@@ -57,6 +57,15 @@ export interface SrgntAPI {
   saveBriefing(request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }): Promise<{ path: string }>;
   listBriefings(): Promise<{ briefings: { id: string; path: string; generatedAt: string }[] }>;
   writeDiagnosticCrashLog(): Promise<{ directory: string }>;
+
+  // Window controls
+  windowMinimize(): Promise<void>;
+  windowMaximize(): Promise<void>;
+  windowClose(): Promise<void>;
+  windowIsMaximized(): Promise<boolean>;
+  onWindowMaximizedChange(callback: (isMaximized: boolean) => void): () => void;
+
+  platform: string;
 }
 
 declare global {

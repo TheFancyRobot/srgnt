@@ -20,10 +20,10 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 
 <!-- AGENT-START:current-focus -->
 _Last refreshed: 2026-03-29._
-- Session in progress: [[05_Sessions/2026-03-29-011244-polish-onboarding-settings-and-release-qa-opencode|SESSION-2026-03-29-011244 OpenCode session for Polish Onboarding Settings And Release QA]] - owner: OpenCode - phase: [[02_Phases/Phase_08_product_hardening/Phase|Phase 08 product hardening]] - updated: 2026-03-29
+- Session in progress: none.
 - Current step: [[02_Phases/Phase_11_real_machine_validation/Steps/Step_01_run-real-machine-release-validation|STEP-11-01 Run real machine release validation]] - status: planned - phase: [[02_Phases/Phase_11_real_machine_validation/Phase|Phase 11 real machine validation]]
 - Active phase: [[02_Phases/Phase_11_real_machine_validation/Phase|PHASE-11 Real Machine Validation]] - status: planned - updated: 2026-03-29
-- Also active: 1 more additional sessions, 17 more additional steps.
+- Also active: 15 more additional steps.
 <!-- AGENT-END:current-focus -->
 
 ## Repo Snapshot

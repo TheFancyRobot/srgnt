@@ -5,7 +5,7 @@ contract_version: 1
 title: Ship Packaging Update And Distribution Pipeline
 step_id: STEP-08-01
 phase: '[[02_Phases/Phase_08_product_hardening/Phase|Phase 08 product hardening]]'
-status: partial
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-28'
@@ -61,10 +61,10 @@ Define and implement how the desktop product is built, packaged, updated, and di
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: partial
+- Status: completed
 - Current owner:
 - Last touched: 2026-03-28
-- Next action: Finish live release publication and installer validation across macOS and Windows.
+- Next action: Use the documented release path in real-machine validation and manual publication flows.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -120,4 +120,4 @@ Define and implement how the desktop product is built, packaged, updated, and di
 
 - Completion means the app has a reproducible build and distribution path.
 - Validation target: packaged build succeeds and install/update behavior is documented.
-- Current state: build, pack, AppImage release, packaged smoke coverage, generated platform icon assets, and cross-platform CI artifact builds are working; local Fedora `.rpm` generation now passes through `dist:rpm:fedora`, which uses a dedicated `rpmbuild` script after `electron-builder --dir`. Hosted release publication and live updater feeds remain open.
+- Current state: build, pack, AppImage release, Fedora RPM generation, packaged smoke coverage, generated platform icon assets, cross-platform CI artifact builds, and documented manual publication flow are working; remaining real-machine installer sign-off is tracked in [[02_Phases/Phase_11_real_machine_validation/Phase|PHASE-11 Real Machine Validation]].

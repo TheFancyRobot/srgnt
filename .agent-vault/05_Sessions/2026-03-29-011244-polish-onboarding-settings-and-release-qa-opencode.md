@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Polish Onboarding Settings And Release QA
 session_id: SESSION-2026-03-29-011244
 date: '2026-03-29'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_08_product_hardening/Phase|Phase 08 product hardening]]'
@@ -68,6 +68,7 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 - 21:49 - Added a reusable platform runbook note for Windows, macOS x86_64, macOS arm64, and Linux `.deb` validation, then linked it from the release process/checklist so the next real-machine phase has a concrete playbook to execute.
 - 21:55 - Tried to prepare the requested commit, but `/home/gimbo/dev/srgnt` is not a git repository, so no commit could be created here. Continued with the non-blocked work by creating PHASE-11 and STEP-11-01 for real-machine validation.
 - 22:05 - Added an interim `LICENSE.md` using Business Source License 1.1 with a paid-competition restriction and updated the root package metadata to point at the new license file.
+- 22:18 - Closed out PHASE-08 as a repo-side hardening milestone by marking STEP-08-01 and STEP-08-03 complete and handing the remaining real-machine sign-off work to PHASE-11.
 
 ## Findings
 
@@ -137,5 +138,5 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 
 ## Completion Summary
 
-- Session is still in progress. Linux accessibility notes, startup/memory samples, the one-hour soak baseline, the near-term release publication decision, root-level release-candidate commands, and clean-runner CI icon generation are now recorded.
-- Remaining work is now almost entirely external/manual: macOS/Windows installer validation, icon verification outside Linux, and dedicated screen-reader checks.
+- Session completed after closing out PHASE-08 as a repo-side hardening milestone. Linux accessibility notes, startup/memory samples, the one-hour soak baseline, the near-term release publication decision, root-level release-candidate commands, clean-runner CI icon generation, and platform validation runbooks are now recorded.
+- Remaining work is explicitly handed off to [[02_Phases/Phase_11_real_machine_validation/Phase|PHASE-11 Real Machine Validation]] for real-machine installer, trust-surface, icon, and dedicated screen-reader verification.

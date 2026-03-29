@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Polish Onboarding Settings And Release QA
 session_id: SESSION-2026-03-28-221017
 date: '2026-03-28'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_08_product_hardening/Phase|Phase 08 product hardening]]'

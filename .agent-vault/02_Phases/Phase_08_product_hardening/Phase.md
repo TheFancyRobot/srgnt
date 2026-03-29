@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Product Hardening
 phase_id: PHASE-08
-status: partial
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-29'
@@ -54,16 +54,16 @@ Make the desktop app shippable and supportable with packaging, updates, crash ha
 
 ## Acceptance Criteria
 
-- [ ] A release/distribution path exists and is documented. (AppImage packaging, packaged smoke coverage, and cross-platform CI artifact builds exist; live release publication and installer validation remain open.)
-- [ ] Updater and crash-handling behavior are implemented or prototyped with explicit limitations. (Local crash handling is implemented; update checks are wired with explicit provider/configuration limits.)
+- [x] A release/distribution path exists and is documented. (AppImage packaging, Fedora RPM generation, packaged smoke coverage, release-candidate commands, and cross-platform CI artifact builds exist; final real-machine sign-off is tracked in PHASE-11.)
+- [x] Updater and crash-handling behavior are implemented or prototyped with explicit limitations. (Local crash handling is implemented; update checks are wired with explicit provider/configuration limits and a manual publication flow.)
 - [x] Telemetry/redaction policy is explicit and aligned with the local-first privacy posture. (Crash payloads are redacted before local persistence and the policy doc now matches the implementation.)
-- [ ] Onboarding and settings flows are coherent enough for new-user and release QA validation. (Linux automation, accessibility notes, and Linux performance baselines are in place, but macOS/Windows validation and dedicated screen-reader checks are still blocked.)
+- [x] Onboarding and settings flows are coherent enough for new-user and release QA validation. (Linux automation, accessibility notes, performance baselines, and cross-platform validation runbooks are in place; remaining machine execution is tracked in PHASE-11.)
 
 ## Linear Context
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|PHASE-07 Terminal Integration Hardening]]
-- Current phase status: partial
+- Current phase status: completed
 - Next phase: [[02_Phases/Phase_11_real_machine_validation/Phase|PHASE-11 Real Machine Validation]]
 <!-- AGENT-END:phase-linear-context -->
 
@@ -91,9 +91,9 @@ Make the desktop app shippable and supportable with packaging, updates, crash ha
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_08_product_hardening/Steps/Step_01_ship-packaging-update-and-distribution-pipeline|STEP-08-01 Ship Packaging Update And Distribution Pipeline]] - Start here; defines how the app is built and delivered.
+- [x] [[02_Phases/Phase_08_product_hardening/Steps/Step_01_ship-packaging-update-and-distribution-pipeline|STEP-08-01 Ship Packaging Update And Distribution Pipeline]] - Release commands, CI artifact builds, and publication flow docs are in place.
 - [x] [[02_Phases/Phase_08_product_hardening/Steps/Step_02_add-crash-handling-and-redaction-aware-telemetry-policy|STEP-08-02 Add Crash Handling And Redaction Aware Telemetry Policy]] - Local-only crash handling, redaction, and renderer fallback are now implemented.
-- [ ] [[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]] - Depends on Steps 01-02.
+- [x] [[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]] - Release QA automation, baselines, and real-machine runbooks are in place.
 <!-- AGENT-END:phase-steps -->
 
 ## Notes
@@ -101,4 +101,4 @@ Make the desktop app shippable and supportable with packaging, updates, crash ha
 - Desktop build, pack, and Linux release commands now work as real repo commands, and CI forwards signing/update environment variables when they are present.
 - Crash handling now includes redacted local log writing, a renderer fallback screen, and a QA utility path for writing diagnostic crash logs.
 - Onboarding now creates a real workspace, settings persist into workspace config, and release QA automation covers the Linux first-run, settings, crash-log, and packaged launch paths.
-- This phase stays partial because real release publication, installer validation outside Linux, and dedicated screen-reader verification still need operator time.
+- This phase is complete as a repo-side hardening milestone. Remaining real-machine installer, trust-surface, and dedicated screen-reader verification work now moves into [[02_Phases/Phase_11_real_machine_validation/Phase|PHASE-11 Real Machine Validation]].

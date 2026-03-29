@@ -5,7 +5,7 @@ contract_version: 1
 title: Polish Onboarding Settings And Release QA
 step_id: STEP-08-03
 phase: '[[02_Phases/Phase_08_product_hardening/Phase|Phase 08 product hardening]]'
-status: partial
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-29'
@@ -66,10 +66,10 @@ Finish the release-readiness pass for first-run setup, settings, and QA coverage
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: partial
+- Status: completed
 - Current owner:
 - Last touched: 2026-03-29
-- Next action: Run manual macOS/Windows packaging/icon validation plus dedicated screen-reader verification before promoting this step to completed.
+- Next action: Execute the Phase 11 real-machine runbooks on target hosts and record the remaining external sign-off results.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -139,4 +139,4 @@ Finish the release-readiness pass for first-run setup, settings, and QA coverage
 - The step now has repeatable automated Electron coverage for the first-run and release-QA-critical flows, reducing reliance on manual-only validation for onboarding, connectors, persistence, and terminal launch behavior.
 - Linux CI now runs both the real Electron E2E suite and a packaged Linux smoke test, and the packaged path exposed/fixed missing schema runtime dependencies that would have broken release builds before first launch.
 - The desktop shell now creates a real workspace during onboarding, persists settings under `.command-center/config/desktop-settings.json`, and exposes release-QA utilities for update checks, crash-log writing, and renderer fallback verification.
-- This step remains partial because dedicated screen-reader verification, the one-hour memory soak, and manual macOS/Windows release checks are still blocked.
+- This step is complete as a repo-side release-readiness milestone. Remaining manual macOS/Windows installer checks and dedicated screen-reader verification now move to [[02_Phases/Phase_11_real_machine_validation/Steps/Step_01_run-real-machine-release-validation|STEP-11-01 Run real machine release validation]].

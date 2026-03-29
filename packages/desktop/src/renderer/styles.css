@@ -298,6 +298,44 @@
     margin-top: 0.25rem;
   }
 
+  /* ──────────────── Titlebar ──────────────── */
+
+  .titlebar {
+    height: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
+  }
+
+  .titlebar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+
+  .titlebar-btn-default {
+    color: var(--color-text-tertiary);
+  }
+
+  .titlebar-btn-default:hover {
+    background-color: var(--color-surface-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  .titlebar-btn-close {
+    color: var(--color-text-tertiary);
+  }
+
+  .titlebar-btn-close:hover {
+    background-color: #e81123;
+    color: #ffffff;
+  }
+
   /* ──────────────── Navigation ──────────────── */
 
   .nav-item {

@@ -149,6 +149,7 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -157,6 +158,13 @@ function createWindow(): void {
     },
   });
   hardenWindow(mainWindow);
+
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window:maximized-changed', true);
+  });
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window:maximized-changed', false);
+  });
 
   if (isDev && !forceLocalRenderer) {
     mainWindow.loadURL('http://localhost:5173');
@@ -623,6 +631,26 @@ ipcMain.handle(ipcChannels.briefingList, async () => {
   } catch {
     return { briefings: [] };
   }
+});
+
+ipcMain.handle('window:minimize', () => {
+  mainWindow?.minimize();
+});
+
+ipcMain.handle('window:maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow?.maximize();
+  }
+});
+
+ipcMain.handle('window:close', () => {
+  mainWindow?.close();
+});
+
+ipcMain.handle('window:is-maximized', () => {
+  return mainWindow?.isMaximized() ?? false;
 });
 
 ipcMain.handle(ipcChannels.crashWriteTestLog, async () => {

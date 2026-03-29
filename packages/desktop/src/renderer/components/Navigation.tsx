@@ -1,4 +1,5 @@
 import React from 'react';
+import { Titlebar } from './Titlebar.js';
 
 export interface NavItem {
   id: string;
@@ -143,50 +144,56 @@ export interface AppLayoutProps {
 
 export function AppLayout({ children, activeId, onNavigate, date, fullBleed = false }: AppLayoutProps): React.ReactElement {
   return (
-    <div className="flex h-screen bg-surface-secondary grain">
-      {/* Sidebar */}
-      <aside className="w-56 border-r border-border-default bg-surface-primary flex flex-col surface-gradient">
-        {/* Brand header */}
-        <div className="p-4 pb-3 border-b border-border-muted">
-          <div className="flex items-center gap-3 animate-fade-in">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-srgnt-400 to-srgnt-600 shadow-xs">
-              <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-              </svg>
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-sm font-display font-semibold text-text-primary tracking-tight">srgnt</h1>
-              {date && (
-                <p className="text-[10px] font-mono-data text-text-tertiary truncate">{date}</p>
-              )}
+    <div className="flex flex-col h-screen bg-surface-secondary grain">
+      {/* Custom titlebar */}
+      <Titlebar />
+
+      {/* Sidebar + Content */}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar */}
+        <aside className="w-56 border-r border-border-default bg-surface-primary flex flex-col surface-gradient">
+          {/* Brand header */}
+          <div className="p-4 pb-3 border-b border-border-muted">
+            <div className="flex items-center gap-3 animate-fade-in">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-srgnt-400 to-srgnt-600 shadow-xs">
+                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-sm font-display font-semibold text-text-primary tracking-tight">srgnt</h1>
+                {date && (
+                  <p className="text-[10px] font-mono-data text-text-tertiary truncate">{date}</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
-          <Navigation
-            items={canonicalNavItems}
-            activeId={activeId}
-            onNavigate={onNavigate}
-          />
-        </div>
-
-        {/* Footer status */}
-        <div className="p-3 border-t border-border-muted animate-fade-in">
-          <div className="flex items-center gap-2 px-1">
-            <span className="status-indicator connected" />
-            <span className="text-[11px] text-text-tertiary">Online</span>
+          {/* Navigation */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <Navigation
+              items={canonicalNavItems}
+              activeId={activeId}
+              onNavigate={onNavigate}
+            />
           </div>
-        </div>
-      </aside>
 
-      {/* Main content */}
-      <main className={`flex-1 min-w-0 min-h-0 ${fullBleed ? 'overflow-hidden' : 'overflow-auto scrollbar-thin'}`}>
-        <div className={fullBleed ? 'h-full' : 'max-w-4xl mx-auto px-8 py-6'}>
-          {children}
-        </div>
-      </main>
+          {/* Footer status */}
+          <div className="p-3 border-t border-border-muted animate-fade-in">
+            <div className="flex items-center gap-2 px-1">
+              <span className="status-indicator connected" />
+              <span className="text-[11px] text-text-tertiary">Online</span>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <main className={`flex-1 min-w-0 min-h-0 ${fullBleed ? 'overflow-hidden' : 'overflow-auto scrollbar-thin'}`}>
+          <div className={fullBleed ? 'h-full' : 'max-w-4xl mx-auto px-8 py-6'}>
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

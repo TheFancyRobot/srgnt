@@ -107,6 +107,19 @@ const api = {
     ipcRenderer.invoke(ipcChannels.briefingList),
 
   writeDiagnosticCrashLog: (): Promise<{ directory: string }> => ipcRenderer.invoke(ipcChannels.crashWriteTestLog),
+
+  // Window controls
+  windowMinimize: (): Promise<void> => ipcRenderer.invoke('window:minimize'),
+  windowMaximize: (): Promise<void> => ipcRenderer.invoke('window:maximize'),
+  windowClose: (): Promise<void> => ipcRenderer.invoke('window:close'),
+  windowIsMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:is-maximized'),
+  onWindowMaximizedChange: (callback: (isMaximized: boolean) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, isMaximized: boolean) => callback(isMaximized);
+    ipcRenderer.on('window:maximized-changed', handler);
+    return () => ipcRenderer.removeListener('window:maximized-changed', handler);
+  },
+
+  platform: process.platform,
 };
 
 contextBridge.exposeInMainWorld('srgnt', api);

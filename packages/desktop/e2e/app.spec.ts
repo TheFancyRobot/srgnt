@@ -1,6 +1,13 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import type { SrgntAPI } from '../src/renderer/env';
 import { completeOnboarding, expect, test } from './fixtures';
+
+declare global {
+  interface Window {
+    srgnt: SrgntAPI;
+  }
+}
 
 test('shows onboarding on first launch and boots into the command center', async ({ electronApp, userDataDir, window: page }) => {
   await expect(page.getByRole('heading', { name: 'Create Your Workspace' })).toBeVisible();
@@ -48,6 +55,33 @@ test('navigates across key surfaces and updates connector status', async ({ wind
   await page.getByRole('button', { name: 'Advanced' }).click();
   await expect(page.getByText('Debug Mode')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Check For Updates' })).toBeVisible();
+});
+
+test('opens the terminal view without CSP bootstrap failures', async ({ window: page }) => {
+  await completeOnboarding(page);
+
+  const consoleMessages: string[] = [];
+  page.on('console', (message) => {
+    consoleMessages.push(message.text());
+  });
+
+  await page.getByRole('button', { name: 'Terminal' }).click();
+  await expect(page.getByRole('button', { name: 'Terminal', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByTestId('terminal-host')).toBeVisible();
+  await expect(page.getByRole('tab')).toBeVisible();
+  await expect
+    .poll(async () => page.locator('[data-testid="terminal-host"] > *').count())
+    .toBeGreaterThan(0);
+
+  await page.waitForTimeout(1000);
+
+  expect(
+    consoleMessages.some((message) =>
+      message.includes('Content Security Policy')
+      || message.includes('Refused to connect to \'data:application/wasm')
+      || message.includes('Fetch API cannot load data:application/wasm'),
+    ),
+  ).toBe(false);
 });
 
 test('persists settings and writes redacted crash diagnostics', async ({ userDataDir, window: page }) => {
@@ -141,7 +175,7 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
       launch,
       sessionIds: sessions.sessions.map((session) => session.id),
       workspaceRoot: await window.srgnt.getWorkspaceRoot(),
-      hasApi: typeof window.srgnt?.getAppVersion === 'function',
+      hasApi: typeof window.srgnt?.getWorkspaceRoot === 'function',
       hasProcess: typeof globalThis.process !== 'undefined',
       hasRequire: typeof globalThis.require !== 'undefined',
     };

@@ -5,13 +5,14 @@ License text copyright (c) 2020 MariaDB Corporation Ab, All Rights Reserved.
 
 Licensor:
 
-srgnt project contributors
+The Fancy Robot, LLC
 
 Licensed Work:
 
-The Licensed Work is the source code, documentation, and related assets made
-available in this repository by the Licensor, excluding third-party components
-distributed under their own licenses.
+The Licensed Work is copyright (c) 2026 The Fancy Robot, LLC and includes the
+source code, documentation, and related assets made available in this
+repository by the Licensor, excluding third-party components distributed under
+their own licenses.
 
 Additional Use Grant:
 

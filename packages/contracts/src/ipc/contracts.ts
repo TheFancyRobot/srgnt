@@ -27,42 +27,19 @@ export const ipcChannels = {
   terminalClose: 'terminal:close',
   terminalList: 'terminal:list',
   terminalLaunchWithContext: 'terminal:launch-with-context',
+  launchApprovalRequired: 'launch:approval-required',
+  launchApprovalResolve: 'launch:approval-resolve',
+  runHistoryList: 'run-history:list',
+  runHistoryGet: 'run-history:get',
+  runLogSave: 'run-log:save',
   entitiesList: 'entities:list',
   briefingSave: 'briefing:save',
   briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
 } as const;
 
-export const ipcChannelValues = [
-  ipcChannels.appGetVersion,
-  ipcChannels.appGetUserDataPath,
-  ipcChannels.appCheckForUpdates,
-  ipcChannels.workspaceGetRoot,
-  ipcChannels.workspaceSetRoot,
-  ipcChannels.workspaceChooseRoot,
-  ipcChannels.workspaceCreateDefaultRoot,
-  ipcChannels.connectorList,
-  ipcChannels.connectorStatus,
-  ipcChannels.connectorConnect,
-  ipcChannels.connectorDisconnect,
-  ipcChannels.settingsGet,
-  ipcChannels.settingsSave,
-  ipcChannels.skillList,
-  ipcChannels.skillRun,
-  ipcChannels.skillCancel,
-  ipcChannels.approvalRequest,
-  ipcChannels.approvalResolve,
-  ipcChannels.terminalSpawn,
-  ipcChannels.terminalWrite,
-  ipcChannels.terminalResize,
-  ipcChannels.terminalClose,
-  ipcChannels.terminalList,
-  ipcChannels.terminalLaunchWithContext,
-  ipcChannels.entitiesList,
-  ipcChannels.briefingSave,
-  ipcChannels.briefingList,
-  ipcChannels.crashWriteTestLog,
-] as const;
+type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
+export const ipcChannelValues = Object.values(ipcChannels) as [IpcChannelValue, ...IpcChannelValue[]];
 
 const datetimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
 
@@ -245,6 +222,65 @@ export const STerminalLaunchWithContextResponse = Schema.Struct({
   launchId: Schema.String,
 });
 export type TerminalLaunchWithContextResponse = Schema.Schema.Type<typeof STerminalLaunchWithContextResponse>;
+
+export const SRunHistoryEntry = Schema.Struct({
+  id: Schema.String,
+  launchId: Schema.String,
+  command: Schema.String,
+  startTime: Schema.String.pipe(Schema.pattern(datetimePattern)),
+  endTime: Schema.optional(Schema.String.pipe(Schema.pattern(datetimePattern))),
+  exitCode: Schema.optional(Schema.Number),
+  outputSummary: Schema.String,
+  redactedFields: Schema.Array(Schema.String),
+});
+
+export const SRunHistoryListResponse = Schema.Struct({
+  runs: Schema.Array(SRunHistoryEntry),
+});
+export type RunHistoryListResponse = Schema.Schema.Type<typeof SRunHistoryListResponse>;
+
+export const SRunHistoryGetRequest = Schema.Struct({
+  launchId: Schema.String,
+});
+
+export const SRunHistoryGetResponse = Schema.Struct({
+  run: Schema.optional(SRunHistoryEntry),
+});
+export type RunHistoryGetResponse = Schema.Schema.Type<typeof SRunHistoryGetResponse>;
+
+export const SRunLogSaveRequest = Schema.Struct({
+  content: Schema.String,
+  runId: Schema.String,
+  launchId: Schema.String,
+});
+export type RunLogSaveRequest = Schema.Schema.Type<typeof SRunLogSaveRequest>;
+
+export const SRunLogSaveResponse = Schema.Struct({
+  path: Schema.String,
+});
+export type RunLogSaveResponse = Schema.Schema.Type<typeof SRunLogSaveResponse>;
+
+export const SLaunchApprovalPayload = Schema.Struct({
+  approvalId: Schema.String,
+  launchContext: SLaunchContext,
+  command: Schema.String,
+  riskLevel: Schema.Literal('low', 'medium', 'high'),
+  requiresApproval: Schema.Boolean,
+});
+export type LaunchApprovalPayload = Schema.Schema.Type<typeof SLaunchApprovalPayload>;
+
+export const SLaunchApprovalResolveRequest = Schema.Struct({
+  approvalId: Schema.String,
+  approved: Schema.Boolean,
+});
+export type LaunchApprovalResolveRequest = Schema.Schema.Type<typeof SLaunchApprovalResolveRequest>;
+
+export const SRedactionPolicy = Schema.Struct({
+  maxOutputLength: PositiveInt,
+  redactPatterns: Schema.Array(Schema.String),
+  sensitiveEnvKeys: Schema.Array(Schema.String),
+});
+export type RedactionPolicySchema = Schema.Schema.Type<typeof SRedactionPolicy>;
 
 export const SEntitiesListResponse = Schema.Struct({
   entities: Schema.Array(Schema.Unknown),

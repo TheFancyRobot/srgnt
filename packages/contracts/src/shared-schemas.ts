@@ -1,8 +1,6 @@
 import { Schema } from "@effect/schema";
 import { Either } from "effect";
 
-export { Schema as S };
-
 
 export const EmailString = Schema.String.pipe(
   Schema.pattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
@@ -13,6 +11,10 @@ export const UrlString = Schema.String.pipe(
 );
 
 export const DateTimeString = Schema.DateTimeUtc;
+
+export const DateTimeISOString = Schema.String.pipe(
+  Schema.pattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/)
+);
 
 export const SemVerString = Schema.String.pipe(
   Schema.pattern(/^\d+\.\d+\.\d+$/)

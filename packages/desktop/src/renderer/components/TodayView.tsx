@@ -168,7 +168,7 @@ export function TodayView({ onLaunchContext }: TodayViewProps = {}): React.React
         sourceWorkflow: 'daily-briefing',
         sourceArtifactId: task.key,
         workingDirectory: workspaceRoot || '/',
-        intent: 'readOnly',
+        intent: 'artifactAffecting',
         labels: [task.key, task.project],
         createdAt: new Date().toISOString(),
       };

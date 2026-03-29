@@ -1,9 +1,5 @@
 import { Schema } from '@effect/schema';
-import { EmailString } from '@srgnt/contracts';
-
-const datetimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
-
-const SDateTimeString = Schema.String.pipe(Schema.pattern(datetimePattern));
+import { EmailString, DateTimeISOString } from '@srgnt/contracts';
 
 type Mutable<T> = {
   -readonly [K in keyof T]: T[K];
@@ -14,8 +10,8 @@ export const SSyncAccount = Schema.Struct({
   email: EmailString,
   displayName: Schema.String,
   encryptionPublicKey: Schema.optional(Schema.String),
-  createdAt: SDateTimeString,
-  lastSyncAt: Schema.optional(SDateTimeString),
+  createdAt: DateTimeISOString,
+  lastSyncAt: Schema.optional(DateTimeISOString),
 });
 
 export type SyncAccount = Mutable<Schema.Schema.Type<typeof SSyncAccount>>;
@@ -25,7 +21,7 @@ export const SSyncDevice = Schema.Struct({
   name: Schema.String,
   type: Schema.Literal('desktop', 'mobile', 'tablet'),
   encryptionPublicKey: Schema.String,
-  lastSeenAt: SDateTimeString,
+  lastSeenAt: DateTimeISOString,
   isCurrent: Schema.optionalWith(Schema.Boolean, { default: () => false }),
 });
 
@@ -44,11 +40,11 @@ export const SConflictRecord = Schema.Struct({
   entityId: Schema.String,
   localVersion: Schema.String,
   remoteVersion: Schema.String,
-  conflictedAt: SDateTimeString,
+  conflictedAt: DateTimeISOString,
   resolution: Schema.optionalWith(Schema.Literal('pending', 'local', 'remote', 'merged'), {
     default: () => 'pending' as const,
   }),
-  resolvedAt: Schema.optional(SDateTimeString),
+  resolvedAt: Schema.optional(DateTimeISOString),
   resolvedBy: Schema.optional(Schema.String),
 });
 

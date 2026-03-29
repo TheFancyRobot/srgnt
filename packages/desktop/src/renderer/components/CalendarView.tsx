@@ -1,4 +1,5 @@
 import React from 'react';
+import type { LaunchContext } from '@srgnt/contracts';
 
 /* ═══════════════════════════════════════════════════════════
    Calendar View — Day/Agenda + Event Detail + Triage
@@ -129,7 +130,12 @@ function AttendeeStatus({ status }: { status: CalendarEvent['attendees'][0]['sta
 
 /* ─── Event Detail Panel ─── */
 
-function EventDetail({ event, onClose }: { event: CalendarEvent; onClose: () => void }): React.ReactElement {
+function EventDetail({ event, onClose, onLaunch, pendingLaunchId }: {
+  event: CalendarEvent;
+  onClose: () => void;
+  onLaunch?: (event: CalendarEvent) => void;
+  pendingLaunchId?: string | null;
+}): React.ReactElement {
   const colors = categoryColors[event.category];
   const triage = triageLabels[event.triageStatus];
 
@@ -137,16 +143,29 @@ function EventDetail({ event, onClose }: { event: CalendarEvent; onClose: () => 
     <div className="animate-scale-in">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-display font-semibold text-text-primary">{event.title}</h3>
-        <button
-          type="button"
-          onClick={onClose}
-          className="btn btn-ghost p-1.5 -mr-1.5"
-          aria-label="Close detail"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1.5">
+          {onLaunch && (
+            <button
+              type="button"
+              onClick={() => onLaunch(event)}
+              disabled={pendingLaunchId != null}
+              className="text-[10px] px-2 py-0.5 rounded border border-srgnt-400 text-srgnt-500 hover:bg-srgnt-500 hover:text-white transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              title={`Open terminal for ${event.title}`}
+            >
+              {pendingLaunchId === event.id ? 'Opening...' : 'Launch'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-ghost p-1.5 -mr-1.5"
+            aria-label="Close detail"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Time & location */}
@@ -220,14 +239,45 @@ function EventDetail({ event, onClose }: { event: CalendarEvent; onClose: () => 
 
 /* ─── Main view ─── */
 
-export function CalendarView(): React.ReactElement {
+export interface CalendarViewProps {
+  onLaunchContext?: (launchContext: LaunchContext) => void | Promise<void>;
+}
+
+export function CalendarView({ onLaunchContext }: CalendarViewProps = {}): React.ReactElement {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [pendingLaunch, setPendingLaunch] = React.useState<string | null>(null);
   const selectedEvent = FIXTURE_EVENTS.find((e) => e.id === selectedId) || null;
   const dateHeader = formatDateHeader();
 
   const needsAttention = FIXTURE_EVENTS.filter(
     (e) => e.triageStatus === 'needs-prep' || e.triageStatus === 'needs-followup' || e.triageStatus === 'needs-decline'
   );
+
+  const handleLaunch = async (ev: CalendarEvent) => {
+    setPendingLaunch(ev.id);
+    try {
+      const workspaceRoot = await window.srgnt.getWorkspaceRoot();
+      const launchContext: LaunchContext = {
+        launchId: `launch-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        sourceWorkflow: 'calendar-triage',
+        sourceArtifactId: ev.id,
+        workingDirectory: workspaceRoot || '/',
+        intent: ev.triageStatus === 'needs-decline' ? 'readOnly' : 'artifactAffecting',
+        labels: [ev.title, ev.category],
+        createdAt: new Date().toISOString(),
+      };
+
+      if (onLaunchContext) {
+        await onLaunchContext(launchContext);
+      } else {
+        await window.srgnt.terminalLaunchWithContext({ launchContext, rows: 24, cols: 80 });
+      }
+    } catch (err) {
+      console.error('Launch failed:', err);
+    } finally {
+      setPendingLaunch(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -264,20 +314,35 @@ export function CalendarView(): React.ReactElement {
             {needsAttention.map((ev) => {
               const triage = triageLabels[ev.triageStatus];
               return (
-                <button
+                <div
                   key={ev.id}
-                  type="button"
-                  onClick={() => setSelectedId(ev.id)}
-                  className={`card-brand p-3 min-w-[200px] max-w-[240px] flex-shrink-0 text-left transition-all hover:shadow-md cursor-pointer ${
+                  className={`card-brand p-3 min-w-[200px] max-w-[240px] flex-shrink-0 transition-all hover:shadow-md ${
                     selectedId === ev.id ? 'ring-2 ring-srgnt-400' : ''
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-mono-data text-text-tertiary">{ev.startTime}</span>
-                    {triage && <span className={`badge ${triage.cls}`}>{triage.label}</span>}
-                  </div>
-                  <p className="text-sm font-medium text-text-primary truncate">{ev.title}</p>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(ev.id)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono-data text-text-tertiary">{ev.startTime}</span>
+                      {triage && <span className={`badge ${triage.cls}`}>{triage.label}</span>}
+                    </div>
+                    <p className="text-sm font-medium text-text-primary truncate">{ev.title}</p>
+                  </button>
+                  {onLaunchContext && (
+                    <button
+                      type="button"
+                      onClick={() => void handleLaunch(ev)}
+                      disabled={pendingLaunch !== null}
+                      className="mt-2 text-[10px] px-2 py-0.5 rounded border border-srgnt-400 text-srgnt-500 hover:bg-srgnt-500 hover:text-white transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={`Open terminal for ${ev.title}`}
+                    >
+                      {pendingLaunch === ev.id ? 'Opening...' : 'Launch'}
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -351,7 +416,12 @@ export function CalendarView(): React.ReactElement {
           <aside className="lg:col-span-2 animate-slide-up stagger-3">
             <h2 className="section-heading mb-3">Event Detail</h2>
             <div className="card p-5 sticky top-6">
-              <EventDetail event={selectedEvent} onClose={() => setSelectedId(null)} />
+              <EventDetail
+                event={selectedEvent}
+                onClose={() => setSelectedId(null)}
+                onLaunch={onLaunchContext ? handleLaunch : undefined}
+                pendingLaunchId={pendingLaunch}
+              />
             </div>
           </aside>
         )}

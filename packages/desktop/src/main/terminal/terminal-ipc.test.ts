@@ -6,6 +6,7 @@ import {
   STerminalResizeRequest,
   STerminalCloseRequest,
   STerminalListResponse,
+  STerminalLaunchWithContextRequest,
   safeParse,
 } from '@srgnt/contracts';
 import {
@@ -391,6 +392,120 @@ describe('Terminal surface Effect schemas', () => {
         timestamp: 'not-a-date',
         level: 'info',
         message: 'hello',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('STerminalLaunchWithContextRequest', () => {
+    const validLaunchContext = {
+      launchId: 'launch-001',
+      sourceWorkflow: 'daily-briefing',
+      workingDirectory: '/workspace/demo',
+      command: 'git status',
+      intent: 'readOnly',
+      createdAt: new Date().toISOString(),
+    };
+
+    it('accepts valid launch context with defaults', () => {
+      const result = safeParse(STerminalLaunchWithContextRequest, {
+        launchContext: validLaunchContext,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.rows).toBe(24);
+        expect(result.data.cols).toBe(80);
+        expect(result.data.launchContext.launchId).toBe('launch-001');
+      }
+    });
+
+    it('accepts custom rows and cols', () => {
+      const result = safeParse(STerminalLaunchWithContextRequest, {
+        launchContext: validLaunchContext,
+        rows: 40,
+        cols: 120,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.rows).toBe(40);
+        expect(result.data.cols).toBe(120);
+      }
+    });
+
+    it('rejects missing launchContext', () => {
+      const result = safeParse(STerminalLaunchWithContextRequest, {});
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects invalid intent', () => {
+      const result = safeParse(STerminalLaunchWithContextRequest, {
+        launchContext: { ...validLaunchContext, intent: 'destructive' },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('defaults intent to artifactAffecting when omitted', () => {
+      const { intent, ...noIntent } = validLaunchContext;
+      const result = safeParse(STerminalLaunchWithContextRequest, {
+        launchContext: noIntent,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.launchContext.intent).toBe('artifactAffecting');
+      }
+    });
+  });
+
+  describe('Launch intent approval paths', () => {
+    it('readOnly intent does not require approval', () => {
+      const readOnlyContext = {
+        launchId: 'launch-readonly-001',
+        sourceWorkflow: 'daily-briefing',
+        workingDirectory: '/workspace/demo',
+        command: 'git status',
+        intent: 'readOnly' as const,
+        createdAt: new Date().toISOString(),
+      };
+      const result = safeParse(STerminalLaunchWithContextRequest, {
+        launchContext: readOnlyContext,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.launchContext.intent).toBe('readOnly');
+      }
+    });
+
+    it('artifactAffecting intent requires approval', () => {
+      const artifactAffectingContext = {
+        launchId: 'launch-approval-001',
+        sourceWorkflow: 'daily-briefing',
+        sourceArtifactId: 'SRGNT-142',
+        workingDirectory: '/workspace/demo',
+        command: 'git push',
+        intent: 'artifactAffecting' as const,
+        createdAt: new Date().toISOString(),
+      };
+      const result = safeParse(STerminalLaunchWithContextRequest, {
+        launchContext: artifactAffectingContext,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.launchContext.intent).toBe('artifactAffecting');
+        expect(result.data.launchContext.sourceArtifactId).toBe('SRGNT-142');
+      }
+    });
+
+    it('rejects invalid intent values', () => {
+      const invalidContext = {
+        launchId: 'launch-invalid-001',
+        sourceWorkflow: 'daily-briefing',
+        workingDirectory: '/workspace/demo',
+        command: 'rm -rf /',
+        intent: 'deleteEverything' as any,
+        createdAt: new Date().toISOString(),
+      };
+      const result = safeParse(STerminalLaunchWithContextRequest, {
+        launchContext: invalidContext,
       });
       expect(result.success).toBe(false);
     });

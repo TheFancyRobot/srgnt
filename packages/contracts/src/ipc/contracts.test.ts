@@ -14,6 +14,10 @@ import {
   SApprovalResolveRequest,
   STerminalLaunchWithContextRequest,
   STerminalLaunchWithContextResponse,
+  SRunLogSaveRequest,
+  SRunLogSaveResponse,
+  SLaunchApprovalPayload,
+  SLaunchApprovalResolveRequest,
 } from './contracts.js';
 
 describe('IPC Channel', () => {
@@ -221,5 +225,93 @@ describe('Terminal Launch With Context', () => {
     };
 
     expect(() => parseSync(STerminalLaunchWithContextResponse, response)).not.toThrow();
+  });
+});
+
+describe('RunLog Save', () => {
+  it('validates a run log save request', () => {
+    const request = {
+      content: '# Run Log\n\n## Metadata\n- Run ID: runlog-123',
+      runId: 'runlog-123',
+      launchId: 'launch-456',
+    };
+    expect(() => parseSync(SRunLogSaveRequest, request)).not.toThrow();
+  });
+
+  it('validates a run log save response', () => {
+    const response = {
+      path: '/workspace/.command-center/runs/runlog-123.md',
+    };
+    expect(() => parseSync(SRunLogSaveResponse, response)).not.toThrow();
+  });
+});
+
+describe('Launch Approval Payload', () => {
+  it('validates an approval payload with low risk', () => {
+    const payload = {
+      approvalId: 'approval-001',
+      launchContext: {
+        launchId: 'launch-001',
+        sourceWorkflow: 'daily-briefing',
+        workingDirectory: '/workspace',
+        intent: 'readOnly',
+        createdAt: '2024-03-25T10:00:00Z',
+      },
+      command: 'git status',
+      riskLevel: 'low',
+      requiresApproval: false,
+    };
+    expect(() => parseSync(SLaunchApprovalPayload, payload)).not.toThrow();
+  });
+
+  it('validates an approval payload with high risk', () => {
+    const payload = {
+      approvalId: 'approval-002',
+      launchContext: {
+        launchId: 'launch-002',
+        sourceWorkflow: 'skill-execution',
+        sourceArtifactId: 'SRGNT-142',
+        workingDirectory: '/workspace',
+        intent: 'artifactAffecting',
+        createdAt: '2024-03-25T10:00:00Z',
+      },
+      command: 'git push origin main',
+      riskLevel: 'high',
+      requiresApproval: true,
+    };
+    expect(() => parseSync(SLaunchApprovalPayload, payload)).not.toThrow();
+  });
+
+  it('rejects invalid risk level', () => {
+    const payload = {
+      approvalId: 'approval-003',
+      launchContext: {
+        launchId: 'launch-003',
+        sourceWorkflow: 'daily-briefing',
+        workingDirectory: '/workspace',
+        intent: 'readOnly',
+        createdAt: '2024-03-25T10:00:00Z',
+      },
+      command: 'ls',
+      riskLevel: 'critical' as any,
+      requiresApproval: false,
+    };
+    expect(() => parseSync(SLaunchApprovalPayload, payload)).toThrow();
+  });
+
+  it('rejects when requiresApproval is true but approvalId is missing', () => {
+    const payload = {
+      launchContext: {
+        launchId: 'launch-004',
+        sourceWorkflow: 'skill-execution',
+        workingDirectory: '/workspace',
+        intent: 'artifactAffecting',
+        createdAt: '2024-03-25T10:00:00Z',
+      },
+      command: 'rm file.txt',
+      riskLevel: 'medium',
+      requiresApproval: true,
+    };
+    expect(() => parseSync(SLaunchApprovalPayload, payload)).toThrow();
   });
 });

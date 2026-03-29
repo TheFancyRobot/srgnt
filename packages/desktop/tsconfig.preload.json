@@ -1,0 +1,12 @@
+{
+  "extends": "@srgnt/tsconfig/base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist/preload",
+    "rootDir": "./src/preload",
+    "module": "CommonJS",
+    "moduleResolution": "node"
+  },
+  "include": ["src/preload/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

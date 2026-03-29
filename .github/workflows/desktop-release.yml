@@ -1,0 +1,114 @@
+name: Desktop Release Build
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify-linux-rc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2 libgbm1 libxss1 libxtst6 imagemagick
+
+      - name: Run repo-side Linux release candidate gate
+        run: xvfb-run -a pnpm run release:check:repo
+
+  build:
+    needs: verify-linux-rc
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Linux desktop dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2 libgbm1 libxss1 libxtst6
+
+      - name: Build desktop package
+        run: pnpm --filter @srgnt/desktop build
+
+      - name: Typecheck desktop package
+        run: pnpm --filter @srgnt/desktop typecheck
+
+      - name: Run desktop unit tests
+        run: pnpm --filter @srgnt/desktop test
+
+      - name: Build release artifacts
+        if: github.event_name != 'pull_request'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          SRGNT_UPDATE_OWNER: ${{ github.repository_owner }}
+          SRGNT_UPDATE_REPO: ${{ github.event.repository.name }}
+        run: |
+          case ${{ matrix.platform }} in
+            linux) pnpm --filter @srgnt/desktop dist:linux ;;
+            mac) pnpm --filter @srgnt/desktop dist:mac ;;
+            win) pnpm --filter @srgnt/desktop dist:win ;;
+          esac
+
+      - name: Upload release artifacts
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-release-${{ matrix.platform }}
+          path: packages/desktop/release
+          if-no-files-found: ignore

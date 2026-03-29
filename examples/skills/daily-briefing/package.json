@@ -1,0 +1,22 @@
+{
+  "name": "@srgnt/example-skills-daily-briefing",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Daily briefing skill example for srgnt",
+  "main": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@srgnt/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@srgnt/tsconfig": "workspace:*",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

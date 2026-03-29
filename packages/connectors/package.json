@@ -1,0 +1,24 @@
+{
+  "name": "@srgnt/connectors",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Jira, Outlook Calendar, Teams connector SDK for srgnt",
+  "main": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@srgnt/contracts": "workspace:*",
+    "@srgnt/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@srgnt/tsconfig": "workspace:*",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "@srgnt/tsconfig/base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist/main",
+    "rootDir": "./src/main",
+    "module": "CommonJS",
+    "moduleResolution": "node"
+  },
+  "include": ["src/main/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

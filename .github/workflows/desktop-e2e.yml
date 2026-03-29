@@ -1,0 +1,57 @@
+name: Desktop E2E
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  desktop-e2e-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2 libgbm1 libxss1 libxtst6 imagemagick
+
+      - name: Generate release icons
+        run: pnpm --filter @srgnt/desktop build:icons
+
+      - name: Typecheck desktop package
+        run: pnpm --filter @srgnt/desktop typecheck
+
+      - name: Run Electron E2E suite
+        run: xvfb-run -a pnpm --filter @srgnt/desktop test:e2e
+
+      - name: Run packaged Linux smoke test
+        run: xvfb-run -a pnpm --filter @srgnt/desktop test:e2e:packaged:linux
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-e2e-artifacts
+          path: |
+            packages/desktop/playwright-report
+            packages/desktop/test-results
+          if-no-files-found: ignore

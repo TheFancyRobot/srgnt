@@ -1,0 +1,95 @@
+<svg width="1600" height="600" viewBox="0 0 1600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix
+        in="blur"
+        type="matrix"
+        values="1 0 0 0 0
+                0 0 0 0 0
+                0 0 0 0 0
+                0 0 0 0.7 0"/>
+    </filter>
+
+    <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix
+        in="blur"
+        type="matrix"
+        values="0 0 0 0 0
+                0 0.85 0 0 0
+                0 0 1 0 0
+                0 0 0 0.7 0"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="600" fill="#000000"/>
+
+  <text
+    x="800"
+    y="345"
+    text-anchor="middle"
+    font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', monospace"
+    font-size="220"
+    font-weight="800"
+    letter-spacing="-8"
+    fill="#00B7FF"
+    opacity="0.6"
+    filter="url(#glow-cyan)"
+    transform="translate(-12, 0)">
+    srgnt
+  </text>
+
+  <text
+    x="800"
+    y="345"
+    text-anchor="middle"
+    font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', monospace"
+    font-size="220"
+    font-weight="800"
+    letter-spacing="-8"
+    fill="#FF2A3D"
+    opacity="0.6"
+    filter="url(#glow-red)"
+    transform="translate(12, 0)">
+    srgnt
+  </text>
+
+  <text
+    x="800"
+    y="345"
+    text-anchor="middle"
+    font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', monospace"
+    font-size="220"
+    font-weight="800"
+    letter-spacing="-8"
+    fill="#00B7FF"
+    transform="translate(-8, 0)">
+    srgnt
+  </text>
+
+  <text
+    x="800"
+    y="345"
+    text-anchor="middle"
+    font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', monospace"
+    font-size="220"
+    font-weight="800"
+    letter-spacing="-8"
+    fill="#FF2A3D"
+    transform="translate(8, 0)">
+    srgnt
+  </text>
+
+  <text
+    x="800"
+    y="345"
+    text-anchor="middle"
+    font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', monospace"
+    font-size="220"
+    font-weight="800"
+    letter-spacing="-8"
+    fill="#F8F8F8">
+    srgnt
+  </text>
+</svg>

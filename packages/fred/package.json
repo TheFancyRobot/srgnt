@@ -1,0 +1,26 @@
+{
+  "name": "@srgnt/fred",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Fred premium orchestration layer for srgnt",
+  "main": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@effect/schema": "^0.75.5",
+    "@srgnt/contracts": "workspace:*",
+    "@srgnt/runtime": "workspace:*",
+    "effect": "^3.21.0"
+  },
+  "devDependencies": {
+    "@srgnt/tsconfig": "workspace:*",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

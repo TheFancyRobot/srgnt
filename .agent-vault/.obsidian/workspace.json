@@ -1,0 +1,222 @@
+{
+  "main": {
+    "id": "6c0eb2f08ab4d67a",
+    "type": "split",
+    "children": [
+      {
+        "id": "f700bcfe514502a9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e6c090e92e09111c",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "SRGNT.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "SRGNT"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "6fa695eb286260af",
+    "type": "split",
+    "children": [
+      {
+        "id": "fba8306b6d7ab211",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d555fc4e8999ee05",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "4f266b62e02ef280",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "66eb10901624931a",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "6c76dc4c8fcb2029",
+    "type": "split",
+    "children": [
+      {
+        "id": "021e1262ea18a7cd",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "32dd3b5cdfe64365",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "9a5300e8bb1664af",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "535708a339ba047b",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "10c0b4c9af9cb15d",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "57ecb5b7341b5658",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "e6c090e92e09111c",
+  "lastOpenFiles": [
+    "SRGNT.md",
+    "02_Phases/Phase_09_sync_preparation/Steps/Step_02_draft-encrypted-sync-architecture-and-account-model.md",
+    "02_Phases/Phase_08_product_hardening/Steps/Step_01_ship-packaging-update-and-distribution-pipeline.md",
+    "02_Phases/Phase_02_desktop_foundation/Steps/Step_01_scaffold-monorepo-and-desktop-packages.md",
+    "02_Phases/Phase_01_foundation_contracts/Steps/Step_01_freeze-repo-layout-and-contract-locations.md",
+    "02_Phases/Phase_00_product_framing_lock/Steps/Step_01_reconcile-product-boundary-and-terminology.md",
+    "02_Phases/Phase_09_sync_preparation/Steps/Step_01_define-data-classification-and-sync-safe-boundaries.md",
+    "01_Architecture/Code_Graph.md",
+    "02_Phases/Phase_10_premium_fred_preparation/Steps/Step_02_specify-fred-integration-boundary-and-minimization-rules.md",
+    "02_Phases/Phase_10_premium_fred_preparation/Steps/Step_01_define-entitlements-and-base-vs-premium-contracts.md",
+    "02_Phases/Phase_10_premium_fred_preparation/Steps/Step_03_design-premium-workflow-concepts-without-base-coupling.md",
+    "02_Phases/Phase_09_sync_preparation/Steps/Step_03_validate-conflict-recovery-and-continuity-assumptions.md",
+    "02_Phases/Phase_08_product_hardening/Steps/Step_02_add-crash-handling-and-redaction-aware-telemetry-policy.md",
+    "02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa.md",
+    "02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs.md",
+    "02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context.md",
+    "02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_01_implement-pty-service-and-terminal-surface-contracts.md",
+    "02_Phases/Phase_09_sync_preparation/Phase.md",
+    "02_Phases/Phase_05_flagship_workflow/Steps/Step_04_compose-end-to-end-command-center-workflow.md",
+    "02_Phases/Phase_05_flagship_workflow/Steps/Step_03_build-calendar-detail-and-triage-surfaces.md",
+    "02_Phases/Phase_05_flagship_workflow/Steps/Step_02_implement-daily-briefing-artifact-pipeline.md",
+    "02_Phases/Phase_05_flagship_workflow/Steps/Step_01_define-today-workflow-inputs-outputs-and-acceptance-slice.md",
+    "02_Phases/Phase_04_first_integrations/Steps/Step_05_add-connector-status-and-freshness-ui.md",
+    "02_Phases/Phase_04_first_integrations/Steps/Step_04_resolve-teams-or-slack-wedge-and-implement-third-connector.md",
+    "02_Phases/Phase_04_first_integrations/Steps/Step_03_implement-outlook-calendar-connector-fixtures-and-freshness-hooks.md",
+    "02_Phases/Phase_04_first_integrations/Steps/Step_02_implement-jira-connector-fixtures-and-canonical-mapping.md",
+    "02_Phases/Phase_10_premium_fred_preparation/Steps",
+    "02_Phases/Phase_10_premium_fred_preparation",
+    "02_Phases/Phase_09_sync_preparation/Steps",
+    "02_Phases/Phase_09_sync_preparation",
+    "02_Phases/Phase_08_product_hardening/Steps",
+    "02_Phases/Phase_08_product_hardening",
+    "02_Phases/Phase_07_terminal_integration_hardening/Steps",
+    "02_Phases/Phase_07_terminal_integration_hardening",
+    "02_Phases/Phase_05_flagship_workflow/Steps",
+    "02_Phases/Phase_05_flagship_workflow"
+  ]
+}

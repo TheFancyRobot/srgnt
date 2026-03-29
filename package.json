@@ -1,0 +1,26 @@
+{
+  "name": "srgnt",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Desktop-first personal command center",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @srgnt/desktop test:e2e",
+    "test:e2e:packaged:linux": "pnpm --filter @srgnt/desktop test:e2e:packaged:linux",
+    "build": "pnpm -r build",
+    "release:check:repo": "pnpm --filter @srgnt/desktop build:icons && pnpm test && pnpm test:e2e && pnpm test:e2e:packaged:linux",
+    "release:artifacts:linux": "pnpm --filter @srgnt/desktop dist:linux && pnpm --filter @srgnt/desktop dist:rpm:fedora",
+    "release:rc:linux": "pnpm run release:check:repo && pnpm run release:artifacts:linux"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

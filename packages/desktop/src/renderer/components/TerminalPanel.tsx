@@ -225,7 +225,7 @@ function TerminalTabContent({
         // input from Ghostty WASM during init is ignored. Use captured
         // sessionId so this handler can only write to its own session.
         term.onData((data: string) => {
-          if (disposed) return;
+          if (disposed || !sessionIdRef.current) return;
           runSafe(TerminalIpc.write(sessionId, data));
         });
 
@@ -257,7 +257,7 @@ function TerminalTabContent({
         // Auto-fit on container resize and sync PTY dimensions
         fitAddon.observeResize();
         term.onResize(({ cols: c, rows: r }) => {
-          if (!disposed) {
+          if (!disposed && sessionIdRef.current) {
             runSafe(TerminalIpc.resize(sessionId, r, c));
           }
         });

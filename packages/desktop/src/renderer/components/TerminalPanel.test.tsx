@@ -4,6 +4,12 @@ import type { LaunchContext } from '@srgnt/contracts';
 import { TerminalPanel } from './TerminalPanel';
 
 vi.mock('ghostty-web', () => {
+  class MockGhostty {
+    static async load() {
+      return new MockGhostty();
+    }
+  }
+
   class MockTerminal {
     options: { fontSize: number; fontFamily: string };
     rows: number;
@@ -27,7 +33,7 @@ vi.mock('ghostty-web', () => {
   }
 
   return {
-    init: vi.fn().mockResolvedValue(undefined),
+    Ghostty: MockGhostty,
     Terminal: MockTerminal,
   };
 });

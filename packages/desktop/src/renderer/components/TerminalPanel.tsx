@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { init, Terminal } from 'ghostty-web';
+import ghosttyWasmUrl from 'ghostty-web/ghostty-vt.wasm?url';
+import { Ghostty, Terminal } from 'ghostty-web';
 import type { LaunchContext } from '@srgnt/contracts';
 import { TerminalIpc, runSafe, runUnsafe } from '../effects/terminal-ipc.js';
 
@@ -20,13 +21,13 @@ export interface TabInfo {
   denied: boolean;
 }
 
-let wasmReady: Promise<void> | null = null;
+let ghosttyReady: Promise<Ghostty> | null = null;
 
-function ensureWasmInit(): Promise<void> {
-  if (!wasmReady) {
-    wasmReady = init();
+function ensureGhosttyInit(): Promise<Ghostty> {
+  if (!ghosttyReady) {
+    ghosttyReady = Ghostty.load(ghosttyWasmUrl);
   }
-  return wasmReady;
+  return ghosttyReady;
 }
 
 function ApprovalPreview({
@@ -150,26 +151,28 @@ function TerminalTabContent({
 
     const setup = async () => {
       try {
-        await ensureWasmInit();
+        const ghostty = await ensureGhosttyInit();
+        if (disposed) return;
+
+        term = new Terminal({
+          ghostty,
+          cursorBlink: true,
+          fontSize: 13,
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          theme: {
+            background: '#1a1a1a',
+            foreground: '#e5e5e5',
+            cursor: '#e5e5e5',
+            selectionBackground: '#404040',
+          },
+          rows: 24,
+          cols: 80,
+        });
       } catch {
         return;
       }
 
       if (disposed) return;
-
-      term = new Terminal({
-        cursorBlink: true,
-        fontSize: 13,
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-        theme: {
-          background: '#1a1a1a',
-          foreground: '#e5e5e5',
-          cursor: '#e5e5e5',
-          selectionBackground: '#404040',
-        },
-        rows: 24,
-        cols: 80,
-      });
 
       term.open(container);
       termRef.current = term;

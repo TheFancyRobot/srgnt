@@ -4,9 +4,15 @@ export function Titlebar(): React.ReactElement {
   const [isMaximized, setIsMaximized] = React.useState(false);
 
   React.useEffect(() => {
-    window.srgnt.windowIsMaximized().then(setIsMaximized);
+    let mounted = true;
+    window.srgnt.windowIsMaximized().then((v) => {
+      if (mounted) setIsMaximized(v);
+    }).catch(() => {});
     const unsub = window.srgnt.onWindowMaximizedChange(setIsMaximized);
-    return unsub;
+    return () => {
+      mounted = false;
+      unsub();
+    };
   }, []);
 
   return (

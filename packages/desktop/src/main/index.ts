@@ -638,11 +638,10 @@ ipcMain.handle('window:minimize', () => {
 });
 
 ipcMain.handle('window:maximize', () => {
-  if (mainWindow?.isMaximized()) {
-    mainWindow.unmaximize();
-  } else {
-    mainWindow?.maximize();
-  }
+  const win = mainWindow;
+  if (!win) return;
+  if (win.isMaximized()) win.unmaximize();
+  else win.maximize();
 });
 
 ipcMain.handle('window:close', () => {

@@ -1,5 +1,5 @@
 import { Schema } from "@effect/schema";
-import { PositiveInt, StringRecord } from '../shared-schemas.js';
+import { PositiveInt } from '../shared-schemas.js';
 import { SLaunchContext } from '../entities/launch.js';
 
 export const ipcChannels = {
@@ -164,10 +164,6 @@ export const SApprovalResolveRequest = Schema.Struct({
 export type ApprovalResolveRequest = Schema.Schema.Type<typeof SApprovalResolveRequest>;
 
 export const STerminalSpawnRequest = Schema.Struct({
-  command: Schema.optional(Schema.String),
-  args: Schema.optionalWith(Schema.Array(Schema.String), { default: () => [] }),
-  env: Schema.optionalWith(StringRecord, { default: () => ({}) }),
-  cwd: Schema.optional(Schema.String),
   rows: Schema.optionalWith(PositiveInt, { default: () => 24 }),
   cols: Schema.optionalWith(PositiveInt, { default: () => 80 }),
 });

@@ -17,13 +17,28 @@ interface GitHubProviderConfig {
 
 type UpdateProviderConfig = GenericProviderConfig | GitHubProviderConfig;
 
+const GITHUB_SEGMENT_PATTERN = /^[A-Za-z0-9_.-]+$/;
+
 function nowIso(): string {
   return new Date().toISOString();
 }
 
+function isSafeUpdateUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isSafeGithubSegment(value: string): boolean {
+  return GITHUB_SEGMENT_PATTERN.test(value);
+}
+
 function resolveProviderConfig(channel: UpdateChannel): UpdateProviderConfig | null {
   const genericUrl = process.env.SRGNT_UPDATE_URL?.trim();
-  if (genericUrl) {
+  if (genericUrl && isSafeUpdateUrl(genericUrl)) {
     return {
       provider: 'generic',
       url: genericUrl,
@@ -33,7 +48,7 @@ function resolveProviderConfig(channel: UpdateChannel): UpdateProviderConfig | n
 
   const owner = process.env.SRGNT_UPDATE_OWNER?.trim();
   const repo = process.env.SRGNT_UPDATE_REPO?.trim();
-  if (owner && repo) {
+  if (owner && repo && isSafeGithubSegment(owner) && isSafeGithubSegment(repo)) {
     return {
       provider: 'github',
       owner,
@@ -62,7 +77,7 @@ export async function checkForUpdates(channel: UpdateChannel): Promise<UpdateChe
       status: 'skipped',
       channel,
       checkedAt: nowIso(),
-      message: 'No update provider configured. Set SRGNT_UPDATE_URL or SRGNT_UPDATE_OWNER/SRGNT_UPDATE_REPO.',
+      message: 'No valid update provider configured. Use an HTTPS SRGNT_UPDATE_URL or safe SRGNT_UPDATE_OWNER/SRGNT_UPDATE_REPO values.',
     };
   }
 

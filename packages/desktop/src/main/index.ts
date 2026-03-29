@@ -4,9 +4,18 @@ import * as path from 'node:path';
 import {
   ipcChannels,
   parseSync,
+  SApprovalResolveRequest,
+  SBriefingSaveRequest,
   SDesktopSettings,
+  SIpcApprovalRequest,
   SLaunchApprovalResolveRequest,
+  SRunHistoryGetRequest,
+  SRunLogSaveRequest,
+  STerminalCloseRequest,
   STerminalLaunchWithContextRequest,
+  STerminalResizeRequest,
+  STerminalSpawnRequest,
+  STerminalWriteRequest,
   type DesktopSettings,
   type TerminalLaunchWithContextRequest,
   type UpdateCheckResponse,
@@ -93,9 +102,47 @@ process.on('unhandledRejection', async (reason) => {
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const forceLocalRenderer = process.env.SRGNT_E2E === '1';
+const SAFE_STORAGE_STEM_PATTERN = /[^A-Za-z0-9_-]+/g;
 
 if (process.env.SRGNT_USER_DATA_PATH) {
   app.setPath('userData', process.env.SRGNT_USER_DATA_PATH);
+}
+
+function normalizeWorkspaceRootInput(root: string): string {
+  const trimmed = root.trim();
+  if (!trimmed) {
+    throw new Error('Workspace root is required.');
+  }
+  return trimmed;
+}
+
+function sanitizeStorageStem(value: string, fallback: string): string {
+  const sanitized = value
+    .trim()
+    .replace(SAFE_STORAGE_STEM_PATTERN, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120);
+
+  return sanitized || `${fallback}-${Date.now()}`;
+}
+
+function getManagedMarkdownPath(directory: 'runs' | 'artifacts', stem: string): string {
+  const root = workspaceRoot || app.getPath('userData');
+  const fileName = `${sanitizeStorageStem(stem, directory === 'runs' ? 'run' : 'artifact')}.md`;
+  return path.join(root, '.command-center', directory, fileName);
+}
+
+function hardenWindow(window: BrowserWindow): void {
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('will-attach-webview', (event) => {
+    event.preventDefault();
+  });
+  window.webContents.on('will-navigate', (event, url) => {
+    const currentUrl = window.webContents.getURL();
+    if (currentUrl && url !== currentUrl) {
+      event.preventDefault();
+    }
+  });
 }
 
 function createWindow(): void {
@@ -109,6 +156,7 @@ function createWindow(): void {
       sandbox: true,
     },
   });
+  hardenWindow(mainWindow);
 
   if (isDev && !forceLocalRenderer) {
     mainWindow.loadURL('http://localhost:5173');
@@ -232,7 +280,7 @@ ipcMain.handle(ipcChannels.appCheckForUpdates, async () => recordUpdateCheck());
 
 ipcMain.handle(ipcChannels.workspaceGetRoot, () => workspaceRoot);
 
-ipcMain.handle(ipcChannels.workspaceSetRoot, async (_event, root: string) => setWorkspaceRootInternal(root));
+ipcMain.handle(ipcChannels.workspaceSetRoot, async (_event, root: string) => setWorkspaceRootInternal(normalizeWorkspaceRootInput(root)));
 
 ipcMain.handle(ipcChannels.workspaceChooseRoot, async () => chooseWorkspaceRoot());
 
@@ -312,19 +360,29 @@ ipcMain.handle(ipcChannels.skillCancel, (_event, runId: string) => ({
   status: 'cancelled',
 }));
 
-ipcMain.handle(ipcChannels.approvalRequest, (_event, request: { id: string; capability: string; reason: string; requestedBy: string }) => {
+ipcMain.handle(ipcChannels.approvalRequest, (_event, rawRequest) => {
+  const request = parseSync(SIpcApprovalRequest, {
+    ...(rawRequest ?? {}),
+    requestedAt: new Date().toISOString(),
+  });
   approvalRequests.set(request.id, {
     ...request,
-    requestedAt: new Date().toISOString(),
   });
 });
 
-ipcMain.handle(ipcChannels.approvalResolve, (_event, payload: { id: string; approved: boolean }) => {
+ipcMain.handle(ipcChannels.approvalResolve, (_event, rawPayload) => {
+  const payload = parseSync(SApprovalResolveRequest, rawPayload);
   approvalRequests.delete(payload.id);
 });
 
-ipcMain.handle(ipcChannels.terminalSpawn, async (_event, options) => {
-  const { session } = await ptyService.spawn(options || {});
+ipcMain.handle(ipcChannels.terminalSpawn, async (_event, rawOptions) => {
+  const options = parseSync(STerminalSpawnRequest, rawOptions ?? {});
+  const { session } = await ptyService.spawn({
+    args: [],
+    env: {},
+    rows: options.rows,
+    cols: options.cols,
+  });
   ptyService.onData(session.id, (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('terminal:data', session.id, data);
@@ -338,15 +396,18 @@ ipcMain.handle(ipcChannels.terminalSpawn, async (_event, options) => {
   return { sessionId: session.id, pid: session.process.pid };
 });
 
-ipcMain.handle(ipcChannels.terminalWrite, (_event, payload: { sessionId: string; data: string }) => {
+ipcMain.handle(ipcChannels.terminalWrite, (_event, rawPayload) => {
+  const payload = parseSync(STerminalWriteRequest, rawPayload);
   ptyService.write(payload.sessionId, payload.data);
 });
 
-ipcMain.handle(ipcChannels.terminalResize, (_event, payload: { sessionId: string; rows: number; cols: number }) => {
+ipcMain.handle(ipcChannels.terminalResize, (_event, rawPayload) => {
+  const payload = parseSync(STerminalResizeRequest, rawPayload);
   ptyService.resize(payload.sessionId, payload.rows, payload.cols);
 });
 
-ipcMain.handle(ipcChannels.terminalClose, (_event, payload: { sessionId: string }) => {
+ipcMain.handle(ipcChannels.terminalClose, (_event, rawPayload) => {
+  const payload = parseSync(STerminalCloseRequest, rawPayload);
   ptyService.kill(payload.sessionId);
 });
 
@@ -428,9 +489,8 @@ ipcMain.handle(ipcChannels.terminalLaunchWithContext, async (_event, rawPayload)
 });
 
 async function writeRunLogToDisk(logId: string, markdown: string) {
-  const runsDir = path.join(workspaceRoot || app.getPath('userData'), '.command-center', 'runs');
-  await fs.mkdir(runsDir, { recursive: true });
-  const filePath = path.join(runsDir, `${logId}.md`);
+  const filePath = getManagedMarkdownPath('runs', logId);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, markdown, 'utf-8');
 }
 
@@ -508,7 +568,8 @@ ipcMain.handle(ipcChannels.runHistoryList, () => {
   };
 });
 
-ipcMain.handle(ipcChannels.runHistoryGet, (_event, request: { launchId: string }) => {
+ipcMain.handle(ipcChannels.runHistoryGet, (_event, rawRequest) => {
+  const request = parseSync(SRunHistoryGetRequest, rawRequest);
   const run = runLogService.getRun(request.launchId);
   if (!run) return { run: undefined };
   return {
@@ -525,20 +586,18 @@ ipcMain.handle(ipcChannels.runHistoryGet, (_event, request: { launchId: string }
   };
 });
 
-ipcMain.handle(ipcChannels.runLogSave, async (_event, request: { content: string; runId: string; launchId: string }) => {
-  const runsDir = path.join(workspaceRoot || app.getPath('userData'), '.command-center', 'runs');
-  await fs.mkdir(runsDir, { recursive: true });
-  const filename = `${request.runId}.md`;
-  const filePath = path.join(runsDir, filename);
+ipcMain.handle(ipcChannels.runLogSave, async (_event, rawRequest) => {
+  const request = parseSync(SRunLogSaveRequest, rawRequest);
+  const filePath = getManagedMarkdownPath('runs', request.runId);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, request.content, 'utf-8');
   return { path: filePath };
 });
 
-ipcMain.handle(ipcChannels.briefingSave, async (_event, request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }) => {
-  const artifactsDir = path.join(workspaceRoot || app.getPath('userData'), '.command-center', 'artifacts');
-  await fs.mkdir(artifactsDir, { recursive: true });
-  const filename = `${request.metadata.id}.md`;
-  const filePath = path.join(artifactsDir, filename);
+ipcMain.handle(ipcChannels.briefingSave, async (_event, rawRequest) => {
+  const request = parseSync(SBriefingSaveRequest, rawRequest);
+  const filePath = getManagedMarkdownPath('artifacts', request.metadata.id);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, request.content, 'utf-8');
   return { path: filePath };
 });

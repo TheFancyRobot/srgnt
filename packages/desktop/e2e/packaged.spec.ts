@@ -35,7 +35,7 @@ test('launches the packaged Linux build and shows first-run onboarding', async (
     expect(appState.userDataPath).toBe(userDataDir);
 
     const rendererState = await page.evaluate(() => ({
-      hasApi: typeof window.srgnt?.getAppVersion === 'function',
+      hasApi: typeof window.srgnt?.getWorkspaceRoot === 'function',
       hasProcess: typeof globalThis.process !== 'undefined',
       hasRequire: typeof globalThis.require !== 'undefined',
     }));

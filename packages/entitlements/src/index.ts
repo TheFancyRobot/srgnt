@@ -1,9 +1,5 @@
 import { Schema } from '@effect/schema';
-import { NumberRecord } from '@srgnt/contracts';
-
-const datetimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
-
-const SDateTimeString = Schema.String.pipe(Schema.pattern(datetimePattern));
+import { NumberRecord, DateTimeISOString } from '@srgnt/contracts';
 
 export const SEntitlementTier = Schema.Literal('free', 'premium', 'enterprise');
 export type EntitlementTier = Schema.Schema.Type<typeof SEntitlementTier>;
@@ -21,8 +17,8 @@ export type Entitlement = Schema.Schema.Type<typeof SEntitlement>;
 export const SEntitlementGrant = Schema.Struct({
   userId: Schema.String,
   entitlementId: Schema.String,
-  grantedAt: SDateTimeString,
-  expiresAt: Schema.optional(SDateTimeString),
+  grantedAt: DateTimeISOString,
+  expiresAt: Schema.optional(DateTimeISOString),
   source: Schema.optionalWith(Schema.Literal('purchase', 'trial', 'promotion', 'system'), {
     default: () => 'system' as const,
   }),

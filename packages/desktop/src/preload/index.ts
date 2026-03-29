@@ -7,6 +7,10 @@ import type {
   UpdateCheckResponse,
 } from '@srgnt/contracts';
 
+// NOTE: ipcChannels must be inlined here — the preload runs with sandbox: true,
+// which restricts require() to Electron built-ins only. Importing runtime values
+// from npm packages (like @srgnt/contracts) crashes the preload silently.
+// The canonical definition lives in @srgnt/contracts/src/ipc/contracts.ts.
 const ipcChannels = {
   appGetVersion: 'app:get-version',
   appGetUserDataPath: 'app:get-user-data-path',
@@ -32,6 +36,11 @@ const ipcChannels = {
   terminalClose: 'terminal:close',
   terminalList: 'terminal:list',
   terminalLaunchWithContext: 'terminal:launch-with-context',
+  launchApprovalRequired: 'launch:approval-required',
+  launchApprovalResolve: 'launch:approval-resolve',
+  runHistoryList: 'run-history:list',
+  runHistoryGet: 'run-history:get',
+  runLogSave: 'run-log:save',
   entitiesList: 'entities:list',
   briefingSave: 'briefing:save',
   briefingList: 'briefing:list',
@@ -87,6 +96,17 @@ const api = {
     ipcRenderer.invoke(ipcChannels.terminalList),
   terminalLaunchWithContext: (request: TerminalLaunchWithContextRequest): Promise<TerminalLaunchWithContextResponse> =>
     ipcRenderer.invoke(ipcChannels.terminalLaunchWithContext, request),
+  runHistoryList: (): Promise<{ runs: { id: string; launchId: string; command: string; startTime: string; endTime?: string; exitCode?: number; outputSummary: string; redactedFields: string[] }[] }> =>
+    ipcRenderer.invoke(ipcChannels.runHistoryList),
+  runHistoryGet: (launchId: string): Promise<{ run?: { id: string; launchId: string; command: string; startTime: string; endTime?: string; exitCode?: number; outputSummary: string; redactedFields: string[] } }> =>
+    ipcRenderer.invoke(ipcChannels.runHistoryGet, { launchId }),
+  onLaunchApprovalRequired: (callback: (payload: { approvalId: string; launchContext: TerminalLaunchWithContextRequest['launchContext']; command: string; riskLevel: string }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: { approvalId: string; launchContext: TerminalLaunchWithContextRequest['launchContext']; command: string; riskLevel: string }) => callback(payload);
+    ipcRenderer.on(ipcChannels.launchApprovalRequired, handler);
+    return () => ipcRenderer.removeListener(ipcChannels.launchApprovalRequired, handler);
+  },
+  resolveLaunchApproval: (approvalId: string, approved: boolean): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.launchApprovalResolve, { approvalId, approved }),
   onTerminalData: (callback: (sessionId: string, data: string) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, sessionId: string, data: string) => callback(sessionId, data);
     ipcRenderer.on('terminal:data', handler);

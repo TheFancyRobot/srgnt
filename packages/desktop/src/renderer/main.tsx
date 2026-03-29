@@ -422,9 +422,11 @@ function App(): React.ReactElement {
       case 'today':
         return <TodayView onLaunchContext={handleLaunchContext} />;
       case 'calendar':
-        return <CalendarView />;
+        return <CalendarView onLaunchContext={handleLaunchContext} />;
       case 'terminal':
-        return <TerminalPanel className="h-[calc(100vh-3rem)]" launchContext={pendingLaunchContext} />;
+        return (
+          <TerminalPanel className="h-full w-full" launchContext={pendingLaunchContext} />
+        );
       case 'connectors':
         return (
           <ConnectorStatusPanel
@@ -467,7 +469,7 @@ function App(): React.ReactElement {
   };
 
   return (
-    <AppLayout activeId={currentView} onNavigate={handleNavigate} date={dateStr}>
+    <AppLayout activeId={currentView} onNavigate={handleNavigate} date={dateStr} fullBleed={currentView === 'terminal'}>
       {renderContent()}
     </AppLayout>
   );

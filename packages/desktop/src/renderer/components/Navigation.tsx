@@ -138,9 +138,10 @@ export interface AppLayoutProps {
   activeId?: string;
   onNavigate?: (id: string) => void;
   date?: string;
+  fullBleed?: boolean;
 }
 
-export function AppLayout({ children, activeId, onNavigate, date }: AppLayoutProps): React.ReactElement {
+export function AppLayout({ children, activeId, onNavigate, date, fullBleed = false }: AppLayoutProps): React.ReactElement {
   return (
     <div className="flex h-screen bg-surface-secondary grain">
       {/* Sidebar */}
@@ -181,8 +182,8 @@ export function AppLayout({ children, activeId, onNavigate, date }: AppLayoutPro
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto scrollbar-thin">
-        <div className="max-w-4xl mx-auto px-8 py-6">
+      <main className={`flex-1 min-w-0 min-h-0 ${fullBleed ? 'overflow-hidden' : 'overflow-auto scrollbar-thin'}`}>
+        <div className={fullBleed ? 'h-full' : 'max-w-4xl mx-auto px-8 py-6'}>
           {children}
         </div>
       </main>

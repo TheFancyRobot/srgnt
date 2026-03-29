@@ -5,12 +5,13 @@ import {
   ipcChannels,
   parseSync,
   SDesktopSettings,
+  SLaunchApprovalResolveRequest,
   STerminalLaunchWithContextRequest,
   type DesktopSettings,
   type TerminalLaunchWithContextRequest,
   type UpdateCheckResponse,
 } from '@srgnt/contracts';
-import { CanonicalStore } from '@srgnt/runtime';
+import { CanonicalStore, createRunLogService, createApprovalService, redactEnv, truncateOutput, DEFAULT_REDACTION_POLICY } from '@srgnt/runtime';
 import { taskFixtures, eventFixtures, messageFixtures } from '@srgnt/contracts';
 import { createPtySessionManager } from './pty/session-manager.js';
 import { createPtyService } from './pty/node-pty-service.js';
@@ -70,6 +71,9 @@ for (const message of messageFixtures) {
 
 const sessionManager = createPtySessionManager();
 const ptyService = createPtyService({ sessionManager });
+const runLogService = createRunLogService();
+const approvalService = createApprovalService();
+const pendingLaunches = new Map<string, { resolve: (approved: boolean) => void }>();
 const crashReporter = createCrashReporter();
 crashReporter.start();
 
@@ -355,8 +359,89 @@ ipcMain.handle(ipcChannels.terminalList, () => ({
   })),
 }));
 
-ipcMain.handle(ipcChannels.terminalLaunchWithContext, async (_event, request: TerminalLaunchWithContextRequest) => {
-  const { launchContext, rows, cols } = parseSync(STerminalLaunchWithContextRequest, request);
+ipcMain.handle(ipcChannels.terminalLaunchWithContext, async (_event, rawPayload) => {
+  const payload = parseSync(STerminalLaunchWithContextRequest, rawPayload);
+  const { launchContext, rows = 24, cols = 80 } = payload;
+
+  const intent = launchContext.intent ?? 'artifactAffecting';
+  const requiresApproval = intent === 'artifactAffecting';
+
+  if (requiresApproval) {
+    const template = {
+      id: `terminal-direct-${Date.now()}`,
+      name: 'Terminal Command',
+      description: `Direct terminal command: ${launchContext.command || 'bash'}`,
+      command: launchContext.command || 'bash',
+      args: [],
+      intent: 'artifactAffecting' as const,
+      requiredCapabilities: [],
+    };
+
+    const approval = approvalService.requestApproval(launchContext, template);
+
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      return {
+        sessionId: '',
+        pid: 0,
+        launchId: launchContext.launchId,
+        status: 'approval-pending',
+        approvalId: approval.id,
+      };
+    }
+
+    mainWindow.webContents.send(ipcChannels.launchApprovalRequired, {
+      approvalId: approval.id,
+      launchContext,
+      command: launchContext.command || 'bash',
+      riskLevel: 'high',
+      requiresApproval: true,
+    });
+
+    return new Promise<{
+      sessionId: string;
+      pid: number;
+      launchId: string;
+      status: 'approved' | 'denied';
+    }>((resolve) => {
+      pendingLaunches.set(approval.id, {
+        resolve: (approved: boolean) => {
+          pendingLaunches.delete(approval.id);
+          if (!approved) {
+            resolve({ sessionId: '', pid: 0, launchId: launchContext.launchId, status: 'denied' });
+            return;
+          }
+          launchApproved(launchContext, rows, cols).then((result) => resolve(result));
+        },
+      });
+
+      setTimeout(() => {
+        if (pendingLaunches.has(approval.id)) {
+          pendingLaunches.delete(approval.id);
+          approvalService.deny(approval.id);
+          resolve({ sessionId: '', pid: 0, launchId: launchContext.launchId, status: 'denied' });
+        }
+      }, 5 * 60 * 1000);
+    });
+  }
+
+  return launchApproved(launchContext, rows, cols);
+});
+
+async function writeRunLogToDisk(logId: string, markdown: string) {
+  const runsDir = path.join(workspaceRoot || app.getPath('userData'), '.command-center', 'runs');
+  await fs.mkdir(runsDir, { recursive: true });
+  const filePath = path.join(runsDir, `${logId}.md`);
+  await fs.writeFile(filePath, markdown, 'utf-8');
+}
+
+async function launchApproved(
+  launchContext: TerminalLaunchWithContextRequest['launchContext'],
+  rows: number,
+  cols: number
+): Promise<{ sessionId: string; pid: number; launchId: string; status: 'approved' }> {
+  const log = runLogService.startRun(launchContext.launchId, launchContext, launchContext.command || 'bash');
+  await writeRunLogToDisk(log.id, runLogService.toMarkdown(log));
+
   const { session } = await ptyService.spawn({
     command: launchContext.command,
     args: [],
@@ -365,22 +450,89 @@ ipcMain.handle(ipcChannels.terminalLaunchWithContext, async (_event, request: Te
     rows,
     cols,
   });
+
   ptyService.onData(session.id, (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('terminal:data', session.id, data);
     }
   });
-  ptyService.onExit(session.id, (exitCode) => {
+
+  ptyService.onExit(session.id, async (exitCode) => {
+    const output = '';
+    const completedLog = runLogService.completeRun(launchContext.launchId, exitCode, output);
+    if (completedLog) {
+      const redactedOutput = redactEnv(runLogService.getRun(launchContext.launchId)?.context.env || {}, DEFAULT_REDACTION_POLICY);
+      completedLog.outputSummary = truncateOutput(output, 500);
+      completedLog.redactedFields = redactedOutput.redactedFields;
+      await writeRunLogToDisk(completedLog.id, runLogService.toMarkdown(completedLog));
+    }
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('terminal:exit', session.id, exitCode);
     }
   });
-  return { sessionId: session.id, pid: session.process.pid, launchId: launchContext.launchId };
+
+  return { sessionId: session.id, pid: session.process.pid, launchId: launchContext.launchId, status: 'approved' };
+}
+
+ipcMain.handle(ipcChannels.launchApprovalResolve, (_event, rawPayload) => {
+  const payload = parseSync(SLaunchApprovalResolveRequest, rawPayload);
+  const pending = pendingLaunches.get(payload.approvalId);
+  if (pending) {
+    if (payload.approved) {
+      approvalService.approve(payload.approvalId);
+    } else {
+      approvalService.deny(payload.approvalId);
+    }
+    pending.resolve(payload.approved);
+  }
+  return { resolved: !!pending };
 });
 
 ipcMain.handle(ipcChannels.entitiesList, () => ({
   entities: canonicalStore.listEntities(),
 }));
+
+ipcMain.handle(ipcChannels.runHistoryList, () => {
+  const runs = runLogService.listRuns();
+  return {
+    runs: runs.map((r) => ({
+      id: r.id,
+      launchId: r.launchId,
+      command: r.command,
+      startTime: r.startTime.toISOString(),
+      endTime: r.endTime?.toISOString(),
+      exitCode: r.exitCode,
+      outputSummary: r.outputSummary,
+      redactedFields: r.redactedFields,
+    })),
+  };
+});
+
+ipcMain.handle(ipcChannels.runHistoryGet, (_event, request: { launchId: string }) => {
+  const run = runLogService.getRun(request.launchId);
+  if (!run) return { run: undefined };
+  return {
+    run: {
+      id: run.id,
+      launchId: run.launchId,
+      command: run.command,
+      startTime: run.startTime.toISOString(),
+      endTime: run.endTime?.toISOString(),
+      exitCode: run.exitCode,
+      outputSummary: run.outputSummary,
+      redactedFields: run.redactedFields,
+    },
+  };
+});
+
+ipcMain.handle(ipcChannels.runLogSave, async (_event, request: { content: string; runId: string; launchId: string }) => {
+  const runsDir = path.join(workspaceRoot || app.getPath('userData'), '.command-center', 'runs');
+  await fs.mkdir(runsDir, { recursive: true });
+  const filename = `${request.runId}.md`;
+  const filePath = path.join(runsDir, filename);
+  await fs.writeFile(filePath, request.content, 'utf-8');
+  return { path: filePath };
+});
 
 ipcMain.handle(ipcChannels.briefingSave, async (_event, request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }) => {
   const artifactsDir = path.join(workspaceRoot || app.getPath('userData'), '.command-center', 'artifacts');

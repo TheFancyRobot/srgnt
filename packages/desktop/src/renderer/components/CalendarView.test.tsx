@@ -1,8 +1,46 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { CalendarView } from './CalendarView';
 
 describe('CalendarView', () => {
+  beforeEach(() => {
+    window.srgnt = {
+      getAppVersion: vi.fn(),
+      getUserDataPath: vi.fn(),
+      checkForUpdates: vi.fn(),
+      getWorkspaceRoot: vi.fn().mockResolvedValue('/workspace/demo'),
+      setWorkspaceRoot: vi.fn(),
+      chooseWorkspaceRoot: vi.fn(),
+      createDefaultWorkspaceRoot: vi.fn(),
+      listConnectors: vi.fn(),
+      getConnectorStatus: vi.fn(),
+      connectConnector: vi.fn(),
+      disconnectConnector: vi.fn(),
+      getDesktopSettings: vi.fn(),
+      saveDesktopSettings: vi.fn(),
+      listSkills: vi.fn(),
+      runSkill: vi.fn(),
+      cancelSkill: vi.fn(),
+      requestApproval: vi.fn(),
+      resolveApproval: vi.fn(),
+      terminalSpawn: vi.fn(),
+      terminalWrite: vi.fn(),
+      terminalResize: vi.fn(),
+      terminalClose: vi.fn(),
+      terminalList: vi.fn(),
+      onTerminalData: vi.fn(),
+      onTerminalExit: vi.fn(),
+      terminalLaunchWithContext: vi.fn(),
+      onLaunchApprovalRequired: vi.fn(),
+      resolveLaunchApproval: vi.fn(),
+      runHistoryList: vi.fn(),
+      runHistoryGet: vi.fn(),
+      listEntities: vi.fn(),
+      saveBriefing: vi.fn(),
+      listBriefings: vi.fn(),
+      writeDiagnosticCrashLog: vi.fn(),
+    };
+  });
   it('renders the calendar header with date', () => {
     render(<CalendarView />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Calendar');
@@ -59,5 +97,25 @@ describe('CalendarView', () => {
   it('shows attendee count in agenda', () => {
     render(<CalendarView />);
     expect(screen.getByText(/Sarah K., Mike R/)).toBeInTheDocument();
+  });
+
+  it('builds a launch context for the first triage event', async () => {
+    const onLaunchContext = vi.fn().mockResolvedValue(undefined);
+
+    render(<CalendarView onLaunchContext={onLaunchContext} />);
+
+    const launchButtons = screen.getAllByRole('button', { name: /Launch/i });
+    fireEvent.click(launchButtons[0]!);
+
+    await waitFor(() => expect(onLaunchContext).toHaveBeenCalledTimes(1));
+
+    expect(onLaunchContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceWorkflow: 'calendar-triage',
+        sourceArtifactId: 'e1',
+        workingDirectory: '/workspace/demo',
+        intent: 'artifactAffecting',
+      }),
+    );
   });
 });

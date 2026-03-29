@@ -5,14 +5,21 @@ contract_version: 1
 title: Harden Previews Approvals And Run Logs
 step_id: STEP-07-03
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
-status: scaffolded
+status: complete
 owner: ''
 created: '2026-03-21'
-updated: '2026-03-28'
+updated: '2026-03-29'
 depends_on:
   - STEP-07-01
   - STEP-07-02
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-03-29-053301-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-053301 opencode session for Harden Previews Approvals And Run Logs]]'
+  - '[[05_Sessions/2026-03-29-132728-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-132728 Session for Harden Previews Approvals And Run Logs]]'
+  - '[[05_Sessions/2026-03-29-134622-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-134622 Session for Harden Previews Approvals And Run Logs]]'
+  - '[[05_Sessions/2026-03-29-142825-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-142825 opencode session for Harden Previews Approvals And Run Logs]]'
+  - '[[05_Sessions/2026-03-29-150444-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-150444 OpenCode session for Harden Previews Approvals And Run Logs]]'
+  - '[[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]]'
+  - '[[05_Sessions/2026-03-29-155208-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-155208 opencode session for Harden Previews Approvals And Run Logs]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -60,10 +67,12 @@ Add the trust and audit features required once terminal launches can affect user
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: scaffolded
-- Current owner:
-- Last touched: 2026-03-22
-- Next action: Replace the current scaffolding with the promised implementation and verification path.
+- Status: in-progress
+- Current owner: opencode
+- Last touched: 2026-03-29
+- Next action: Complete manual end-to-end validation of approval flow
+- Completed: approval gate in main/index.ts, ApprovalPreview component in TerminalPanel.tsx, approval IPC events, run log persistence to .command-center/runs/ as markdown, runLogSave IPC channel and schema, approval path schema tests
+- Remaining: manual end-to-end validation
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -120,8 +129,15 @@ A junior dev verifies completeness by:
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-03-29 - [[05_Sessions/2026-03-29-053301-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-053301 opencode session for Harden Previews Approvals And Run Logs]] - Fixed main/index.ts, added approval flow, added ApprovalPreview component
+- 2026-03-29 - [[05_Sessions/2026-03-29-132728-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-132728]] - Added run log persistence, IPC channel, schema tests, approval path tests
+- 2026-03-29 - [[05_Sessions/2026-03-29-134622-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-134622 Session for Harden Previews Approvals And Run Logs]] - Session created.
+- 2026-03-29 - [[05_Sessions/2026-03-29-142825-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-142825 opencode session for Harden Previews Approvals And Run Logs]] - Session created.
+- 2026-03-29 - [[05_Sessions/2026-03-29-150444-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-150444 OpenCode session for Harden Previews Approvals And Run Logs]] - Session created.
+- 2026-03-29 - [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - Session created.
+- 2026-03-29 - [[05_Sessions/2026-03-29-155208-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-155208 opencode session for Harden Previews Approvals And Run Logs]] - Session created.
 <!-- AGENT-END:step-session-history -->
+- 2026-03-29 - [[05_Sessions/2026-03-29-155208-harden-previews-approvals-and-run-logs-opencode|SESSION-2026-03-29-155208]] - Implemented tabbed terminal sessions, multi-tab support, real-time run log writes on start.
 
 ## Outcome Summary
 

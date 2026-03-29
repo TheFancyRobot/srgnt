@@ -7,7 +7,7 @@ phase_id: PHASE-07
 status: partial
 owner: ''
 created: '2026-03-21'
-updated: '2026-03-28'
+updated: '2026-03-29'
 depends_on:
   - '[[02_Phases/Phase_05_flagship_workflow/Phase|PHASE-05 Flagship Workflow]]'
 related_architecture:
@@ -17,6 +17,7 @@ related_decisions:
   - '[[04_Decisions/DEC-0001_use-desktop-first-product-boundary-for-phase-01|DEC-0001 Desktop-first product boundary]]'
 related_bugs:
   - '[[03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app|BUG-0002 Today View launch flow fails in live desktop app]]'
+  - '[[03_Bugs/BUG-0003_today-view-launch-hardcodes-intent-readonly-bypassing-approval-preview|BUG-0003 Today View launch hardcodes intent: readOnly bypassing approval preview]]'
 tags:
   - agent-vault
   - phase
@@ -84,6 +85,7 @@ Harden the embedded terminal and agent-launch workflow so it fits the same privi
 
 <!-- AGENT-START:phase-related-bugs -->
 - [[03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app|BUG-0002 Today View launch flow fails in live desktop app]]
+- [[03_Bugs/BUG-0003_today-view-launch-hardcodes-intent-readonly-bypassing-approval-preview|BUG-0003 Today View launch hardcodes intent: readOnly bypassing approval preview]]
 <!-- AGENT-END:phase-related-bugs -->
 
 ## Steps

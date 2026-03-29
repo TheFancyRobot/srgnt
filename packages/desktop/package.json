@@ -17,7 +17,7 @@
     "test:e2e": "pnpm run build && playwright test e2e/app.spec.ts",
     "test:e2e:headed": "pnpm run build && playwright test e2e/app.spec.ts --headed",
     "test:e2e:packaged:linux": "pnpm run pack && playwright test e2e/packaged.spec.ts",
-    "dev": "concurrently -k -n vite,electron \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "pnpm run build:main && pnpm run build:preload && concurrently -k -n vite,electron \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "dev:electron": "electron .",
     "dev:renderer": "vite",
     "build:icons": "./scripts/build-icons.sh",

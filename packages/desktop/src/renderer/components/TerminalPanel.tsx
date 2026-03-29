@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import ghosttyWasmUrl from 'ghostty-web/ghostty-vt.wasm?url';
-import { Ghostty, Terminal } from 'ghostty-web';
+import { Ghostty, Terminal, FitAddon } from 'ghostty-web';
 import type { LaunchContext } from '@srgnt/contracts';
 import { TerminalIpc, runSafe, runUnsafe } from '../effects/terminal-ipc.js';
 
@@ -94,31 +94,6 @@ function ApprovalPreview({
   );
 }
 
-function measureTerminal(term: Terminal, container: HTMLDivElement) {
-  const style = window.getComputedStyle(container);
-  const paddingLeft = parseFloat(style.paddingLeft) || 0;
-  const paddingRight = parseFloat(style.paddingRight) || 0;
-  const paddingTop = parseFloat(style.paddingTop) || 0;
-  const paddingBottom = parseFloat(style.paddingBottom) || 0;
-  const availableWidth = container.clientWidth - paddingLeft - paddingRight;
-  const availableHeight = container.clientHeight - paddingTop - paddingBottom;
-  if (availableWidth <= 0 || availableHeight <= 0) return;
-
-  const testChar = 'M';
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  ctx.font = `${term.options.fontSize}px ${term.options.fontFamily}`;
-  const charWidth = ctx.measureText(testChar).width;
-  const charHeight = term.options.fontSize * 1.4;
-
-  const cols = Math.max(1, Math.floor(availableWidth / charWidth));
-  const rows = Math.max(1, Math.floor(availableHeight / charHeight));
-
-  if (cols !== term.cols || rows !== term.rows) {
-    term.resize(cols, rows);
-  }
-}
 
 interface TerminalTabContentProps {
   tabId: string;
@@ -139,6 +114,7 @@ function TerminalTabContent({
 }: TerminalTabContentProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const cleanupRef = useRef<(() => void)[]>([]);
 
@@ -147,6 +123,7 @@ function TerminalTabContent({
     if (!container) return;
 
     let term: Terminal;
+    let fitAddon: FitAddon;
     let disposed = false;
 
     const setup = async () => {
@@ -174,15 +151,17 @@ function TerminalTabContent({
 
       if (disposed) return;
 
+      container.replaceChildren();
       term.open(container);
+      // Clear stale framebuffer pixels from shared Ghostty WASM instance
+      term.write('\x1b[2J\x1b[H');
       termRef.current = term;
 
-      term.onData((data: string) => {
-        const sid = sessionIdRef.current;
-        if (sid) {
-          runSafe(TerminalIpc.write(sid, data));
-        }
-      });
+      // Use Ghostty's FitAddon for proper sizing with real font metrics
+      fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+      fitAddonRef.current = fitAddon;
+      fitAddon.fit();
 
       const cleanupApprovalEvent = window.srgnt.onLaunchApprovalRequired((payload) => {
         if (disposed) return;
@@ -242,6 +221,14 @@ function TerminalTabContent({
         sessionIdRef.current = sessionId;
         onConnected(tabId, sessionId);
 
+        // Register onData AFTER session is established so any spurious
+        // input from Ghostty WASM during init is ignored. Use captured
+        // sessionId so this handler can only write to its own session.
+        term.onData((data: string) => {
+          if (disposed) return;
+          runSafe(TerminalIpc.write(sessionId, data));
+        });
+
         const cleanupData = window.srgnt.onTerminalData((sid, data) => {
           if (sid === sessionId && term && !disposed) {
             term.write(data);
@@ -258,10 +245,20 @@ function TerminalTabContent({
 
         cleanupRef.current = [cleanupData, cleanupExit, cleanupApprovalEvent];
 
+        // Fit terminal to container using real font metrics, sync PTY
         requestAnimationFrame(() => {
-          if (!disposed && container) {
-            measureTerminal(term, container);
+          if (!disposed && fitAddon) {
+            fitAddon.fit();
+            runSafe(TerminalIpc.resize(sessionId, term.rows, term.cols));
             term.focus();
+          }
+        });
+
+        // Auto-fit on container resize and sync PTY dimensions
+        fitAddon.observeResize();
+        term.onResize(({ cols: c, rows: r }) => {
+          if (!disposed) {
+            runSafe(TerminalIpc.resize(sessionId, r, c));
           }
         });
       } catch (error) {
@@ -273,29 +270,22 @@ function TerminalTabContent({
 
     setup();
 
-    const resizeObserver = new ResizeObserver(() => {
-      if (termRef.current && container && !disposed) {
-        measureTerminal(termRef.current, container);
-        const sid = sessionIdRef.current;
-        if (sid) {
-          runSafe(TerminalIpc.resize(sid, termRef.current.rows, termRef.current.cols));
-        }
-      }
-    });
-    resizeObserver.observe(container);
-
     return () => {
       disposed = true;
-      resizeObserver.disconnect();
       cleanupRef.current.forEach((fn) => fn());
       const activeSessionId = sessionIdRef.current;
       if (activeSessionId) {
         runSafe(TerminalIpc.close(activeSessionId));
       }
+      if (fitAddonRef.current) {
+        fitAddonRef.current.dispose();
+        fitAddonRef.current = null;
+      }
       if (termRef.current) {
         termRef.current.dispose();
         termRef.current = null;
       }
+      container.replaceChildren();
       sessionIdRef.current = null;
     };
   }, [tabId, launchContext, onConnected, onExited, onApprovalRequired, onDenied]);
@@ -304,7 +294,8 @@ function TerminalTabContent({
     <div
       ref={containerRef}
       data-testid="terminal-host"
-      className="flex-1 overflow-hidden min-h-0"
+      style={{ caretColor: 'transparent' }}
+      className="flex-1 overflow-hidden min-h-0 p-2"
     />
   );
 }

@@ -23,6 +23,8 @@ vi.mock('ghostty-web', () => {
 
     open() {}
     onData() {}
+    onResize() {}
+    loadAddon() {}
     resize(cols: number, rows: number) {
       this.cols = cols;
       this.rows = rows;
@@ -32,9 +34,18 @@ vi.mock('ghostty-web', () => {
     focus() {}
   }
 
+  class MockFitAddon {
+    activate() {}
+    dispose() {}
+    fit() {}
+    proposeDimensions() { return undefined; }
+    observeResize() {}
+  }
+
   return {
     Ghostty: MockGhostty,
     Terminal: MockTerminal,
+    FitAddon: MockFitAddon,
   };
 });
 

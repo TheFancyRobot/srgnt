@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Desktop-first personal command center",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE.md",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "typecheck": "pnpm -r typecheck",

@@ -67,6 +67,7 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 - 21:44 - Pivoted to documenting the remaining external sign-off work: creating reusable platform validation checklists for Windows, macOS x86_64, macOS arm64, and Linux `.deb` packages so real-machine verification can happen in a clean follow-on phase.
 - 21:49 - Added a reusable platform runbook note for Windows, macOS x86_64, macOS arm64, and Linux `.deb` validation, then linked it from the release process/checklist so the next real-machine phase has a concrete playbook to execute.
 - 21:55 - Tried to prepare the requested commit, but `/home/gimbo/dev/srgnt` is not a git repository, so no commit could be created here. Continued with the non-blocked work by creating PHASE-11 and STEP-11-01 for real-machine validation.
+- 22:05 - Added an interim `LICENSE.md` using Business Source License 1.1 with a paid-competition restriction and updated the root package metadata to point at the new license file.
 
 ## Findings
 

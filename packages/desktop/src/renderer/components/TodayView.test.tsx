@@ -5,41 +5,8 @@ import { TodayView } from './TodayView';
 describe('TodayView', () => {
   beforeEach(() => {
     window.srgnt = {
-      getAppVersion: vi.fn(),
-      getUserDataPath: vi.fn(),
-      checkForUpdates: vi.fn(),
       getWorkspaceRoot: vi.fn().mockResolvedValue('/workspace/demo'),
-      setWorkspaceRoot: vi.fn(),
-      chooseWorkspaceRoot: vi.fn(),
-      createDefaultWorkspaceRoot: vi.fn(),
-      listConnectors: vi.fn(),
-      getConnectorStatus: vi.fn(),
-      connectConnector: vi.fn(),
-      disconnectConnector: vi.fn(),
-      getDesktopSettings: vi.fn(),
-      saveDesktopSettings: vi.fn(),
-      listSkills: vi.fn(),
-      runSkill: vi.fn(),
-      cancelSkill: vi.fn(),
-      requestApproval: vi.fn(),
-      resolveApproval: vi.fn(),
-      terminalSpawn: vi.fn(),
-      terminalWrite: vi.fn(),
-      terminalResize: vi.fn(),
-      terminalClose: vi.fn(),
-      terminalList: vi.fn(),
-      onTerminalData: vi.fn(),
-      onTerminalExit: vi.fn(),
-      terminalLaunchWithContext: vi.fn(),
-      onLaunchApprovalRequired: vi.fn(),
-      resolveLaunchApproval: vi.fn(),
-      runHistoryList: vi.fn(),
-      runHistoryGet: vi.fn(),
-      listEntities: vi.fn(),
-      saveBriefing: vi.fn(),
-      listBriefings: vi.fn(),
-      writeDiagnosticCrashLog: vi.fn(),
-    };
+    } as unknown as typeof window.srgnt;
   });
 
   it('builds a launch context for the selected task', async () => {

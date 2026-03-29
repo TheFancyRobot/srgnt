@@ -57,8 +57,6 @@ export interface DesktopConnectorState {
 }
 
 const api = {
-  getAppVersion: (): Promise<string> => ipcRenderer.invoke(ipcChannels.appGetVersion),
-  getUserDataPath: (): Promise<string> => ipcRenderer.invoke(ipcChannels.appGetUserDataPath),
   checkForUpdates: (): Promise<UpdateCheckResponse> => ipcRenderer.invoke(ipcChannels.appCheckForUpdates),
 
   getWorkspaceRoot: (): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceGetRoot),
@@ -67,24 +65,13 @@ const api = {
   createDefaultWorkspaceRoot: (): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceCreateDefaultRoot),
 
   listConnectors: (): Promise<{ connectors: DesktopConnectorState[] }> => ipcRenderer.invoke(ipcChannels.connectorList),
-  getConnectorStatus: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorStatus, id),
   connectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorConnect, id),
   disconnectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorDisconnect, id),
 
   getDesktopSettings: (): Promise<DesktopSettingsResponse> => ipcRenderer.invoke(ipcChannels.settingsGet),
   saveDesktopSettings: (settings: DesktopSettings): Promise<DesktopSettingsResponse> => ipcRenderer.invoke(ipcChannels.settingsSave, settings),
 
-  listSkills: (): Promise<{ skills: { name: string; version: string }[] }> => ipcRenderer.invoke(ipcChannels.skillList),
-  runSkill: (skillName: string, skillVersion: string, parameters?: Record<string, unknown>): Promise<{ runId: string; status: string }> =>
-    ipcRenderer.invoke(ipcChannels.skillRun, { skillName, skillVersion, parameters }),
-  cancelSkill: (runId: string): Promise<{ runId: string; status: string }> => ipcRenderer.invoke(ipcChannels.skillCancel, runId),
-
-  requestApproval: (request: { id: string; capability: string; reason: string; requestedBy: string }): Promise<void> =>
-    ipcRenderer.invoke(ipcChannels.approvalRequest, request),
-  resolveApproval: (id: string, approved: boolean): Promise<void> =>
-    ipcRenderer.invoke(ipcChannels.approvalResolve, { id, approved }),
-
-  terminalSpawn: (options?: { command?: string; args?: string[]; env?: Record<string, string>; cwd?: string; rows?: number; cols?: number }): Promise<{ sessionId: string; pid: number }> =>
+  terminalSpawn: (options?: { rows?: number; cols?: number }): Promise<{ sessionId: string; pid: number }> =>
     ipcRenderer.invoke(ipcChannels.terminalSpawn, options || {}),
   terminalWrite: (sessionId: string, data: string): Promise<void> =>
     ipcRenderer.invoke(ipcChannels.terminalWrite, { sessionId, data }),
@@ -96,10 +83,6 @@ const api = {
     ipcRenderer.invoke(ipcChannels.terminalList),
   terminalLaunchWithContext: (request: TerminalLaunchWithContextRequest): Promise<TerminalLaunchWithContextResponse> =>
     ipcRenderer.invoke(ipcChannels.terminalLaunchWithContext, request),
-  runHistoryList: (): Promise<{ runs: { id: string; launchId: string; command: string; startTime: string; endTime?: string; exitCode?: number; outputSummary: string; redactedFields: string[] }[] }> =>
-    ipcRenderer.invoke(ipcChannels.runHistoryList),
-  runHistoryGet: (launchId: string): Promise<{ run?: { id: string; launchId: string; command: string; startTime: string; endTime?: string; exitCode?: number; outputSummary: string; redactedFields: string[] } }> =>
-    ipcRenderer.invoke(ipcChannels.runHistoryGet, { launchId }),
   onLaunchApprovalRequired: (callback: (payload: { approvalId: string; launchContext: TerminalLaunchWithContextRequest['launchContext']; command: string; riskLevel: string }) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, payload: { approvalId: string; launchContext: TerminalLaunchWithContextRequest['launchContext']; command: string; riskLevel: string }) => callback(payload);
     ipcRenderer.on(ipcChannels.launchApprovalRequired, handler);
@@ -117,8 +100,6 @@ const api = {
     ipcRenderer.on('terminal:exit', handler);
     return () => ipcRenderer.removeListener('terminal:exit', handler);
   },
-
-  listEntities: (): Promise<{ entities: unknown[] }> => ipcRenderer.invoke(ipcChannels.entitiesList),
 
   saveBriefing: (request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }): Promise<{ path: string }> =>
     ipcRenderer.invoke(ipcChannels.briefingSave, request),

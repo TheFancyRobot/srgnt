@@ -32,14 +32,24 @@ describe('Terminal IPC Zod schemas', () => {
       const result = safeParse(STerminalSpawnRequest, {});
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.args).toEqual([]);
-        expect(result.data.env).toEqual({});
         expect(result.data.rows).toBe(24);
         expect(result.data.cols).toBe(80);
       }
     });
 
-    it('accepts full spawn request', () => {
+    it('accepts terminal geometry overrides', () => {
+      const result = safeParse(STerminalSpawnRequest, {
+        rows: 40,
+        cols: 120,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.rows).toBe(40);
+        expect(result.data.cols).toBe(120);
+      }
+    });
+
+    it('accepts terminal requests even when extra fields are present', () => {
       const result = safeParse(STerminalSpawnRequest, {
         command: '/bin/zsh',
         args: ['-l'],
@@ -49,11 +59,6 @@ describe('Terminal IPC Zod schemas', () => {
         cols: 120,
       });
       expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.command).toBe('/bin/zsh');
-        expect(result.data.args).toEqual(['-l']);
-        expect(result.data.rows).toBe(40);
-      }
     });
 
     it('rejects non-positive rows', () => {

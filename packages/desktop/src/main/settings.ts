@@ -18,6 +18,10 @@ export const defaultDesktopSettings: DesktopSettings = {
   },
   debugMode: false,
   maxConcurrentRuns: '3',
+  layout: {
+    sidebarWidth: 240,
+    sidebarCollapsed: false,
+  },
 };
 
 export function resolveDefaultWorkspaceRoot(homePath: string): string {
@@ -98,6 +102,10 @@ export function mergeDesktopSettings(settings?: Partial<DesktopSettings>): Deskt
     connectors: {
       ...defaultDesktopSettings.connectors,
       ...(settings?.connectors ?? {}),
+    },
+    layout: {
+      ...defaultDesktopSettings.layout,
+      ...(settings?.layout ?? {}),
     },
   };
 }

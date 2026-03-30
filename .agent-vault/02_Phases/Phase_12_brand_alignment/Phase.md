@@ -7,7 +7,7 @@ phase_id: PHASE-12
 status: completed
 owner: ''
 created: '2026-03-29'
-updated: '2026-03-29'
+updated: '2026-03-30'
 depends_on:
   - '[[02_Phases/Phase_08_product_hardening/Phase|PHASE-08 Product Hardening]]'
 related_architecture: '[[01_Architecture/System_Overview|System Overview]]'
@@ -67,7 +67,7 @@ Align the desktop app's visual identity — typography, color palette, logo, and
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_08_product_hardening/Phase|PHASE-08 Product Hardening]]
 - Current phase status: planned
-- Next phase: not planned yet.
+- Next phase: [[02_Phases/Phase_13_ui_layout_restructuring/Phase|PHASE-13 UI Layout Restructuring]]
 <!-- AGENT-END:phase-linear-context -->
 
 ## Related Architecture

@@ -8,10 +8,23 @@ import { ConnectorStatusPanel } from './components/ConnectorStatus.js';
 import type { ConnectorInfo } from './components/ConnectorStatus.js';
 import { TodayView } from './components/TodayView.js';
 import { CalendarView } from './components/CalendarView.js';
-import { TerminalPanel } from './components/TerminalPanel.js';
 import { OnboardingWizard } from './components/Onboarding.js';
 import type { OnboardingFlow } from './components/Onboarding.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
+import { LayoutProvider, useLayout } from './components/LayoutContext.js';
+import type { PanelDefinition } from './components/LayoutContext.js';
+import { navIcons } from './components/icons.js';
+import { NotesView } from './components/NotesView.js';
+import { TodaySidePanel } from './components/sidepanels/TodaySidePanel.js';
+import { CalendarSidePanel } from './components/sidepanels/CalendarSidePanel.js';
+import { NotesSidePanel } from './components/sidepanels/NotesSidePanel.js';
+import { ConnectorsSidePanel } from './components/sidepanels/ConnectorsSidePanel.js';
+import { SettingsSidePanel } from './components/sidepanels/SettingsSidePanel.js';
+
+const LazyTerminalPanel = React.lazy(async () => {
+  const module = await import('./components/TerminalPanel.js');
+  return { default: module.TerminalPanel };
+});
 
 const defaultSettings: DesktopSettings = {
   theme: 'system',
@@ -25,6 +38,10 @@ const defaultSettings: DesktopSettings = {
   },
   debugMode: false,
   maxConcurrentRuns: '3',
+  layout: {
+    sidebarWidth: 240,
+    sidebarCollapsed: false,
+  },
 };
 
 const initialUpdateStatus: UpdateCheckResponse = {
@@ -34,11 +51,39 @@ const initialUpdateStatus: UpdateCheckResponse = {
   message: 'Update checks have not run yet.',
 };
 
-function App(): React.ReactElement {
-  const [currentView, setCurrentView] = React.useState<string>('today');
+const defaultPanels: PanelDefinition[] = [
+  { id: 'today', icon: navIcons['today']!, label: 'Daily Dashboard', section: 'main', order: 1, sidePanelContent: TodaySidePanel },
+  { id: 'calendar', icon: navIcons['calendar']!, label: 'Calendar', section: 'main', order: 2, sidePanelContent: CalendarSidePanel },
+  { id: 'notes', icon: navIcons['notes']!, label: 'Notes', section: 'main', order: 3, sidePanelContent: NotesSidePanel },
+  { id: 'connectors', icon: navIcons['connectors']!, label: 'Connectors', section: 'system', order: 4 },
+  { id: 'settings', icon: navIcons['settings']!, label: 'Settings', section: 'system', order: 5, sidePanelContent: SettingsSidePanel },
+  { id: 'terminal', icon: navIcons['terminal']!, label: 'Terminal', section: 'utility', order: 6 },
+];
+
+function TerminalLoadingState(): React.ReactElement {
+  return (
+    <div className="h-full w-full bg-surface-secondary flex items-center justify-center p-6">
+      <div className="card p-8 text-center space-y-3 animate-scale-in">
+        <p className="text-sm font-mono-data text-text-tertiary">Loading terminal surface...</p>
+        <div className="w-10 h-1 rounded-full bg-surface-tertiary overflow-hidden mx-auto">
+          <div className="h-full w-1/2 bg-srgnt-500 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AppContent({
+  initialSettings,
+  persistSettings,
+}: {
+  initialSettings: DesktopSettings;
+  persistSettings: (nextSettings: DesktopSettings) => Promise<DesktopSettings>;
+}): React.ReactElement {
+  const { activePanel, setActivePanel, registerPanel } = useLayout();
   const [pendingLaunchContext, setPendingLaunchContext] = React.useState<LaunchContext | null>(null);
   const [connectors, setConnectors] = React.useState<ConnectorInfo[]>([]);
-  const [settings, setSettings] = React.useState<DesktopSettings>(defaultSettings);
+  const [settings, setSettings] = React.useState<DesktopSettings>(initialSettings);
   const [workspaceRoot, setWorkspaceRoot] = React.useState('');
   const [workspaceRootDraft, setWorkspaceRootDraft] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
@@ -46,6 +91,20 @@ function App(): React.ReactElement {
   const [updateStatus, setUpdateStatus] = React.useState<UpdateCheckResponse>(initialUpdateStatus);
   const [statusMessage, setStatusMessage] = React.useState('');
   const [simulateRenderCrash, setSimulateRenderCrash] = React.useState(false);
+  const settingsRef = React.useRef(initialSettings);
+
+  const syncSettings = React.useCallback(
+    (nextSettings: DesktopSettings) => {
+      settingsRef.current = nextSettings;
+      setSettings(nextSettings);
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    settingsRef.current = initialSettings;
+    setSettings(initialSettings);
+  }, [initialSettings]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -61,7 +120,7 @@ function App(): React.ReactElement {
           return;
         }
 
-        setSettings(loadedSettings);
+        syncSettings(loadedSettings);
         setWorkspaceRoot(loadedWorkspaceRoot);
         setWorkspaceRootDraft(loadedWorkspaceRoot);
         setShowOnboarding(!loadedWorkspaceRoot);
@@ -80,7 +139,33 @@ function App(): React.ReactElement {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [syncSettings]);
+
+  React.useEffect(() => {
+    if (activePanel !== 'terminal') {
+      setPendingLaunchContext(null);
+    }
+  }, [activePanel]);
+
+  const connectorsSidePanel = React.useMemo(() => {
+    function ConnectorsPanel(): React.ReactElement {
+      return <ConnectorsSidePanel connectors={connectors} />;
+    }
+
+    ConnectorsPanel.displayName = 'ConnectorsPanel';
+    return ConnectorsPanel;
+  }, [connectors]);
+
+  React.useEffect(() => {
+    registerPanel({
+      id: 'connectors',
+      icon: navIcons['connectors']!,
+      label: 'Connectors',
+      section: 'system',
+      order: 4,
+      sidePanelContent: connectorsSidePanel,
+    });
+  }, [connectorsSidePanel, registerPanel]);
 
   React.useEffect(() => {
     const updateTheme = () => {
@@ -106,33 +191,36 @@ function App(): React.ReactElement {
   }, []);
 
   const saveSettings = React.useCallback(async (nextSettings: DesktopSettings) => {
-    const response = await window.srgnt.saveDesktopSettings(nextSettings);
-    setSettings(response.settings);
-    setWorkspaceRoot(response.workspaceRoot);
-    setWorkspaceRootDraft(response.workspaceRoot);
+    const savedSettings = await persistSettings(nextSettings);
+    syncSettings(savedSettings);
     await reloadConnectors();
-  }, [reloadConnectors]);
+  }, [persistSettings, reloadConnectors, syncSettings]);
 
   const patchSettings = React.useCallback(async (patch: Partial<DesktopSettings>) => {
+    const currentSettings = settingsRef.current;
     const nextSettings: DesktopSettings = {
-      ...settings,
+      ...currentSettings,
       ...patch,
       connectors: {
-        ...settings.connectors,
+        ...currentSettings.connectors,
         ...(patch.connectors ?? {}),
+      },
+      layout: {
+        ...currentSettings.layout,
+        ...(patch.layout ?? {}),
       },
     };
     await saveSettings(nextSettings);
-  }, [saveSettings, settings]);
+  }, [saveSettings]);
 
   const refreshWorkspaceState = React.useCallback(async () => {
     const response = await window.srgnt.getDesktopSettings();
-    setSettings(response.settings);
+    syncSettings(response.settings);
     setWorkspaceRoot(response.workspaceRoot);
     setWorkspaceRootDraft(response.workspaceRoot);
     setShowOnboarding(!response.workspaceRoot);
     await reloadConnectors();
-  }, [reloadConnectors]);
+  }, [reloadConnectors, syncSettings]);
 
   const handleConnect = React.useCallback(async (id: string) => {
     await window.srgnt.connectConnector(id);
@@ -144,17 +232,10 @@ function App(): React.ReactElement {
     await refreshWorkspaceState();
   }, [refreshWorkspaceState]);
 
-  const handleNavigate = React.useCallback((view: string) => {
-    setCurrentView(view);
-    if (view !== 'terminal') {
-      setPendingLaunchContext(null);
-    }
-  }, []);
-
   const handleLaunchContext = React.useCallback((launchContext: LaunchContext) => {
     setPendingLaunchContext(launchContext);
-    setCurrentView('terminal');
-  }, []);
+    setActivePanel('terminal');
+  }, [setActivePanel]);
 
   const ensureDefaultWorkspace = React.useCallback(async () => {
     const nextRoot = await window.srgnt.createDefaultWorkspaceRoot();
@@ -162,11 +243,11 @@ function App(): React.ReactElement {
       window.srgnt.getDesktopSettings(),
       window.srgnt.listConnectors(),
     ]);
-    setSettings(loadedSettings);
+    syncSettings(loadedSettings);
     setWorkspaceRoot(loadedWorkspaceRoot || nextRoot);
     setWorkspaceRootDraft(loadedWorkspaceRoot || nextRoot);
     setConnectors(connectorResponse.connectors);
-  }, []);
+  }, [syncSettings]);
 
   const handleChooseWorkspaceRoot = React.useCallback(async () => {
     const nextRoot = await window.srgnt.chooseWorkspaceRoot();
@@ -411,21 +492,19 @@ function App(): React.ReactElement {
     return <OnboardingWizard flow={onboardingFlow} />;
   }
 
-  const dateStr = new Date().toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-
   const renderContent = () => {
-    switch (currentView) {
+    switch (activePanel) {
       case 'today':
         return <TodayView onLaunchContext={handleLaunchContext} />;
       case 'calendar':
         return <CalendarView onLaunchContext={handleLaunchContext} />;
+      case 'notes':
+        return <NotesView />;
       case 'terminal':
         return (
-          <TerminalPanel className="h-full w-full" launchContext={pendingLaunchContext} />
+          <React.Suspense fallback={<TerminalLoadingState />}>
+            <LazyTerminalPanel className="h-full w-full" launchContext={pendingLaunchContext} />
+          </React.Suspense>
         );
       case 'connectors':
         return (
@@ -469,7 +548,7 @@ function App(): React.ReactElement {
   };
 
   return (
-    <AppLayout activeId={currentView} onNavigate={handleNavigate} date={dateStr} fullBleed={currentView === 'terminal'}>
+    <AppLayout fullBleed={activePanel === 'terminal'}>
       {renderContent()}
     </AppLayout>
   );
@@ -530,6 +609,103 @@ function SettingsUtilityPanel({
         <p className="text-xs text-text-tertiary font-mono-data">{statusMessage}</p>
       )}
     </section>
+  );
+}
+
+function App(): React.ReactElement {
+  const [settings, setSettings] = React.useState<DesktopSettings>(defaultSettings);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const latestSettingsRef = React.useRef(settings);
+  const layoutSaveTimeoutRef = React.useRef<number | null>(null);
+  const saveQueueRef = React.useRef(Promise.resolve<DesktopSettings>(defaultSettings));
+
+  React.useEffect(() => {
+    latestSettingsRef.current = settings;
+  }, [settings]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const { settings: loadedSettings } = await window.srgnt.getDesktopSettings();
+        if (!cancelled) {
+          setSettings(loadedSettings);
+        }
+      } catch (error) {
+        console.error('[renderer] failed to load initial settings', error);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (layoutSaveTimeoutRef.current !== null) {
+        window.clearTimeout(layoutSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const persistSettings = React.useCallback(async (nextSettings: DesktopSettings) => {
+    latestSettingsRef.current = nextSettings;
+    setSettings(nextSettings);
+
+    const savePromise = saveQueueRef.current.then(async () => {
+      const response = await window.srgnt.saveDesktopSettings(nextSettings);
+      latestSettingsRef.current = response.settings;
+      setSettings(response.settings);
+      return response.settings;
+    });
+
+    saveQueueRef.current = savePromise.catch(() => latestSettingsRef.current);
+    return savePromise;
+  }, []);
+
+  const handleLayoutChange = React.useCallback((prefs: { sidebarWidth: number; sidebarCollapsed: boolean }) => {
+    if (layoutSaveTimeoutRef.current !== null) {
+      window.clearTimeout(layoutSaveTimeoutRef.current);
+    }
+
+    layoutSaveTimeoutRef.current = window.setTimeout(() => {
+      const currentSettings = latestSettingsRef.current;
+
+      void persistSettings({
+        ...currentSettings,
+        layout: {
+          ...currentSettings.layout,
+          ...prefs,
+        },
+      });
+    }, 300);
+  }, [persistSettings]);
+
+  if (isLoading) {
+    return (
+      <LayoutProvider defaultPanel="today" initialPanels={defaultPanels}>
+        <div className="min-h-screen bg-surface-secondary grain flex items-center justify-center p-6">
+          <div className="card p-8 text-center space-y-3 animate-scale-in">
+            <p className="text-sm font-mono-data text-text-tertiary">Bootstrapping desktop state...</p>
+          </div>
+        </div>
+      </LayoutProvider>
+    );
+  }
+
+  return (
+    <LayoutProvider
+      defaultPanel="today"
+      initialPanels={defaultPanels}
+      initialWidth={settings.layout?.sidebarWidth ?? 240}
+      initialCollapsed={settings.layout?.sidebarCollapsed ?? false}
+      onLayoutChange={handleLayoutChange}
+    >
+      <AppContent initialSettings={settings} persistSettings={persistSettings} />
+    </LayoutProvider>
   );
 }
 

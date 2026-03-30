@@ -13,6 +13,18 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),
     emptyOutDir: true,
+    // The Ghostty terminal runtime is intentionally isolated behind a lazy route.
+    // Keep the warning threshold close to that chunk so startup bundle regressions still surface.
+    chunkSizeWarningLimit: 650,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('/node_modules/ghostty-web/')) {
+            return 'terminal-runtime';
+          }
+        },
+      },
+    },
   },
   css: {
     postcss: './postcss.config.js',

@@ -57,6 +57,10 @@ describe('desktop settings helpers', () => {
         outlook: false,
         teams: true,
       },
+      layout: {
+        sidebarWidth: 320,
+        sidebarCollapsed: true,
+      },
       maxConcurrentRuns: '5' as const,
     };
 
@@ -65,6 +69,38 @@ describe('desktop settings helpers', () => {
     const filePath = getDesktopSettingsPath(workspaceRoot);
     await expect(fs.stat(filePath)).resolves.toBeDefined();
     await expect(readDesktopSettings(workspaceRoot)).resolves.toEqual(settings);
+  });
+
+  it('merges missing layout preferences with defaults when reading settings', async () => {
+    const workspaceRoot = await makeTempDir('srgnt-layout-defaults-');
+    const filePath = getDesktopSettingsPath(workspaceRoot);
+
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(
+      filePath,
+      JSON.stringify({
+        theme: 'dark',
+        updateChannel: 'beta',
+        telemetryEnabled: true,
+        crashReportsEnabled: false,
+        connectors: {
+          jira: true,
+          outlook: false,
+          teams: false,
+        },
+        debugMode: false,
+        maxConcurrentRuns: '5',
+      }),
+      'utf8',
+    );
+
+    await expect(readDesktopSettings(workspaceRoot)).resolves.toMatchObject({
+      theme: 'dark',
+      layout: {
+        sidebarWidth: 240,
+        sidebarCollapsed: false,
+      },
+    });
   });
 
   it('uses a stable default workspace root under the home directory', () => {

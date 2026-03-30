@@ -47,6 +47,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 ## Findings
 
+<!-- AGENT-START:session-findings -->
 - ApprovalService.requestApproval(launchContext, template) takes two arguments - NOT a simple object
 - RunLogService has standalone functions: redactEnv(env, policy), truncateOutput(output, maxLength), DEFAULT_REDACTION_POLICY
 - IPC channels added: launchApprovalRequired, launchApprovalResolve

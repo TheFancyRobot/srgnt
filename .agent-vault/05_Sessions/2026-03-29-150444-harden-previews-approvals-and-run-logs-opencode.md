@@ -110,25 +110,6 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 ## Completion Summary
 
-- State what finished, what remains, and whether the session ended in a clean handoff state.
 - Terminal view now renders edge-to-edge within the main content pane while the other views keep the existing centered layout.
-- Renderer build is green; full desktop typecheck remains blocked by unrelated test mock updates already needed for the approval IPC additions.
-ovals And Run Logs]].
-<!-- AGENT-END:session-follow-up-work -->
-
-## Completion Summary
-
-- State what finished, what remains, and whether the session ended in a clean handoff state.
-the existing centered layout.
-- Renderer build is green; full desktop typecheck remains blocked by unrelated test mock updates already needed for the approval IPC additions.
-ovals And Run Logs]].
-<!-- AGENT-END:session-follow-up-work -->
-
-## Completion Summary
-
-- State what finished, what remains, and whether the session ended in a clean handoff state.
-
-
-## Completion Summary
-
-- State what finished, what remains, and whether the session ended in a clean handoff state.
+- Renderer build is green.
+- The session ended in a clean handoff state after the approval overlay regressions were fixed and covered by renderer tests.

@@ -57,6 +57,6 @@ export async function completeOnboarding(window: Page): Promise<void> {
   await window.getByRole('button', { name: 'Next' }).click();
   await expect(window.getByRole('heading', { name: "You're All Set" })).toBeVisible();
   await window.getByRole('button', { name: 'Get Started' }).click();
-  await expect(window.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
-  await expect(window.getByText('Priorities')).toBeVisible();
+  await expect(window.getByRole('button', { name: 'Daily Dashboard' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(window.getByRole('heading', { name: 'Priorities' })).toBeVisible();
 }

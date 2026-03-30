@@ -1,8 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import ghosttyWasmUrl from 'ghostty-web/ghostty-vt.wasm?url';
-import { Ghostty, Terminal, FitAddon } from 'ghostty-web';
 import type { LaunchContext } from '@srgnt/contracts';
 import { TerminalIpc, runSafe, runUnsafe } from '../effects/terminal-ipc.js';
+
+type GhosttyModule = typeof import('ghostty-web');
+type GhosttyInstance = InstanceType<GhosttyModule['Ghostty']>;
+type GhosttyTerminal = InstanceType<GhosttyModule['Terminal']>;
+type GhosttyFitAddon = InstanceType<GhosttyModule['FitAddon']>;
+
+interface GhosttyRuntime {
+  ghostty: GhosttyInstance;
+  Terminal: GhosttyModule['Terminal'];
+  FitAddon: GhosttyModule['FitAddon'];
+}
 
 interface ApprovalPreviewState {
   approvalId: string;
@@ -21,13 +30,21 @@ export interface TabInfo {
   denied: boolean;
 }
 
-let ghosttyReady: Promise<Ghostty> | null = null;
+let ghosttyRuntimeReady: Promise<GhosttyRuntime> | null = null;
 
-function ensureGhosttyInit(): Promise<Ghostty> {
-  if (!ghosttyReady) {
-    ghosttyReady = Ghostty.load(ghosttyWasmUrl);
+function ensureGhosttyRuntime(): Promise<GhosttyRuntime> {
+  if (!ghosttyRuntimeReady) {
+    ghosttyRuntimeReady = Promise.all([
+      import('ghostty-web'),
+      import('ghostty-web/ghostty-vt.wasm?url'),
+    ]).then(async ([ghosttyModule, ghosttyWasm]) => ({
+      ghostty: await ghosttyModule.Ghostty.load(ghosttyWasm.default),
+      Terminal: ghosttyModule.Terminal,
+      FitAddon: ghosttyModule.FitAddon,
+    }));
   }
-  return ghosttyReady;
+
+  return ghosttyRuntimeReady;
 }
 
 function ApprovalPreview({
@@ -113,8 +130,8 @@ function TerminalTabContent({
   onDenied,
 }: TerminalTabContentProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
-  const termRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
+  const termRef = useRef<GhosttyTerminal | null>(null);
+  const fitAddonRef = useRef<GhosttyFitAddon | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const cleanupRef = useRef<(() => void)[]>([]);
 
@@ -122,14 +139,16 @@ function TerminalTabContent({
     const container = containerRef.current;
     if (!container) return;
 
-    let term: Terminal;
-    let fitAddon: FitAddon;
+    let term: GhosttyTerminal;
+    let fitAddon: GhosttyFitAddon;
+    let FitAddonCtor: GhosttyModule['FitAddon'];
     let disposed = false;
 
     const setup = async () => {
       try {
-        const ghostty = await ensureGhosttyInit();
+        const { ghostty, Terminal, FitAddon } = await ensureGhosttyRuntime();
         if (disposed) return;
+        FitAddonCtor = FitAddon;
 
         term = new Terminal({
           ghostty,
@@ -174,7 +193,7 @@ function TerminalTabContent({
       termRef.current = term;
 
       // Use Ghostty's FitAddon for proper sizing with real font metrics
-      fitAddon = new FitAddon();
+      fitAddon = new FitAddonCtor();
       term.loadAddon(fitAddon);
       fitAddonRef.current = fitAddon;
       fitAddon.fit();

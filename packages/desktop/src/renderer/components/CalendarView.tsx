@@ -1,5 +1,6 @@
 import React from 'react';
 import type { LaunchContext } from '@srgnt/contracts';
+import { useLayout } from './LayoutContext.js';
 
 /* ═══════════════════════════════════════════════════════════
    Calendar View — Day/Agenda + Event Detail + Triage
@@ -93,8 +94,9 @@ const FIXTURE_EVENTS: CalendarEvent[] = [
 
 /* ─── Helpers ─── */
 
-function formatDateHeader(): string {
-  return new Date().toLocaleDateString('en-US', {
+function formatDateHeader(year: number, month: number): string {
+  const date = new Date(year, month, 1);
+  return date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -244,10 +246,11 @@ export interface CalendarViewProps {
 }
 
 export function CalendarView({ onLaunchContext }: CalendarViewProps = {}): React.ReactElement {
+  const { calendarYear, calendarMonth } = useLayout();
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [pendingLaunch, setPendingLaunch] = React.useState<string | null>(null);
   const selectedEvent = FIXTURE_EVENTS.find((e) => e.id === selectedId) || null;
-  const dateHeader = formatDateHeader();
+  const dateHeader = formatDateHeader(calendarYear, calendarMonth);
 
   const needsAttention = FIXTURE_EVENTS.filter(
     (e) => e.triageStatus === 'needs-prep' || e.triageStatus === 'needs-followup' || e.triageStatus === 'needs-decline'

@@ -282,14 +282,21 @@ describe('Terminal surface Effect schemas', () => {
 
   describe('STerminalSurfaceConfig', () => {
     it('provides sensible defaults', () => {
-      const result = safeParse(STerminalSurfaceConfig, {});
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.defaultRows).toBe(24);
-        expect(result.data.defaultCols).toBe(80);
-        expect(result.data.shell).toBe(process.env['SHELL'] || '/bin/bash');
-        expect(result.data.maxSessions).toBe(5);
-        expect(result.data.sessionTimeoutMs).toBe(3600000);
+      const origShell = process.env['SHELL'];
+      process.env['SHELL'] = '/usr/bin/zsh';
+      try {
+        const result = safeParse(STerminalSurfaceConfig, {});
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data.defaultRows).toBe(24);
+          expect(result.data.defaultCols).toBe(80);
+          expect(result.data.shell).toBe('/usr/bin/zsh');
+          expect(result.data.maxSessions).toBe(5);
+          expect(result.data.sessionTimeoutMs).toBe(3600000);
+        }
+      } finally {
+        if (origShell === undefined) delete process.env['SHELL'];
+        else process.env['SHELL'] = origShell;
       }
     });
 

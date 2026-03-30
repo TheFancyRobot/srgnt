@@ -452,13 +452,15 @@ ipcMain.handle(ipcChannels.terminalLaunchWithContext, async (_event, rawPayload)
 
   const intent = launchContext.intent ?? 'artifactAffecting';
   const requiresApproval = intent === 'artifactAffecting';
+  const resolvedCommand = launchContext.command
+    || (process.platform === 'win32' ? 'powershell.exe' : process.env['SHELL'] || 'bash');
 
   if (requiresApproval) {
     const template = {
       id: `terminal-direct-${Date.now()}`,
       name: 'Terminal Command',
-      description: `Direct terminal command: ${launchContext.command || 'shell'}`,
-      command: launchContext.command || 'shell',
+      description: `Direct terminal command: ${resolvedCommand}`,
+      command: resolvedCommand,
       args: [],
       intent: 'artifactAffecting' as const,
       requiredCapabilities: [],
@@ -479,7 +481,7 @@ ipcMain.handle(ipcChannels.terminalLaunchWithContext, async (_event, rawPayload)
     mainWindow.webContents.send(ipcChannels.launchApprovalRequired, {
       approvalId: approval.id,
       launchContext,
-      command: launchContext.command || 'shell',
+      command: resolvedCommand,
       riskLevel: 'high',
       requiresApproval: true,
     });
@@ -525,7 +527,9 @@ async function launchApproved(
   rows: number,
   cols: number
 ): Promise<{ sessionId: string; pid: number; launchId: string; status: 'approved' }> {
-  const log = runLogService.startRun(launchContext.launchId, launchContext, launchContext.command || 'shell');
+  const resolvedCommand = launchContext.command
+    || (process.platform === 'win32' ? 'powershell.exe' : process.env['SHELL'] || 'bash');
+  const log = runLogService.startRun(launchContext.launchId, launchContext, resolvedCommand);
   await writeRunLogToDisk(log.id, runLogService.toMarkdown(log));
 
   const { session } = await ptyService.spawn({

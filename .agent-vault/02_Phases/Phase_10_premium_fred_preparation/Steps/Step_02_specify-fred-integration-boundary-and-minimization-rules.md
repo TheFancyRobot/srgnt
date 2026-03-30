@@ -95,14 +95,14 @@ Define how premium orchestration can touch product data without overreaching.
   - `IFredDataAccessor` (requestContext, getMinimizedPayload)
   - `DataAccessScope` (which files/fields Fred may read, per user consent)
   - `MinimizedPayload` (only the data Fred needs, with redaction applied)
-- `packages/fred/src/schemas/fred-request.ts` — Zod schemas:
+- `packages/fred/src/schemas/fred-request.ts` — Effect Schema definitions:
   - `FredWorkflowRequestSchema`
   - `DataAccessScopeSchema`
   - `MinimizedPayloadSchema`
   - `FredWorkflowResultSchema`
 
 **Key decisions to apply:**
-- DEC-0002 (TypeScript + Zod) — interfaces + Zod schemas for all Fred contracts
+- DEC-0002 (TypeScript + Effect.Schema) — interfaces + Effect Schema definitions for all Fred contracts
 - DEC-0005 (pnpm) — `packages/fred/` registered in workspace
 - DEC-0006 (docs + scaffolding) — architecture doc + package scaffolding
 - DEC-0007 (markdown/Dataview) — Fred reads markdown files through the data accessor, never directly; Dataview queries may be used to select relevant files
@@ -129,7 +129,7 @@ Define how premium orchestration can touch product data without overreaching.
 6. `IFredDataAccessor` interface exists with requestContext and getMinimizedPayload methods
 7. `FredWorkflowRequest` includes a `userConsent` field — not optional
 8. No import in `packages/entitlements/` or any `packages/*` (other than fred itself) references `packages/fred/`
-9. Zod schemas parse valid examples
+9. Effect Schema definitions decode valid examples
 10. Architecture doc explicitly lists data that Fred must NEVER access (secrets, credentials, etc.)
 
 **Junior-readiness verdict:** PASS — the step is well-scoped as interface design + documentation. The minimization rules and data access boundaries require careful thought, but STEP-09-01's classification matrix provides a strong foundation. The main risk is a junior dev making the Fred boundary too broad; the constraints above ("never the full workspace," "every access through IFredDataAccessor") provide guardrails.

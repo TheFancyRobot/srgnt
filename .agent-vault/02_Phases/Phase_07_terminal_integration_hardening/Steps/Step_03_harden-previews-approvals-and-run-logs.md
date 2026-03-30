@@ -68,12 +68,12 @@ Add the trust and audit features required once terminal launches can affect user
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: in-progress
-- Current owner: opencode
+- Status: complete
+- Current owner: —
 - Last touched: 2026-03-29
-- Next action: Complete manual end-to-end validation of approval flow
-- Completed: approval gate in main/index.ts, ApprovalPreview component in TerminalPanel.tsx, approval IPC events, run log persistence to .command-center/runs/ as markdown, runLogSave IPC channel and schema, approval path schema tests
-- Remaining: manual end-to-end validation
+- Next action: None — step complete
+- Completed: approval gate in main/index.ts, ApprovalPreview component in TerminalPanel.tsx, approval IPC events, run log persistence to .command-center/runs/ as markdown, runLogSave IPC channel and schema, approval path schema tests, security hardening (CSP, IPC validation, navigation blocking, Electron upgrade)
+- Remaining: none
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

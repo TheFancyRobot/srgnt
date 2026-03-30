@@ -87,7 +87,7 @@ Sketch premium workflow ideas that layer onto the base product rather than repla
 - If shared premium interfaces emerge that don't belong in `packages/fred/` or `packages/entitlements/`, extend `packages/entitlements/src/interfaces/` with premium feature types (e.g., `IPremiumFeature`, `PremiumFeatureManifest`). Create a new `packages/premium/` package only if the surface area warrants a separate workspace package — typically this means 3+ modules or a distinct dependency graph. The default path is to extend `packages/entitlements/` unless the executing agent can justify separation.
 
 **Key decisions to apply:**
-- DEC-0002 (TypeScript + Zod) — any shared premium schemas in Zod
+- DEC-0002 (TypeScript + Effect.Schema) — any shared premium schemas in Effect Schema
 - DEC-0005 (pnpm) — new package (if created) registered in workspace
 - DEC-0006 (docs + scaffolding) — design doc is mandatory; code scaffolding is conditional on whether shared premium interfaces are needed beyond what `packages/fred/` and `packages/entitlements/` already provide
 - DEC-0007 (markdown/Dataview) — premium features that involve data must work through the markdown/Dataview layer, not introduce a new storage backend

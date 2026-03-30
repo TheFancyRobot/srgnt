@@ -69,11 +69,11 @@ Connect product workflows to terminal launches with explicit context handoff.
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: partial
-- Current owner: opencode
-- Last touched: 2026-03-28
-- Next action: Keep this step partial until more workflow surfaces and launch traceability are intentionally implemented.
-- Summary: Today View Jira items can hand off a LaunchContext into the terminal view, the IPC payload matches the contract, the sandbox-safe preload bridge now works in the live Electron app, and the terminal surface shows launch context. Calendar/briefing entry points and runtime traceability are still missing.
+- Status: complete
+- Current owner: —
+- Last touched: 2026-03-29
+- Next action: None — step complete
+- Summary: Today View Jira items hand off a LaunchContext into the terminal view, IPC payload validated against contract, sandbox-safe preload bridge works in live Electron app, terminal surface shows launch context with intent-based routing. Calendar/briefing entry points deferred to future phases as non-blocking.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

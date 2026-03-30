@@ -88,7 +88,7 @@ Pressure-test the sync-prep architecture against real failure and recovery cases
   - `ConflictType` enum (frontmatterField, markdownBody, fileDeleted, fileCreatedBoth)
   - `ConflictRecord` (fileId, conflictType, localVersion, remoteVersion, resolution)
   - `MergeStrategy` enum (lastWriteWins, fieldLevelMerge, manualResolution)
-- `packages/sync/src/schemas/conflict.ts` — Zod schemas for conflict records
+- `packages/sync/src/schemas/conflict.ts` — Effect Schema definitions for conflict records
 - `packages/sync/src/test-fixtures/` — test fixture directory containing:
   - `conflicting-frontmatter.fixture.ts` — two versions of a YAML frontmatter block with field-level conflicts
   - `conflicting-body.fixture.ts` — two versions of a markdown file body with content conflicts
@@ -97,7 +97,7 @@ Pressure-test the sync-prep architecture against real failure and recovery cases
   - Each fixture: a pair of file states + expected merge result for the chosen strategy
 
 **Key decisions to apply:**
-- DEC-0002 (TypeScript + Zod) — conflict schemas in Zod, interfaces in TypeScript
+- DEC-0002 (TypeScript + Effect.Schema) — conflict schemas in Effect Schema, interfaces in TypeScript
 - DEC-0006 (docs + scaffolding) — both design doc with pass/fail table AND test fixtures with conflict interfaces
 - DEC-0007 (markdown/Dataview) — conflicts are between markdown files with YAML frontmatter; Dataview indexes are derived, never conflict-resolved, only rebuilt
 
@@ -118,7 +118,7 @@ Pressure-test the sync-prep architecture against real failure and recovery cases
 3. `IConflictResolver` interface compiles and has detect, resolve, markResolved methods
 4. Test fixtures directory contains at least 4 fixture files
 5. Each fixture file exports: `localVersion`, `remoteVersion`, and `expectedResult` (or equivalent structure)
-6. Zod schemas in `conflict.ts` can parse a valid `ConflictRecord` example
+6. Effect Schema definitions in `conflict.ts` can decode a valid `ConflictRecord` example
 7. `pnpm --filter sync build` succeeds with all new files
 8. Design doc explicitly addresses Dataview index rebuild strategy after conflict resolution
 

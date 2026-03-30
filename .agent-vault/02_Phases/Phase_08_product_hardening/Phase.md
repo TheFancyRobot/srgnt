@@ -64,7 +64,7 @@ Make the desktop app shippable and supportable with packaging, updates, crash ha
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|PHASE-07 Terminal Integration Hardening]]
 - Current phase status: completed
-- Next phase: [[02_Phases/Phase_11_real_machine_validation/Phase|PHASE-11 Real Machine Validation]]
+- Next phase: [[02_Phases/Phase_12_brand_alignment/Phase|PHASE-12 Brand Alignment]]
 <!-- AGENT-END:phase-linear-context -->
 
 ## Related Architecture

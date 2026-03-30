@@ -92,13 +92,13 @@ Translate the classification matrix into a future sync architecture without unde
   - `IAccountProvider` (authenticate, getSubscription, getDeviceId)
   - `AccountInfo` (userId, deviceId, subscriptionTier)
   - `SubscriptionTier` enum (free, premium)
-- `packages/sync/src/schemas/sync-payload.ts` — Zod schemas for:
+- `packages/sync/src/schemas/sync-payload.ts` — Effect Schema definitions for:
   - `SyncPayloadSchema` — validates the shape of encrypted sync payloads
   - `SyncMetadataSchema` — validates the plaintext metadata envelope
   - `DeviceInfoSchema` — validates device identification data
 
 **Key decisions to apply:**
-- DEC-0002 (TypeScript + Zod) — interfaces as TypeScript, runtime validation as Zod schemas
+- DEC-0002 (TypeScript + Effect.Schema) — interfaces as TypeScript, runtime validation as Effect Schema
 - DEC-0005 (pnpm) — new files go in the existing `packages/sync/` created in STEP-09-01
 - DEC-0006 (docs + scaffolding) — both the architecture doc and the interface/schema files are required
 - DEC-0007 (markdown/Dataview) — sync must handle markdown files as the data format; Dataview indexes are derived and not synced
@@ -122,7 +122,7 @@ Translate the classification matrix into a future sync architecture without unde
 3. All new interface files compile: `pnpm --filter sync build` succeeds
 4. `ISyncEngine` interface has at minimum: init, push, pull, resolveConflict, getStatus methods
 5. `IAccountProvider` interface has at minimum: authenticate, getSubscription, getDeviceId methods
-6. Zod schemas in `sync-payload.ts` can parse a valid example payload
+6. Effect Schema definitions in `sync-payload.ts` can decode a valid example payload
 7. The architecture doc references the STEP-09-01 classification matrix for sync eligibility decisions
 8. No interface method accepts raw unencrypted workspace content as a parameter to a remote-facing operation
 9. The architecture doc includes explicit treatment of key rotation, device revocation, and account recovery

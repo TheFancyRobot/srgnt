@@ -5,7 +5,7 @@ contract_version: 1
 title: gpt-5.4 session for Implement PTY Service And Terminal Surface Contracts
 session_id: SESSION-2026-03-29-190942
 date: '2026-03-29'
-status: in-progress
+status: completed
 owner: gpt-5.4
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
@@ -79,3 +79,4 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Completion Summary
 
 - State what finished, what remains, and whether the session ended in a clean handoff state.
+- Empty skeleton session — no work was performed. STEP-07-01 was already completed before this session was created. Closing as part of Phase 07 close-out.

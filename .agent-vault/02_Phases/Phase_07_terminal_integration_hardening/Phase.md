@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Terminal Integration Hardening
 phase_id: PHASE-07
-status: partial
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-29'
@@ -55,16 +55,16 @@ Harden the embedded terminal and agent-launch workflow so it fits the same privi
 
 ## Acceptance Criteria
 
-- [ ] Terminal sessions are hosted through the privileged boundary rather than direct renderer process spawning.
-- [ ] Workflow launch actions can inject safe artifact-aware context into terminal sessions.
-- [ ] Preview-before-write and approval behavior is explicit for artifact-affecting workflows.
-- [ ] Run logs capture enough detail to audit terminal-triggered workflow activity without leaking unnecessary sensitive content.
+- [x] Terminal sessions are hosted through the privileged boundary rather than direct renderer process spawning.
+- [x] Workflow launch actions can inject safe artifact-aware context into terminal sessions.
+- [x] Preview-before-write and approval behavior is explicit for artifact-affecting workflows.
+- [x] Run logs capture enough detail to audit terminal-triggered workflow activity without leaking unnecessary sensitive content.
 
 ## Linear Context
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_06_replace_zod_with_effect_schema/Phase|PHASE-06 Replace Zod with Effect Schema]]
-- Current phase status: partial
+- Current phase status: completed
 - Next phase: [[02_Phases/Phase_08_product_hardening/Phase|PHASE-08 Product Hardening]]
 <!-- AGENT-END:phase-linear-context -->
 
@@ -92,14 +92,15 @@ Harden the embedded terminal and agent-launch workflow so it fits the same privi
 
 <!-- AGENT-START:phase-steps -->
 - [x] [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_01_implement-pty-service-and-terminal-surface-contracts|STEP-07-01 Implement PTY Service And Terminal Surface Contracts]] - Start here; establishes the secure hosting path.
-- [ ] [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]] - Depends on Step 01.
-- [ ] [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - Depends on Steps 01-02.
+- [x] [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]] - Depends on Step 01.
+- [x] [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - Depends on Steps 01-02.
 <!-- AGENT-END:phase-steps -->
 
 ## Notes
 
-- STEP-07-01 is complete: PTY service, terminal surface contracts, IPC handlers, renderer panel, and validation tests are implemented and passing.
-- STEP-07-02 now has a working Today View -> Terminal launch path with contract-aligned IPC payloads and visible launch context, but broader workflow surfaces and runtime traceability are still incomplete.
-- Live Electron smoke now passes for the implemented Today View -> Terminal path after fixing the sandboxed preload bridge; BUG-0002 records the regression and fix.
-- STEP-07-03 remains scaffolded helper code only; approvals, preview-before-write, and persisted run logs are not wired into the product flow.
-- This phase is marked partial so later agents do not mistake the completed PTY contracts for a fully hardened terminal feature.
+- All three steps are complete. PTY service, launch context wiring, approval gates, and run logs are implemented and tested.
+- STEP-07-01: PTY service in main process, IPC handlers, renderer panel, session lifecycle, environment variable filtering.
+- STEP-07-02: LaunchContext schema in contracts, Today View launch path, intent-based routing (readOnly vs artifactAffecting), preload bridge fix (BUG-0002).
+- STEP-07-03: ApprovalService with pending/approved/denied/expired states, ApprovalPreview component, run log persistence to .command-center/runs/, RedactionPolicy schema with default sensitive-key filtering, markdown run log output.
+- Security hardening pass completed: terminal IPC validation, navigation blocking, CSP without remote fonts, Electron 35.7.5 / Electron Builder 26.8.1 upgrade.
+- Remaining architectural note: preload API surface is still broader than ideal; further reduction is a future concern, not a Phase 07 blocker.

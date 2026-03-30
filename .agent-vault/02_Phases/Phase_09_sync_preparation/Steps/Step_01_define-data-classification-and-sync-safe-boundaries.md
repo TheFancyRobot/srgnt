@@ -77,15 +77,15 @@ Classify what data exists in the product and what sync may or may not move later
 
 *Production scaffolding code:*
 - `packages/sync/` — new pnpm workspace package initialized with `package.json`, `tsconfig.json`, `src/index.ts`
-- `packages/sync/src/schemas/classification.ts` — Zod schemas defining:
+- `packages/sync/src/schemas/classification.ts` — Effect Schema definitions:
   - `DataClassification` enum (`public`, `internal`, `confidential`, `secret`)
   - `SyncEligibility` enum (`syncSafe`, `encryptedOnly`, `localOnly`, `rebuildable`)
   - `DataClassEntry` schema (name, format, classification, eligibility, authoritative boolean)
   - `ClassificationMatrix` schema (array of `DataClassEntry`)
-- `packages/sync/src/schemas/frontmatter.ts` — optional Zod helper schemas for classification metadata references used by sync tooling; do not require earlier phases to add new frontmatter fields just to satisfy this step
+- `packages/sync/src/schemas/frontmatter.ts` — optional Effect Schema helpers for classification metadata references used by sync tooling; do not require earlier phases to add new frontmatter fields just to satisfy this step
 
 **Key decisions to apply:**
-- DEC-0002 (TypeScript + Zod) — all schemas must be Zod, not plain TypeScript types
+- DEC-0002 (TypeScript + Effect.Schema) — all schemas must be Effect Schema, not plain TypeScript types
 - DEC-0005 (pnpm monorepo) — `packages/sync/` must be registered in pnpm workspace config
 - DEC-0006 (docs + production scaffolding) — this step must produce BOTH the design doc AND the code artifacts
 - DEC-0007 (Dataview over markdown) — classification must account for markdown files with YAML frontmatter as the data format; no database tables to classify
@@ -108,8 +108,8 @@ Classify what data exists in the product and what sync may or may not move later
 2. `pnpm install` succeeds with the new package
 3. `pnpm --filter sync build` (or `tsc`) succeeds with no type errors
 4. Classification matrix doc exists and covers at least: workspace markdown files, YAML frontmatter metadata, Dataview indexes, connector credentials/tokens, crash logs, user settings, run history, approval records
-5. Every Zod schema in `packages/sync/src/schemas/` can be imported and `.parse()` called with a valid example
-6. Classification matrix and Zod schemas are consistent — every data class in the doc has a corresponding enum value or is representable by the schema
+5. Every Effect Schema in `packages/sync/src/schemas/` can be imported and `parseSync()` called with a valid example
+6. Classification matrix and Effect Schema definitions are consistent — every data class in the doc has a corresponding enum value or is representable by the schema
 7. No data class is left as "TBD" — every class has a definitive sync eligibility assignment
 
 **Junior-readiness verdict:** PASS — the deliverables are concrete (one doc, two schema files, one package scaffold). The classification exercise is conceptual but bounded by existing data classes. A junior dev needs access to PHASE-02/03/07 outputs to enumerate data classes. Provide a starter list of known data classes to prevent them from missing categories.

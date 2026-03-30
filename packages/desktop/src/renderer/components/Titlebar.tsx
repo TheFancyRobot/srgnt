@@ -17,8 +17,10 @@ export function Titlebar(): React.ReactElement {
 
   return (
     <div className="titlebar drag-region flex items-center justify-between bg-surface-primary border-b border-border-muted select-none">
-      {/* Left spacer / drag area */}
-      <div className="flex-1 h-full" />
+      {/* Logo + drag area */}
+      <div className="flex items-center flex-1 h-full">
+        <span className="titlebar-logo no-drag">srgnt</span>
+      </div>
 
       {/* Window controls */}
       <div className="no-drag flex items-center h-full">

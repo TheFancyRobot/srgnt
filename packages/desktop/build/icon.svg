@@ -32,7 +32,7 @@
     font-size="620"
     font-weight="800"
     fill="#00B7FF"
-    opacity="0.62"
+    opacity="0.6"
     filter="url(#glow-cyan)"
     transform="translate(-20, 0)">
     S
@@ -46,7 +46,7 @@
     font-size="620"
     font-weight="800"
     fill="#FF2A3D"
-    opacity="0.62"
+    opacity="0.6"
     filter="url(#glow-red)"
     transform="translate(20, 0)">
     S
@@ -83,7 +83,7 @@
     font-family="'JetBrains Mono', 'JetBrainsMono Nerd Font', monospace"
     font-size="620"
     font-weight="800"
-    fill="#F8F8F8">
+    fill="#F0EFEC">
     S
   </text>
 </svg>

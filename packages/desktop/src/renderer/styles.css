@@ -3,58 +3,100 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Brand palette — warm amber/gold ("brass insignia") */
-    --color-srgnt-50: #fef9ec;
-    --color-srgnt-100: #fcefc4;
-    --color-srgnt-200: #f9df84;
-    --color-srgnt-300: #f5cb44;
-    --color-srgnt-400: #f0b429;
-    --color-srgnt-500: #d49b0a;
-    --color-srgnt-600: #b07b06;
-    --color-srgnt-700: #8c5a09;
-    --color-srgnt-800: #74480e;
-    --color-srgnt-900: #623b11;
-    --color-srgnt-950: #391e05;
+  /* ──────────────── Self-hosted brand fonts ──────────────── */
 
-    /* Surfaces — light mode */
+  @font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./fonts/barlow-latin-400-normal.woff2') format('woff2');
+  }
+
+  @font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('./fonts/barlow-latin-500-normal.woff2') format('woff2');
+  }
+
+  @font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('./fonts/barlow-latin-600-normal.woff2') format('woff2');
+  }
+
+  @font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./fonts/barlow-latin-700-normal.woff2') format('woff2');
+  }
+
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');
+  }
+
+  :root {
+    /* Brand palette — luminous violet (anaglyph bridge) */
+    --color-srgnt-50: #faf5ff;
+    --color-srgnt-100: #f0e4fe;
+    --color-srgnt-200: #e0c8fd;
+    --color-srgnt-300: #cba4fb;
+    --color-srgnt-400: #b794f6;
+    --color-srgnt-500: #9b6eee;
+    --color-srgnt-600: #7c4ddb;
+    --color-srgnt-700: #6438b8;
+    --color-srgnt-800: #532f96;
+    --color-srgnt-900: #462a7a;
+    --color-srgnt-950: #2c1654;
+
+    /* Surfaces — light mode (placeholder — to be refined later) */
     --color-surface-primary: #ffffff;
-    --color-surface-secondary: #f9fafb;
-    --color-surface-tertiary: #f0f1f4;
+    --color-surface-secondary: #faf9f8;
+    --color-surface-tertiary: #f2f0ee;
     --color-surface-elevated: #ffffff;
     --color-surface-overlay: rgba(0, 0, 0, 0.4);
-    --color-surface-brand: #fef9ec;
+    --color-surface-brand: #faf5ff;
 
     /* Text — light mode */
-    --color-text-primary: #111318;
-    --color-text-secondary: #4b5060;
-    --color-text-tertiary: #6b7280;
+    --color-text-primary: #1a1a1e;
+    --color-text-secondary: #52504b;
+    --color-text-tertiary: #7a7770;
     --color-text-inverse: #ffffff;
-    --color-text-brand: #8c5a09;
+    --color-text-brand: #6438b8;
 
     /* Borders — light mode */
-    --color-border-default: #e1e4ea;
-    --color-border-muted: #eff0f3;
-    --color-border-strong: #c8ccd5;
-    --color-border-brand: #f5cb44;
+    --color-border-default: #e2e0db;
+    --color-border-muted: #eeedea;
+    --color-border-strong: #c8c5be;
+    --color-border-brand: #b794f6;
 
-    /* Status colors */
-    --color-success-50: #f0fdf4;
-    --color-success-100: #dcfce7;
-    --color-success-500: #22c55e;
-    --color-success-600: #16a34a;
-    --color-warning-50: #fefce8;
-    --color-warning-100: #fef9c3;
-    --color-warning-500: #eab308;
-    --color-warning-600: #ca8a04;
-    --color-error-50: #fef2f2;
-    --color-error-100: #fee2e2;
-    --color-error-500: #ef4444;
-    --color-error-600: #dc2626;
+    /* Status colors — branded semantic tones */
+    --color-success-50: #f0f9f3;
+    --color-success-100: #dcf0e2;
+    --color-success-500: #7bb88e;
+    --color-success-600: #5ea474;
+    --color-warning-50: #fdf8eb;
+    --color-warning-100: #faf0d0;
+    --color-warning-500: #e0b45e;
+    --color-warning-600: #c99a3e;
+    --color-error-50: #fdf1f0;
+    --color-error-100: #fbe0dd;
+    --color-error-500: #ec8e84;
+    --color-error-600: #d96e62;
     --color-info-50: #eff6ff;
     --color-info-100: #dbeafe;
-    --color-info-500: #3b82f6;
-    --color-info-600: #2563eb;
+    --color-info-500: #85acc6;
+    --color-info-600: #6893b0;
 
     /* Shadows */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -62,40 +104,40 @@
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
     --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.04);
-    --shadow-glow: 0 0 24px rgba(240, 180, 41, 0.15);
+    --shadow-glow: 0 0 24px rgba(183, 148, 246, 0.15);
   }
 
   .dark {
-    /* Surfaces — deep navy */
-    --color-surface-primary: #0c1121;
-    --color-surface-secondary: #111729;
-    --color-surface-tertiary: #1a2138;
-    --color-surface-elevated: #161d32;
+    /* Surfaces — graphite / carbon / ink */
+    --color-surface-primary: #0c0c10;
+    --color-surface-secondary: #131318;
+    --color-surface-tertiary: #1b1b22;
+    --color-surface-elevated: #1b1b22;
     --color-surface-overlay: rgba(0, 0, 0, 0.6);
-    --color-surface-brand: rgba(240, 180, 41, 0.06);
+    --color-surface-brand: rgba(183, 148, 246, 0.06);
 
-    /* Text — dark mode */
-    --color-text-primary: #e8ecf4;
-    --color-text-secondary: #8b95ab;
-    --color-text-tertiary: #7b8496;
-    --color-text-inverse: #0c1121;
-    --color-text-brand: #f0b429;
+    /* Text — warm bone / stone */
+    --color-text-primary: #e2e0db;
+    --color-text-secondary: #b0ada4;
+    --color-text-tertiary: #8a867e;
+    --color-text-inverse: #0c0c10;
+    --color-text-brand: #b794f6;
 
     /* Borders — dark mode */
-    --color-border-default: #1f2940;
-    --color-border-muted: #151c30;
-    --color-border-strong: #2d3a54;
-    --color-border-brand: rgba(240, 180, 41, 0.25);
+    --color-border-default: #2a2a34;
+    --color-border-muted: #1e1e26;
+    --color-border-strong: #3a3a46;
+    --color-border-brand: rgba(183, 148, 246, 0.25);
 
     /* Status dark overrides */
-    --color-success-50: rgba(34, 197, 94, 0.08);
-    --color-success-100: rgba(34, 197, 94, 0.12);
-    --color-warning-50: rgba(234, 179, 8, 0.08);
-    --color-warning-100: rgba(234, 179, 8, 0.12);
-    --color-error-50: rgba(239, 68, 68, 0.08);
-    --color-error-100: rgba(239, 68, 68, 0.12);
-    --color-info-50: rgba(59, 130, 246, 0.08);
-    --color-info-100: rgba(59, 130, 246, 0.12);
+    --color-success-50: rgba(123, 184, 142, 0.08);
+    --color-success-100: rgba(123, 184, 142, 0.12);
+    --color-warning-50: rgba(224, 180, 94, 0.08);
+    --color-warning-100: rgba(224, 180, 94, 0.12);
+    --color-error-50: rgba(236, 142, 132, 0.08);
+    --color-error-100: rgba(236, 142, 132, 0.12);
+    --color-info-50: rgba(133, 172, 198, 0.08);
+    --color-info-100: rgba(133, 172, 198, 0.12);
 
     /* Shadows — dark mode */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -103,7 +145,7 @@
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
     --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.2);
-    --shadow-glow: 0 0 32px rgba(240, 180, 41, 0.12);
+    --shadow-glow: 0 0 32px rgba(183, 148, 246, 0.12);
   }
 
   * {
@@ -111,7 +153,7 @@
   }
 
   body {
-    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif;
     color: var(--color-text-primary);
     background-color: var(--color-surface-secondary);
     -webkit-font-smoothing: antialiased;
@@ -131,11 +173,11 @@
   /* Custom selection */
   ::selection {
     background-color: var(--color-srgnt-200);
-    color: var(--color-srgnt-900);
+    color: var(--color-srgnt-950);
   }
 
   .dark ::selection {
-    background-color: rgba(240, 180, 41, 0.2);
+    background-color: rgba(183, 148, 246, 0.2);
     color: var(--color-srgnt-200);
   }
 }
@@ -149,7 +191,7 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif;
     font-size: 0.8125rem;
     font-weight: 500;
     letter-spacing: 0.01em;
@@ -174,7 +216,7 @@
 
   .btn-primary {
     background: linear-gradient(135deg, var(--color-srgnt-500) 0%, var(--color-srgnt-600) 100%);
-    color: #0c1121;
+    color: #ffffff;
     box-shadow: var(--shadow-xs), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   }
 
@@ -259,7 +301,7 @@
     display: block;
     width: 100%;
     padding: 0.5rem 0.75rem;
-    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif;
     font-size: 0.8125rem;
     border-radius: 8px;
     border: 1px solid var(--color-border-default);
@@ -275,7 +317,7 @@
   }
 
   .dark .input:focus {
-    box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.1);
+    box-shadow: 0 0 0 3px rgba(183, 148, 246, 0.1);
   }
 
   .input:disabled {
@@ -334,6 +376,30 @@
   .titlebar-btn-close:hover {
     background-color: #e81123;
     color: #ffffff;
+  }
+
+  .titlebar-logo {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 0.875rem;
+    letter-spacing: -0.03em;
+    color: var(--color-srgnt-500);
+    padding-left: 14px;
+    cursor: default;
+    text-shadow:
+      -2px 0 0 rgba(0, 183, 255, 0.7),
+       2px 0 0 rgba(255, 42, 61, 0.7);
+    transition: text-shadow 200ms ease;
+  }
+
+  .dark .titlebar-logo {
+    color: var(--color-text-primary);
+  }
+
+  .titlebar-logo:hover {
+    text-shadow:
+      -2px 0 0 rgba(0, 183, 255, 0.75),
+       2px 0 0 rgba(255, 42, 61, 0.75);
   }
 
   /* ──────────────── Navigation ──────────────── */
@@ -452,7 +518,7 @@
   /* ──────────────── Section headings ──────────────── */
 
   .section-heading {
-    font-family: 'Sora', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif;
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -570,7 +636,7 @@
   /* ──────────────── Display typography ──────────────── */
 
   .font-display {
-    font-family: 'Sora', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif;
   }
 
   .font-mono-data {
@@ -585,6 +651,6 @@
   }
 
   .dark .surface-gradient {
-    background: linear-gradient(135deg, var(--color-surface-primary) 0%, var(--color-surface-secondary) 50%, rgba(240, 180, 41, 0.02) 100%);
+    background: linear-gradient(135deg, var(--color-surface-primary) 0%, var(--color-surface-secondary) 50%, rgba(183, 148, 246, 0.02) 100%);
   }
 }

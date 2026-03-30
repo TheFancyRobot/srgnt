@@ -152,25 +152,11 @@ export function AppLayout({ children, activeId, onNavigate, date, fullBleed = fa
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
         <aside className="w-56 border-r border-border-default bg-surface-primary flex flex-col surface-gradient">
-          {/* Brand header */}
-          <div className="p-4 pb-3 border-b border-border-muted">
-            <div className="flex items-center gap-3 animate-fade-in">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-srgnt-400 to-srgnt-600 shadow-xs">
-                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                </svg>
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-sm font-display font-semibold text-text-primary tracking-tight">srgnt</h1>
-                {date && (
-                  <p className="text-[10px] font-mono-data text-text-tertiary truncate">{date}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
           {/* Navigation */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="flex-1 overflow-y-auto scrollbar-thin pt-2">
+            {date && (
+              <p className="text-[10px] font-mono-data text-text-tertiary px-4 pb-2 truncate">{date}</p>
+            )}
             <Navigation
               items={canonicalNavItems}
               activeId={activeId}

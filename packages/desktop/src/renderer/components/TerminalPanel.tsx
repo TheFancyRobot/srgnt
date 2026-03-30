@@ -40,51 +40,51 @@ function ApprovalPreview({
   onDeny: () => void;
 }): React.ReactElement {
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-neutral-900 text-white p-6">
-      <div className="max-w-md w-full bg-neutral-800 rounded-lg border border-neutral-700 p-6">
-        <h3 className="text-lg font-semibold mb-4 text-yellow-400">Approval Required</h3>
+    <div className="flex flex-col items-center justify-center h-full bg-surface-secondary text-text-primary p-6">
+      <div className="max-w-md w-full bg-surface-tertiary rounded-lg border border-border-default p-6">
+        <h3 className="text-lg font-semibold mb-4 text-warning-500">Approval Required</h3>
         <div className="space-y-3 text-sm">
           <div>
-            <span className="text-neutral-400">Command:</span>
-            <code className="ml-2 text-neutral-200 bg-neutral-900 px-2 py-1 rounded">
+            <span className="text-text-tertiary">Command:</span>
+            <code className="ml-2 text-text-primary bg-surface-primary px-2 py-1 rounded font-mono">
               {approval.command || 'bash'}
             </code>
           </div>
           <div>
-            <span className="text-neutral-400">Risk Level:</span>
+            <span className="text-text-tertiary">Risk Level:</span>
             <span
               className={`ml-2 font-medium ${
                 approval.riskLevel === 'high'
-                  ? 'text-red-400'
+                  ? 'text-error-500'
                   : approval.riskLevel === 'medium'
-                  ? 'text-yellow-400'
-                  : 'text-green-400'
+                  ? 'text-warning-500'
+                  : 'text-success-500'
               }`}
             >
               {approval.riskLevel.toUpperCase()}
             </span>
           </div>
           <div>
-            <span className="text-neutral-400">Workflow:</span>
-            <span className="ml-2 text-neutral-200">{approval.launchContext.sourceWorkflow}</span>
+            <span className="text-text-tertiary">Workflow:</span>
+            <span className="ml-2 text-text-primary">{approval.launchContext.sourceWorkflow}</span>
           </div>
           <div>
-            <span className="text-neutral-400">Directory:</span>
-            <span className="ml-2 text-neutral-200">{approval.launchContext.workingDirectory}</span>
+            <span className="text-text-tertiary">Directory:</span>
+            <span className="ml-2 text-text-primary">{approval.launchContext.workingDirectory}</span>
           </div>
         </div>
         <div className="flex gap-3 mt-6">
           <button
             type="button"
             onClick={onDeny}
-            className="flex-1 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 rounded text-sm transition-colors"
+            className="flex-1 px-4 py-2 bg-surface-elevated hover:bg-surface-tertiary border border-border-default rounded text-sm transition-colors"
           >
             Deny
           </button>
           <button
             type="button"
             onClick={onApprove}
-            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 rounded text-sm font-medium transition-colors"
+            className="flex-1 px-4 py-2 bg-success-600 hover:bg-success-500 text-white rounded text-sm font-medium transition-colors"
           >
             Approve
           </button>
@@ -135,12 +135,28 @@ function TerminalTabContent({
           ghostty,
           cursorBlink: true,
           fontSize: 13,
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Fira Code', monospace",
           theme: {
-            background: '#1a1a1a',
-            foreground: '#e5e5e5',
-            cursor: '#e5e5e5',
-            selectionBackground: '#404040',
+            background: '#131318',
+            foreground: '#e2e0db',
+            cursor: '#b794f6',
+            selectionBackground: '#2a2a34',
+            black: '#0c0c10',
+            brightBlack: '#3a3a46',
+            red: '#ec8e84',
+            brightRed: '#f0a49c',
+            green: '#7bb88e',
+            brightGreen: '#96cca5',
+            yellow: '#e0b45e',
+            brightYellow: '#e8c87a',
+            blue: '#85acc6',
+            brightBlue: '#9ec0d6',
+            magenta: '#b794f6',
+            brightMagenta: '#c4a5f8',
+            cyan: '#00B7FF',
+            brightCyan: '#5ccfff',
+            white: '#e2e0db',
+            brightWhite: '#f0efec',
           },
           rows: 24,
           cols: 80,
@@ -295,7 +311,7 @@ function TerminalTabContent({
       ref={containerRef}
       data-testid="terminal-host"
       style={{ caretColor: 'transparent' }}
-      className="flex-1 overflow-hidden min-h-0 p-2"
+      className="flex-1 overflow-hidden min-h-0 pt-2 pl-2 bg-[#131318]"
     />
   );
 }
@@ -431,16 +447,16 @@ export function TerminalPanel({ className = '', launchContext = null }: Terminal
   }, []);
 
   return (
-    <div className={`flex flex-col bg-neutral-900 overflow-hidden ${className}`}>
-      <div className="flex items-center bg-neutral-800 border-b border-neutral-700 min-h-[36px]">
+    <div className={`flex flex-col bg-surface-secondary overflow-hidden ${className}`}>
+      <div className="flex items-center bg-surface-primary border-b border-border-default min-h-[36px]">
         <div className="flex items-center flex-1 overflow-x-auto scrollbar-none">
           {tabs.map((tab) => (
             <div
               key={tab.id}
-              className={`group flex items-center gap-2 px-3 py-1.5 text-xs font-mono cursor-pointer border-r border-neutral-700 min-w-0 max-w-[180px] ${
+              className={`group flex items-center gap-2 px-3 py-1.5 text-xs font-mono cursor-pointer border-r border-border-muted min-w-0 max-w-[180px] ${
                 tab.id === activeTabId
-                  ? 'bg-neutral-900 text-white'
-                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-750'
+                  ? 'bg-surface-secondary text-text-primary'
+                  : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-tertiary'
               }`}
               onClick={() => setActiveTabId(tab.id)}
               role="tab"
@@ -449,10 +465,10 @@ export function TerminalPanel({ className = '', launchContext = null }: Terminal
               <span
                 className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                   tab.approvalPending
-                    ? 'bg-yellow-500'
+                    ? 'bg-warning-500'
                     : tab.isConnected
-                    ? 'bg-green-500'
-                    : 'bg-red-500'
+                    ? 'bg-success-500'
+                    : 'bg-error-500'
                 }`}
               />
               <span className="truncate">{tab.label}</span>
@@ -462,7 +478,7 @@ export function TerminalPanel({ className = '', launchContext = null }: Terminal
                   e.stopPropagation();
                   closeTab(tab.id);
                 }}
-                className="shrink-0 ml-1 w-4 h-4 flex items-center justify-center rounded text-neutral-500 hover:text-white hover:bg-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="shrink-0 ml-1 w-4 h-4 flex items-center justify-center rounded text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary opacity-0 group-hover:opacity-100 transition-opacity"
                 aria-label={`Close ${tab.label}`}
               >
                 ×
@@ -473,7 +489,7 @@ export function TerminalPanel({ className = '', launchContext = null }: Terminal
         <button
           type="button"
           onClick={() => addTab(null)}
-          className="flex items-center justify-center w-8 h-8 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors shrink-0"
+          className="flex items-center justify-center w-8 h-8 text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary transition-colors shrink-0"
           aria-label="Open new terminal tab"
         >
           +
@@ -491,10 +507,10 @@ export function TerminalPanel({ className = '', launchContext = null }: Terminal
             aria-hidden={tab.id !== activeTabId}
           >
             {tab.denied ? (
-              <div className="flex items-center justify-center h-full text-neutral-400">
+              <div className="flex items-center justify-center h-full text-text-secondary">
                 <div className="text-center">
-                  <div className="text-red-400 text-lg mb-2">Launch Denied</div>
-                  <div className="text-sm text-neutral-500">This terminal launch was denied.</div>
+                  <div className="text-error-500 text-lg mb-2">Launch Denied</div>
+                  <div className="text-sm text-text-tertiary">This terminal launch was denied.</div>
                 </div>
               </div>
             ) : (
@@ -508,7 +524,7 @@ export function TerminalPanel({ className = '', launchContext = null }: Terminal
                   onDenied={handleDenied}
                 />
                 {tab.approvalPending && (
-                  <div className="absolute inset-0 z-10 flex flex-col bg-neutral-900/92 backdrop-blur-sm">
+                  <div className="absolute inset-0 z-10 flex flex-col bg-surface-primary/95 backdrop-blur-sm">
                     <div className="h-[36px] shrink-0" />
                     <ApprovalPreview
                       approval={tab.approvalPending}
@@ -523,7 +539,7 @@ export function TerminalPanel({ className = '', launchContext = null }: Terminal
         ))}
 
         {tabs.length === 0 && (
-          <div className="flex items-center justify-center h-full text-neutral-500 text-sm">
+          <div className="flex items-center justify-center h-full text-text-tertiary text-sm">
             No terminal sessions. Click + to open one.
           </div>
         )}

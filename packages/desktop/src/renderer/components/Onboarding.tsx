@@ -89,14 +89,7 @@ export function OnboardingWizard({ flow }: { flow: OnboardingFlow }): React.Reac
           <div className="p-8">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-srgnt-400 to-srgnt-600 shadow-xs">
-                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-                  </svg>
-                </div>
-                <span className="text-sm font-display font-semibold text-text-primary">srgnt</span>
-              </div>
+              <span className="titlebar-logo" style={{ paddingLeft: 0 }}>srgnt</span>
               <button
                 type="button"
                 onClick={flow.onSkip}

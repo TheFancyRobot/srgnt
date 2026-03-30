@@ -72,8 +72,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        display: ['Sora', 'DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        sans: ['DM Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Barlow', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Barlow', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SF Mono', 'Fira Code', 'monospace'],
       },
       boxShadow: {

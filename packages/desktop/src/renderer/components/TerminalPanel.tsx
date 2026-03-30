@@ -311,7 +311,7 @@ function TerminalTabContent({
       ref={containerRef}
       data-testid="terminal-host"
       style={{ caretColor: 'transparent' }}
-      className="flex-1 overflow-hidden min-h-0 pt-2 pl-2 bg-[#131318]"
+      className="flex-1 overflow-hidden min-h-0 pt-2 pl-2 bg-surface-secondary"
     />
   );
 }

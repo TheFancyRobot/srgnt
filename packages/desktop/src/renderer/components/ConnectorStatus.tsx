@@ -81,7 +81,7 @@ function ConnectorCard({
   const meta = connectorMeta[connector.id];
 
   return (
-    <div className={`card p-5 animate-slide-up stagger-${stagger}`}>
+    <div id={`connector-${connector.id}`} className={`card p-5 animate-slide-up stagger-${stagger}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           {/* Icon */}

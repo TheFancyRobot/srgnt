@@ -86,6 +86,12 @@ export const SDesktopConnectorPreferences = Schema.Struct({
 });
 export type DesktopConnectorPreferences = Schema.Schema.Type<typeof SDesktopConnectorPreferences>;
 
+export const SLayoutPreferences = Schema.Struct({
+  sidebarWidth: Schema.Number,
+  sidebarCollapsed: Schema.Boolean,
+});
+export type LayoutPreferences = Schema.Schema.Type<typeof SLayoutPreferences>;
+
 export const SDesktopSettings = Schema.Struct({
   theme: SDesktopTheme,
   updateChannel: SUpdateChannel,
@@ -94,6 +100,9 @@ export const SDesktopSettings = Schema.Struct({
   connectors: SDesktopConnectorPreferences,
   debugMode: Schema.Boolean,
   maxConcurrentRuns: Schema.Literal('1', '3', '5'),
+  layout: Schema.optionalWith(SLayoutPreferences, {
+    default: () => ({ sidebarWidth: 240, sidebarCollapsed: false }),
+  }),
 });
 export type DesktopSettings = Schema.Schema.Type<typeof SDesktopSettings>;
 

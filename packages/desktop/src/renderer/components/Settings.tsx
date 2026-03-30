@@ -20,8 +20,6 @@ export interface SettingsSection {
 /* ─── Panel ─── */
 
 export function SettingsPanel({ sections, theme, onThemeChange }: { sections: SettingsSection[]; theme?: 'system' | 'light' | 'dark'; onThemeChange?: (theme: 'system' | 'light' | 'dark') => void }): React.ReactElement {
-  const [activeSection, setActiveSection] = React.useState(sections[0]?.id || '');
-
   const sectionsWithTheme = React.useMemo(() => {
     return sections.map((section) => {
       if (section.id === 'general') {
@@ -40,7 +38,7 @@ export function SettingsPanel({ sections, theme, onThemeChange }: { sections: Se
   }, [sections, theme, onThemeChange]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <header className="animate-slide-up">
         <h1 className="text-2xl font-display font-semibold text-text-primary tracking-tight mb-1">
@@ -49,50 +47,17 @@ export function SettingsPanel({ sections, theme, onThemeChange }: { sections: Se
         <p className="text-sm text-text-secondary">Configure your workspace and integrations.</p>
       </header>
 
-      {/* Layout */}
-      <div className="flex gap-8 animate-slide-up stagger-1">
-        {/* Section nav */}
-        <nav className="w-44 flex-shrink-0" aria-label="Settings sections">
-          <ul className="space-y-0.5" role="list">
-            {sectionsWithTheme.map((section) => (
-              <li key={section.id}>
-                <button
-                  type="button"
-                  onClick={() => setActiveSection(section.id)}
-                  className={`
-                    nav-item w-full text-left text-sm
-                    ${activeSection === section.id ? 'active' : ''}
-                  `}
-                >
-                  {section.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {sectionsWithTheme.find((s) => s.id === activeSection) && (
-            <SettingsSectionContent
-              section={sectionsWithTheme.find((s) => s.id === activeSection)!}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Section content ─── */
-
-function SettingsSectionContent({ section }: { section: SettingsSection }): React.ReactElement {
-  return (
-    <div className="animate-fade-in">
-      <h2 className="section-heading mb-4">{section.title}</h2>
-      <div className="space-y-4">
-        {section.settings.map((setting, i) => (
-          <SettingRow key={setting.id} setting={setting} stagger={i + 1} />
+      {/* All sections in one scrollable column */}
+      <div className="space-y-8 animate-slide-up stagger-1">
+        {sectionsWithTheme.map((section, sectionIndex) => (
+          <section key={section.id} id={`settings-section-${section.id}`}>
+            <h2 className="section-heading mb-4">{section.title}</h2>
+            <div className="space-y-4">
+              {section.settings.map((setting, settingIndex) => (
+                <SettingRow key={setting.id} setting={setting} stagger={sectionIndex + settingIndex + 1} />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     </div>

@@ -20,9 +20,9 @@ test('shows onboarding on first launch and boots into the command center', async
   await expect(page.getByRole('heading', { name: "You're All Set" })).toBeVisible();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
-  await expect(page.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByText('Priorities')).toBeVisible();
-  await expect(page.getByText('Attention Needed')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Daily Dashboard' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('heading', { name: 'Priorities' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Attention Needed' })).toBeVisible();
 
   const appState = await electronApp.evaluate(async ({ app }) => ({
     isPackaged: app.isPackaged,
@@ -37,23 +37,32 @@ test('navigates across key surfaces and updates connector status', async ({ wind
   await completeOnboarding(page);
 
   await page.getByRole('button', { name: 'Calendar' }).click();
-  await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
+  await expect(page.locator('main h1').filter({ hasText: 'Calendar' })).toBeVisible();
   await page.getByRole('button', { name: /Sprint Planning/ }).first().click();
   await expect(page.getByRole('heading', { name: 'Event Detail' })).toBeVisible();
   await expect(page.getByText('Prep Notes')).toBeVisible();
 
   await page.getByRole('button', { name: 'Connectors' }).click();
-  await expect(page.getByRole('heading', { name: 'Connectors' })).toBeVisible();
+  await expect(page.locator('main h1').filter({ hasText: 'Connectors' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Connect Jira' }).click();
   await expect(page.getByRole('button', { name: 'Disconnect Jira' })).toBeVisible();
   await page.getByRole('button', { name: 'Disconnect Jira' }).click();
   await expect(page.getByRole('button', { name: 'Connect Jira' })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Notes' }).click();
+  await expect(page.locator('main h1').filter({ hasText: 'Notes' })).toBeVisible();
+  await expect(page.getByLabel('Side panel').getByText('Notes coming soon')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Notes' }).click();
+  await expect(page.getByRole('complementary', { name: 'Side panel' })).toHaveAttribute('data-collapsed', 'true');
+  await page.getByRole('button', { name: 'Expand side panel' }).click();
+  await expect(page.getByRole('complementary', { name: 'Side panel' })).toHaveAttribute('data-collapsed', 'false');
+
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   await page.getByRole('button', { name: 'Advanced' }).click();
-  await expect(page.getByText('Debug Mode')).toBeVisible();
+  await expect(page.getByText('Debug Mode').last()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Check For Updates' })).toBeVisible();
 });
 
@@ -66,7 +75,7 @@ test('opens the terminal view without CSP bootstrap failures', async ({ window: 
   });
 
   await page.getByRole('button', { name: 'Terminal' }).click();
-  await expect(page.getByRole('button', { name: 'Terminal', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Terminal', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('terminal-host')).toBeVisible();
   await expect(page.getByRole('tab')).toBeVisible();
   await expect
@@ -89,17 +98,11 @@ test('persists settings and writes redacted crash diagnostics', async ({ userDat
 
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Privacy' }).click();
+  await page.locator('#telemetry-enabled-input + div').click();
 
   await page.getByRole('button', { name: 'General' }).click();
   await page.selectOption('#theme-input', 'dark');
   await page.selectOption('#update-channel-input', 'beta');
-  await page.evaluate(async () => {
-    const current = await window.srgnt.getDesktopSettings();
-    await window.srgnt.saveDesktopSettings({
-      ...current.settings,
-      telemetryEnabled: true,
-    });
-  });
   await page.getByRole('button', { name: 'Write Crash Log' }).click();
 
   const saved = await page.evaluate(async () => {

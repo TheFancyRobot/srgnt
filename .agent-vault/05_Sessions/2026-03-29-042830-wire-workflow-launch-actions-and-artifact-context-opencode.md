@@ -83,23 +83,6 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 ## Completion Summary
 
-- State what finished, what remains, and whether the session ended in a clean handoff state.
-!-- AGENT-START:session-bugs-encountered -->
-- None.
-<!-- AGENT-END:session-bugs-encountered -->
-
-## Decisions Made or Updated
-
-<!-- AGENT-START:session-decisions-made-or-updated -->
-- None.
-<!-- AGENT-END:session-decisions-made-or-updated -->
-
-## Follow-Up Work
-
-<!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]].
-<!-- AGENT-END:session-follow-up-work -->
-
-## Completion Summary
-
-- State what finished, what remains, and whether the session ended in a clean handoff state.
+- STEP-07-02 completed in this session.
+- Calendar launch entry points, artifact context wiring, and the run-history surface were implemented and validated.
+- The session ended in a clean handoff state for the next Phase 07 step.

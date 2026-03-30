@@ -49,6 +49,10 @@ vi.mock('ghostty-web', () => {
   };
 });
 
+vi.mock('ghostty-web/ghostty-vt.wasm?url', () => ({
+  default: 'ghostty-vt.wasm',
+}));
+
 vi.mock('../effects/terminal-ipc.js', () => ({
   TerminalIpc: {
     close: vi.fn(() => ({ _tag: 'close' })),

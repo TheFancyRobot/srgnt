@@ -73,17 +73,22 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - Approval check in `main/index.ts:366-367` only triggers when `intent === 'artifactAffecting'`
 - Since intent was always 'readOnly', `requiresApproval` was always false
 
+## Workaround
+
+- Use the fixed `TodayView.tsx` implementation where launch contexts set `intent: 'artifactAffecting'` for the Today workflow launch path.
+- There is no safe runtime workaround on the broken build because the incorrect intent is baked into the renderer launch request.
+
+## Permanent Fix Plan
+
+- Keep `TodayView.handleLaunch()` aligned with the approval boundary by treating these launches as `artifactAffecting`.
+- Preserve regression coverage so future renderer changes cannot silently downgrade the launch intent back to `readOnly`.
+
 ## Regression Coverage Needed
 
 - Unit test: TodayView launch with 'artifactAffecting' intent triggers approval preview
 - E2E test: Full approval flow from Today View → approval modal → approve → terminal opens
 - Snapshot test: Approval modal appears with correct command, directory, and workflow context
 - Integration test: Verify `terminalLaunchWithContext` IPC sends `launchApprovalRequired` event for artifact-affecting launches
-
-
--单元 test: TodayView launch with 'artifactAffecting' intent triggers approval preview
-- E2E test: Full approval flow from Today View → approval modal → approve → terminal opens
--Snapshot test: Approval modal appears with correct command, directory, and workflow context
 
 ## Related Notes
 

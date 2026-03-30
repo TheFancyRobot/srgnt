@@ -76,12 +76,12 @@ export function ActivityBar({ items, activeId, onNavigate }: ActivityBarProps): 
     [focusedIndex, items.length],
   );
 
-  const mainItems = items.filter((i) => i.section === 'main');
-  const systemItems = items.filter((i) => i.section === 'system');
-  const utilityItems = items.filter((i) => i.section === 'utility');
+  const indexedItems = items.map((item, index) => ({ item, index }));
+  const mainItems = indexedItems.filter(({ item }) => item.section === 'main');
+  const systemItems = indexedItems.filter(({ item }) => item.section === 'system');
+  const utilityItems = indexedItems.filter(({ item }) => item.section === 'utility');
 
-  const renderItem = (item: ActivityBarItem) => {
-    const globalIndex = items.indexOf(item);
+  const renderItem = ({ item, index: globalIndex }: { item: ActivityBarItem; index: number }) => {
     const isActive = item.id === activeId;
     const isFocused = globalIndex === focusedIndex;
 
@@ -117,17 +117,17 @@ export function ActivityBar({ items, activeId, onNavigate }: ActivityBarProps): 
         className="flex flex-col items-center h-full py-2"
       >
         <div className="flex flex-col items-center gap-1">
-          {mainItems.map((item) => renderItem(item))}
+          {mainItems.map(renderItem)}
         </div>
 
         <div className="flex flex-col items-center gap-1 mt-2 pt-2 border-t border-border-muted">
-          {systemItems.map((item) => renderItem(item))}
+          {systemItems.map(renderItem)}
         </div>
 
         <div className="flex-1" />
 
         <div className="flex flex-col items-center gap-1 pt-2 border-t border-border-muted">
-          {utilityItems.map((item) => renderItem(item))}
+          {utilityItems.map(renderItem)}
         </div>
 
         <div className="flex justify-center mb-2 mt-2">

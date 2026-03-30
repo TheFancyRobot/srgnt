@@ -55,10 +55,14 @@ const defaultPanels: PanelDefinition[] = [
   { id: 'today', icon: navIcons['today']!, label: 'Daily Dashboard', section: 'main', order: 1, sidePanelContent: TodaySidePanel },
   { id: 'calendar', icon: navIcons['calendar']!, label: 'Calendar', section: 'main', order: 2, sidePanelContent: CalendarSidePanel },
   { id: 'notes', icon: navIcons['notes']!, label: 'Notes', section: 'main', order: 3, sidePanelContent: NotesSidePanel },
-  { id: 'connectors', icon: navIcons['connectors']!, label: 'Connectors', section: 'system', order: 4 },
+  { id: 'connectors', icon: navIcons['connectors']!, label: 'Connectors', section: 'system', order: 4, sidePanelContent: EmptyConnectorsSidePanel },
   { id: 'settings', icon: navIcons['settings']!, label: 'Settings', section: 'system', order: 5, sidePanelContent: SettingsSidePanel },
   { id: 'terminal', icon: navIcons['terminal']!, label: 'Terminal', section: 'utility', order: 6 },
 ];
+
+function EmptyConnectorsSidePanel(): React.ReactElement {
+  return <ConnectorsSidePanel connectors={[]} />;
+}
 
 function TerminalLoadingState(): React.ReactElement {
   return (

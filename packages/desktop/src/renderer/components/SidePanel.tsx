@@ -14,6 +14,7 @@ export function SidePanel({ children }: { children: React.ReactNode }): React.Re
   const widthRef = React.useRef(sidebarWidth);
   const frameRef = React.useRef<number | null>(null);
   const clickTimeoutRef = React.useRef<number | null>(null);
+  const dragCleanupRef = React.useRef<(() => void) | null>(null);
 
   const commitWidth = React.useCallback(
     (nextWidth: number) => {
@@ -27,6 +28,8 @@ export function SidePanel({ children }: { children: React.ReactNode }): React.Re
       e.preventDefault();
       const startX = e.clientX;
       const startWidth = widthRef.current;
+
+      dragCleanupRef.current?.();
 
       document.body.style.userSelect = 'none';
 
@@ -44,7 +47,7 @@ export function SidePanel({ children }: { children: React.ReactNode }): React.Re
         });
       };
 
-      const handleMouseUp = () => {
+      const cleanupDrag = () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
         document.body.style.userSelect = '';
@@ -54,9 +57,15 @@ export function SidePanel({ children }: { children: React.ReactNode }): React.Re
           frameRef.current = null;
         }
 
+        dragCleanupRef.current = null;
+      };
+
+      const handleMouseUp = () => {
+        cleanupDrag();
         commitWidth(widthRef.current);
       };
 
+      dragCleanupRef.current = cleanupDrag;
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
@@ -82,6 +91,8 @@ export function SidePanel({ children }: { children: React.ReactNode }): React.Re
 
   React.useEffect(() => {
     return () => {
+      dragCleanupRef.current?.();
+
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
       }
@@ -117,7 +128,6 @@ export function SidePanel({ children }: { children: React.ReactNode }): React.Re
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize side panel"
-            tabIndex={0}
             onClick={handleResizeClick}
             onMouseDown={handleMouseDown}
           />

@@ -1,6 +1,24 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { existsSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+
+// On Linux, use ANGLE's Vulkan backend when available to avoid eglCreateImage
+// EGL_BAD_MATCH crashes with Mesa drivers on Wayland. Falls back to default
+// ANGLE/EGL on systems without Vulkan.
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+
+  const vulkanAvailable =
+    existsSync('/usr/lib/libvulkan.so.1') ||
+    existsSync('/usr/lib64/libvulkan.so.1') ||
+    existsSync('/usr/lib/x86_64-linux-gnu/libvulkan.so.1');
+
+  if (vulkanAvailable) {
+    app.commandLine.appendSwitch('use-angle', 'vulkan');
+  }
+}
+
 import {
   ipcChannels,
   parseSync,
@@ -439,8 +457,8 @@ ipcMain.handle(ipcChannels.terminalLaunchWithContext, async (_event, rawPayload)
     const template = {
       id: `terminal-direct-${Date.now()}`,
       name: 'Terminal Command',
-      description: `Direct terminal command: ${launchContext.command || 'bash'}`,
-      command: launchContext.command || 'bash',
+      description: `Direct terminal command: ${launchContext.command || 'shell'}`,
+      command: launchContext.command || 'shell',
       args: [],
       intent: 'artifactAffecting' as const,
       requiredCapabilities: [],
@@ -461,7 +479,7 @@ ipcMain.handle(ipcChannels.terminalLaunchWithContext, async (_event, rawPayload)
     mainWindow.webContents.send(ipcChannels.launchApprovalRequired, {
       approvalId: approval.id,
       launchContext,
-      command: launchContext.command || 'bash',
+      command: launchContext.command || 'shell',
       riskLevel: 'high',
       requiresApproval: true,
     });
@@ -507,7 +525,7 @@ async function launchApproved(
   rows: number,
   cols: number
 ): Promise<{ sessionId: string; pid: number; launchId: string; status: 'approved' }> {
-  const log = runLogService.startRun(launchContext.launchId, launchContext, launchContext.command || 'bash');
+  const log = runLogService.startRun(launchContext.launchId, launchContext, launchContext.command || 'shell');
   await writeRunLogToDisk(log.id, runLogService.toMarkdown(log));
 
   const { session } = await ptyService.spawn({

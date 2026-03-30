@@ -287,7 +287,7 @@ describe('Terminal surface Effect schemas', () => {
       if (result.success) {
         expect(result.data.defaultRows).toBe(24);
         expect(result.data.defaultCols).toBe(80);
-        expect(result.data.shell).toBe('/bin/bash');
+        expect(result.data.shell).toBe(process.env['SHELL'] || '/bin/bash');
         expect(result.data.maxSessions).toBe(5);
         expect(result.data.sessionTimeoutMs).toBe(3600000);
       }

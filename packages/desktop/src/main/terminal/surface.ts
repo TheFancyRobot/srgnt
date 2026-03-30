@@ -17,7 +17,7 @@ export type WorkflowLaunchContext = Schema.Schema.Type<typeof SWorkflowLaunchCon
 export const STerminalSurfaceConfig = Schema.Struct({
   defaultRows: Schema.optionalWith(PositiveInt, { default: () => 24 }),
   defaultCols: Schema.optionalWith(PositiveInt, { default: () => 80 }),
-  shell: Schema.optionalWith(Schema.String, { default: () => '/bin/bash' }),
+  shell: Schema.optionalWith(Schema.String, { default: () => process.env['SHELL'] || '/bin/bash' }),
   maxSessions: Schema.optionalWith(PositiveInt, { default: () => 5 }),
   sessionTimeoutMs: Schema.optionalWith(PositiveInt, { default: () => 3600000 }),
 });

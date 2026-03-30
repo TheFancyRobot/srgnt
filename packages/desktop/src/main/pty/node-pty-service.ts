@@ -37,7 +37,9 @@ export function createPtyService(deps: PtyServiceDeps): PtyService {
       const validated = parseSync(SPtyProcessOptions, options) as PtyProcessOptions;
       const args = [...validated.args];
 
-      const shell = process.platform === 'win32' ? 'powershell.exe' : 'bash';
+      const shell = process.platform === 'win32'
+        ? 'powershell.exe'
+        : process.env['SHELL'] || 'bash';
       const shellArgs = process.platform === 'win32' ? ['-NoLogo'] : ['--login'];
 
       const cleanEnv: Record<string, string> = {};

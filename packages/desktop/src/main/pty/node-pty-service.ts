@@ -37,10 +37,29 @@ export function createPtyService(deps: PtyServiceDeps): PtyService {
       const validated = parseSync(SPtyProcessOptions, options) as PtyProcessOptions;
       const args = [...validated.args];
 
-      const shell = process.platform === 'win32'
+      const isWindows = process.platform === 'win32';
+      const shell = isWindows
         ? 'powershell.exe'
         : process.env['SHELL'] || 'bash';
-      const shellArgs = process.platform === 'win32' ? ['-NoLogo'] : ['--login'];
+
+      let shellArgs: string[];
+      if (isWindows) {
+        shellArgs = ['-NoLogo'];
+      } else {
+        const basename = shell.split('/').pop() || shell;
+        switch (basename) {
+          case 'bash':
+          case 'sh':
+            shellArgs = ['--login'];
+            break;
+          case 'zsh':
+          case 'fish':
+            shellArgs = ['-l'];
+            break;
+          default:
+            shellArgs = [];
+        }
+      }
 
       const cleanEnv: Record<string, string> = {};
       for (const [k, v] of Object.entries(process.env)) {

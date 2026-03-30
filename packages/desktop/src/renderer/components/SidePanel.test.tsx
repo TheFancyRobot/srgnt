@@ -71,6 +71,13 @@ describe('SidePanel', () => {
     expect(resizeHandle).toHaveAttribute('aria-label', 'Resize side panel');
   });
 
+  it('resize handle is not keyboard focusable without keyboard resize support', () => {
+    renderWithSidePanel(<div>Test Content</div>);
+
+    const resizeHandle = screen.getByRole('separator', { name: 'Resize side panel' });
+    expect(resizeHandle).not.toHaveAttribute('tabindex');
+  });
+
   it('resize handle is not rendered when collapsed', () => {
     renderWithSidePanel(<div>Test Content</div>, { initialCollapsed: true });
 
@@ -143,5 +150,20 @@ describe('SidePanel', () => {
     fireEvent.click(resizeHandle);
 
     expect(sidePanel).toHaveStyle({ '--sidebar-width': '240px' });
+  });
+
+  it('cleans up drag listeners and selection state when unmounted mid-resize', () => {
+    const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+    const { unmount } = renderWithSidePanel(<div>Test Content</div>);
+
+    fireEvent.mouseDown(screen.getByRole('separator', { name: 'Resize side panel' }), { clientX: 100 });
+
+    expect(document.body.style.userSelect).toBe('none');
+
+    unmount();
+
+    expect(document.body.style.userSelect).toBe('');
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
   });
 });

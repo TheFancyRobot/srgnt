@@ -19,7 +19,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('/node_modules/ghostty-web/')) {
+          const normalizedId = id.replace(/\\/g, '/');
+          if (normalizedId.includes('/node_modules/ghostty-web/')) {
             return 'terminal-runtime';
           }
         },

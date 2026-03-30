@@ -47,7 +47,7 @@ export function ActivityBar({ items, activeId, onNavigate }: ActivityBarProps): 
     (e: React.KeyboardEvent) => {
       if (items.length === 0) return;
 
-      let newIndex = focusedIndex;
+      let newIndex: number;
 
       switch (e.key) {
         case 'ArrowDown':

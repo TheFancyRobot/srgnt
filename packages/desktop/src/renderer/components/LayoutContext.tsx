@@ -184,7 +184,7 @@ export function LayoutProvider({
       return;
     }
 
-    onLayoutChange({ sidebarWidth, sidebarCollapsed: isSidebarCollapsed });
+    onLayoutChange({ sidebarWidth, sidebarCollapsed: userCollapsedPref.current });
   }, [sidebarWidth, isSidebarCollapsed, onLayoutChange]);
 
   const value = React.useMemo<LayoutContextValue>(

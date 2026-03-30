@@ -12,7 +12,8 @@ if (process.platform === 'linux') {
   const vulkanAvailable =
     existsSync('/usr/lib/libvulkan.so.1') ||
     existsSync('/usr/lib64/libvulkan.so.1') ||
-    existsSync('/usr/lib/x86_64-linux-gnu/libvulkan.so.1');
+    existsSync('/usr/lib/x86_64-linux-gnu/libvulkan.so.1') ||
+    existsSync('/usr/lib/aarch64-linux-gnu/libvulkan.so.1');
 
   if (vulkanAvailable) {
     app.commandLine.appendSwitch('use-angle', 'vulkan');

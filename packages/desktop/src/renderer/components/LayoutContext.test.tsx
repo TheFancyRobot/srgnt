@@ -265,7 +265,7 @@ describe('LayoutContext', () => {
     expect(onLayoutChange).not.toHaveBeenCalled();
   });
 
-  it('does not persist forced collapse when switching to a panel without side content', () => {
+  it('does not persist or emit forced collapse when switching to a panel without side content', () => {
     const onLayoutChange = vi.fn();
 
     function ForcedCollapseTest(): React.ReactElement {
@@ -284,10 +284,12 @@ describe('LayoutContext', () => {
       </LayoutProvider>,
     );
 
+    onLayoutChange.mockClear();
+
     fireEvent.click(screen.getByTestId('set-terminal'));
 
     expect(screen.getByTestId('sidebar-collapsed')).toHaveTextContent('true');
-    expect(onLayoutChange).toHaveBeenCalledWith(expect.objectContaining({ sidebarCollapsed: false }));
+    expect(onLayoutChange).not.toHaveBeenCalled();
   });
 
   it('reapplies incoming initial width and collapsed values after mount', () => {

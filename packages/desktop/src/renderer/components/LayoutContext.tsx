@@ -40,6 +40,10 @@ function clampWidth(width: number): number {
   return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, width));
 }
 
+function sameLayoutPreferences(a: LayoutPreferences | null, b: LayoutPreferences): boolean {
+  return a !== null && a.sidebarWidth === b.sidebarWidth && a.sidebarCollapsed === b.sidebarCollapsed;
+}
+
 export function LayoutProvider({
   children,
   defaultPanel = 'today',
@@ -74,6 +78,7 @@ export function LayoutProvider({
   const userCollapsedPref = React.useRef(initialCollapsed);
   const collapsedRef = React.useRef(initialCollapsed);
   const hasEmittedInitialLayout = React.useRef(false);
+  const lastEmittedLayout = React.useRef<LayoutPreferences | null>(null);
 
   React.useEffect(() => {
     collapsedRef.current = isSidebarCollapsed;
@@ -179,12 +184,20 @@ export function LayoutProvider({
       return;
     }
 
+    const nextLayout = { sidebarWidth, sidebarCollapsed: userCollapsedPref.current };
+
     if (!hasEmittedInitialLayout.current) {
       hasEmittedInitialLayout.current = true;
+      lastEmittedLayout.current = nextLayout;
       return;
     }
 
-    onLayoutChange({ sidebarWidth, sidebarCollapsed: userCollapsedPref.current });
+    if (sameLayoutPreferences(lastEmittedLayout.current, nextLayout)) {
+      return;
+    }
+
+    lastEmittedLayout.current = nextLayout;
+    onLayoutChange(nextLayout);
   }, [sidebarWidth, isSidebarCollapsed, onLayoutChange]);
 
   const value = React.useMemo<LayoutContextValue>(

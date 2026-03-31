@@ -45,6 +45,7 @@ import { createPtySessionManager } from './pty/session-manager.js';
 import { createPtyService } from './pty/node-pty-service.js';
 import { createCrashReporter } from './crash.js';
 import { checkForUpdates } from './updater.js';
+import { registerNotesHandlers } from './notes.js';
 import {
   defaultDesktopSettings,
   ensureWorkspaceLayout,
@@ -224,6 +225,7 @@ async function setWorkspaceRootInternal(root: string): Promise<string> {
 
   crashReporter.setWorkspaceRoot(resolvedRoot);
   syncConnectorStateFromSettings(desktopSettings);
+  registerNotesHandlers(workspaceRoot);
   return resolvedRoot;
 }
 

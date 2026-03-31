@@ -45,6 +45,16 @@ const ipcChannels = {
   briefingSave: 'briefing:save',
   briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
+  notesListDir: 'notes:list-dir',
+  notesReadFile: 'notes:read-file',
+  notesWriteFile: 'notes:write-file',
+  notesCreateFile: 'notes:create-file',
+  notesCreateFolder: 'notes:create-folder',
+  notesDelete: 'notes:delete',
+  notesRename: 'notes:rename',
+  notesSearch: 'notes:search',
+  notesResolveWikilink: 'notes:resolve-wikilink',
+  notesListWorkspaceMarkdown: 'notes:list-workspace-markdown',
 } as const;
 
 export interface DesktopConnectorState {
@@ -107,6 +117,28 @@ const api = {
     ipcRenderer.invoke(ipcChannels.briefingList),
 
   writeDiagnosticCrashLog: (): Promise<{ directory: string }> => ipcRenderer.invoke(ipcChannels.crashWriteTestLog),
+
+  // Notes operations
+  notesListDir: (dirPath: string): Promise<{ entries: { name: string; path: string; isDirectory: boolean; modifiedAt: string }[] }> =>
+    ipcRenderer.invoke(ipcChannels.notesListDir, { dirPath }),
+  notesReadFile: (filePath: string): Promise<{ content: string; modifiedAt: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesReadFile, { filePath }),
+  notesWriteFile: (filePath: string, content: string): Promise<{ path: string; modifiedAt: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesWriteFile, { filePath, content }),
+  notesCreateFile: (filePath: string, title: string): Promise<{ path: string; createdAt: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesCreateFile, { filePath, title }),
+  notesCreateFolder: (dirPath: string): Promise<{ path: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesCreateFolder, { dirPath }),
+  notesDelete: (path: string, isDirectory: boolean): Promise<{ deleted: boolean }> =>
+    ipcRenderer.invoke(ipcChannels.notesDelete, { path, isDirectory }),
+  notesRename: (oldPath: string, newName: string): Promise<{ newPath: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesRename, { oldPath, newName }),
+  notesSearch: (query: string, maxResults?: number): Promise<{ results: { title: string; path: string; snippet: string; score: number }[] }> =>
+    ipcRenderer.invoke(ipcChannels.notesSearch, { query, maxResults: maxResults ?? 20 }),
+  notesResolveWikilink: (wikilink: string): Promise<{ resolved: boolean; path: string; line?: number }> =>
+    ipcRenderer.invoke(ipcChannels.notesResolveWikilink, { wikilink }),
+  notesListWorkspaceMarkdown: (query?: string, maxResults?: number): Promise<{ files: { title: string; path: string; modifiedAt: string }[] }> =>
+    ipcRenderer.invoke(ipcChannels.notesListWorkspaceMarkdown, { query: query ?? '', maxResults: maxResults ?? 20 }),
 
   // Window controls
   windowMinimize: (): Promise<void> => ipcRenderer.invoke('window:minimize'),

@@ -4,7 +4,7 @@ import { SemVerString } from '../shared-schemas.js';
 const datetimePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/;
 
 export const SWorkspaceDirectoryType = Schema.Literal(
-  "daily", "projects", "people", "meetings", "systems", "dashboards", "inbox"
+  "daily", "projects", "people", "meetings", "systems", "dashboards", "inbox", "notes"
 );
 export type WorkspaceDirectoryType = Schema.Schema.Type<typeof SWorkspaceDirectoryType>;
 
@@ -77,6 +77,7 @@ export const defaultWorkspaceLayout: WorkspaceLayout = {
     { type: 'systems', path: 'Systems', description: 'System documentation and runbooks' },
     { type: 'dashboards', path: 'Dashboards', description: 'Dashboard and status views' },
     { type: 'inbox', path: 'Inbox', description: 'Inbox for unprocessed items' },
+    { type: 'notes', path: 'Notes', description: 'Operational notes and artifacts' },
   ],
   commandCenter: {
     root: '.command-center',

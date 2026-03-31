@@ -36,6 +36,16 @@ export const ipcChannels = {
   briefingSave: 'briefing:save',
   briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
+  notesListDir: 'notes:list-dir',
+  notesReadFile: 'notes:read-file',
+  notesWriteFile: 'notes:write-file',
+  notesCreateFile: 'notes:create-file',
+  notesCreateFolder: 'notes:create-folder',
+  notesDelete: 'notes:delete',
+  notesRename: 'notes:rename',
+  notesSearch: 'notes:search',
+  notesResolveWikilink: 'notes:resolve-wikilink',
+  notesListWorkspaceMarkdown: 'notes:list-workspace-markdown',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -320,3 +330,136 @@ export const SBriefingListResponse = Schema.Struct({
   briefings: Schema.Array(SBriefingListEntry),
 });
 export type BriefingListResponse = Schema.Schema.Type<typeof SBriefingListResponse>;
+
+// Notes IPC types
+
+export const SNotesListDirRequest = Schema.Struct({
+  dirPath: Schema.String,
+});
+export type NotesListDirRequest = Schema.Schema.Type<typeof SNotesListDirRequest>;
+
+export const SNotesFileEntry = Schema.Struct({
+  name: Schema.String,
+  path: Schema.String,
+  isDirectory: Schema.Boolean,
+  modifiedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+
+export const SNotesListDirResponse = Schema.Struct({
+  entries: Schema.Array(SNotesFileEntry),
+});
+export type NotesListDirResponse = Schema.Schema.Type<typeof SNotesListDirResponse>;
+
+export const SNotesReadFileRequest = Schema.Struct({
+  filePath: Schema.String,
+});
+export type NotesReadFileRequest = Schema.Schema.Type<typeof SNotesReadFileRequest>;
+
+export const SNotesReadFileResponse = Schema.Struct({
+  content: Schema.String,
+  modifiedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+export type NotesReadFileResponse = Schema.Schema.Type<typeof SNotesReadFileResponse>;
+
+export const SNotesWriteFileRequest = Schema.Struct({
+  filePath: Schema.String,
+  content: Schema.String,
+});
+export type NotesWriteFileRequest = Schema.Schema.Type<typeof SNotesWriteFileRequest>;
+
+export const SNotesWriteFileResponse = Schema.Struct({
+  path: Schema.String,
+  modifiedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+export type NotesWriteFileResponse = Schema.Schema.Type<typeof SNotesWriteFileResponse>;
+
+export const SNotesCreateFileRequest = Schema.Struct({
+  filePath: Schema.String,
+  title: Schema.String,
+});
+export type NotesCreateFileRequest = Schema.Schema.Type<typeof SNotesCreateFileRequest>;
+
+export const SNotesCreateFileResponse = Schema.Struct({
+  path: Schema.String,
+  createdAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+export type NotesCreateFileResponse = Schema.Schema.Type<typeof SNotesCreateFileResponse>;
+
+export const SNotesCreateFolderRequest = Schema.Struct({
+  dirPath: Schema.String,
+});
+export type NotesCreateFolderRequest = Schema.Schema.Type<typeof SNotesCreateFolderRequest>;
+
+export const SNotesCreateFolderResponse = Schema.Struct({
+  path: Schema.String,
+});
+export type NotesCreateFolderResponse = Schema.Schema.Type<typeof SNotesCreateFolderResponse>;
+
+export const SNotesDeleteRequest = Schema.Struct({
+  path: Schema.String,
+  isDirectory: Schema.Boolean,
+});
+export type NotesDeleteRequest = Schema.Schema.Type<typeof SNotesDeleteRequest>;
+
+export const SNotesDeleteResponse = Schema.Struct({
+  deleted: Schema.Boolean,
+});
+export type NotesDeleteResponse = Schema.Schema.Type<typeof SNotesDeleteResponse>;
+
+export const SNotesRenameRequest = Schema.Struct({
+  oldPath: Schema.String,
+  newName: Schema.String,
+});
+export type NotesRenameRequest = Schema.Schema.Type<typeof SNotesRenameRequest>;
+
+export const SNotesRenameResponse = Schema.Struct({
+  newPath: Schema.String,
+});
+export type NotesRenameResponse = Schema.Schema.Type<typeof SNotesRenameResponse>;
+
+export const SNotesSearchRequest = Schema.Struct({
+  query: Schema.String,
+  maxResults: Schema.optionalWith(Schema.Number, { default: () => 20 }),
+});
+export type NotesSearchRequest = Schema.Schema.Type<typeof SNotesSearchRequest>;
+
+export const SNotesSearchResultEntry = Schema.Struct({
+  title: Schema.String,
+  path: Schema.String,
+  snippet: Schema.String,
+  score: Schema.Number,
+});
+
+export const SNotesSearchResponse = Schema.Struct({
+  results: Schema.Array(SNotesSearchResultEntry),
+});
+export type NotesSearchResponse = Schema.Schema.Type<typeof SNotesSearchResponse>;
+
+export const SNotesResolveWikilinkRequest = Schema.Struct({
+  wikilink: Schema.String,
+});
+export type NotesResolveWikilinkRequest = Schema.Schema.Type<typeof SNotesResolveWikilinkRequest>;
+
+export const SNotesResolveWikilinkResponse = Schema.Struct({
+  resolved: Schema.Boolean,
+  path: Schema.String,
+  line: Schema.optional(Schema.Number),
+});
+export type NotesResolveWikilinkResponse = Schema.Schema.Type<typeof SNotesResolveWikilinkResponse>;
+
+export const SNotesListWorkspaceMarkdownRequest = Schema.Struct({
+  query: Schema.optional(Schema.String),
+  maxResults: Schema.optionalWith(Schema.Number, { default: () => 20 }),
+});
+export type NotesListWorkspaceMarkdownRequest = Schema.Schema.Type<typeof SNotesListWorkspaceMarkdownRequest>;
+
+export const SNotesWorkspaceMarkdownEntry = Schema.Struct({
+  title: Schema.String,
+  path: Schema.String,
+  modifiedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+
+export const SNotesListWorkspaceMarkdownResponse = Schema.Struct({
+  files: Schema.Array(SNotesWorkspaceMarkdownEntry),
+});
+export type NotesListWorkspaceMarkdownResponse = Schema.Schema.Type<typeof SNotesListWorkspaceMarkdownResponse>;

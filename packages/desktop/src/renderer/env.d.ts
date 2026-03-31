@@ -58,6 +58,18 @@ export interface SrgntAPI {
   listBriefings(): Promise<{ briefings: { id: string; path: string; generatedAt: string }[] }>;
   writeDiagnosticCrashLog(): Promise<{ directory: string }>;
 
+  // Notes operations
+  notesListDir(dirPath: string): Promise<{ entries: { name: string; path: string; isDirectory: boolean; modifiedAt: string }[] }>;
+  notesReadFile(filePath: string): Promise<{ content: string; modifiedAt: string }>;
+  notesWriteFile(filePath: string, content: string): Promise<{ path: string; modifiedAt: string }>;
+  notesCreateFile(filePath: string, title: string): Promise<{ path: string; createdAt: string }>;
+  notesCreateFolder(dirPath: string): Promise<{ path: string }>;
+  notesDelete(path: string, isDirectory: boolean): Promise<{ deleted: boolean }>;
+  notesRename(oldPath: string, newName: string): Promise<{ newPath: string }>;
+  notesSearch(query: string, maxResults?: number): Promise<{ results: { title: string; path: string; snippet: string; score: number }[] }>;
+  notesResolveWikilink(wikilink: string): Promise<{ resolved: boolean; path: string; line?: number }>;
+  notesListWorkspaceMarkdown(query?: string, maxResults?: number): Promise<{ files: { title: string; path: string; modifiedAt: string }[] }>;
+
   // Window controls
   windowMinimize(): Promise<void>;
   windowMaximize(): Promise<void>;

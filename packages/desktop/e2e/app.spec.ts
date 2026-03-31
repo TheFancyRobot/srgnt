@@ -98,10 +98,10 @@ test('persists settings and writes redacted crash diagnostics', async ({ userDat
   await completeOnboarding(page);
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: 'Privacy' }).click();
+  await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'Privacy' }).click();
   await page.locator('#telemetry-enabled-input + div').click();
 
-  await page.getByRole('button', { name: 'General' }).click();
+  await page.getByRole('navigation', { name: 'Settings categories' }).getByRole('button', { name: 'General' }).click();
   await page.selectOption('#theme-input', 'dark');
   await page.selectOption('#update-channel-input', 'beta');
   await expect(page.locator('#telemetry-enabled-input')).toBeChecked();

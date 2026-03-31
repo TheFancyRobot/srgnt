@@ -79,6 +79,16 @@ export function LayoutProvider({
   const collapsedRef = React.useRef(initialCollapsed);
   const hasEmittedInitialLayout = React.useRef(false);
   const lastEmittedLayout = React.useRef<LayoutPreferences | null>(null);
+  const activePanelRef = React.useRef(activePanel);
+  const panelsRef = React.useRef(panels);
+
+  React.useEffect(() => {
+    activePanelRef.current = activePanel;
+  }, [activePanel]);
+
+  React.useEffect(() => {
+    panelsRef.current = panels;
+  }, [panels]);
 
   React.useEffect(() => {
     collapsedRef.current = isSidebarCollapsed;
@@ -95,39 +105,36 @@ export function LayoutProvider({
   }, [initialCollapsed, initialWidth]);
 
   const setActivePanel = React.useCallback((id: string) => {
-    setPanels((currentPanels) => {
-      const exists = currentPanels.some((p) => p.id === id);
-      if (!exists) return currentPanels;
+    const currentPanels = panelsRef.current;
+    if (!currentPanels.some((p) => p.id === id)) {
+      return;
+    }
 
-      setActivePanelRaw((prevId) => {
-        if (prevId === id) {
-          userCollapsedPref.current = !userCollapsedPref.current;
-          collapsedRef.current = userCollapsedPref.current;
-          setSidebarCollapsedRaw(userCollapsedPref.current);
-          return prevId;
-        }
+    const prevId = activePanelRef.current;
+    if (prevId === id) {
+      const nextCollapsed = !userCollapsedPref.current;
+      userCollapsedPref.current = nextCollapsed;
+      collapsedRef.current = nextCollapsed;
+      setSidebarCollapsedRaw(nextCollapsed);
+      return;
+    }
 
-        const prevPanel = currentPanels.find((p) => p.id === prevId);
-        const nextPanel = currentPanels.find((p) => p.id === id);
+    const prevPanel = currentPanels.find((p) => p.id === prevId);
+    const nextPanel = currentPanels.find((p) => p.id === id);
 
-        if (nextPanel && nextPanel.sidePanelContent === undefined) {
-          if (!prevPanel || prevPanel.sidePanelContent !== undefined) {
-            userCollapsedPref.current = collapsedRef.current;
-            collapsedRef.current = true;
-            setSidebarCollapsedRaw(true);
-          }
-        } else {
-          if (prevPanel && prevPanel.sidePanelContent === undefined) {
-            collapsedRef.current = userCollapsedPref.current;
-            setSidebarCollapsedRaw(userCollapsedPref.current);
-          }
-        }
+    if (nextPanel?.sidePanelContent === undefined) {
+      if (!prevPanel || prevPanel.sidePanelContent !== undefined) {
+        userCollapsedPref.current = collapsedRef.current;
+        collapsedRef.current = true;
+        setSidebarCollapsedRaw(true);
+      }
+    } else if (prevPanel?.sidePanelContent === undefined) {
+      collapsedRef.current = userCollapsedPref.current;
+      setSidebarCollapsedRaw(userCollapsedPref.current);
+    }
 
-        return id;
-      });
-
-      return currentPanels;
-    });
+    activePanelRef.current = id;
+    setActivePanelRaw(id);
   }, []);
 
   const setSidebarCollapsed = React.useCallback((collapsed: boolean) => {
@@ -149,12 +156,18 @@ export function LayoutProvider({
   const registerPanel = React.useCallback((panel: PanelDefinition) => {
     setPanels((prev) => {
       const filtered = prev.filter((p) => p.id !== panel.id);
-      return [...filtered, panel].sort((a, b) => a.order - b.order);
+      const next = [...filtered, panel].sort((a, b) => a.order - b.order);
+      panelsRef.current = next;
+      return next;
     });
   }, []);
 
   const unregisterPanel = React.useCallback((id: string) => {
-    setPanels((prev) => prev.filter((p) => p.id !== id));
+    setPanels((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      panelsRef.current = next;
+      return next;
+    });
   }, []);
 
   React.useEffect(() => {

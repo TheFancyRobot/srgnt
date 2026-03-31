@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { waitForDesktopReady } from './fixtures';
 
 test.skip(process.platform !== 'linux', 'Packaged smoke test is currently Linux-only.');
 
@@ -21,7 +22,7 @@ test('launches the packaged Linux build and shows first-run onboarding', async (
 
   try {
     const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
+    await waitForDesktopReady(page);
 
     await expect(page.getByRole('heading', { name: 'Create Your Workspace' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Skip setup' })).toBeVisible();

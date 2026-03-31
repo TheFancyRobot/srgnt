@@ -235,6 +235,27 @@ describe('LayoutContext', () => {
     expect(screen.getByTestId('sidebar-collapsed')).toHaveTextContent('false');
   });
 
+  it('Ctrl+B does not toggle when focus is in contenteditable content', () => {
+    function ContentEditableTest(): React.ReactElement {
+      const layout = useLayout();
+      return (
+        <div>
+          <span data-testid="sidebar-collapsed">{String(layout.isSidebarCollapsed)}</span>
+          <div data-testid="editable-root" contentEditable suppressContentEditableWarning>
+            <span data-testid="editable-child">Editable text</span>
+          </div>
+        </div>
+      );
+    }
+
+    render(<LayoutProvider initialPanels={defaultPanels}><ContentEditableTest /></LayoutProvider>);
+
+    const editableChild = screen.getByTestId('editable-child');
+    fireEvent.keyDown(editableChild, { key: 'b', ctrlKey: true });
+
+    expect(screen.getByTestId('sidebar-collapsed')).toHaveTextContent('false');
+  });
+
   it('onLayoutChange callback is called when sidebarWidth or sidebarCollapsed changes', () => {
     const onLayoutChange = vi.fn();
 

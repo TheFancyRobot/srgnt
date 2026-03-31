@@ -67,11 +67,13 @@ export function SettingsPanel({ sections, theme, onThemeChange }: { sections: Se
 /* ─── Setting row ─── */
 
 function SettingRow({ setting, stagger }: { setting: Setting; stagger: number }): React.ReactElement {
+  const inputId = `${setting.id}-input`;
+
   return (
     <div className={`card p-4 animate-slide-up stagger-${stagger}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <label htmlFor={setting.id} className="text-sm font-medium text-text-primary">
+          <label htmlFor={inputId} className="text-sm font-medium text-text-primary">
             {setting.label}
           </label>
           {setting.description && (

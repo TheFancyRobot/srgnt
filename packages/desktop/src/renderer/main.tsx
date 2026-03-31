@@ -195,6 +195,7 @@ function AppContent({
   }, []);
 
   const saveSettings = React.useCallback(async (nextSettings: DesktopSettings) => {
+    syncSettings(nextSettings);
     const savedSettings = await persistSettings(nextSettings);
     syncSettings(savedSettings);
     await reloadConnectors();

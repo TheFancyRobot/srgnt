@@ -49,7 +49,28 @@ export const test = base.extend<E2EFixtures>({
 
 export { expect };
 
+export async function waitForDesktopReady(window: Page): Promise<void> {
+  await window.waitForLoadState('domcontentloaded');
+  await expect(window.locator('body')).toBeVisible();
+
+  const onboardingHeading = window.getByRole('heading', { name: 'Create Your Workspace' });
+  const dashboardButton = window.getByRole('button', { name: 'Daily Dashboard' });
+
+  await expect
+    .poll(async () => {
+      if (await onboardingHeading.count()) {
+        return 'onboarding';
+      }
+      if (await dashboardButton.count()) {
+        return 'app';
+      }
+      return 'loading';
+    })
+    .not.toBe('loading');
+}
+
 export async function completeOnboarding(window: Page): Promise<void> {
+  await waitForDesktopReady(window);
   await expect(window.getByRole('heading', { name: 'Create Your Workspace' })).toBeVisible();
   await window.getByRole('button', { name: 'Create Workspace' }).click();
   await window.getByRole('button', { name: 'Next' }).click();

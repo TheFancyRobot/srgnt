@@ -164,10 +164,12 @@ export function LayoutProvider({
       const isMod = e.metaKey || e.ctrlKey;
       if (!isMod) return;
 
-      const target = e.target as HTMLElement;
-      const tagName = target.tagName.toLowerCase();
-      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') return;
-      if (target.getAttribute('contenteditable') === 'true') return;
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        const tagName = target.tagName.toLowerCase();
+        if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') return;
+        if (target.closest('[contenteditable]:not([contenteditable="false"])')) return;
+      }
 
       e.preventDefault();
       userCollapsedPref.current = !userCollapsedPref.current;

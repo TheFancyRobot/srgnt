@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { SrgntAPI } from '../src/renderer/env';
-import { completeOnboarding, expect, test } from './fixtures';
+import { completeOnboarding, expect, test, waitForDesktopReady } from './fixtures';
 
 declare global {
   interface Window {
@@ -10,6 +10,7 @@ declare global {
 }
 
 test('shows onboarding on first launch and boots into the command center', async ({ electronApp, userDataDir, window: page }) => {
+  await waitForDesktopReady(page);
   await expect(page.getByRole('heading', { name: 'Create Your Workspace' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Skip setup' })).toBeVisible();
 
@@ -103,6 +104,7 @@ test('persists settings and writes redacted crash diagnostics', async ({ userDat
   await page.getByRole('button', { name: 'General' }).click();
   await page.selectOption('#theme-input', 'dark');
   await page.selectOption('#update-channel-input', 'beta');
+  await expect(page.locator('#telemetry-enabled-input')).toBeChecked();
   await page.getByRole('button', { name: 'Write Crash Log' }).click();
 
   const saved = await page.evaluate(async () => {

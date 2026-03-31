@@ -19,11 +19,11 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-03-30._
-- Session in progress: [[05_Sessions/2026-03-30-161918-refactor-applayout-to-three-panel-shell-opencode|SESSION-2026-03-30-161918 OpenCode session for Refactor AppLayout to three-panel shell]] - owner: OpenCode - phase: [[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]] - updated: 2026-03-30
-- Current step: [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]] - status: complete - phase: [[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]
-- Active phase: [[02_Phases/Phase_13_ui_layout_restructuring/Phase|PHASE-13 UI Layout Restructuring]] - status: complete - updated: 2026-03-30
-- Also active: 4 more additional sessions, 18 more additional steps.
+_Last refreshed: 2026-03-31._
+- Session in progress: [[05_Sessions/2026-03-31-033706-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-033706 OpenCode session for Add IPC channels and main process handlers for notes file operations]] - owner: OpenCode - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]] - updated: 2026-03-31
+- Current step: [[02_Phases/Phase_14_notes_view/Steps/Step_01_add-ipc-channels-and-main-process-handlers-for-notes-file-operations|STEP-14-01 Freeze Notes workspace contract and typed IPC surface]] - status: planned - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
+- Active phase: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] - status: planned - updated: 2026-03-31
+- Also active: 6 more additional sessions, 26 more additional steps.
 <!-- AGENT-END:current-focus -->
 - Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
 - Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]

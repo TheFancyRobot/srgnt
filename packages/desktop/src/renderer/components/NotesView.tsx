@@ -1,15 +1,34 @@
 import React from 'react';
 import { useNotes } from './notes/NotesContext.js';
-import { TiptapEditor } from './notes/TiptapEditor.js';
-import type { SaveState } from './notes/TiptapEditor.js';
+import { MarkdownEditor } from './notes/MarkdownEditor.js';
+import type { SaveState, SyntaxMode } from './notes/MarkdownEditor.js';
+
+const EDITOR_MODE_STORAGE_KEY = 'srgnt:editor:syntax-mode';
+
+function loadInitialSyntaxMode(): SyntaxMode {
+  if (typeof window === 'undefined') {
+    return 'live-preview';
+  }
+
+  const stored = window.localStorage.getItem(EDITOR_MODE_STORAGE_KEY);
+  return stored === 'source' ? 'source' : 'live-preview';
+}
 
 export function NotesView(): React.ReactElement {
   const { selectedPath, activeContent, activeContentLoading, clearSelection, writeActiveContent, error } = useNotes();
   const [saveState, setSaveState] = React.useState<SaveState>('idle');
+  const [syntaxMode, setSyntaxMode] = React.useState<SyntaxMode>(() => loadInitialSyntaxMode());
+  const handleToggleSyntaxMode = React.useCallback(() => {
+    setSyntaxMode((current) => (current === 'live-preview' ? 'source' : 'live-preview'));
+  }, []);
 
   React.useEffect(() => {
     setSaveState('idle');
   }, [selectedPath]);
+
+  React.useEffect(() => {
+    window.localStorage.setItem(EDITOR_MODE_STORAGE_KEY, syntaxMode);
+  }, [syntaxMode]);
 
   if (!selectedPath) {
     return (
@@ -48,6 +67,16 @@ export function NotesView(): React.ReactElement {
           <button
             type="button"
             className="btn btn-ghost text-xs"
+            aria-label="Toggle syntax visibility"
+            aria-pressed={syntaxMode === 'source'}
+            title={syntaxMode === 'live-preview' ? 'Show full markdown syntax' : 'Return to live preview'}
+            onClick={handleToggleSyntaxMode}
+          >
+            {syntaxMode === 'live-preview' ? 'Source' : 'Live preview'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost text-xs"
             onClick={clearSelection}
           >
             Close
@@ -59,10 +88,12 @@ export function NotesView(): React.ReactElement {
         <div className="flex-1 py-8 text-center text-xs text-text-tertiary animate-pulse">Loading note...</div>
       ) : activeContent != null ? (
         <div className="flex-1 overflow-y-auto px-8 py-6">
-          <TiptapEditor
+          <MarkdownEditor
             rawContent={activeContent}
             onContentChange={handleContentChange}
+            onToggleSyntaxMode={handleToggleSyntaxMode}
             saveState={saveState}
+            syntaxMode={syntaxMode}
           />
         </div>
       ) : (

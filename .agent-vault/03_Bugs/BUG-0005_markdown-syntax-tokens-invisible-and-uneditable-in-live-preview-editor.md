@@ -4,15 +4,15 @@ template_version: 2
 contract_version: 1
 title: Markdown syntax tokens invisible and uneditable in live-preview editor
 bug_id: BUG-0005
-status: in-progress
+status: fixed
 severity: sev-2
 category: ux
 reported_on: '2026-04-01'
-fixed_on: ''
-owner: ''
+fixed_on: '2026-04-01'
+owner: OpenCode
 created: '2026-04-01'
 updated: '2026-04-01'
-related_notes: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]], [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]], [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation|STEP-14-05 Add workspace-wide wikilink resolution, navigation, and note creation]], [[02_Phases/Phase_14_notes_view/Steps/Step_06_implement-notion-style-slash-commands-menu|STEP-14-06 Implement markdown slash commands on top of live preview]], [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]], [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]], [[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]], [[01_Architecture/System_Overview|System Overview]], [[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]], [[06_Shared_Knowledge/srgnt_framework_ux_direction|Initial Product UX Direction]], [[06_Shared_Knowledge/srgnt_framework_navigation_and_ia|Desktop Navigation and IA]]'
+related_notes: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]], [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]], [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation|STEP-14-05 Add workspace-wide wikilink resolution, navigation, and note creation]], [[02_Phases/Phase_14_notes_view/Steps/Step_06_implement-notion-style-slash-commands-menu|STEP-14-06 Implement markdown slash commands on top of live preview]], [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]], [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]], [[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]], [[05_Sessions/2026-04-01-192822-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-192822 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]], [[01_Architecture/System_Overview|System Overview]], [[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]], [[06_Shared_Knowledge/srgnt_framework_ux_direction|Initial Product UX Direction]], [[06_Shared_Knowledge/srgnt_framework_navigation_and_ia|Desktop Navigation and IA]]'
 tags:
   - agent-vault
   - bug
@@ -76,6 +76,7 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - The Tiptap/ProseMirror editor renders markdown into a structured document model (headings become `<h1>`–`<h6>` nodes, bold becomes `<strong>` marks, etc.). The raw markdown syntax tokens (`###`, `**`, `-`, `>`) are consumed during parsing and never stored in the document state — they cannot be revealed because they do not exist in ProseMirror's internal representation.
 - Obsidian's live preview avoids this by using **CodeMirror 6** (a plain-text editor with decorations) rather than a structured document editor. CodeMirror always has the raw text; it hides/shows syntax via view decorations, which is architecturally compatible with the desired behavior.
 - Attempting to reconstruct and inject raw syntax tokens back into a ProseMirror document via decorations would be fragile: tokens must be re-derived from node types and marks, edge cases (nested formatting, ambiguous syntax) would be error-prone, and edits to decoration-injected tokens would require bidirectional sync between the decoration layer and the document model.
+- Fixed in `packages/desktop/src/renderer/components/notes/MarkdownEditor.tsx` by replacing the Tiptap editor with a CodeMirror 6 editor backed by `codemirror-live-markdown`, so the raw markdown stays in the document state and syntax visibility is handled by decorations instead of lossy rich-text parsing.
 
 ## Workaround
 
@@ -145,6 +146,8 @@ User confirmed switching from Tiptap/ProseMirror to CodeMirror 6 with the `codem
 - Round-trip test: edit syntax tokens, save, reload, verify markdown fidelity is preserved.
 - Keyboard shortcut test: verify toggle shortcut works.
 - Accessibility test: verify toggle is keyboard-navigable, has proper aria-label, respects reduced-motion.
+- Implemented: `packages/desktop/src/renderer/components/notes/MarkdownEditor.test.tsx` now covers frontmatter rendering, save-state indicators, heading syntax reveal in live preview, and full source mode rendering.
+- Implemented validation: `pnpm --filter @srgnt/desktop test`, `pnpm --filter @srgnt/desktop typecheck`, and `pnpm --filter @srgnt/desktop build`.
 
 ## Related Notes
 
@@ -156,6 +159,7 @@ User confirmed switching from Tiptap/ProseMirror to CodeMirror 6 with the `codem
 - Session: [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]]
 - Session: [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]
 - Session: [[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]
+- Session: [[05_Sessions/2026-04-01-192822-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-192822 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]
 - Architecture: [[01_Architecture/System_Overview|System Overview]]
 - Decision: [[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]]
 - UX direction: [[06_Shared_Knowledge/srgnt_framework_ux_direction|Initial Product UX Direction]]
@@ -171,4 +175,5 @@ User confirmed switching from Tiptap/ProseMirror to CodeMirror 6 with the `codem
 - 2026-04-01 - Researched `codemirror-live-markdown` (npm package, MIT, modular, supports headings/bold/italic/lists/blockquotes/code/tables/math/links). Also evaluated `codemirror-markdown-hybrid` as alternative.
 - 2026-04-01 - Fix plan documented. Implementation pending.
 - 2026-04-01 - SESSION-2026-04-01-190658 created to continue implementation and repair vault note integrity before handoff.
+- 2026-04-01 - Fixed by migrating the notes editor from Tiptap to CodeMirror 6 + `codemirror-live-markdown`, adding a persisted source/live-preview toggle, and validating with full desktop test, typecheck, and build runs.
 <!-- AGENT-END:bug-timeline -->

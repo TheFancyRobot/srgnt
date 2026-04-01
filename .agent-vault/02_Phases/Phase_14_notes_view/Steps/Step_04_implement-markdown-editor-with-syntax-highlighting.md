@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement Obsidian-style live-preview markdown editor foundation
 step_id: STEP-14-04
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: in-progress
+status: done
 owner: ''
 created: '2026-03-31'
 updated: '2026-04-01'
@@ -15,6 +15,7 @@ depends_on:
 related_sessions:
   - '[[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
   - '[[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
+  - '[[05_Sessions/2026-04-01-192822-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-192822 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
 related_bugs:
   - '[[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]'
 tags:
@@ -80,10 +81,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-03-31
-- Next action: Start STEP-14-04.
+- Status: done
+- Current owner: OpenCode
+- Last touched: 2026-04-01
+- Next action: Start STEP-14-05 wikilink support on top of the CodeMirror live-preview editor.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -164,10 +165,12 @@ This section supersedes the vaguer template text above when they conflict.
 <!-- AGENT-START:step-session-history -->
 - 2026-04-01 - [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Session created.
 - 2026-04-01 - [[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Bug-orchestration session created to continue BUG-0005 implementation and repair vault note integrity.
+- 2026-04-01 - [[05_Sessions/2026-04-01-192822-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-192822 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Session created.
 <!-- AGENT-END:step-session-history -->
 - [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431]] started (OpenCode)
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Completed by replacing the original Tiptap-based editor with a CodeMirror 6 `MarkdownEditor` that uses `codemirror-live-markdown` to reveal syntax on the active line while preserving raw markdown in the document.
+- `NotesView.tsx` now exposes a persisted source/live-preview toggle, and the renderer keeps the existing frontmatter block plus debounced save-state feedback.
+- Validation: `pnpm --filter @srgnt/desktop test`, `pnpm --filter @srgnt/desktop typecheck`, and `pnpm --filter @srgnt/desktop build` all passed on 2026-04-01.

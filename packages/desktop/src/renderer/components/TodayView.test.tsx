@@ -31,6 +31,7 @@ describe('TodayView', () => {
     );
   });
 
+  /* ── BUG-0003 regression: intent must never be readOnly for Today View launches ── */
   it('BUG-0003: launch intent is artifactAffecting, never readOnly', async () => {
     const onLaunchContext = vi.fn().mockResolvedValue(undefined);
 

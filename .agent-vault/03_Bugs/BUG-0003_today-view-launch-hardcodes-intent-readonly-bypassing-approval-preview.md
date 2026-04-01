@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: 'Today View launch hardcodes intent: readOnly bypassing approval preview'
 bug_id: BUG-0003
-status: new
+status: closed
 severity: sev-3
 category: logic
 reported_on: '2026-03-29'
-fixed_on: '2026-03-29'
+fixed_on: '2026-04-01'
 owner: ''
 created: '2026-03-29'
 updated: '2026-03-29'
@@ -72,6 +72,7 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - Code path: `TodayView.handleLaunch() → handleLaunchContext() → terminalLaunchWithContext IPC`
 - Approval check in `main/index.ts:366-367` only triggers when `intent === 'artifactAffecting'`
 - Since intent was always 'readOnly', `requiresApproval` was always false
+- **Re-verified 2026-04-01**: `TodayView.tsx:171` previously hardcoded `intent: 'readOnly'`, causing the approval gate in `main/index.ts` (which only triggers for `intent === 'artifactAffecting'`) to always evaluate `requiresApproval` as false. Fix confirmed in place: intent is now `'artifactAffecting'`. Four regression tests added to `TodayView.test.tsx` covering: callback path intent, explicit readOnly rejection, all-buttons coverage, and IPC fallback path.
 
 ## Workaround
 

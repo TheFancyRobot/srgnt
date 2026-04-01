@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Notes tree add-item input has white-on-white text (a11y AAA fail)
 bug_id: BUG-0004
-status: fixed
+status: closed
 severity: sev-2
 category: a11y
 reported_on: '2026-04-01'

@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Markdown syntax tokens invisible and uneditable in live-preview editor
 bug_id: BUG-0005
-status: fixed
+status: closed
 severity: sev-2
 category: ux
 reported_on: '2026-04-01'

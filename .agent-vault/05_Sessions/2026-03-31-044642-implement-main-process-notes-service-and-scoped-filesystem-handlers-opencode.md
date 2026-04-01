@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Implement main-process notes service and scoped filesystem handlers
 session_id: SESSION-2026-03-31-044642
 date: '2026-03-31'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
@@ -80,15 +80,21 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- `packages/desktop/src/main/notes.ts` — CREATED (485 lines)
+- `packages/desktop/src/main/index.ts` — modified (+2 lines)
+- `packages/contracts/src/ipc/contracts.ts` — modified (+143 lines)
+- `packages/contracts/src/workspace/layout.ts` — modified (+2 lines)
+- `packages/desktop/src/preload/index.ts` — modified (+32 lines)
+- `packages/desktop/src/renderer/env.d.ts` — modified (+12 lines)
+- `.agent-vault/05_Sessions/2026-03-31-044642-*.md` — CREATED
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: `pnpm run typecheck` — Result: ✅ PASSED
+- Command: `pnpm run test` — Result: ✅ PASSED
+- Notes: All packages pass typecheck and tests
 <!-- AGENT-END:session-validation-run -->
 
 ## Bugs Encountered
@@ -106,9 +112,21 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_14_notes_view/Steps/Step_02_create-notes-file-service-with-path-scoped-operations|STEP-14-02 Implement main-process notes service and scoped filesystem handlers]].
+- [ ] Execute [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]] — next step
+- [ ] Verify `NotesSidePanel.tsx` placeholder can be replaced with real tree using notes.ts service
+- [ ] Add `NotesContext.tsx` for shared renderer selection state between side panel and main content
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary
 
-- State what finished, what remains, and whether the session ended in a clean handoff state.
+**What was accomplished:**
+- STEP-14-02 completed: main-process notes service (`notes.ts`) with all path-scoped filesystem operations implemented and registered
+- 10 IPC channels wired up with Effect Schema validation
+- `registerNotesHandlers(workspaceRoot)` extracted from the 689-line `main/index.ts`
+
+**What remains:**
+- STEP-14-03 (tree component + shared renderer state) is next
+- Steps 04–08 still pending
+
+**Handoff state:** Clean. Session remains `in-progress` for `/vault:resume` to pick up.
+\n\n**Handoff to STEP-14-03 completed** via new session 2026-04-01-042638.

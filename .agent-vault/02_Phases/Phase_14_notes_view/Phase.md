@@ -7,7 +7,7 @@ phase_id: PHASE-14
 status: planned
 owner: ''
 created: '2026-03-30'
-updated: '2026-03-31'
+updated: '2026-04-01'
 depends_on:
   - '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|PHASE-13 UI Layout Restructuring]]'
 related_architecture:
@@ -19,7 +19,9 @@ related_decisions:
   - '[[04_Decisions/DEC-0011_dec-0011-use-simplequeryengine-over-in-memory-canonicalstore-for-v1-query-index|DEC-0011 Use SimpleQueryEngine over in-memory CanonicalStore for v1 query/index]]'
   - '[[04_Decisions/DEC-0008_define-file-backed-record-contract-for-canonical-workspace-data|DEC-0008 File-backed record contract]]'
   - '[[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]]'
-related_bugs: []
+related_bugs:
+  - '[[03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail|BUG-0004 Notes tree add-item input has white-on-white text (a11y AAA fail)]]'
+  - '[[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]'
 tags:
   - agent-vault
   - phase
@@ -107,7 +109,8 @@ Build the Notes view: a workspace-backed file/folder browser and markdown note e
 ## Related Bugs
 
 <!-- AGENT-START:phase-related-bugs -->
-- None yet.
+- [[03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail|BUG-0004 Notes tree add-item input has white-on-white text (a11y AAA fail)]]
+- [[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]
 <!-- AGENT-END:phase-related-bugs -->
 
 ## Steps

@@ -5,14 +5,16 @@ contract_version: 1
 title: Build Notes tree and shared renderer selection state
 step_id: STEP-14-03
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
+status: done
 owner: ''
 created: '2026-03-31'
-updated: '2026-03-31'
+updated: '2026-04-01'
 depends_on:
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_02_create-notes-file-service-with-path-scoped-operations|STEP-14-02]]'
-related_sessions: []
-related_bugs: []
+related_sessions:
+  - '[[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]]'
+related_bugs:
+  - '[[03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail|BUG-0004 Notes tree add-item input has white-on-white text (a11y AAA fail)]]'
 tags:
   - agent-vault
   - step
@@ -144,7 +146,7 @@ This section supersedes the vaguer template text above when they conflict.
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-04-01 - [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary

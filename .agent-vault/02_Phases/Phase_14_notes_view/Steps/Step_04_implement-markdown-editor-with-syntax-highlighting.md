@@ -5,15 +5,18 @@ contract_version: 1
 title: Implement Obsidian-style live-preview markdown editor foundation
 step_id: STEP-14-04
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
+status: in-progress
 owner: ''
 created: '2026-03-31'
-updated: '2026-03-31'
+updated: '2026-04-01'
 depends_on:
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_02_create-notes-file-service-with-path-scoped-operations|STEP-14-02]]'
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03]]'
-related_sessions: []
-related_bugs: []
+related_sessions:
+  - '[[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
+  - '[[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
+related_bugs:
+  - '[[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]'
 tags:
   - agent-vault
   - step
@@ -159,8 +162,10 @@ This section supersedes the vaguer template text above when they conflict.
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-04-01 - [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Session created.
+- 2026-04-01 - [[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Bug-orchestration session created to continue BUG-0005 implementation and repair vault note integrity.
 <!-- AGENT-END:step-session-history -->
+- [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431]] started (OpenCode)
 
 ## Outcome Summary
 

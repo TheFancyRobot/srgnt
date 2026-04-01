@@ -19,11 +19,11 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-03-31._
-- Session in progress: [[05_Sessions/2026-03-31-033706-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-033706 OpenCode session for Add IPC channels and main process handlers for notes file operations]] - owner: OpenCode - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]] - updated: 2026-03-31
-- Current step: [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]] - status: planned - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
-- Active phase: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] - status: planned - updated: 2026-03-31
-- Also active: 9 more additional sessions, 24 more additional steps.
+_Last refreshed: 2026-04-01._
+- Session in progress: [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]] - owner: OpenCode - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]] - updated: 2026-04-01
+- Current step: [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]] - status: in-progress - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
+- Active phase: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] - status: planned - updated: 2026-04-01
+- Also active: 11 more additional sessions, 23 more additional steps, 2 open critical bugs.
 <!-- AGENT-END:current-focus -->
 - Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
 - Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]
@@ -72,7 +72,8 @@ _Last refreshed: 2026-03-31._
 ## Critical Bugs
 
 <!-- AGENT-START:critical-bugs -->
-- No open sev-1 or sev-2 bugs are currently recorded.
+- [[03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail|BUG-0004 Notes tree add-item input has white-on-white text (a11y AAA fail)]] - status: new - severity: sev-2 - reported: 2026-04-01
+- [[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]] - status: in-progress - severity: sev-2 - reported: 2026-04-01
 <!-- AGENT-END:critical-bugs -->
 
 ## Resume Point

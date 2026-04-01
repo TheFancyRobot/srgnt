@@ -29,11 +29,13 @@ Use this note as the manual table of contents for bug records in \`03_Bugs/\`.
 <!-- AGENT-START:bugs-index -->
 _Last rebuilt: 2026-04-01._
 
-- Notes indexed: 5
-- Status summary: new (1), fixed (3), open (1)
+- Notes indexed: 7
+- Status summary: new (3), fixed (3), open (1)
 
 | Id | Title | Status | Severity | Reported | Fixed | Linear |
 | --- | --- | --- | --- | --- | --- | --- |
+| BUG-0006 | [Notes view shows markdown syntax on all lines and textarea has visible border on focus](../03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus.md) | new | sev-2 | 2026-04-01 | - | - |
+| BUG-0007 | [Source button on note editor does not implement live-preview toggle correctly](../03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly.md) | new | sev-2 | 2026-04-01 | - | - |
 | BUG-0003 | [Today View launch hardcodes intent: readOnly bypassing approval preview](../03_Bugs/BUG-0003_today-view-launch-hardcodes-intent-readonly-bypassing-approval-preview.md) | new | sev-3 | 2026-03-29 | 2026-03-29 | - |
 | BUG-0004 | [Notes tree add-item input has white-on-white text (a11y AAA fail)](../03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail.md) | fixed | sev-2 | 2026-04-01 | 2026-04-01 | - |
 | BUG-0005 | [Markdown syntax tokens invisible and uneditable in live-preview editor](../03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor.md) | fixed | sev-2 | 2026-04-01 | 2026-04-01 | - |

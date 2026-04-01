@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: 'RESEARCH: Query Engine Memory Scaling for Thousands of Documents'
 bug_id: BUG-0001
-status: open
+status: closed
 severity: sev-3
 category: performance
 reported_on: '2026-03-22'
-fixed_on: ''
+fixed_on: '2026-04-01'
 owner: ''
 created: '2026-03-22'
 updated: '2026-03-22'
@@ -64,6 +64,17 @@ The current SimpleQueryEngine + CanonicalStore design loads all entity metadata 
 ## Confirmed Root Cause
 
 - Not yet confirmed. This note tracks a research-backed risk that was intentionally accepted in [[04_Decisions/DEC-0011|Decision DEC-0011 (SimpleQueryEngine choice)]].
+Three scaling issues confirmed in the v1 in-memory design:
+
+1. **Full-scan type lookups**: Both `CanonicalStore.findByType()` and `SimpleQueryEngine` query methods called `Array.from(entities.values()).filter(...)` on every type query — O(n) over all entities regardless of how many match the requested type.
+
+2. **No pagination support**: `findEntitiesByType` and `listEntities` always materialized and returned all matching results with no limit/offset, forcing callers to hold entire result sets in memory.
+
+3. **Unbounded growth**: No eviction mechanism existed. Every entity added was retained forever in memory with no capacity limit.
+
+4. **Incorrect total reporting**: `SimpleQueryEngine.executeStructuredQuery` reported `total` after applying `limit`, making it impossible for callers to know the true result count for pagination UIs.
+
+**Fix applied**: Added secondary type indexes (`Map<string, Set<string>>`) to both CanonicalStore and SimpleQueryEngine for O(1) type lookups. Added `PaginationOptions` (limit/offset) to store methods. Added LRU eviction with configurable `maxCapacity` using Map insertion-order semantics. Fixed query engine `total` to report pre-pagination count and added `offset` support to `DataviewQuery`.
 
 ## Workaround
 

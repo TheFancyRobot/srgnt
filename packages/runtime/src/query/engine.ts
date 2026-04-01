@@ -22,6 +22,7 @@ export interface DataviewQuery {
   where?: string;
   sort?: SortSpec[];
   limit?: number;
+  offset?: number;
   select?: string[];
 }
 
@@ -36,6 +37,7 @@ export interface QueryEngine {
 export class SimpleQueryEngine implements QueryEngine {
   private indexedFields: Set<string> = new Set();
   private entityIndex: Map<string, EntityEnvelope> = new Map();
+  private typeIndex: Map<string, Set<string>> = new Map();
 
   async query<T>(query: string | DataviewQuery): Promise<QueryResult<T>> {
     const start = Date.now();
@@ -69,56 +71,81 @@ export class SimpleQueryEngine implements QueryEngine {
 
   addToIndex(entity: EntityEnvelope): void {
     this.entityIndex.set(entity.id, entity);
+    let typeSet = this.typeIndex.get(entity.canonicalType);
+    if (!typeSet) {
+      typeSet = new Set();
+      this.typeIndex.set(entity.canonicalType, typeSet);
+    }
+    typeSet.add(entity.id);
   }
 
   removeFromIndex(id: string): void {
+    const entity = this.entityIndex.get(id);
+    if (entity) {
+      const typeSet = this.typeIndex.get(entity.canonicalType);
+      if (typeSet) {
+        typeSet.delete(id);
+        if (typeSet.size === 0) this.typeIndex.delete(entity.canonicalType);
+      }
+    }
     this.entityIndex.delete(id);
+  }
+
+  private getEntitiesByType(entityType: string): EntityEnvelope[] {
+    const typeSet = this.typeIndex.get(entityType);
+    if (!typeSet) return [];
+    const results: EntityEnvelope[] = [];
+    for (const id of typeSet) {
+      const entity = this.entityIndex.get(id);
+      if (entity) results.push(entity);
+    }
+    return results;
   }
 
   private executeDql<T>(query: string, start: number): Promise<QueryResult<T>> {
     const fromMatch = query.match(/FROM\s+["']?(\w+)["']?/i);
     const entityType = fromMatch ? fromMatch[1] : null;
 
-    let results = Array.from(this.entityIndex.values()) as unknown as T[];
-
+    let results: EntityEnvelope[];
     if (entityType) {
-      results = results.filter((e: unknown) => {
-        const entity = e as Record<string, unknown>;
-        return entity.canonicalType === entityType;
-      });
+      results = this.getEntitiesByType(entityType);
+    } else {
+      results = Array.from(this.entityIndex.values());
     }
 
     const durationMs = Date.now() - start;
     return Promise.resolve({
-      data: results,
+      data: results as unknown as T[],
       total: results.length,
       durationMs,
     });
   }
 
   private executeStructuredQuery<T>(query: DataviewQuery, start: number): Promise<QueryResult<T>> {
-    let results = Array.from(this.entityIndex.values()) as unknown as T[];
-
+    let results: EntityEnvelope[];
     if (query.from) {
-      const entityType = query.from;
-      results = results.filter((e: unknown) => {
-        const entity = e as Record<string, unknown>;
-        return entity.canonicalType === entityType;
-      });
+      results = this.getEntitiesByType(query.from);
+    } else {
+      results = Array.from(this.entityIndex.values());
     }
 
     if (query.sort) {
       results = this.applySort(results, query.sort);
     }
 
-    if (query.limit) {
-      results = results.slice(0, query.limit);
+    const total = results.length;
+
+    const offset = query.offset ?? 0;
+    if (query.limit !== undefined) {
+      results = results.slice(offset, offset + query.limit);
+    } else if (offset > 0) {
+      results = results.slice(offset);
     }
 
     const durationMs = Date.now() - start;
     return Promise.resolve({
-      data: results,
-      total: results.length,
+      data: results as unknown as T[],
+      total,
       durationMs,
     });
   }

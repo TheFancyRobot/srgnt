@@ -4,15 +4,15 @@ template_version: 2
 contract_version: 1
 title: Notes tree add-item input has white-on-white text (a11y AAA fail)
 bug_id: BUG-0004
-status: new
+status: fixed
 severity: sev-2
 category: a11y
 reported_on: '2026-04-01'
-fixed_on: ''
-owner: ''
+fixed_on: '2026-04-01'
+owner: OpenCode
 created: '2026-04-01'
 updated: '2026-04-01'
-related_notes: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]], [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]], [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638]], [[06_Shared_Knowledge/srgnt_framework_ux_direction|UX Direction]], [[06_Shared_Knowledge/srgnt_framework_navigation_and_ia|Navigation and IA]], [[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
+related_notes: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]], [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]], [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638]], [[05_Sessions/2026-04-01-210911-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-210911]], [[06_Shared_Knowledge/srgnt_framework_ux_direction|UX Direction]], [[06_Shared_Knowledge/srgnt_framework_navigation_and_ia|Navigation and IA]], [[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
 tags:
   - agent-vault
   - bug
@@ -75,6 +75,8 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 
 - Fill this in once investigation proves the cause.
 - Link the decisive evidence such as code paths, tests, or logs.
+- The inline create/rename field in `packages/desktop/src/renderer/components/sidepanels/NotesSidePanel.tsx` bypassed the shared `.input` form-control contract and assembled its own partial styling. In the app, that left the field vulnerable to base form styling interactions and it could render unreadable text/background combinations.
+- Fixed by reusing the shared `.input` styling contract and keeping only the notes-tree-specific border, placeholder, and focus overrides on top.
 
 ## Workaround
 
@@ -92,6 +94,8 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 ## Regression Coverage Needed
 
 - List tests, fixtures, reproductions, alerts, or docs updates needed to stop the bug from returning.
+- Implemented: `packages/desktop/src/renderer/components/sidepanels/NotesSidePanel.test.tsx` now asserts that inline create controls use the shared `.input` styling contract plus the notes-tree-specific contrast-related classes.
+- Implemented validation: `pnpm --filter @srgnt/desktop test -- src/renderer/components/sidepanels/NotesSidePanel.test.tsx` and `pnpm --filter @srgnt/desktop typecheck`.
 
 ## Related Notes
 
@@ -99,6 +103,7 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - Phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
 - Step: [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]]
 - Session: [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]]
+- Session: [[05_Sessions/2026-04-01-210911-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-210911 OpenCode session for Build Notes tree and shared renderer selection state]]
 - Architecture: [[01_Architecture/System_Overview|System Overview]]
 - Shared knowledge: [[06_Shared_Knowledge/srgnt_framework_ux_direction|UX Direction]] — theme and visual direction for side panels
 - Shared knowledge: [[06_Shared_Knowledge/srgnt_framework_navigation_and_ia|Navigation and IA]] — notes tree navigation contract
@@ -109,4 +114,5 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 
 <!-- AGENT-START:bug-timeline -->
 - 2026-04-01 - Reported.
+- 2026-04-01 - Fixed by moving the inline create/rename field onto the shared `.input` styling contract and adding side-panel regression coverage.
 <!-- AGENT-END:bug-timeline -->

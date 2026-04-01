@@ -6,6 +6,8 @@ import { NotesSidePanel } from './NotesSidePanel.js';
 
 describe('NotesSidePanel', () => {
   beforeEach(() => {
+    document.documentElement.className = '';
+
     const notesListDir = vi.fn(async (dirPath: string) => {
       switch (dirPath) {
         case '':
@@ -118,5 +120,20 @@ describe('NotesSidePanel', () => {
     await waitFor(() => {
       expect(window.srgnt.notesCreateFile).toHaveBeenCalledWith('Projects/Retro.md', 'Retro');
     });
+  });
+
+  it('uses the shared input styling for inline create controls', async () => {
+    render(
+      <NotesProvider>
+        <NotesSidePanel />
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByTitle('New note'));
+
+    const input = screen.getByPlaceholderText('note title...');
+    expect(input).toHaveClass('input');
+    expect(input).toHaveClass('border-srgnt-500');
+    expect(input).toHaveClass('placeholder:text-text-tertiary');
   });
 });

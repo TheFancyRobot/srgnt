@@ -76,7 +76,7 @@ function InlineNameInput({
       <input
         ref={inputRef}
         type="text"
-        className="flex-1 min-w-0 rounded border border-srgnt-500 bg-surface-tertiary/50 px-1.5 py-0.5 text-xs text-text-primary outline-none"
+        className="input flex-1 min-w-0 rounded-md border-srgnt-500 px-1.5 py-0.5 text-xs placeholder:text-text-tertiary focus:ring-2 focus:ring-srgnt-500/20 disabled:bg-surface-tertiary disabled:text-text-tertiary"
         placeholder={placeholder}
         value={value}
         disabled={isSubmitting}

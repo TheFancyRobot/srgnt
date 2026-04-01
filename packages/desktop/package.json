@@ -95,12 +95,21 @@
     "@effect/schema": "^0.75.5",
     "@srgnt/contracts": "workspace:*",
     "@srgnt/runtime": "workspace:*",
+    "@tiptap/extension-code-block-lowlight": "^3.22.0",
+    "@tiptap/extension-placeholder": "^3.22.0",
+    "@tiptap/extension-task-item": "^3.22.0",
+    "@tiptap/extension-task-list": "^3.22.0",
+    "@tiptap/pm": "^3.22.0",
+    "@tiptap/react": "^3.22.0",
+    "@tiptap/starter-kit": "^3.22.0",
     "effect": "^3.21.0",
     "electron-updater": "^6.3.9",
     "fast-check": "^4.6.0",
     "ghostty-web": "^0.4.0",
+    "lowlight": "^3.3.0",
     "node-pty": "^1.1.0",
-    "pure-rand": "^8.4.0"
+    "pure-rand": "^8.4.0",
+    "tiptap-markdown": "^0.9.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

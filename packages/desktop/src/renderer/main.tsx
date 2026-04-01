@@ -20,6 +20,7 @@ import { CalendarSidePanel } from './components/sidepanels/CalendarSidePanel.js'
 import { NotesSidePanel } from './components/sidepanels/NotesSidePanel.js';
 import { ConnectorsSidePanel } from './components/sidepanels/ConnectorsSidePanel.js';
 import { SettingsSidePanel } from './components/sidepanels/SettingsSidePanel.js';
+import { NotesProvider } from './components/notes/NotesContext.js';
 
 const LazyTerminalPanel = React.lazy(async () => {
   const module = await import('./components/TerminalPanel.js');
@@ -552,11 +553,15 @@ function AppContent({
     }
   };
 
-  return (
+  const layout = (
     <AppLayout fullBleed={activePanel === 'terminal'}>
       {renderContent()}
     </AppLayout>
   );
+
+  return activePanel === 'notes'
+    ? <NotesProvider>{layout}</NotesProvider>
+    : layout;
 }
 
 function SettingsUtilityPanel({

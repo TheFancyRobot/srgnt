@@ -94,6 +94,7 @@ export function MarkdownEditor({
             }, SAVE_DEBOUNCE_MS);
           }),
           collapseModeCompartment.of(collapseOnSelectionFacet.of(displayMode === 'live-preview')),
+          collapseModeCompartment.of(collapseOnSelectionFacet.of(displayMode === 'live-preview')),
           mouseSelectingField,
           livePreviewPlugin,
           markdownStylePlugin,

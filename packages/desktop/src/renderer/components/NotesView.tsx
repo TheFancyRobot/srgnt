@@ -27,7 +27,6 @@ export function NotesView(): React.ReactElement {
   React.useEffect(() => {
     window.localStorage.setItem(EDITOR_DISPLAY_MODE_STORAGE_KEY, displayMode);
   }, [displayMode]);
-
   if (!selectedPath) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center space-y-3 animate-fade-in">

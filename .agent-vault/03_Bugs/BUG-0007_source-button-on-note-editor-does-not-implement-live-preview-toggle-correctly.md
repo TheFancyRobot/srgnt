@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: Source button on note editor does not implement live-preview toggle correctly
 bug_id: BUG-0007
-status: new
+status: closed
 severity: sev-2
 category: logic
 reported_on: '2026-04-01'
-fixed_on: ''
+fixed_on: '2026-04-01'
 owner: ''
 created: '2026-04-01'
 updated: '2026-04-01'
@@ -88,6 +88,14 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 
 - Fill this in once investigation proves the cause.
 - Link the decisive evidence such as code paths, tests, or logs.
+The editor was built with a global `SyntaxMode` toggle (`'live-preview' | 'source'`) managed in `NotesView.tsx` and passed to `MarkdownEditor.tsx`. A "Source" button in the header toggled the entire editor between raw markdown and rendered preview via a `Compartment` that reconfigured `collapseOnSelectionFacet` to `false` (source mode) or `true` (live-preview mode). This global toggle contradicted the intended Obsidian-style live-preview behavior where per-line focus-based rendering should always be active.
+
+**Evidence:**
+- `NotesView.tsx`: maintained `syntaxMode` state, persisted to `localStorage`, rendered Source/Live preview toggle button
+- `MarkdownEditor.tsx`: accepted `syntaxMode` prop, used `syntaxModeCompartment.reconfigure(collapseOnSelectionFacet.of(syntaxMode === 'live-preview'))` to toggle the facet, and exposed `Mod-/` keybinding for toggling
+- `styles.css`: had `[data-mode='source']` CSS overrides to force-show all formatting tokens in source mode
+
+**Fix:** Removed the `SyntaxMode` type, Source toggle button, `Mod-/` keybinding, `syntaxModeCompartment`, `localStorage` persistence, `data-mode` attribute, and source-mode CSS. `collapseOnSelectionFacet.of(true)` is now set unconditionally so the editor always operates in Obsidian-style live-preview mode.
 
 ## Workaround
 

@@ -103,6 +103,7 @@ describe('MarkdownEditor', () => {
   });
 
   it('marks the default editor mode as live preview', () => {
+  it('marks the default editor mode as live preview', () => {
     const onContentChange = vi.fn();
 
     render(

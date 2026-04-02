@@ -52,8 +52,7 @@ test('navigates across key surfaces and updates connector status', async ({ wind
   await expect(page.getByRole('button', { name: 'Connect Jira' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Notes' }).click();
-  await expect(page.locator('main h1').filter({ hasText: 'Notes' })).toBeVisible();
-  await expect(page.getByLabel('Side panel').getByText('Notes coming soon')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Notes' }).click();
   await expect(page.getByRole('complementary', { name: 'Side panel' })).toHaveAttribute('data-collapsed', 'true');
@@ -213,4 +212,114 @@ test('today view launch button routes to terminal approval flow with the selecte
   await expect(page.getByText('Approval Required')).toBeVisible();
   await expect(page.getByText('daily-briefing')).toBeVisible();
   await expect(page.getByText(/\/workspace\//)).toBeVisible();
+});
+
+test('notes editor defaults to active-line editing and supports fully rendered mode toggle', async ({ userDataDir, window: page }, testInfo) => {
+  const workspaceRoot = path.join(userDataDir, 'notes-workspace');
+  const notesDir = path.join(workspaceRoot, 'Notes');
+  await fs.mkdir(notesDir, { recursive: true });
+  await fs.writeFile(
+    path.join(notesDir, 'Live Preview.md'),
+    '# March 29th 2026\n\n- one\n- two\n\n**bold** text\n',
+    'utf8',
+  );
+
+  await waitForDesktopReady(page);
+  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Get Started' }).click();
+
+  await page.evaluate(async (nextWorkspaceRoot) => {
+    await window.srgnt.setWorkspaceRoot(nextWorkspaceRoot);
+  }, workspaceRoot);
+
+  await page.reload();
+  await waitForDesktopReady(page);
+
+  await page.getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('treeitem', { name: /Live Preview\.md/ }).click();
+  await expect(page.getByRole('heading', { name: 'Live Preview.md' })).toBeVisible();
+
+  const initialMarkerState = await page.evaluate(() => {
+    const markers = Array.from(document.querySelectorAll('.cm-formatting-inline, .cm-formatting-inline-visible, .cm-formatting-block, .cm-formatting-block-visible'))
+      .slice(0, 20)
+      .map((el) => ({
+        text: el.textContent,
+        className: el.className,
+        opacity: window.getComputedStyle(el).opacity,
+        fontSize: window.getComputedStyle(el).fontSize,
+        maxWidth: window.getComputedStyle(el).maxWidth,
+      }));
+
+    return {
+      displayMode: document.querySelector('[data-testid="markdown-editor-wrapper"]')?.getAttribute('data-display-mode'),
+      markerCount: markers.length,
+      markers,
+    };
+  });
+
+  expect(initialMarkerState.displayMode).toBe('live-preview');
+  expect(initialMarkerState.markers.some((marker) => marker.className.includes('cm-formatting-block-visible') && Number.parseFloat(marker.opacity) > 0.5)).toBe(true);
+  expect(initialMarkerState.markers.some((marker) => marker.className === 'cm-formatting-inline' && marker.maxWidth === '0px' && marker.opacity === '0')).toBe(true);
+
+  await page.screenshot({ path: testInfo.outputPath('notes-default.png') });
+
+  await page.getByText('March 29th 2026').click();
+  await page.waitForTimeout(250);
+
+  const focusedMarkerState = await page.evaluate(() => {
+    const markers = Array.from(document.querySelectorAll('.cm-formatting-inline, .cm-formatting-inline-visible, .cm-formatting-block, .cm-formatting-block-visible'))
+      .slice(0, 20)
+      .map((el) => ({
+        text: el.textContent,
+        className: el.className,
+        opacity: window.getComputedStyle(el).opacity,
+        fontSize: window.getComputedStyle(el).fontSize,
+        maxWidth: window.getComputedStyle(el).maxWidth,
+      }));
+
+    return {
+      displayMode: document.querySelector('[data-testid="markdown-editor-wrapper"]')?.getAttribute('data-display-mode'),
+      markerCount: markers.length,
+      markers,
+    };
+  });
+
+  expect(focusedMarkerState.displayMode).toBe('live-preview');
+  expect(focusedMarkerState.markers.some((marker) => marker.className.includes('cm-formatting-block-visible') && Number.parseFloat(marker.opacity) > 0.5)).toBe(true);
+
+  await page.screenshot({ path: testInfo.outputPath('notes-live-preview-focused.png') });
+
+  const toggle = page.getByRole('button', { name: 'Toggle fully rendered mode' });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-display-mode', 'live-preview');
+
+  await toggle.click();
+
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-display-mode', 'rendered');
+
+  const renderedMarkerState = await page.evaluate(() => {
+    const markers = Array.from(document.querySelectorAll('.cm-formatting-inline, .cm-formatting-inline-visible, .cm-formatting-block, .cm-formatting-block-visible'))
+      .slice(0, 20)
+      .map((el) => ({
+        text: el.textContent,
+        className: el.className,
+        opacity: window.getComputedStyle(el).opacity,
+        fontSize: window.getComputedStyle(el).fontSize,
+        maxWidth: window.getComputedStyle(el).maxWidth,
+      }));
+
+    return {
+      displayMode: document.querySelector('[data-testid="markdown-editor-wrapper"]')?.getAttribute('data-display-mode'),
+      markerCount: markers.length,
+      markers,
+    };
+  });
+
+  expect(renderedMarkerState.displayMode).toBe('rendered');
+  expect(renderedMarkerState.markers.every((marker) => Number.parseFloat(marker.opacity) === 0)).toBe(true);
+
+  await page.screenshot({ path: testInfo.outputPath('notes-rendered-only.png') });
 });

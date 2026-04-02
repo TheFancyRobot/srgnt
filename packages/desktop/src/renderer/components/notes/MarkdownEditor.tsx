@@ -1,5 +1,5 @@
 import React from 'react';
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
@@ -14,14 +14,17 @@ import {
 import { parseFrontmatter, serializeWithFrontmatter } from './markdown-serializer.js';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+export type EditorDisplayMode = 'live-preview' | 'rendered';
 
 interface MarkdownEditorProps {
   rawContent: string;
   onContentChange: (markdown: string) => void;
   saveState: SaveState;
+  displayMode: EditorDisplayMode;
 }
 
 const SAVE_DEBOUNCE_MS = 1000;
+const collapseModeCompartment = new Compartment();
 
 const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
   idle: null,
@@ -34,6 +37,7 @@ export function MarkdownEditor({
   rawContent,
   onContentChange,
   saveState,
+  displayMode,
 }: MarkdownEditorProps): React.ReactElement {
   const parsed = React.useMemo(() => parseFrontmatter(rawContent), [rawContent]);
   const editorMountRef = React.useRef<HTMLDivElement | null>(null);
@@ -89,7 +93,7 @@ export function MarkdownEditor({
               onContentChangeRef.current(fullContent);
             }, SAVE_DEBOUNCE_MS);
           }),
-          collapseOnSelectionFacet.of(true),
+          collapseModeCompartment.of(collapseOnSelectionFacet.of(displayMode === 'live-preview')),
           mouseSelectingField,
           livePreviewPlugin,
           markdownStylePlugin,
@@ -151,10 +155,23 @@ export function MarkdownEditor({
     });
   }, [parsed.body]);
 
+  React.useEffect(() => {
+    const view = editorRef.current;
+    if (!view) {
+      return;
+    }
+
+    view.dispatch({
+      effects: collapseModeCompartment.reconfigure(
+        collapseOnSelectionFacet.of(displayMode === 'live-preview'),
+      ),
+    });
+  }, [displayMode]);
+
   const saveLabel = SAVE_STATE_LABELS[saveState];
 
   return (
-    <div className="markdown-editor-wrapper" data-testid="markdown-editor-wrapper">
+    <div className="markdown-editor-wrapper" data-display-mode={displayMode} data-testid="markdown-editor-wrapper">
       {parsed.frontmatter && (
         <div className="markdown-frontmatter" data-testid="frontmatter-block">
           <pre className="markdown-frontmatter-content">{parsed.frontmatter}</pre>

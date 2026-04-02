@@ -1,12 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { MarkdownEditor } from './MarkdownEditor.js';
 
 describe('MarkdownEditor', () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it('renders frontmatter as a read-only block', () => {
     const onContentChange = vi.fn();
 
@@ -136,37 +132,26 @@ describe('MarkdownEditor', () => {
     expect(screen.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-display-mode', 'rendered');
   });
 
-  it('marks inactive heading lines for rendered heading layout', () => {
+  it('keeps active-line syntax collapse enabled in rendered mode', async () => {
     const onContentChange = vi.fn();
 
     render(
       <MarkdownEditor
-        rawContent={'Intro\n### Heading'}
+        rawContent={'### Heading\n\nParagraph with **bold** text'}
         onContentChange={onContentChange}
         saveState="idle"
-        displayMode="live-preview"
+        displayMode="rendered"
       />,
     );
 
-    expect(document.querySelector('.cm-rendered-heading-line')).not.toBeNull();
-    expect(document.querySelector('.cm-md-header-mark')).not.toBeNull();
+    const editor = screen.getByLabelText('Markdown editor');
+
+    await act(async () => {
+      fireEvent.focus(editor);
+      fireEvent.mouseUp(editor);
+      fireEvent.keyUp(editor, { key: 'ArrowRight' });
+    });
+
+    expect(document.querySelector('.cm-formatting-block-visible')).not.toBeNull();
   });
-
-  it('marks inactive bullet list lines for rendered list layout', () => {
-    const onContentChange = vi.fn();
-
-    render(
-      <MarkdownEditor
-        rawContent={'Intro\n- Bullet item'}
-        onContentChange={onContentChange}
-        saveState="idle"
-        displayMode="live-preview"
-      />,
-    );
-
-    expect(document.querySelector('.cm-bullet-list-line')).not.toBeNull();
-    expect(document.querySelector('.cm-rendered-bullet-list-line')).not.toBeNull();
-    expect(document.querySelector('.cm-md-list-mark')).not.toBeNull();
-  });
-
 });

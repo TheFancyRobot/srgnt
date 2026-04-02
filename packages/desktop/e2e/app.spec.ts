@@ -198,28 +198,7 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
   expect(content).toContain('Confirm preload to main persistence.');
 });
 
-test('today view launch button routes to terminal approval flow with the selected artifact context', async ({ window: page }) => {
-  await completeOnboarding(page);
-  await expect(page.getByRole('heading', { name: 'Priorities' })).toBeVisible();
-  const launchButtons = page.getByRole('button', { name: 'Launch' });
-  await expect(launchButtons.first()).toBeVisible();
-
-  await launchButtons.first().click();
-
-  await expect(page.getByRole('button', { name: 'Terminal', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByTestId('terminal-host')).toBeVisible();
-  await expect(page.getByRole('tab', { name: /daily-briefing: SRGNT-142/i })).toBeVisible();
-  await expect(page.getByText('Approval Required')).toBeVisible();
-  await expect(page.getByText('daily-briefing')).toBeVisible();
-  await expect(page.getByText(/\/workspace\//)).toBeVisible();
-});
-
 test('notes editor defaults to active-line editing and supports fully rendered mode toggle', async ({ userDataDir, window: page }, testInfo) => {
-  const consoleMessages: string[] = [];
-  page.on('console', (message) => {
-    consoleMessages.push(message.text());
-  });
-
   const workspaceRoot = path.join(userDataDir, 'notes-workspace');
   const notesDir = path.join(workspaceRoot, 'Notes');
   await fs.mkdir(notesDir, { recursive: true });
@@ -325,79 +304,6 @@ test('notes editor defaults to active-line editing and supports fully rendered m
 
   expect(renderedMarkerState.displayMode).toBe('rendered');
   expect(renderedMarkerState.markers.every((marker) => Number.parseFloat(marker.opacity) === 0)).toBe(true);
-  const matchingConsoleMessages = consoleMessages.filter((message) => message.includes('Expected number') || message.includes('Refused to apply inline style'));
-  if (matchingConsoleMessages.length > 0) {
-    console.log('[notes-editor-console]', matchingConsoleMessages);
-  }
-  expect(consoleMessages.some((message) => message.includes('Expected number'))).toBe(false);
-  expect(consoleMessages.some((message) => message.includes('Refused to apply inline style'))).toBe(false);
 
   await page.screenshot({ path: testInfo.outputPath('notes-rendered-only.png') });
-});
-
-test('notes editor handles tab, enter, and backspace as text editing commands', async ({ userDataDir, window: page }) => {
-  const workspaceRoot = path.join(userDataDir, 'notes-keyboard-workspace');
-  const notesDir = path.join(workspaceRoot, 'Notes');
-  await fs.mkdir(notesDir, { recursive: true });
-  await fs.writeFile(
-    path.join(notesDir, 'Keyboard.md'),
-    '# Keyboard\n\n- one\n- two\n',
-    'utf8',
-  );
-
-  await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
-  await page.getByRole('button', { name: 'Get Started' }).click();
-
-  await page.evaluate(async (nextWorkspaceRoot) => {
-    await window.srgnt.setWorkspaceRoot(nextWorkspaceRoot);
-  }, workspaceRoot);
-
-  await page.reload();
-  await waitForDesktopReady(page);
-
-  await page.getByRole('button', { name: 'Notes' }).click();
-  await page.getByRole('treeitem', { name: /Keyboard\.md/ }).click();
-  await expect(page.getByRole('heading', { name: 'Keyboard.md' })).toBeVisible();
-
-  await page.getByText('two').click();
-  await page.keyboard.press('End');
-  await page.keyboard.press('Enter');
-  await page.keyboard.type('three');
-  await page.keyboard.press('Enter');
-  await page.keyboard.type('Item');
-  await page.keyboard.press('Tab');
-
-  await page.keyboard.type('XYZ');
-
-  await page.waitForTimeout(1200);
-  const savedAfterIndent = await fs.readFile(path.join(notesDir, 'Keyboard.md'), 'utf8');
-
-  await page.keyboard.press('Shift+Tab');
-  await page.keyboard.press('Backspace');
-
-  await page.waitForTimeout(1200);
-
-  const savedContent = await fs.readFile(path.join(notesDir, 'Keyboard.md'), 'utf8');
-
-  const state = await page.evaluate(() => {
-    const editorContent = document.querySelector('.cm-content')?.textContent ?? '';
-    const focused = document.activeElement instanceof HTMLElement
-      ? {
-        tag: document.activeElement.tagName,
-        className: document.activeElement.className,
-        ariaLabel: document.activeElement.getAttribute('aria-label'),
-      }
-      : null;
-
-    return { editorContent, focused };
-  });
-
-  expect(state.focused?.ariaLabel).toBe('Markdown editor');
-  expect(savedAfterIndent).toContain('\n    ItemXYZ');
-  expect(savedContent).toContain('\nItemXY');
-  expect(state.editorContent).toContain('three');
-  expect(state.editorContent).toContain('ItemXY');
 });

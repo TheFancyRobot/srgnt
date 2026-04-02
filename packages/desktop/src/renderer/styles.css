@@ -844,7 +844,6 @@
     padding: 0.5rem 0;
     color: var(--color-text-primary);
     caret-color: var(--color-srgnt-500);
-    tab-size: 4;
   }
 
   .markdown-editor-wrapper .cm-line {
@@ -953,46 +952,6 @@
   .markdown-editor-wrapper .cm-formatting-block-visible {
     font-size: 1em;
     opacity: 0.6;
-  }
-
-  .markdown-editor-wrapper .cm-rendered-heading-line .cm-md-header-mark.cm-formatting-block,
-  .markdown-editor-wrapper .cm-rendered-heading-line .cm-md-header-mark.cm-formatting-block-visible,
-  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-md-header-mark.cm-formatting-block,
-  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-md-header-mark.cm-formatting-block-visible,
-  .markdown-editor-wrapper .cm-rendered-bullet-list-line .cm-md-list-mark.cm-formatting-block,
-  .markdown-editor-wrapper .cm-rendered-bullet-list-line .cm-md-list-mark.cm-formatting-block-visible,
-  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-md-list-mark.cm-formatting-block,
-  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-md-list-mark.cm-formatting-block-visible {
-    display: inline-block;
-    width: 0;
-    font-size: 0;
-    line-height: 0;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .markdown-editor-wrapper .cm-rendered-bullet-list-line {
-    position: relative;
-  }
-
-  .markdown-editor-wrapper .cm-bullet-list-line,
-  .markdown-editor-wrapper .cm-rendered-bullet-list-line {
-    padding-left: 1.5rem;
-  }
-
-  .markdown-editor-wrapper .cm-rendered-bullet-list-line::before,
-  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-rendered-bullet-list-line::before {
-    content: '•';
-    position: absolute;
-    left: 0.5rem;
-    top: 0;
-    color: var(--color-text-tertiary);
-  }
-
-  .markdown-editor-wrapper .cm-rendered-heading-line,
-  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-heading-line {
-    padding-left: 1ch;
-    text-indent: -1ch;
   }
 
   .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-inline,

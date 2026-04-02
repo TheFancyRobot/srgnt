@@ -131,4 +131,27 @@ describe('MarkdownEditor', () => {
 
     expect(screen.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-display-mode', 'rendered');
   });
+
+  it('keeps active-line syntax collapse enabled in rendered mode', async () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'### Heading\n\nParagraph with **bold** text'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="rendered"
+      />,
+    );
+
+    const editor = screen.getByLabelText('Markdown editor');
+
+    await act(async () => {
+      fireEvent.focus(editor);
+      fireEvent.mouseUp(editor);
+      fireEvent.keyUp(editor, { key: 'ArrowRight' });
+    });
+
+    expect(document.querySelector('.cm-formatting-block-visible')).not.toBeNull();
+  });
 });

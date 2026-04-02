@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compartment, EditorState } from '@codemirror/state';
+import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
@@ -24,8 +24,6 @@ interface MarkdownEditorProps {
 }
 
 const SAVE_DEBOUNCE_MS = 1000;
-const collapseModeCompartment = new Compartment();
-
 const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
   idle: null,
   saving: 'Saving...',
@@ -93,7 +91,7 @@ export function MarkdownEditor({
               onContentChangeRef.current(fullContent);
             }, SAVE_DEBOUNCE_MS);
           }),
-          collapseModeCompartment.of(collapseOnSelectionFacet.of(displayMode === 'live-preview')),
+          collapseOnSelectionFacet.of(true),
           mouseSelectingField,
           livePreviewPlugin,
           markdownStylePlugin,
@@ -154,19 +152,6 @@ export function MarkdownEditor({
       changes: { from: 0, to: view.state.doc.length, insert: parsed.body },
     });
   }, [parsed.body]);
-
-  React.useEffect(() => {
-    const view = editorRef.current;
-    if (!view) {
-      return;
-    }
-
-    view.dispatch({
-      effects: collapseModeCompartment.reconfigure(
-        collapseOnSelectionFacet.of(displayMode === 'live-preview'),
-      ),
-    });
-  }, [displayMode]);
 
   const saveLabel = SAVE_STATE_LABELS[saveState];
 

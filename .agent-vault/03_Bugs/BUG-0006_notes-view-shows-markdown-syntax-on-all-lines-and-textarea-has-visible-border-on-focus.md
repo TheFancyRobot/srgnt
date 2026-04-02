@@ -8,7 +8,7 @@ status: closed
 severity: sev-2
 category: ui
 reported_on: '2026-04-01'
-fixed_on: '2026-04-01'
+fixed_on: '2026-04-02'
 owner: ''
 created: '2026-04-01'
 updated: '2026-04-01'
@@ -77,6 +77,9 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 **Issue 1 (syntax visible on all lines):** The editor used a `SyntaxMode` toggle with a `Compartment` to switch between `live-preview` and `source` modes. The `[data-mode='source']` CSS overrides in `styles.css` force-showed formatting tokens (`max-width: none; opacity: 1`), but the `collapseOnSelectionFacet` was conditionally enabled only when `syntaxMode === 'live-preview'`. The toggle introduced complexity and a state where source mode showed all tokens. Fix: removed the mode toggle entirely; `collapseOnSelectionFacet.of(true)` is now always active, so only the cursor line shows raw syntax.
 
 **Issue 2 (textarea border on focus):** CodeMirror 6 uses a hidden `<textarea>` for IME/clipboard input. This element inherited default browser focus outlines. Fix: added `outline: none !important; border: none !important; box-shadow: none !important` targeting `.cm-editor textarea`, plus reinforced `outline: none` on `.cm-editor.cm-focused` and `.cm-content:focus`.
+- 2026-04-02 confirmation: `packages/desktop/src/renderer/components/notes/MarkdownEditor.tsx` still gated `collapseOnSelectionFacet` behind `displayMode === 'live-preview'`. Toggling to `rendered` therefore disabled the per-selection collapse behavior entirely, which let markdown formatting tokens remain visible across the whole document instead of staying limited to the active line.
+- The durable fix keeps `collapseOnSelectionFacet.of(true)` mounted in both display modes and leaves `displayMode` responsible only for wrapper-level CSS behavior. Regression coverage now includes `MarkdownEditor.test.tsx`, which verifies active-line syntax collapse still works while the wrapper is in `rendered` mode.
+- The focus-border half of the bug was already covered by the existing `.markdown-editor-wrapper .cm-editor textarea` / `.cm-editor.cm-focused` outline-reset rules in `packages/desktop/src/renderer/styles.css`, so no additional CSS change was required in this follow-up fix.
 
 ## Workaround
 

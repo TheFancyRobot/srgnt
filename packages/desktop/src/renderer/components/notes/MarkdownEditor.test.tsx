@@ -10,9 +10,7 @@ describe('MarkdownEditor', () => {
       <MarkdownEditor
         rawContent={'---\ntitle: "Hello"\n---\n\nWorld'}
         onContentChange={onContentChange}
-        onToggleSyntaxMode={() => {}}
         saveState="idle"
-        syntaxMode="live-preview"
       />,
     );
 
@@ -26,9 +24,7 @@ describe('MarkdownEditor', () => {
       <MarkdownEditor
         rawContent={'Some text'}
         onContentChange={onContentChange}
-        onToggleSyntaxMode={() => {}}
         saveState="saving"
-        syntaxMode="live-preview"
       />,
     );
 
@@ -42,9 +38,7 @@ describe('MarkdownEditor', () => {
       <MarkdownEditor
         rawContent={'Some text'}
         onContentChange={onContentChange}
-        onToggleSyntaxMode={() => {}}
         saveState="saved"
-        syntaxMode="live-preview"
       />,
     );
 
@@ -58,9 +52,7 @@ describe('MarkdownEditor', () => {
       <MarkdownEditor
         rawContent={'Some text'}
         onContentChange={onContentChange}
-        onToggleSyntaxMode={() => {}}
         saveState="error"
-        syntaxMode="live-preview"
       />,
     );
 
@@ -74,9 +66,7 @@ describe('MarkdownEditor', () => {
       <MarkdownEditor
         rawContent={'No frontmatter here'}
         onContentChange={onContentChange}
-        onToggleSyntaxMode={() => {}}
         saveState="idle"
-        syntaxMode="live-preview"
       />,
     );
 
@@ -90,9 +80,7 @@ describe('MarkdownEditor', () => {
       <MarkdownEditor
         rawContent={'### Heading'}
         onContentChange={onContentChange}
-        onToggleSyntaxMode={() => {}}
         saveState="idle"
-        syntaxMode="live-preview"
       />,
     );
 
@@ -108,21 +96,17 @@ describe('MarkdownEditor', () => {
     expect(screen.getByText('###')).toBeInTheDocument();
   });
 
-  it('shows full markdown syntax in source mode', () => {
+  it('does not render data-mode attribute', () => {
     const onContentChange = vi.fn();
 
     render(
       <MarkdownEditor
         rawContent={'### Heading'}
         onContentChange={onContentChange}
-        onToggleSyntaxMode={() => {}}
         saveState="idle"
-        syntaxMode="source"
       />,
     );
 
-    expect(screen.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-mode', 'source');
-    expect(screen.getByText('###')).toBeInTheDocument();
-    expect(screen.getByText('Heading')).toBeInTheDocument();
+    expect(screen.getByTestId('markdown-editor-wrapper').hasAttribute('data-mode')).toBe(false);
   });
 });

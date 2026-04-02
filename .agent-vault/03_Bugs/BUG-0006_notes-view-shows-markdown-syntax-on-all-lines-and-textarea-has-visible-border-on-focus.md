@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: Notes view shows markdown syntax on all lines and textarea has visible border on focus
 bug_id: BUG-0006
-status: new
+status: closed
 severity: sev-2
 category: ui
 reported_on: '2026-04-01'
-fixed_on: ''
+fixed_on: '2026-04-01'
 owner: ''
 created: '2026-04-01'
 updated: '2026-04-01'
@@ -74,6 +74,9 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 
 - Fill this in once investigation proves the cause.
 - Link the decisive evidence such as code paths, tests, or logs.
+**Issue 1 (syntax visible on all lines):** The editor used a `SyntaxMode` toggle with a `Compartment` to switch between `live-preview` and `source` modes. The `[data-mode='source']` CSS overrides in `styles.css` force-showed formatting tokens (`max-width: none; opacity: 1`), but the `collapseOnSelectionFacet` was conditionally enabled only when `syntaxMode === 'live-preview'`. The toggle introduced complexity and a state where source mode showed all tokens. Fix: removed the mode toggle entirely; `collapseOnSelectionFacet.of(true)` is now always active, so only the cursor line shows raw syntax.
+
+**Issue 2 (textarea border on focus):** CodeMirror 6 uses a hidden `<textarea>` for IME/clipboard input. This element inherited default browser focus outlines. Fix: added `outline: none !important; border: none !important; box-shadow: none !important` targeting `.cm-editor textarea`, plus reinforced `outline: none` on `.cm-editor.cm-focused` and `.cm-content:focus`.
 
 ## Workaround
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compartment, EditorState } from '@codemirror/state';
+import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
@@ -14,18 +14,14 @@ import {
 import { parseFrontmatter, serializeWithFrontmatter } from './markdown-serializer.js';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
-export type SyntaxMode = 'live-preview' | 'source';
 
 interface MarkdownEditorProps {
   rawContent: string;
   onContentChange: (markdown: string) => void;
-  onToggleSyntaxMode: () => void;
   saveState: SaveState;
-  syntaxMode: SyntaxMode;
 }
 
 const SAVE_DEBOUNCE_MS = 1000;
-const syntaxModeCompartment = new Compartment();
 
 const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
   idle: null,
@@ -37,9 +33,7 @@ const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
 export function MarkdownEditor({
   rawContent,
   onContentChange,
-  onToggleSyntaxMode,
   saveState,
-  syntaxMode,
 }: MarkdownEditorProps): React.ReactElement {
   const parsed = React.useMemo(() => parseFrontmatter(rawContent), [rawContent]);
   const editorMountRef = React.useRef<HTMLDivElement | null>(null);
@@ -48,11 +42,9 @@ export function MarkdownEditor({
   const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const isExternalUpdateRef = React.useRef(false);
   const onContentChangeRef = React.useRef(onContentChange);
-  const onToggleSyntaxModeRef = React.useRef(onToggleSyntaxMode);
 
   frontmatterRef.current = parsed.frontmatter;
   onContentChangeRef.current = onContentChange;
-  onToggleSyntaxModeRef.current = onToggleSyntaxMode;
 
   React.useEffect(() => {
     const mount = editorMountRef.current;
@@ -68,13 +60,6 @@ export function MarkdownEditor({
           markdown(),
           history(),
           keymap.of([
-            {
-              key: 'Mod-/',
-              run: () => {
-                onToggleSyntaxModeRef.current();
-                return true;
-              },
-            },
             indentWithTab,
             ...historyKeymap,
             ...defaultKeymap,
@@ -104,7 +89,7 @@ export function MarkdownEditor({
               onContentChangeRef.current(fullContent);
             }, SAVE_DEBOUNCE_MS);
           }),
-          syntaxModeCompartment.of(collapseOnSelectionFacet.of(syntaxMode === 'live-preview')),
+          collapseOnSelectionFacet.of(true),
           mouseSelectingField,
           livePreviewPlugin,
           markdownStylePlugin,
@@ -166,21 +151,10 @@ export function MarkdownEditor({
     });
   }, [parsed.body]);
 
-  React.useEffect(() => {
-    const view = editorRef.current;
-    if (!view) {
-      return;
-    }
-
-    view.dispatch({
-      effects: syntaxModeCompartment.reconfigure(collapseOnSelectionFacet.of(syntaxMode === 'live-preview')),
-    });
-  }, [syntaxMode]);
-
   const saveLabel = SAVE_STATE_LABELS[saveState];
 
   return (
-    <div className="markdown-editor-wrapper" data-mode={syntaxMode} data-testid="markdown-editor-wrapper">
+    <div className="markdown-editor-wrapper" data-testid="markdown-editor-wrapper">
       {parsed.frontmatter && (
         <div className="markdown-frontmatter" data-testid="frontmatter-block">
           <pre className="markdown-frontmatter-content">{parsed.frontmatter}</pre>

@@ -911,17 +911,20 @@
     color: var(--color-text-tertiary);
   }
 
-  .markdown-editor-wrapper[data-mode='source'] .cm-formatting-inline {
-    max-width: none;
-    opacity: 1;
-    transform: none;
-    margin: 0;
-    pointer-events: auto;
+  .markdown-editor-wrapper .cm-editor.cm-focused {
+    outline: none;
+    border: none;
+    box-shadow: none;
   }
 
-  .markdown-editor-wrapper[data-mode='source'] .cm-formatting-block {
-    font-size: 1em;
-    opacity: 0.6;
+  .markdown-editor-wrapper .cm-content:focus {
+    outline: none;
+  }
+
+  .markdown-editor-wrapper .cm-editor textarea {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   @media (prefers-reduced-motion: reduce) {

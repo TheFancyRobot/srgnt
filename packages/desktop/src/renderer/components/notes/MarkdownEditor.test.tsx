@@ -11,6 +11,7 @@ describe('MarkdownEditor', () => {
         rawContent={'---\ntitle: "Hello"\n---\n\nWorld'}
         onContentChange={onContentChange}
         saveState="idle"
+        displayMode="live-preview"
       />,
     );
 
@@ -25,6 +26,7 @@ describe('MarkdownEditor', () => {
         rawContent={'Some text'}
         onContentChange={onContentChange}
         saveState="saving"
+        displayMode="live-preview"
       />,
     );
 
@@ -39,6 +41,7 @@ describe('MarkdownEditor', () => {
         rawContent={'Some text'}
         onContentChange={onContentChange}
         saveState="saved"
+        displayMode="live-preview"
       />,
     );
 
@@ -53,6 +56,7 @@ describe('MarkdownEditor', () => {
         rawContent={'Some text'}
         onContentChange={onContentChange}
         saveState="error"
+        displayMode="live-preview"
       />,
     );
 
@@ -67,6 +71,7 @@ describe('MarkdownEditor', () => {
         rawContent={'No frontmatter here'}
         onContentChange={onContentChange}
         saveState="idle"
+        displayMode="live-preview"
       />,
     );
 
@@ -81,6 +86,7 @@ describe('MarkdownEditor', () => {
         rawContent={'### Heading'}
         onContentChange={onContentChange}
         saveState="idle"
+        displayMode="live-preview"
       />,
     );
 
@@ -96,7 +102,7 @@ describe('MarkdownEditor', () => {
     expect(screen.getByText('###')).toBeInTheDocument();
   });
 
-  it('does not render data-mode attribute', () => {
+  it('marks the default editor mode as live preview', () => {
     const onContentChange = vi.fn();
 
     render(
@@ -104,9 +110,25 @@ describe('MarkdownEditor', () => {
         rawContent={'### Heading'}
         onContentChange={onContentChange}
         saveState="idle"
+        displayMode="live-preview"
       />,
     );
 
-    expect(screen.getByTestId('markdown-editor-wrapper').hasAttribute('data-mode')).toBe(false);
+    expect(screen.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-display-mode', 'live-preview');
+  });
+
+  it('supports fully rendered mode', () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'### Heading'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="rendered"
+      />,
+    );
+
+    expect(screen.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-display-mode', 'rendered');
   });
 });

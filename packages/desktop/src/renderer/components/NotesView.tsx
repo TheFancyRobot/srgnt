@@ -1,15 +1,32 @@
 import React from 'react';
 import { useNotes } from './notes/NotesContext.js';
 import { MarkdownEditor } from './notes/MarkdownEditor.js';
-import type { SaveState } from './notes/MarkdownEditor.js';
+import type { EditorDisplayMode, SaveState } from './notes/MarkdownEditor.js';
+
+const EDITOR_DISPLAY_MODE_STORAGE_KEY = 'srgnt:notes:editor-display-mode';
+
+function loadInitialDisplayMode(): EditorDisplayMode {
+  if (typeof window === 'undefined') {
+    return 'live-preview';
+  }
+
+  return window.localStorage.getItem(EDITOR_DISPLAY_MODE_STORAGE_KEY) === 'rendered'
+    ? 'rendered'
+    : 'live-preview';
+}
 
 export function NotesView(): React.ReactElement {
   const { selectedPath, activeContent, activeContentLoading, clearSelection, writeActiveContent, error } = useNotes();
   const [saveState, setSaveState] = React.useState<SaveState>('idle');
+  const [displayMode, setDisplayMode] = React.useState<EditorDisplayMode>(() => loadInitialDisplayMode());
 
   React.useEffect(() => {
     setSaveState('idle');
   }, [selectedPath]);
+
+  React.useEffect(() => {
+    window.localStorage.setItem(EDITOR_DISPLAY_MODE_STORAGE_KEY, displayMode);
+  }, [displayMode]);
 
   if (!selectedPath) {
     return (
@@ -48,6 +65,16 @@ export function NotesView(): React.ReactElement {
           <button
             type="button"
             className="btn btn-ghost text-xs"
+            aria-label="Toggle fully rendered mode"
+            aria-pressed={displayMode === 'rendered'}
+            title={displayMode === 'live-preview' ? 'Disable syntax on the active line' : 'Enable active-line markdown editing'}
+            onClick={() => setDisplayMode((current) => (current === 'live-preview' ? 'rendered' : 'live-preview'))}
+          >
+            {displayMode === 'live-preview' ? 'Rendered only' : 'Active-line edit'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost text-xs"
             onClick={clearSelection}
           >
             Close
@@ -63,6 +90,7 @@ export function NotesView(): React.ReactElement {
             rawContent={activeContent}
             onContentChange={handleContentChange}
             saveState={saveState}
+            displayMode={displayMode}
           />
         </div>
       ) : (

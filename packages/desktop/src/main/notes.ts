@@ -420,6 +420,17 @@ import {
 } from '@srgnt/contracts';
 
 export function registerNotesHandlers(workspaceRoot: string): void {
+  ipcMain.removeHandler(ipcChannels.notesListDir);
+  ipcMain.removeHandler(ipcChannels.notesReadFile);
+  ipcMain.removeHandler(ipcChannels.notesWriteFile);
+  ipcMain.removeHandler(ipcChannels.notesCreateFile);
+  ipcMain.removeHandler(ipcChannels.notesCreateFolder);
+  ipcMain.removeHandler(ipcChannels.notesDelete);
+  ipcMain.removeHandler(ipcChannels.notesRename);
+  ipcMain.removeHandler(ipcChannels.notesSearch);
+  ipcMain.removeHandler(ipcChannels.notesResolveWikilink);
+  ipcMain.removeHandler(ipcChannels.notesListWorkspaceMarkdown);
+
   // List directory contents
   ipcMain.handle(ipcChannels.notesListDir, async (_event, rawPayload) => {
     const payload = parseSync(SNotesListDirRequest, rawPayload ?? { dirPath: '' });

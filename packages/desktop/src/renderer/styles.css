@@ -909,6 +909,66 @@
   .markdown-editor-wrapper .cm-formatting-inline,
   .markdown-editor-wrapper .cm-formatting-block {
     color: var(--color-text-tertiary);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  .markdown-editor-wrapper .cm-formatting-inline {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: baseline;
+    max-width: 0;
+    opacity: 0;
+    transform: scaleX(0.8);
+    pointer-events: none;
+    transition:
+      max-width 0.2s cubic-bezier(0.2, 0, 0.2, 1),
+      opacity 0.15s ease-out,
+      transform 0.15s ease-out;
+  }
+
+  .markdown-editor-wrapper .cm-formatting-inline-visible {
+    max-width: 4ch;
+    opacity: 1;
+    transform: scaleX(1);
+    margin: 0 1px;
+    pointer-events: auto;
+  }
+
+  .markdown-editor-wrapper .cm-formatting-block {
+    display: inline;
+    overflow: hidden;
+    font-size: 0.01em;
+    line-height: inherit;
+    opacity: 0;
+    transition: font-size 0.2s ease-out, opacity 0.2s ease-out;
+  }
+
+  .markdown-editor-wrapper .cm-formatting-block-visible,
+  .markdown-editor-wrapper .cm-formatting-inline-visible {
+    color: var(--color-text-tertiary);
+  }
+
+  .markdown-editor-wrapper .cm-formatting-block-visible {
+    font-size: 1em;
+    opacity: 0.6;
+  }
+
+  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-inline,
+  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-inline-visible {
+    max-width: 0;
+    opacity: 0;
+    transform: scaleX(0.8);
+    margin: 0;
+    pointer-events: none;
+    transition: none;
+  }
+
+  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-block,
+  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-block-visible {
+    font-size: 0.01em;
+    opacity: 0;
+    transition: none;
   }
 
   .markdown-editor-wrapper .cm-editor.cm-focused {
@@ -929,7 +989,9 @@
 
   @media (prefers-reduced-motion: reduce) {
     .markdown-editor-wrapper .cm-formatting-inline,
-    .markdown-editor-wrapper .cm-formatting-block {
+    .markdown-editor-wrapper .cm-formatting-inline-visible,
+    .markdown-editor-wrapper .cm-formatting-block,
+    .markdown-editor-wrapper .cm-formatting-block-visible {
       transition: none;
     }
   }

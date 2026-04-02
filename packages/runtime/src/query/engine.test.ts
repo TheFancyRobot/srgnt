@@ -106,6 +106,18 @@ describe('SimpleQueryEngine total and pagination', () => {
     expect(result.data).toHaveLength(2);
     expect(result.total).toBe(10);
   });
+
+  it('paginates typed queries without materializing the full result window first', async () => {
+    for (let i = 10; i < 3000; i++) {
+      engine.addToIndex({ id: `task-${i}`, canonicalType: 'Task' });
+    }
+
+    const result = await engine.query<EntityEnvelope>({ from: 'Task', limit: 3, offset: 2500 });
+    expect(result.data).toHaveLength(3);
+    expect(result.total).toBe(3000);
+    expect(result.data[0]?.id).toBe('task-2500');
+    expect(result.data[2]?.id).toBe('task-2502');
+  });
 });
 
 describe('SimpleQueryEngine type index', () => {

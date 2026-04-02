@@ -8,7 +8,7 @@ status: closed
 severity: sev-3
 category: performance
 reported_on: '2026-03-22'
-fixed_on: '2026-04-01'
+fixed_on: '2026-04-02'
 owner: ''
 created: '2026-03-22'
 updated: '2026-03-22'
@@ -75,6 +75,12 @@ Three scaling issues confirmed in the v1 in-memory design:
 4. **Incorrect total reporting**: `SimpleQueryEngine.executeStructuredQuery` reported `total` after applying `limit`, making it impossible for callers to know the true result count for pagination UIs.
 
 **Fix applied**: Added secondary type indexes (`Map<string, Set<string>>`) to both CanonicalStore and SimpleQueryEngine for O(1) type lookups. Added `PaginationOptions` (limit/offset) to store methods. Added LRU eviction with configurable `maxCapacity` using Map insertion-order semantics. Fixed query engine `total` to report pre-pagination count and added `offset` support to `DataviewQuery`.
+Confirmed in code: the main remaining scaling bug was that paginated type queries still materialized all matching entities before slicing. `CanonicalStore.findByType()` built a full `results` array from the per-type index and only then applied pagination, and `SimpleQueryEngine.executeStructuredQuery()` did the same for `from` queries before applying `limit` / `offset`. That preserved O(n) memory growth for large typed result sets even when callers only requested a small page.
+
+Fix applied on 2026-04-02:
+- `CanonicalStore.findByType()` now walks the type index lazily and only collects the requested page window.
+- `SimpleQueryEngine` now computes `total` from index metadata and, for unsorted typed queries, only materializes the requested page instead of the full match set.
+- Regression tests now cover deep-offset pagination against thousands of typed entities in both the store and query engine.
 
 ## Workaround
 

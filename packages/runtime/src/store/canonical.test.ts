@@ -105,6 +105,17 @@ describe('CanonicalStore pagination', () => {
     expect(page[1].id).toBe('task-8');
   });
 
+  it('does not materialize all matching entities for paginated type lookups', () => {
+    for (let i = 10; i < 2000; i++) {
+      store.addEntity({ id: `task-${i}`, canonicalType: 'Task' });
+    }
+
+    const page = store.findEntitiesByType('Task', { limit: 5, offset: 1500 });
+    expect(page).toHaveLength(5);
+    expect(page[0].id).toBe('task-1500');
+    expect(page[4].id).toBe('task-1504');
+  });
+
   it('returns empty for offset beyond range', () => {
     const page = store.findEntitiesByType('Task', { offset: 100 });
     expect(page).toHaveLength(0);

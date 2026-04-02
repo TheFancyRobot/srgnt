@@ -74,12 +74,37 @@ export function createEntityStore(options?: EntityStoreOptions): EntityStore {
     typeSet.add(entity.id);
   }
 
-  function removeFromTypeIndex(id: string, canonicalType: string): void {
-    const typeSet = typeIndex.get(canonicalType);
-    if (typeSet) {
-      typeSet.delete(id);
-      if (typeSet.size === 0) typeIndex.delete(canonicalType);
+function removeFromTypeIndex(id: string, canonicalType: string): void {
+  const typeSet = typeIndex.get(canonicalType);
+  if (typeSet) {
+    typeSet.delete(id);
+    if (typeSet.size === 0) typeIndex.delete(canonicalType);
+  }
+}
+
+  function collectIndexedEntities(ids: Iterable<string>, options?: PaginationOptions): EntityEnvelope[] {
+    const offset = options?.offset ?? 0;
+    const limit = options?.limit;
+    const end = limit === undefined ? Number.POSITIVE_INFINITY : offset + limit;
+    const results: EntityEnvelope[] = [];
+    let index = 0;
+
+    for (const id of ids) {
+      if (index >= end) {
+        break;
+      }
+
+      if (index >= offset) {
+        const entity = entities.get(id);
+        if (entity) {
+          results.push(entity);
+        }
+      }
+
+      index += 1;
     }
+
+    return results;
   }
 
   return {
@@ -116,12 +141,7 @@ export function createEntityStore(options?: EntityStoreOptions): EntityStore {
     findByType(canonicalType: string, options?: PaginationOptions): EntityEnvelope[] {
       const typeSet = typeIndex.get(canonicalType);
       if (!typeSet || typeSet.size === 0) return [];
-      const results: EntityEnvelope[] = [];
-      for (const id of typeSet) {
-        const entity = entities.get(id);
-        if (entity) results.push(entity);
-      }
-      return paginate(results, options);
+      return collectIndexedEntities(typeSet, options);
     },
 
     totalByType(canonicalType: string): number {
@@ -137,9 +157,9 @@ export function createEntityStore(options?: EntityStoreOptions): EntityStore {
 
 export class CanonicalStore {
   private store: EntityStore;
-  private validator: Schema.Schema<any, unknown> | undefined;
+  private validator: Schema.Schema<any, any> | undefined;
 
-  constructor(validator?: Schema.Schema<any, unknown>, options?: EntityStoreOptions) {
+  constructor(validator?: Schema.Schema<any, any>, options?: EntityStoreOptions) {
     this.store = createEntityStore(options);
     this.validator = validator;
   }

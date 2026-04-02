@@ -70,6 +70,15 @@ export class SimpleQueryEngine implements QueryEngine {
   }
 
   addToIndex(entity: EntityEnvelope): void {
+    const existing = this.entityIndex.get(entity.id);
+    if (existing && existing.canonicalType !== entity.canonicalType) {
+      const previousTypeSet = this.typeIndex.get(existing.canonicalType);
+      if (previousTypeSet) {
+        previousTypeSet.delete(entity.id);
+        if (previousTypeSet.size === 0) this.typeIndex.delete(existing.canonicalType);
+      }
+    }
+
     this.entityIndex.set(entity.id, entity);
     let typeSet = this.typeIndex.get(entity.canonicalType);
     if (!typeSet) {

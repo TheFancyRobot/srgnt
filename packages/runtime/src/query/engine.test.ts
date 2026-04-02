@@ -134,6 +134,18 @@ describe('SimpleQueryEngine type index', () => {
     expect((result.data[0] as EntityEnvelope).id).toBe('task-2');
   });
 
+  it('moves an entity between type indexes when re-indexed with a new canonical type', async () => {
+    engine.addToIndex({ id: 'item-1', canonicalType: 'Task' });
+    engine.addToIndex({ id: 'item-1', canonicalType: 'Event' });
+
+    const taskResult = await engine.query({ from: 'Task' });
+    const eventResult = await engine.query({ from: 'Event' });
+
+    expect(taskResult.data).toHaveLength(0);
+    expect(eventResult.data).toHaveLength(1);
+    expect((eventResult.data[0] as EntityEnvelope).id).toBe('item-1');
+  });
+
   it('returns empty for non-existent type', async () => {
     engine.addToIndex({ id: 'task-1', canonicalType: 'Task' });
 

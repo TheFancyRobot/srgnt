@@ -101,13 +101,30 @@ export class SimpleQueryEngine implements QueryEngine {
   }
 
   private getEntitiesByType(entityType: string): EntityEnvelope[] {
+    return this.collectEntitiesByType(entityType);
+  }
+
+  private collectEntitiesByType(entityType: string, offset = 0, limit?: number): EntityEnvelope[] {
     const typeSet = this.typeIndex.get(entityType);
     if (!typeSet) return [];
+
+    const end = limit === undefined ? Number.POSITIVE_INFINITY : offset + limit;
     const results: EntityEnvelope[] = [];
+    let index = 0;
+
     for (const id of typeSet) {
-      const entity = this.entityIndex.get(id);
-      if (entity) results.push(entity);
+      if (index >= end) {
+        break;
+      }
+
+      if (index >= offset) {
+        const entity = this.entityIndex.get(id);
+        if (entity) results.push(entity);
+      }
+
+      index += 1;
     }
+
     return results;
   }
 
@@ -131,8 +148,15 @@ export class SimpleQueryEngine implements QueryEngine {
   }
 
   private executeStructuredQuery<T>(query: DataviewQuery, start: number): Promise<QueryResult<T>> {
+    const offset = query.offset ?? 0;
+    const total = query.from
+      ? this.typeIndex.get(query.from)?.size ?? 0
+      : this.entityIndex.size;
+
     let results: EntityEnvelope[];
-    if (query.from) {
+    if (query.from && !query.sort) {
+      results = this.collectEntitiesByType(query.from, offset, query.limit);
+    } else if (query.from) {
       results = this.getEntitiesByType(query.from);
     } else {
       results = Array.from(this.entityIndex.values());
@@ -140,15 +164,17 @@ export class SimpleQueryEngine implements QueryEngine {
 
     if (query.sort) {
       results = this.applySort(results, query.sort);
-    }
-
-    const total = results.length;
-
-    const offset = query.offset ?? 0;
-    if (query.limit !== undefined) {
-      results = results.slice(offset, offset + query.limit);
-    } else if (offset > 0) {
-      results = results.slice(offset);
+      if (query.limit !== undefined) {
+        results = results.slice(offset, offset + query.limit);
+      } else if (offset > 0) {
+        results = results.slice(offset);
+      }
+    } else if (!query.from) {
+      if (query.limit !== undefined) {
+        results = results.slice(offset, offset + query.limit);
+      } else if (offset > 0) {
+        results = results.slice(offset);
+      }
     }
 
     const durationMs = Date.now() - start;

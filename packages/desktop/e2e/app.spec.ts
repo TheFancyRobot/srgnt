@@ -198,3 +198,19 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
   expect(content).toContain('# E2E Briefing');
   expect(content).toContain('Confirm preload to main persistence.');
 });
+
+test('today view launch button routes to terminal approval flow with the selected artifact context', async ({ window: page }) => {
+  await completeOnboarding(page);
+
+  await expect(page.getByRole('heading', { name: 'Priorities' })).toBeVisible();
+  const launchButtons = page.getByRole('button', { name: 'Launch' });
+  await expect(launchButtons.first()).toBeVisible();
+
+  await launchButtons.first().click();
+
+  await expect(page.getByRole('button', { name: 'Terminal', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('tab', { name: /daily-briefing: SRGNT-142/i })).toBeVisible();
+  await expect(page.getByText('Approval Required')).toBeVisible();
+  await expect(page.getByText('daily-briefing')).toBeVisible();
+  await expect(page.getByText(/\/workspace\//)).toBeVisible();
+});

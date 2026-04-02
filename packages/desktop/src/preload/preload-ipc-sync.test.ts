@@ -52,6 +52,34 @@ describe('preload IPC channel sync (BUG-0002 regression)', () => {
     }
   });
 
+  it('only uses type-level imports for @srgnt/* packages', () => {
+    const importStatements = preloadSource
+      .split('\n')
+      .reduce<{ current: string[]; statements: string[] }>((acc, line) => {
+        if (acc.current.length > 0 || line.trimStart().startsWith('import ')) {
+          acc.current.push(line);
+          if (line.trimEnd().endsWith(';')) {
+            acc.statements.push(acc.current.join('\n'));
+            acc.current = [];
+          }
+        }
+
+        return acc;
+      }, { current: [], statements: [] })
+      .statements;
+
+    const srgntImportBlocks = importStatements.filter((statement) =>
+      statement.includes("from '@srgnt/") || statement.includes('from "@srgnt/'),
+    );
+
+    for (const importBlock of srgntImportBlocks) {
+      expect(
+        importBlock,
+        `Preload must not import runtime values from workspace packages. Use \`import type\` instead:\n${importBlock}`,
+      ).toMatch(/^import\s+type\b/);
+    }
+  });
+
   it('preload exposes window.srgnt via contextBridge', () => {
     expect(preloadSource).toContain("contextBridge.exposeInMainWorld('srgnt', api)");
   });

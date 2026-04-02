@@ -68,7 +68,7 @@ This document has been decomposed into focused, linkable notes for better naviga
 | Dataview Strategy | [[06_Shared_Knowledge/srgnt_framework_dataview_strategy\|Dataview Strategy]] |
 | Local-First Storage | [[06_Shared_Knowledge/srgnt_framework_local_first_storage\|Local-First Storage]] |
 | Sync Service Design | [[06_Shared_Knowledge/srgnt_framework_sync_service_design\|Sync Service Design]] |
-| Pre-Dev Readiness Checklist | [[06_Shared_Knowledge/srgnt_framework_predev_readiness_checklist\|Pre-Dev Readiness Checklist]] |
+| Pre-Dev Readiness Checklist | [[06_Shared_Knowledge/srgnt_framework_predev_readiness_checklist|Pre-Dev Readiness Checklist]] |
 
 ## Related Notes
 

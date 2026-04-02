@@ -15,6 +15,8 @@ depends_on:
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation|STEP-14-05]]'
 related_sessions: []
 related_bugs: []
+related_decisions:
+  - '[[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]]'
 tags:
   - agent-vault
   - step

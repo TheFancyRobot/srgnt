@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
 status: done
 owner: ''
 created: '2026-03-31'
-updated: '2026-04-01'
+updated: '2026-04-02'
 depends_on:
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_02_create-notes-file-service-with-path-scoped-operations|STEP-14-02]]'
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03]]'
@@ -16,8 +16,10 @@ related_sessions:
   - '[[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
   - '[[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
   - '[[05_Sessions/2026-04-01-192822-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-192822 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
+  - '[[05_Sessions/2026-04-02-042138-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-02-042138 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]]'
 related_bugs:
   - '[[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]'
+  - '[[03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus|BUG-0006 Notes view shows markdown syntax on all lines and textarea has visible border on focus]]'
 tags:
   - agent-vault
   - step
@@ -166,8 +168,10 @@ This section supersedes the vaguer template text above when they conflict.
 - 2026-04-01 - [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Session created.
 - 2026-04-01 - [[05_Sessions/2026-04-01-190658-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-190658 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Bug-orchestration session created to continue BUG-0005 implementation and repair vault note integrity.
 - 2026-04-01 - [[05_Sessions/2026-04-01-192822-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-192822 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Session created.
+- 2026-04-02 - [[05_Sessions/2026-04-02-042138-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-02-042138 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] - Session created.
 <!-- AGENT-END:step-session-history -->
 - [[05_Sessions/2026-04-01-045431-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-01-045431]] started (OpenCode)
+- [[05_Sessions/2026-04-02-042138-implement-obsidian-style-live-preview-markdown-editor-foundation-opencode|SESSION-2026-04-02-042138 OpenCode session for Implement Obsidian-style live-preview markdown editor foundation]] — integrated bug-fix branch, fixed merge damage, resolved notes editor console errors, and narrowed remaining `Tab`/list continuation issues.
 
 ## Outcome Summary
 

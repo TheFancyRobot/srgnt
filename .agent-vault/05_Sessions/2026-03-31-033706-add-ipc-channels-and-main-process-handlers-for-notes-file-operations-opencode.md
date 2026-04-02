@@ -12,6 +12,7 @@ phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
 related_bugs: []
 related_decisions:
   - '[[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]]'
+  - '[[04_Decisions/DEC-0011_dec-0011-use-simplequeryengine-over-in-memory-canonicalstore-for-v1-query-index|DEC-0011 Use SimpleQueryEngine over in-memory CanonicalStore for v1 query/index]]'
 created: '2026-03-31'
 updated: '2026-03-31'
 tags:

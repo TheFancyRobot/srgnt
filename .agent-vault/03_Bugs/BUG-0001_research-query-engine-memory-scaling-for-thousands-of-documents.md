@@ -16,6 +16,7 @@ related_notes:
   - '[[04_Decisions/DEC-0011|Decision DEC-0011 (SimpleQueryEngine choice)]]'
   - '[[02_Phases/Phase_03_runtime_foundation/Steps/Step_04_decide-query-index-strategy-and-dataview-feasibility|STEP-03-04]]'
   - '[[02_Phases/Phase_03_runtime_foundation/Steps/Step_05_implement-query-index-subsystem|STEP-03-05]]'
+  - '[[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]'
 tags:
   - agent-vault
   - bug
@@ -120,6 +121,7 @@ The current SimpleQueryEngine + CanonicalStore design loads all entity metadata 
 - [[04_Decisions/DEC-0011|Decision DEC-0011 (SimpleQueryEngine choice)]]
 - [[02_Phases/Phase_03_runtime_foundation/Steps/Step_04_decide-query-index-strategy-and-dataview-feasibility|STEP-03-04]]
 - [[02_Phases/Phase_03_runtime_foundation/Steps/Step_05_implement-query-index-subsystem|STEP-03-05]]
+- [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 <!-- AGENT-END:bug-related-notes -->
 
 ## Timeline

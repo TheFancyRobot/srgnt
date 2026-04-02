@@ -15,6 +15,8 @@ related_sessions:
   - '[[05_Sessions/2026-04-02-020524-add-workspace-wide-wikilink-resolution-navigation-and-note-creation-opencode|SESSION-2026-04-02-020524 OpenCode session for Add workspace-wide wikilink resolution, navigation, and note creation]]'
 related_bugs:
   - '[[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]'
+related_decisions:
+  - '[[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]]'
 tags:
   - agent-vault
   - step

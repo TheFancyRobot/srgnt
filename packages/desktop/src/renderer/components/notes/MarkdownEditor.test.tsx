@@ -1,8 +1,12 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MarkdownEditor } from './MarkdownEditor.js';
 
 describe('MarkdownEditor', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders frontmatter as a read-only block', () => {
     const onContentChange = vi.fn();
 
@@ -103,7 +107,6 @@ describe('MarkdownEditor', () => {
   });
 
   it('marks the default editor mode as live preview', () => {
-  it('marks the default editor mode as live preview', () => {
     const onContentChange = vi.fn();
 
     render(
@@ -132,4 +135,38 @@ describe('MarkdownEditor', () => {
 
     expect(screen.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-display-mode', 'rendered');
   });
+
+  it('marks inactive heading lines for rendered heading layout', () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'Intro\n### Heading'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />,
+    );
+
+    expect(document.querySelector('.cm-rendered-heading-line')).not.toBeNull();
+    expect(document.querySelector('.cm-md-header-mark')).not.toBeNull();
+  });
+
+  it('marks inactive bullet list lines for rendered list layout', () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'Intro\n- Bullet item'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />,
+    );
+
+    expect(document.querySelector('.cm-bullet-list-line')).not.toBeNull();
+    expect(document.querySelector('.cm-rendered-bullet-list-line')).not.toBeNull();
+    expect(document.querySelector('.cm-md-list-mark')).not.toBeNull();
+  });
+
 });

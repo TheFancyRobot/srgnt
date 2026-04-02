@@ -15,6 +15,7 @@ superseded_by: []
 related_notes:
   - '[[02_Phases/Phase_03_runtime_foundation/Phase|PHASE-03 Runtime Foundation]]'
   - '[[02_Phases/Phase_03_runtime_foundation/Steps/Step_04_decide-query-index-strategy-and-dataview-feasibility|STEP-03-04]]'
+  - '[[05_Sessions/2026-03-31-033706-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-033706 OpenCode session for Add IPC channels and main process handlers for notes file operations]]'
 tags:
   - agent-vault
   - decision
@@ -102,6 +103,7 @@ Use the **SimpleQueryEngine over in-memory CanonicalStore** as the v1 query/inde
 - Phase: [[02_Phases/Phase_03_runtime_foundation/Phase|PHASE-03 Runtime Foundation]]
 - STEP-03-04 spike: [[02_Phases/Phase_03_runtime_foundation/Steps/Step_04_decide-query-index-strategy-and-dataview-feasibility|STEP-03-04]]
 - STEP-03-05 implementation: [[02_Phases/Phase_03_runtime_foundation/Steps/Step_05_implement-query-index-subsystem|STEP-03-05]]
+- Phase 14 refinement session: [[05_Sessions/2026-03-31-033706-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-033706 OpenCode session for Add IPC channels and main process handlers for notes file operations]]
 <!-- AGENT-END:decision-related-notes -->
 
 ## Change Log

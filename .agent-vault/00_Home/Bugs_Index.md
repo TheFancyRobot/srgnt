@@ -30,16 +30,16 @@ Use this note as the manual table of contents for bug records in \`03_Bugs/\`.
 _Last rebuilt: 2026-04-02._
 
 - Notes indexed: 7
-- Status summary: new (2), closed (1), fixed (3), open (1)
+- Status summary: new (1), closed (5), open (1)
 
 | Id | Title | Status | Severity | Reported | Fixed | Linear |
 | --- | --- | --- | --- | --- | --- | --- |
-| BUG-0007 | [Source button on note editor does not implement live-preview toggle correctly](../03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly.md) | new | sev-2 | 2026-04-01 | - | - |
-| BUG-0003 | [Today View launch hardcodes intent: readOnly bypassing approval preview](../03_Bugs/BUG-0003_today-view-launch-hardcodes-intent-readonly-bypassing-approval-preview.md) | new | sev-3 | 2026-03-29 | 2026-03-29 | - |
-| BUG-0006 | [Notes view shows markdown syntax on all lines and textarea has visible border on focus](../03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus.md) | closed | sev-2 | 2026-04-01 | 2026-04-01 | - |
-| BUG-0004 | [Notes tree add-item input has white-on-white text (a11y AAA fail)](../03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail.md) | fixed | sev-2 | 2026-04-01 | 2026-04-01 | - |
-| BUG-0005 | [Markdown syntax tokens invisible and uneditable in live-preview editor](../03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor.md) | fixed | sev-2 | 2026-04-01 | 2026-04-01 | - |
-| BUG-0002 | [Today View launch flow fails in live desktop app](../03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app.md) | fixed | sev-3 | 2026-03-28 | 2026-03-28 | - |
+| BUG-0006 | [Notes view shows markdown syntax on all lines and textarea has visible border on focus](../03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus.md) | new | sev-2 | 2026-04-01 | - | - |
+| BUG-0004 | [Notes tree add-item input has white-on-white text (a11y AAA fail)](../03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail.md) | closed | sev-2 | 2026-04-01 | 2026-04-01 | - |
+| BUG-0005 | [Markdown syntax tokens invisible and uneditable in live-preview editor](../03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor.md) | closed | sev-2 | 2026-04-01 | 2026-04-01 | - |
+| BUG-0007 | [Source button on note editor does not implement live-preview toggle correctly](../03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly.md) | closed | sev-2 | 2026-04-01 | 2026-04-01 | - |
+| BUG-0003 | [Today View launch hardcodes intent: readOnly bypassing approval preview](../03_Bugs/BUG-0003_today-view-launch-hardcodes-intent-readonly-bypassing-approval-preview.md) | closed | sev-3 | 2026-03-29 | 2026-04-01 | - |
+| BUG-0002 | [Today View launch flow fails in live desktop app](../03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app.md) | closed | sev-3 | 2026-03-28 | 2026-04-01 | - |
 | BUG-0001 | [RESEARCH: Query Engine Memory Scaling for Thousands of Documents](../03_Bugs/BUG-0001_research-query-engine-memory-scaling-for-thousands-of-documents.md) | open | sev-3 | 2026-03-22 | - | - |
 <!-- AGENT-END:bugs-index -->
 

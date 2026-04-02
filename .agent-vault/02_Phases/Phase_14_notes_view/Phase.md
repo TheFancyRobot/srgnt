@@ -7,7 +7,7 @@ phase_id: PHASE-14
 status: planned
 owner: ''
 created: '2026-03-30'
-updated: '2026-04-01'
+updated: '2026-04-02'
 depends_on:
   - '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|PHASE-13 UI Layout Restructuring]]'
 related_architecture:
@@ -22,6 +22,7 @@ related_decisions:
 related_bugs:
   - '[[03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail|BUG-0004 Notes tree add-item input has white-on-white text (a11y AAA fail)]]'
   - '[[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]'
+  - '[[03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus|BUG-0006 Notes view shows markdown syntax on all lines and textarea has visible border on focus]]'
   - '[[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]'
 tags:
   - agent-vault
@@ -87,7 +88,7 @@ Build the Notes view: a workspace-backed file/folder browser and markdown note e
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_13_ui_layout_restructuring/Phase|PHASE-13 UI Layout Restructuring]]
 - Current phase status: planned
-- Next phase: not planned yet.
+- Next phase: [[02_Phases/Phase_15_semantic_search_foundation/Phase|PHASE-15 Semantic Search Foundation]]
 <!-- AGENT-END:phase-linear-context -->
 
 ## Related Architecture
@@ -112,6 +113,7 @@ Build the Notes view: a workspace-backed file/folder browser and markdown note e
 <!-- AGENT-START:phase-related-bugs -->
 - [[03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail|BUG-0004 Notes tree add-item input has white-on-white text (a11y AAA fail)]]
 - [[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]
+- [[03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus|BUG-0006 Notes view shows markdown syntax on all lines and textarea has visible border on focus]]
 - [[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]
 <!-- AGENT-END:phase-related-bugs -->
 

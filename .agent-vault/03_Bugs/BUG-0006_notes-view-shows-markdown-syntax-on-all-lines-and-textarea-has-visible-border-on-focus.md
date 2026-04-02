@@ -12,7 +12,10 @@ fixed_on: ''
 owner: ''
 created: '2026-04-01'
 updated: '2026-04-01'
-related_notes: '["02_Phases/Phase_14_notes_view/Phase.md", "02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting.md", "03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor.md"]'
+related_notes:
+  - '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
+  - '[[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]]'
+  - '[[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]'
 tags:
   - agent-vault
   - bug
@@ -92,7 +95,9 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 ## Related Notes
 
 <!-- AGENT-START:bug-related-notes -->
-- None yet.
+- [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
+- [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]]
+- [[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]
 <!-- AGENT-END:bug-related-notes -->
 - [[02_Phases/Phase_14_notes_view/Phase|Phase 14: Notes View]]
 - [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|Step 14-04: Implement Obsidian-style live-preview markdown editor]]

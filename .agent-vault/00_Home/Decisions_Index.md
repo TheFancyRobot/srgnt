@@ -33,11 +33,12 @@ Use this note as the directory for decision records in \`04_Decisions/\`.
 <!-- AGENT-START:decisions-index -->
 _Last rebuilt: 2026-04-02._
 
-- Notes indexed: 15
-- Status summary: accepted (13), proposed (2)
+- Notes indexed: 16
+- Status summary: accepted (14), proposed (2)
 
 | Id | Title | Status | Decided | Updated | Linear |
 | --- | --- | --- | --- | --- | --- |
+| DEC-0015 | [Use runtime-owned local semantic search with worker-hosted bundled model and workspace-root derived index](../04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index.md) | accepted | 2026-04-02 | 2026-04-02 | - |
 | DEC-0014 | [Define notes workspace boundary and cross-workspace navigation rules](../04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules.md) | accepted | 2026-03-31 | 2026-03-31 | - |
 | DEC-0013 | [Remove legacy contracts z-star exports and standardize on S-star schemas](../04_Decisions/DEC-0013_preserve-contracts-z-star-compatibility-wrappers-after-removing-zod.md) | accepted | 2026-03-28 | 2026-03-28 | - |
 | DEC-0012 | [Default crash reporting to local-only redacted logs](../04_Decisions/DEC-0012_default-crash-reporting-to-local-only-redacted-logs.md) | accepted | 2026-03-22 | 2026-03-28 | - |

@@ -1029,6 +1029,23 @@
     padding-left: 1.5rem !important;
   }
 
+  .markdown-editor-wrapper .cm-hr-line {
+    position: relative;
+    height: 1.5rem;
+    margin: 0.75rem 0;
+    color: transparent;
+  }
+
+  .markdown-editor-wrapper .cm-hr-line::after {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: calc(50% - 0.5px);
+    border-bottom: 1px solid var(--color-border-default);
+    pointer-events: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .markdown-editor-wrapper .cm-formatting-inline,
     .markdown-editor-wrapper .cm-formatting-inline-visible,

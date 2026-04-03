@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: Horizontal rule (----) has no visible rendering
 bug_id: BUG-0011
-status: new
+status: closed
 severity: sev-3
 category: ui
 reported_on: '2026-04-03'
-fixed_on: ''
+fixed_on: '2026-04-03'
 owner: ''
 created: '2026-04-03'
 updated: '2026-04-03'
@@ -68,6 +68,11 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - CodeMirror's markdown parser produces a `HorizontalRule` (or `ThematicBreak`) node in the syntax tree, but no decoration targets it.
 - The thin line visible may be a CSS artifact from the `.cm-line` border or just margin collapse.
 
+## Confirmed Root Cause
+- Confirmed in `packages/desktop/src/renderer/components/notes/MarkdownEditor.tsx`: the editor already decorates list-item lines, but it had no CodeMirror decoration for `HorizontalRule` / `ThematicBreak` syntax nodes.
+- `codemirror-live-markdown` hides block formatting markers on inactive lines, so the raw `----` text was collapsed without any replacement visual element.
+- `packages/desktop/src/renderer/styles.css` also had no dedicated horizontal-rule styling, so the thematic break line inherited normal `.cm-line` rendering and appeared invisible.
+- The fix adds a dedicated `horizontalRulePlugin` that decorates thematic break lines with `cm-hr-line`, and CSS that draws a visible separator via `::after` using `var(--color-border-default)`.
 ## Permanent Fix Plan
 
 - Create a `horizontalRulePlugin` (ViewPlugin) in `MarkdownEditor.tsx` that finds `HorizontalRule`/`ThematicBreak` nodes and applies `Decoration.line({ class: 'cm-hr-line' })`.

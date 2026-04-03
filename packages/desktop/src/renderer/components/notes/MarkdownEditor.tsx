@@ -1,5 +1,5 @@
 import React from 'react';
-import { EditorState } from '@codemirror/state';
+import { EditorState, type Range } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { syntaxTree } from '@codemirror/language';
 import { markdown } from '@codemirror/lang-markdown';
@@ -37,7 +37,7 @@ const listLinePlugin = ViewPlugin.fromClass(
       }
     }
     build(view: EditorView): DecorationSet {
-      const decs: ReturnType<typeof Decoration.line>[] = [];
+      const decs: Range<Decoration>[] = [];
       const seen = new Set<number>();
       syntaxTree(view.state).iterate({
         enter: (node) => {
@@ -65,6 +65,40 @@ const listLinePlugin = ViewPlugin.fromClass(
           }
         },
       });
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/** Decorate thematic break lines so hidden markdown markers still render a visible rule. */
+const horizontalRulePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'HorizontalRule' && node.name !== 'ThematicBreak') return;
+
+          const line = view.state.doc.lineAt(node.from);
+          if (seen.has(line.number)) return;
+          seen.add(line.number);
+
+          decs.push(Decoration.line({ class: 'cm-hr-line' }).range(line.from));
+        },
+      });
+
       return Decoration.set(decs, true);
     }
   },
@@ -145,6 +179,7 @@ export function MarkdownEditor({
           livePreviewPlugin,
           markdownStylePlugin,
           listLinePlugin,
+          horizontalRulePlugin,
           editorTheme,
         ],
       }),

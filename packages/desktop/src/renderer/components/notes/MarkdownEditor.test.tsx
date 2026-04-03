@@ -154,4 +154,19 @@ describe('MarkdownEditor', () => {
 
     expect(document.querySelector('.cm-formatting-block-visible')).not.toBeNull();
   });
+
+  it('decorates horizontal rules with a visible line class', () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'Above\n\n----\n\nBelow'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />,
+    );
+
+    expect(document.querySelector('.cm-hr-line')).not.toBeNull();
+  });
 });

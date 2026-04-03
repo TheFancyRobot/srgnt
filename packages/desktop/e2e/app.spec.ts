@@ -396,4 +396,31 @@ test('notes editor styles indented and fenced code blocks as code containers', a
   expect(codeBlockState.lines.some((line) => line.className.includes('cm-codeblock-last') && line.text?.includes('```'))).toBe(true);
   expect(codeBlockState.lines.every((line) => line.fontFamily.includes('JetBrains Mono') || line.fontFamily.includes('monospace'))).toBe(true);
   expect(codeBlockState.lines.every((line) => line.backgroundColor !== 'rgba(0, 0, 0, 0)' && line.backgroundColor !== 'transparent')).toBe(true);
+
+  await page.getByRole('button', { name: 'Toggle fully rendered mode' }).click();
+  await expect(page.getByTestId('markdown-editor-wrapper')).toHaveAttribute('data-display-mode', 'rendered');
+  await expect.poll(async () => page.locator('.cm-codeblock-line').count()).toBe(6);
+
+  const renderedCodeBlockState = await page.evaluate(() => {
+    const lines = Array.from(document.querySelectorAll('.cm-codeblock-line')).map((line) => {
+      const style = window.getComputedStyle(line);
+      return {
+        className: line.className,
+        text: line.textContent,
+        fontFamily: style.fontFamily,
+        backgroundColor: style.backgroundColor,
+      };
+    });
+
+    return {
+      count: lines.length,
+      lines,
+    };
+  });
+
+  expect(renderedCodeBlockState.count).toBe(6);
+  expect(renderedCodeBlockState.lines.some((line) => line.className.includes('cm-codeblock-first') && line.text?.includes('const indented = true;'))).toBe(true);
+  expect(renderedCodeBlockState.lines.some((line) => line.className.includes('cm-codeblock-last') && line.text?.includes('```'))).toBe(true);
+  expect(renderedCodeBlockState.lines.every((line) => line.fontFamily.includes('JetBrains Mono') || line.fontFamily.includes('monospace'))).toBe(true);
+  expect(renderedCodeBlockState.lines.every((line) => line.backgroundColor !== 'rgba(0, 0, 0, 0)' && line.backgroundColor !== 'transparent')).toBe(true);
 });

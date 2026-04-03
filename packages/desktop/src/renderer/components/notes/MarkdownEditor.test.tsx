@@ -192,4 +192,23 @@ describe('MarkdownEditor', () => {
     expect(codeLines[0]).toHaveClass('cm-codeblock-first');
     expect(codeLines.at(-1)).toHaveClass('cm-codeblock-last');
   });
+
+  it('keeps code block line decorations in rendered mode', () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'Paragraph\n\n    const indented = true;\n\n```ts\nconst fenced = 42;\n```\n'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="rendered"
+      />,
+    );
+
+    const codeLines = Array.from(document.querySelectorAll('.cm-codeblock-line'));
+
+    expect(codeLines).toHaveLength(4);
+    expect(codeLines[0]).toHaveClass('cm-codeblock-first');
+    expect(codeLines.at(-1)).toHaveClass('cm-codeblock-last');
+  });
 });

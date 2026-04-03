@@ -424,3 +424,43 @@ test('notes editor styles indented and fenced code blocks as code containers', a
   expect(renderedCodeBlockState.lines.every((line) => line.fontFamily.includes('JetBrains Mono') || line.fontFamily.includes('monospace'))).toBe(true);
   expect(renderedCodeBlockState.lines.every((line) => line.backgroundColor !== 'rgba(0, 0, 0, 0)' && line.backgroundColor !== 'transparent')).toBe(true);
 });
+
+test('notes editor renders horizontal rules as visible separators', async ({ userDataDir, window: page }) => {
+  const workspaceRoot = path.join(userDataDir, 'hr-workspace');
+  const notesDir = path.join(workspaceRoot, 'Notes');
+  await fs.mkdir(notesDir, { recursive: true });
+  await fs.writeFile(path.join(notesDir, 'Horizontal Rule.md'), 'Above\n\n----\n\nBelow\n', 'utf8');
+
+  await waitForDesktopReady(page);
+  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Get Started' }).click();
+
+  await page.evaluate(async (nextWorkspaceRoot) => {
+    await window.srgnt.setWorkspaceRoot(nextWorkspaceRoot);
+  }, workspaceRoot);
+
+  await page.reload();
+  await waitForDesktopReady(page);
+
+  await page.getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('treeitem', { name: /Horizontal Rule\.md/ }).click();
+  await expect(page.getByRole('heading', { name: 'Horizontal Rule.md' })).toBeVisible();
+
+  const hrLine = page.locator('.cm-hr-line');
+  await expect(hrLine).toHaveCount(1);
+
+  const hrStyles = await hrLine.evaluate((element) => {
+    const styles = window.getComputedStyle(element, '::after');
+    return {
+      borderBottomStyle: styles.borderBottomStyle,
+      borderBottomWidth: styles.borderBottomWidth,
+      borderBottomColor: styles.borderBottomColor,
+    };
+  });
+
+  expect(hrStyles.borderBottomStyle).toBe('solid');
+  expect(Number.parseFloat(hrStyles.borderBottomWidth)).toBeGreaterThan(0);
+  expect(hrStyles.borderBottomColor).not.toBe('rgba(0, 0, 0, 0)');
+});

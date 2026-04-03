@@ -178,6 +178,40 @@ const codeBlockLinePlugin = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
+/** Decorate thematic break lines so hidden markdown markers still render a visible rule. */
+const horizontalRulePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'HorizontalRule' && node.name !== 'ThematicBreak') return;
+
+          const line = view.state.doc.lineAt(node.from);
+          if (seen.has(line.number)) return;
+          seen.add(line.number);
+
+          decs.push(Decoration.line({ class: 'cm-hr-line' }).range(line.from));
+        },
+      });
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
 const SAVE_DEBOUNCE_MS = 1000;
 const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
   idle: null,
@@ -254,6 +288,7 @@ export function MarkdownEditor({
           listLinePlugin,
           blockquoteLinePlugin,
           codeBlockLinePlugin,
+          horizontalRulePlugin,
           editorTheme,
         ],
       }),

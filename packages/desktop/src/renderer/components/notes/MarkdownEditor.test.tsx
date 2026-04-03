@@ -230,4 +230,19 @@ describe('MarkdownEditor', () => {
     expect(codeLines[0]).toHaveClass('cm-codeblock-first');
     expect(codeLines.at(-1)).toHaveClass('cm-codeblock-last');
   });
+
+  it('decorates horizontal rules with a visible line class', () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'Above\n\n----\n\nBelow'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />,
+    );
+
+    expect(document.querySelector('.cm-hr-line')).not.toBeNull();
+  });
 });

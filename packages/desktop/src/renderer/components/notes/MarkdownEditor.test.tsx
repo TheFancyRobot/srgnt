@@ -154,4 +154,23 @@ describe('MarkdownEditor', () => {
 
     expect(document.querySelector('.cm-formatting-block-visible')).not.toBeNull();
   });
+
+  it('decorates blockquote lines with nesting depth metadata', () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'> Quote\n> > Nested'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />,
+    );
+
+    const blockquoteLines = Array.from(document.querySelectorAll('.cm-blockquote-line'));
+
+    expect(blockquoteLines).toHaveLength(2);
+    expect(blockquoteLines[0]).toHaveAttribute('data-blockquote-depth', '1');
+    expect(blockquoteLines[1]).toHaveAttribute('data-blockquote-depth', '2');
+  });
 });

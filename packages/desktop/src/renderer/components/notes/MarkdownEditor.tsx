@@ -1,5 +1,5 @@
 import React from 'react';
-import { EditorState } from '@codemirror/state';
+import { EditorState, type Range } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { syntaxTree } from '@codemirror/language';
 import { markdown } from '@codemirror/lang-markdown';
@@ -37,7 +37,7 @@ const listLinePlugin = ViewPlugin.fromClass(
       }
     }
     build(view: EditorView): DecorationSet {
-      const decs: ReturnType<typeof Decoration.line>[] = [];
+      const decs: Range<Decoration>[] = [];
       const seen = new Set<number>();
       syntaxTree(view.state).iterate({
         enter: (node) => {
@@ -65,6 +65,60 @@ const listLinePlugin = ViewPlugin.fromClass(
           }
         },
       });
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/** Decorate blockquote lines so CSS can restore visual quote styling. */
+const blockquoteLinePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Map<number, number>();
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'Blockquote') return;
+
+          let depth = 0;
+          let parent: typeof node.node | null = node.node;
+          while (parent) {
+            if (parent.name === 'Blockquote') {
+              depth += 1;
+            }
+            parent = parent.parent;
+          }
+
+          const fromLine = view.state.doc.lineAt(node.from).number;
+          const toLine = view.state.doc.lineAt(node.to).number;
+          for (let lineNumber = fromLine; lineNumber <= toLine; lineNumber += 1) {
+            const currentDepth = seen.get(lineNumber) ?? 0;
+            if (depth <= currentDepth) continue;
+            seen.set(lineNumber, depth);
+          }
+        },
+      });
+
+      for (const [lineNumber, depth] of seen) {
+        const line = view.state.doc.line(lineNumber);
+        decs.push(
+          Decoration.line({
+            class: 'cm-blockquote-line',
+            attributes: { 'data-blockquote-depth': String(depth) },
+          }).range(line.from),
+        );
+      }
+
       return Decoration.set(decs, true);
     }
   },
@@ -145,6 +199,7 @@ export function MarkdownEditor({
           livePreviewPlugin,
           markdownStylePlugin,
           listLinePlugin,
+          blockquoteLinePlugin,
           editorTheme,
         ],
       }),

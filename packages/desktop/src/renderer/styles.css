@@ -1029,6 +1029,35 @@
     padding-left: 1.5rem !important;
   }
 
+  /* Restore visible quote treatment after live-preview hides `>` markers. */
+  .markdown-editor-wrapper .cm-blockquote-line {
+    position: relative;
+    margin-left: calc((var(--blockquote-depth, 1) - 1) * 0.75rem);
+    padding-left: calc(1rem + (var(--blockquote-depth, 1) - 1) * 0.25rem) !important;
+    border-left: 3px solid color-mix(in srgb, var(--color-text-brand) 55%, transparent);
+    background: color-mix(in srgb, var(--color-surface-brand) 70%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='1'] {
+    --blockquote-depth: 1;
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='2'] {
+    --blockquote-depth: 2;
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='3'] {
+    --blockquote-depth: 3;
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='4'] {
+    --blockquote-depth: 4;
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='5'] {
+    --blockquote-depth: 5;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .markdown-editor-wrapper .cm-formatting-inline,
     .markdown-editor-wrapper .cm-formatting-inline-visible,

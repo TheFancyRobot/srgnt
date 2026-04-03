@@ -198,6 +198,43 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
   expect(content).toContain('Confirm preload to main persistence.');
 });
 
+test('Tab key indents the current line in the notes editor', async ({ userDataDir, window: page }) => {
+  const workspaceRoot = path.join(userDataDir, 'tab-workspace');
+  const notesDir = path.join(workspaceRoot, 'Notes');
+  await fs.mkdir(notesDir, { recursive: true });
+  await fs.writeFile(path.join(notesDir, 'Tab Test.md'), 'hello world\n', 'utf8');
+
+  await waitForDesktopReady(page);
+  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Get Started' }).click();
+
+  await page.evaluate(async (root) => { await window.srgnt.setWorkspaceRoot(root); }, workspaceRoot);
+  await page.reload();
+  await waitForDesktopReady(page);
+
+  await page.getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('treeitem', { name: /Tab Test\.md/ }).click();
+  await expect(page.getByRole('heading', { name: 'Tab Test.md' })).toBeVisible();
+
+  // Click on the first line of text to place cursor there
+  await page.locator('.cm-line').first().click();
+  await page.waitForTimeout(200);
+
+  // Press Tab via real keyboard
+  await page.keyboard.press('Tab');
+  await page.waitForTimeout(200);
+
+  // Focus should stay in the editor (not navigate away)
+  const focusClass = await page.evaluate(() => document.activeElement?.className ?? '');
+  expect(focusClass).toContain('cm-content');
+
+  // Line should be indented (spaces at start)
+  const text = await page.locator('.cm-content').textContent();
+  expect(text).toMatch(/^\s+hello world/);
+});
+
 test('notes editor defaults to active-line editing and supports fully rendered mode toggle', async ({ userDataDir, window: page }, testInfo) => {
   const workspaceRoot = path.join(userDataDir, 'notes-workspace');
   const notesDir = path.join(workspaceRoot, 'Notes');

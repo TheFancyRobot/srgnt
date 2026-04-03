@@ -987,6 +987,48 @@
     box-shadow: none !important;
   }
 
+  /* ── List bullet indicators ── */
+
+  .markdown-editor-wrapper .cm-list-bullet-line {
+    position: relative;
+  }
+
+  .markdown-editor-wrapper .cm-list-bullet-line::before {
+    content: '\2022'; /* bullet: • */
+    position: absolute;
+    left: 0.5rem;
+    color: var(--color-text-tertiary);
+    pointer-events: none;
+  }
+
+  /* Hide the CSS bullet when the markdown syntax mark is visible (active line) */
+  .markdown-editor-wrapper .cm-list-bullet-line:has(.cm-formatting-block-visible)::before {
+    display: none;
+  }
+
+  .markdown-editor-wrapper .cm-list-ordered-line {
+    position: relative;
+  }
+
+  .markdown-editor-wrapper .cm-list-ordered-line::before {
+    content: attr(data-list-num);
+    position: absolute;
+    left: 0.5rem;
+    color: var(--color-text-tertiary);
+    font-size: 0.875em;
+    pointer-events: none;
+  }
+
+  .markdown-editor-wrapper .cm-list-ordered-line:has(.cm-formatting-block-visible)::before {
+    display: none;
+  }
+
+  /* Shift list line text right to make room for the bullet/number */
+  .markdown-editor-wrapper .cm-list-bullet-line,
+  .markdown-editor-wrapper .cm-list-ordered-line {
+    padding-left: 1.5rem !important;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .markdown-editor-wrapper .cm-formatting-inline,
     .markdown-editor-wrapper .cm-formatting-inline-visible,

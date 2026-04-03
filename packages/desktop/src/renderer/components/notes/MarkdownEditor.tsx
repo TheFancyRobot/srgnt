@@ -1,8 +1,9 @@
 import React from 'react';
 import { EditorState } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { syntaxTree } from '@codemirror/language';
 import { markdown } from '@codemirror/lang-markdown';
-import { EditorView, keymap, placeholder } from '@codemirror/view';
+import { Decoration, EditorView, keymap, placeholder, ViewPlugin, type DecorationSet } from '@codemirror/view';
 import {
   collapseOnSelectionFacet,
   editorTheme,
@@ -22,6 +23,53 @@ interface MarkdownEditorProps {
   saveState: SaveState;
   displayMode: EditorDisplayMode;
 }
+
+/** Decorate lines that contain list items so CSS can render bullets/numbers. */
+const listLinePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: ReturnType<typeof Decoration.line>[] = [];
+      const seen = new Set<number>();
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'ListItem') return;
+          const line = view.state.doc.lineAt(node.from);
+          if (seen.has(line.number)) return;
+          seen.add(line.number);
+          const parent = node.node.parent;
+          if (parent?.name === 'OrderedList') {
+            // Extract the actual number from the ListMark child (e.g. "1.")
+            let mark = '';
+            node.node.cursor().iterate((child) => {
+              if (child.name === 'ListMark') {
+                mark = view.state.doc.sliceString(child.from, child.to);
+              }
+            });
+            decs.push(
+              Decoration.line({
+                class: 'cm-list-ordered-line',
+                attributes: { 'data-list-num': mark || '1.' },
+              }).range(line.from),
+            );
+          } else {
+            decs.push(Decoration.line({ class: 'cm-list-bullet-line' }).range(line.from));
+          }
+        },
+      });
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
 
 const SAVE_DEBOUNCE_MS = 1000;
 const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
@@ -58,6 +106,7 @@ export function MarkdownEditor({
       state: EditorState.create({
         doc: parsed.body,
         extensions: [
+          EditorView.cspNonce.of('srgnt-renderer'),
           EditorView.lineWrapping,
           markdown(),
           history(),
@@ -95,6 +144,7 @@ export function MarkdownEditor({
           mouseSelectingField,
           livePreviewPlugin,
           markdownStylePlugin,
+          listLinePlugin,
           editorTheme,
         ],
       }),

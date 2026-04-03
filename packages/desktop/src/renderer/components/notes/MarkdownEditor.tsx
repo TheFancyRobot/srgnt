@@ -125,6 +125,59 @@ const blockquoteLinePlugin = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
+/** Decorate block code lines so CSS can render a shared code container. */
+const codeBlockLinePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'CodeBlock' && node.name !== 'FencedCode') {
+            return;
+          }
+
+          const firstLine = view.state.doc.lineAt(node.from).number;
+          const lastPos = Math.max(node.from, node.to - 1);
+          const lastLine = view.state.doc.lineAt(lastPos).number;
+
+          for (let lineNumber = firstLine; lineNumber <= lastLine; lineNumber += 1) {
+            if (seen.has(lineNumber)) {
+              continue;
+            }
+
+            seen.add(lineNumber);
+            const line = view.state.doc.line(lineNumber);
+            const classes = ['cm-codeblock-line'];
+
+            if (lineNumber === firstLine) {
+              classes.push('cm-codeblock-first');
+            }
+            if (lineNumber === lastLine) {
+              classes.push('cm-codeblock-last');
+            }
+
+            decs.push(Decoration.line({ class: classes.join(' ') }).range(line.from));
+          }
+        },
+      });
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
 const SAVE_DEBOUNCE_MS = 1000;
 const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
   idle: null,
@@ -200,6 +253,7 @@ export function MarkdownEditor({
           markdownStylePlugin,
           listLinePlugin,
           blockquoteLinePlugin,
+          codeBlockLinePlugin,
           editorTheme,
         ],
       }),

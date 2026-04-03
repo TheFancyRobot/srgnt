@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: Code blocks (indented and fenced) render as plain text with no styling
 bug_id: BUG-0009
-status: new
+status: closed
 severity: sev-2
 category: ui
 reported_on: '2026-04-03'
-fixed_on: ''
+fixed_on: '2026-04-03'
 owner: ''
 created: '2026-04-03'
 updated: '2026-04-03'
@@ -86,6 +86,11 @@ Use one note per bug in `03_Bugs/`. This note is the source of truth for one def
 - The `codemirror-live-markdown` library handles the fenced code formatting marks (```) but not the content styling.
 - CSS has `.cm-code` rules for inline code spans but nothing targeting code block lines.
 
+## Confirmed Root Cause
+- Confirmed in `packages/desktop/src/renderer/components/notes/MarkdownEditor.tsx`: block-level code needed explicit line decorations from a CodeMirror `ViewPlugin` so CSS could target whole code-block lines rather than only inline code spans.
+- The editor styling already handled inline code via `.cm-code`, but block code rendering depended on line-level classes (`.cm-codeblock-line`, `.cm-codeblock-first`, `.cm-codeblock-last`) defined in `packages/desktop/src/renderer/styles.css`.
+- Without those decorations, both indented `CodeBlock` nodes and fenced `FencedCode` nodes fell back to normal paragraph line styling, so the content rendered as plain body text in both live-preview and rendered-only modes.
+- The permanent fix is the shared `codeBlockLinePlugin`, which iterates `CodeBlock` and `FencedCode` syntax nodes and decorates every covered line so the monospace/background container styles apply consistently.
 ## Permanent Fix Plan
 
 - Create a single `codeBlockLinePlugin` (ViewPlugin) in `MarkdownEditor.tsx` that iterates both `CodeBlock`/`CodeText` and `FencedCode` syntax tree nodes and applies `Decoration.line()` with a class like `cm-codeblock-line`.

@@ -5,8 +5,8 @@ contract_version: 1
 title: Add whole-workspace markdown search with bounded indexing
 step_id: STEP-14-07
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
-owner: ''
+status: complete
+owner: executor-1
 created: '2026-03-31'
 updated: '2026-03-31'
 depends_on:
@@ -150,6 +150,7 @@ This section supersedes the vaguer template text above when they conflict.
 <!-- AGENT-START:step-session-history -->
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
+- 2026-04-09: Executor-1 implemented main-process `searchNotes()` (workspace walk, mtime caching, snippet extraction, scoring). Renderer UI was already in place from prior session. Reviewer applied follow-up fixes: snippet highlighting (replaced literal `**match**` with visible treatment), async race condition in NotesContext, added tests. typecheck ✅, tests ✅. Routed to tester.
 
 ## Outcome Summary
 

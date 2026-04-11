@@ -70,6 +70,11 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - Confirmed in `packages/desktop/src/renderer/components/notes/MarkdownEditor.tsx`: the editor already added line decorations for list items, but blockquote syntax nodes were never decorated, so `codemirror-live-markdown` hid the `>` `QuoteMark` tokens without any replacement visual treatment.
 - Confirmed in `packages/desktop/src/renderer/styles.css`: there were CSS rules for `.cm-list-bullet-line` and `.cm-list-ordered-line`, but no corresponding `.cm-blockquote-line` rules, so blockquote lines rendered exactly like plain paragraphs in both live-preview and rendered display modes.
 - The fix adds a dedicated `blockquoteLinePlugin` that decorates every line covered by `Blockquote` nodes and records nesting depth via `data-blockquote-depth`, plus matching CSS that restores the left border, indentation, and subtle quote background.
+
+## Workaround
+
+- None required — fix implemented. Blockquotes now render with proper left border, indentation, and background styling.
+
 ## Permanent Fix Plan
 
 - Create a `blockquoteLinePlugin` (ViewPlugin) in `MarkdownEditor.tsx` that iterates `Blockquote` syntax tree nodes and applies `Decoration.line()` with a class like `cm-blockquote-line`.

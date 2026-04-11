@@ -4,10 +4,10 @@ template_version: 2
 contract_version: 1
 title: Notes View
 phase_id: PHASE-14
-status: planned
+status: complete
 owner: ''
 created: '2026-03-30'
-updated: '2026-04-02'
+updated: '2026-04-09'
 depends_on:
   - '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|PHASE-13 UI Layout Restructuring]]'
 related_architecture:
@@ -24,6 +24,8 @@ related_bugs:
   - '[[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]'
   - '[[03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus|BUG-0006 Notes view shows markdown syntax on all lines and textarea has visible border on focus]]'
   - '[[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]'
+  - '[[03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues|BUG-0010 Slash commands trigger logic and indentation preservation issues]]'
+  - '[[03_Bugs/BUG-0012_markdown-editor-shipped-commonmark-only-parsing-so-gfm-task-lists-tables-strikethrough-and-bare-autolinks-did-not-render|BUG-0012 Markdown editor shipped CommonMark-only parsing so GFM task lists, tables, strikethrough, and bare autolinks did not render]]'
 tags:
   - agent-vault
   - phase
@@ -115,6 +117,8 @@ Build the Notes view: a workspace-backed file/folder browser and markdown note e
 - [[03_Bugs/BUG-0005_markdown-syntax-tokens-invisible-and-uneditable-in-live-preview-editor|BUG-0005 Markdown syntax tokens invisible and uneditable in live-preview editor]]
 - [[03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus|BUG-0006 Notes view shows markdown syntax on all lines and textarea has visible border on focus]]
 - [[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]
+- [[03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues|BUG-0010 Slash commands trigger logic and indentation preservation issues]]
+- [[03_Bugs/BUG-0012_markdown-editor-shipped-commonmark-only-parsing-so-gfm-task-lists-tables-strikethrough-and-bare-autolinks-did-not-render|BUG-0012 Markdown editor shipped CommonMark-only parsing so GFM task lists, tables, strikethrough, and bare autolinks did not render]]
 <!-- AGENT-END:phase-related-bugs -->
 
 ## Steps
@@ -123,11 +127,14 @@ Build the Notes view: a workspace-backed file/folder browser and markdown note e
 - [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_01_add-ipc-channels-and-main-process-handlers-for-notes-file-operations|STEP-14-01 Freeze Notes workspace contract and typed IPC surface]] -- pending
 - [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_02_create-notes-file-service-with-path-scoped-operations|STEP-14-02 Implement main-process notes service and scoped filesystem handlers]] -- pending
 - [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]] -- pending
-- [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]] -- pending
-- [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation|STEP-14-05 Add workspace-wide wikilink resolution, navigation, and note creation]] -- pending
-- [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_06_implement-notion-style-slash-commands-menu|STEP-14-06 Implement markdown slash commands on top of live preview]] -- pending
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]] -- done
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation|STEP-14-05 Add workspace-wide wikilink resolution, navigation, and note creation]] -- done
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_06_implement-notion-style-slash-commands-menu|STEP-14-06 Implement markdown slash commands on top of live preview]] -- done
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_06b_fix-slash-commands-trigger-logic-and-indentation-preservation-issues|STEP-14-06b Fix slash commands trigger logic and indentation preservation issues (BUG-0010)]] -- done (bugfix)
 - [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_07_add-basic-full-text-search-across-notes|STEP-14-07 Add whole-workspace markdown search with bounded indexing]] -- pending
 - [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_08_wire-up-auto-save-error-handling-and-final-integration|STEP-14-08 Harden autosave, conflict recovery, and end-to-end Notes integration]] -- pending
+- [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]]
+- [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_10_autosave-hardening-conflict-recovery-e2e|STEP-14-10 Autosave Hardening + Conflict Recovery + E2E]]
 <!-- AGENT-END:phase-steps -->
 
 ## Parallel Work Map

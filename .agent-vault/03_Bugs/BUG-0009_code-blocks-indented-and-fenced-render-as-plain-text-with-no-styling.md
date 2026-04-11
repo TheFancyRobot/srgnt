@@ -91,6 +91,11 @@ Use one note per bug in `03_Bugs/`. This note is the source of truth for one def
 - The editor styling already handled inline code via `.cm-code`, but block code rendering depended on line-level classes (`.cm-codeblock-line`, `.cm-codeblock-first`, `.cm-codeblock-last`) defined in `packages/desktop/src/renderer/styles.css`.
 - Without those decorations, both indented `CodeBlock` nodes and fenced `FencedCode` nodes fell back to normal paragraph line styling, so the content rendered as plain body text in both live-preview and rendered-only modes.
 - The permanent fix is the shared `codeBlockLinePlugin`, which iterates `CodeBlock` and `FencedCode` syntax nodes and decorates every covered line so the monospace/background container styles apply consistently.
+
+## Workaround
+
+- None required — fix implemented. Code blocks now render with monospace font, background container, and proper styling in both live-preview and rendered modes.
+
 ## Permanent Fix Plan
 
 - Create a single `codeBlockLinePlugin` (ViewPlugin) in `MarkdownEditor.tsx` that iterates both `CodeBlock`/`CodeText` and `FencedCode` syntax tree nodes and applies `Decoration.line()` with a class like `cm-codeblock-line`.

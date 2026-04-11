@@ -73,6 +73,11 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - `codemirror-live-markdown` hides block formatting markers on inactive lines, so the raw `----` text was collapsed without any replacement visual element.
 - `packages/desktop/src/renderer/styles.css` also had no dedicated horizontal-rule styling, so the thematic break line inherited normal `.cm-line` rendering and appeared invisible.
 - The fix adds a dedicated `horizontalRulePlugin` that decorates thematic break lines with `cm-hr-line`, and CSS that draws a visible separator via `::after` using `var(--color-border-default)`.
+
+## Workaround
+
+- None required — fix implemented. Horizontal rules now render as visible separator lines.
+
 ## Permanent Fix Plan
 
 - Create a `horizontalRulePlugin` (ViewPlugin) in `MarkdownEditor.tsx` that finds `HorizontalRule`/`ThematicBreak` nodes and applies `Decoration.line({ class: 'cm-hr-line' })`.

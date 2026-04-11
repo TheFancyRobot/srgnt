@@ -5,14 +5,15 @@ contract_version: 1
 title: Add workspace-wide wikilink resolution, navigation, and note creation
 step_id: STEP-14-05
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
+status: done
 owner: ''
 created: '2026-03-31'
-updated: '2026-04-02'
+updated: '2026-04-05'
 depends_on:
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04]]'
 related_sessions:
   - '[[05_Sessions/2026-04-02-020524-add-workspace-wide-wikilink-resolution-navigation-and-note-creation-opencode|SESSION-2026-04-02-020524 OpenCode session for Add workspace-wide wikilink resolution, navigation, and note creation]]'
+  - '[[05_Sessions/2026-04-05-044402-add-workspace-wide-wikilink-resolution-navigation-and-note-creation|SESSION-2026-04-05-044402 Session for Add workspace-wide wikilink resolution, navigation, and note creation]]'
 related_bugs:
   - '[[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]'
 related_decisions:
@@ -153,9 +154,16 @@ This section supersedes the vaguer template text above when they conflict.
 
 <!-- AGENT-START:step-session-history -->
 - 2026-04-02 - [[05_Sessions/2026-04-02-020524-add-workspace-wide-wikilink-resolution-navigation-and-note-creation-opencode|SESSION-2026-04-02-020524 OpenCode session for Add workspace-wide wikilink resolution, navigation, and note creation]] - Session created.
+- 2026-04-05 - [[05_Sessions/2026-04-05-044402-add-workspace-wide-wikilink-resolution-navigation-and-note-creation|SESSION-2026-04-05-044402 Session for Add workspace-wide wikilink resolution, navigation, and note creation]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Record the final result, the validation performed, and any follow-up required.
 - If the step is blocked, say exactly what is blocking it.
+## Outcome Summary
+
+- Implemented workspace-wide wikilink resolution, navigation, and `[[` autocomplete in the CodeMirror editor.
+- Wikilinks render as clickable links; clicking opens existing files anywhere in workspace or creates new notes under `Notes/` per DEC-0014.
+- Autocomplete suggests workspace markdown files when typing `[[`.
+- Validation: `pnpm --filter @srgnt/desktop typecheck` and `pnpm --filter @srgnt/desktop test` passed on 2026-04-05.

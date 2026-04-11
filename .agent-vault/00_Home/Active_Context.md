@@ -19,11 +19,11 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-04-02._
-- Session in progress: [[05_Sessions/2026-04-02-020524-add-workspace-wide-wikilink-resolution-navigation-and-note-creation-opencode|SESSION-2026-04-02-020524 OpenCode session for Add workspace-wide wikilink resolution, navigation, and note creation]] - owner: OpenCode - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]] - updated: 2026-04-02
-- Current step: [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]] - status: planned - phase: [[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]
-- Active phase: [[02_Phases/Phase_15_semantic_search_foundation/Phase|PHASE-15 Semantic Search Foundation]] - status: planned - updated: 2026-04-02
-- Also active: 13 more additional sessions, 35 more additional steps, 1 open critical bug.
+_Last refreshed: 2026-04-09._
+- Session in progress: [[05_Sessions/2026-04-09-211751-autosave-hardening-conflict-recovery-e2e|SESSION-2026-04-09-211751 Session for Autosave Hardening + Conflict Recovery + E2E]] - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]] - updated: 2026-04-09
+- Current step: [[02_Phases/Phase_14_notes_view/Steps/Step_10_autosave-hardening-conflict-recovery-e2e|STEP-14-10 Autosave Hardening + Conflict Recovery + E2E]] - status: planned - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
+- Active phase: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] - status: complete - updated: 2026-04-09
+- Also active: 18 more additional sessions, 35 more additional steps, 1 open critical bug.
 <!-- AGENT-END:current-focus -->
 - Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
 - Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]
@@ -72,7 +72,7 @@ _Last refreshed: 2026-04-02._
 ## Critical Bugs
 
 <!-- AGENT-START:critical-bugs -->
-- [[03_Bugs/BUG-0006_notes-view-shows-markdown-syntax-on-all-lines-and-textarea-has-visible-border-on-focus|BUG-0006 Notes view shows markdown syntax on all lines and textarea has visible border on focus]] - status: new - severity: sev-2 - reported: 2026-04-01
+- [[03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues|BUG-0010 Slash commands trigger logic and indentation preservation issues]] - status: fixed - severity: sev-1 - reported: 2026-04-06
 <!-- AGENT-END:critical-bugs -->
 
 ## Resume Point

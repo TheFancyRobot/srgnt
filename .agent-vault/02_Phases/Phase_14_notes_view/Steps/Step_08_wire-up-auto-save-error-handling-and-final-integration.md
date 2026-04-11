@@ -5,8 +5,8 @@ contract_version: 1
 title: Harden autosave, conflict recovery, and end-to-end Notes integration
 step_id: STEP-14-08
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
-owner: ''
+status: complete
+owner: executor-1
 created: '2026-03-31'
 updated: '2026-03-31'
 depends_on:
@@ -163,6 +163,7 @@ This section supersedes the vaguer template text above when they conflict.
 <!-- AGENT-START:step-session-history -->
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
+- 2026-04-09: STEP-14-08 complete (executor-1). Debounced autosave (1s), save failure retry with exponential backoff (3 retries + banner), file lifecycle events (rename/delete/external mod), conflict banner, E2E validation. Reviewer fixed writeActiveContent error propagation and deleted-file recovery content loss. Tester: 206/206 unit tests, 14/14 E2E, all clean.
 
 ## Outcome Summary
 

@@ -7,7 +7,7 @@ phase_id: PHASE-15
 status: planned
 owner: ''
 created: '2026-04-02'
-updated: '2026-04-02'
+updated: '2026-04-09'
 depends_on:
   - '[[02_Phases/Phase_03_runtime_foundation/Phase|PHASE-03 Runtime Foundation]]'
   - '[[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]]'
@@ -114,6 +114,7 @@ tags:
 - [ ] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_implement-canonical-workspace-markdown-corpus-policy-and-exclusions|STEP-15-02 Implement canonical workspace markdown corpus policy and exclusions]] -- can begin after Step 01.
 - [ ] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_03_implement-markdown-frontmatter-parsing-heading-aware-chunking-and-wikilink-extraction|STEP-15-03 Implement markdown frontmatter parsing, heading-aware chunking, and wikilink extraction]] -- depends on Steps 01-02.
 - [ ] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_04_bundle-the-offline-model-assets-and-add-local-only-model-resolution|STEP-15-04 Bundle the offline model assets and add local-only model resolution]] -- can run in parallel with Step 02 after Step 01.
+- [ ] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_gfm-compliance-test-suite|STEP-15-02 GFM Compliance Test Suite]]
 <!-- AGENT-END:phase-steps -->
 
 ## Parallel Work Map

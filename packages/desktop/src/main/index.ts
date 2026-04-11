@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { existsSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -46,6 +46,7 @@ import { createPtyService } from './pty/node-pty-service.js';
 import { createCrashReporter } from './crash.js';
 import { checkForUpdates } from './updater.js';
 import { registerNotesHandlers } from './notes.js';
+import { createShellOpenExternalHandler } from './shell-open-external.js';
 import {
   defaultDesktopSettings,
   ensureWorkspaceLayout,
@@ -657,6 +658,11 @@ ipcMain.handle(ipcChannels.briefingList, async () => {
     return { briefings: [] };
   }
 });
+
+ipcMain.handle(
+  ipcChannels.shellOpenExternal,
+  createShellOpenExternalHandler(shell.openExternal),
+);
 
 ipcMain.handle('window:minimize', () => {
   mainWindow?.minimize();

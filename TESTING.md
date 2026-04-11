@@ -76,3 +76,21 @@ The Electron app now supports:
 
 - Fedora local RPM packaging now uses `packages/desktop/scripts/build-fedora-rpm.sh`; install `libxcrypt-compat` and `rpm-build` first.
 - Update checks are wired, but a real hosted release feed is still an operator step.
+
+## Pi Team Workflow
+
+If you use [pi](https://github.com/mariozechner/pi) while working on this repo, the team templates are maintained **globally** only. See [`docs/pi-teams.md`](docs/pi-teams.md) for the reusable review/bugfix workflow.
+
+The shortest productive loop is:
+
+```text
+create_predefined_team({ team_name: "qa", predefined_team: "qa", cwd: "/path/to/srgnt" })
+create_predefined_team({ team_name: "bugfix", predefined_team: "bugfix", cwd: "/path/to/srgnt" })
+create_predefined_team({ team_name: "review", predefined_team: "review-team", cwd: "/path/to/srgnt" })
+```
+
+Recommended use:
+- run `qa` first to surface issues and regressions
+- run `bugfix` on the reported issues
+- use `review-team` when you want one orchestrator to keep the handoff moving automatically
+- keep only one orchestrator active at a time to avoid duplicate routing

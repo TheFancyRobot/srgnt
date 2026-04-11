@@ -60,3 +60,15 @@ The desktop app now has a dedicated `Desktop E2E` GitHub Actions workflow that r
 - a packaged Linux smoke test against the unpacked desktop bundle
 
 For local details and the full desktop testing workflow, see `TESTING.md`.
+
+## Pi Team Workflow
+
+If you are using [pi](https://github.com/mariozechner/pi) with this repo, the team templates are maintained **globally** only. See [`docs/pi-teams.md`](docs/pi-teams.md) for the reusable team templates and the recommended QA → bugfix → QA loop.
+
+Quick start:
+
+```text
+create_predefined_team({ team_name: "qa", predefined_team: "qa", cwd: "/path/to/srgnt" })
+create_predefined_team({ team_name: "bugfix", predefined_team: "bugfix", cwd: "/path/to/srgnt" })
+create_predefined_team({ team_name: "review", predefined_team: "review-team", cwd: "/path/to/srgnt" })
+```

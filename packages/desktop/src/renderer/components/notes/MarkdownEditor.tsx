@@ -458,7 +458,6 @@ const horizontalRulePlugin = ViewPlugin.fromClass(
 
 // Arrow key navigation is handled by CodeMirror's defaultKeymap (cursorLineUp/cursorLineDown).
 
-const SAVE_DEBOUNCE_MS = 1000;
 const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
   idle: null,
   saving: 'Saving...',
@@ -478,7 +477,6 @@ export function MarkdownEditor({
   const editorMountRef = React.useRef<HTMLDivElement | null>(null);
   const editorRef = React.useRef<EditorView | null>(null);
   const frontmatterRef = React.useRef<string | null>(parsed.frontmatter);
-  const saveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const isExternalUpdateRef = React.useRef(false);
   const onContentChangeRef = React.useRef(onContentChange);
 
@@ -545,13 +543,7 @@ export function MarkdownEditor({
             }
 
             const fullContent = serializeWithFrontmatter(frontmatterRef.current, update.state.doc.toString());
-
-            if (saveTimerRef.current) {
-              clearTimeout(saveTimerRef.current);
-            }
-            saveTimerRef.current = setTimeout(() => {
-              onContentChangeRef.current(fullContent);
-            }, SAVE_DEBOUNCE_MS);
+            onContentChangeRef.current(fullContent);
           }),
           collapseOnSelectionFacet.of(true),
           mouseSelectingField,
@@ -648,22 +640,12 @@ export function MarkdownEditor({
       view.contentDOM.removeEventListener('mousedown', handleMouseDown);
       mount.removeEventListener('click', handleEditorClick);
       document.removeEventListener('mouseup', handleMouseUp);
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-      }
       if (editorRef.current === view) {
         editorRef.current = null;
       }
       view.destroy();
     };
   }, []);
-
-  React.useEffect(() => {
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-  }, [rawContent]);
 
   React.useEffect(() => {
     const view = editorRef.current;

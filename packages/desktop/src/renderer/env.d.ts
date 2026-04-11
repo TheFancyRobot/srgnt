@@ -67,8 +67,11 @@ export interface SrgntAPI {
   notesDelete(path: string, isDirectory: boolean): Promise<{ deleted: boolean }>;
   notesRename(oldPath: string, newName: string): Promise<{ newPath: string }>;
   notesSearch(query: string, maxResults?: number): Promise<{ results: { title: string; path: string; snippet: string; score: number }[] }>;
-  notesResolveWikilink(wikilink: string): Promise<{ resolved: boolean; path: string; line?: number }>;
+  notesResolveWikilink(wikilink: string, currentFilePath?: string): Promise<{ resolved: boolean; path: string; line?: number }>;
   notesListWorkspaceMarkdown(query?: string, maxResults?: number): Promise<{ files: { title: string; path: string; modifiedAt: string }[] }>;
+
+  // Shell
+  openExternal(url: string): Promise<void>;
 
   // Window controls
   windowMinimize(): Promise<void>;

@@ -55,6 +55,7 @@ const ipcChannels = {
   notesSearch: 'notes:search',
   notesResolveWikilink: 'notes:resolve-wikilink',
   notesListWorkspaceMarkdown: 'notes:list-workspace-markdown',
+  shellOpenExternal: 'shell:open-external',
 } as const;
 
 export interface DesktopConnectorState {
@@ -135,10 +136,14 @@ const api = {
     ipcRenderer.invoke(ipcChannels.notesRename, { oldPath, newName }),
   notesSearch: (query: string, maxResults?: number): Promise<{ results: { title: string; path: string; snippet: string; score: number }[] }> =>
     ipcRenderer.invoke(ipcChannels.notesSearch, { query, maxResults: maxResults ?? 20 }),
-  notesResolveWikilink: (wikilink: string): Promise<{ resolved: boolean; path: string; line?: number }> =>
-    ipcRenderer.invoke(ipcChannels.notesResolveWikilink, { wikilink }),
+  notesResolveWikilink: (wikilink: string, currentFilePath?: string): Promise<{ resolved: boolean; path: string; line?: number }> =>
+    ipcRenderer.invoke(ipcChannels.notesResolveWikilink, { wikilink, currentFilePath }),
   notesListWorkspaceMarkdown: (query?: string, maxResults?: number): Promise<{ files: { title: string; path: string; modifiedAt: string }[] }> =>
     ipcRenderer.invoke(ipcChannels.notesListWorkspaceMarkdown, { query: query ?? '', maxResults: maxResults ?? 20 }),
+
+  // Shell
+  openExternal: (url: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.shellOpenExternal, { url }),
 
   // Window controls
   windowMinimize: (): Promise<void> => ipcRenderer.invoke('window:minimize'),

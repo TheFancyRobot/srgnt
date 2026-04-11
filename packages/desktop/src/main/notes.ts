@@ -108,7 +108,7 @@ export async function listNotes(
     }
 
     const entryPath = path.join(targetPath, entry.name);
-    
+
     // Reject symlinks
     try {
       const stat = await fs.lstat(entryPath);
@@ -362,34 +362,419 @@ export async function renameEntry(
   return { newPath: validatedNewPath };
 }
 
-// Search (stub — returns empty until Step 07)
+// Mtime-based content cache for search
+const searchContentCache = new Map<string, { mtime: number; content: string }>();
 
+/**
+ * Walk workspace recursively to collect all .md files.
+ * Reuses the same exclusion logic as listWorkspaceMarkdown.
+ */
+async function collectSearchFiles(workspaceRoot: string): Promise<string[]> {
+  const workspacePath = path.normalize(workspaceRoot);
+  const excludePath = path.normalize(path.join(workspaceRoot, '.command-center'));
+  const files: string[] = [];
+  const processedDirs = new Set<string>();
+
+  async function walk(dirPath: string) {
+    const normalized = path.normalize(dirPath);
+    if (processedDirs.has(normalized)) return;
+    processedDirs.add(normalized);
+    if (normalized.startsWith(excludePath)) return;
+
+    let entries: import('node:fs').Dirent[];
+    try {
+      entries = await fs.readdir(normalized, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+      const entryPath = path.join(normalized, entry.name);
+
+      try {
+        const stat = await fs.lstat(entryPath);
+        if (stat.isSymbolicLink()) continue;
+
+        if (entry.isDirectory()) {
+          await walk(entryPath);
+        } else if (entry.name.endsWith('.md')) {
+          if (stat.size > MAX_FILE_SIZE_BYTES) continue;
+          files.push(entryPath);
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  await walk(workspacePath);
+  return files;
+}
+
+/**
+ * Get file content with mtime-based caching.
+ */
+async function getCachedContent(filePath: string): Promise<string | null> {
+  try {
+    const stat = await fs.stat(filePath);
+    const cached = searchContentCache.get(filePath);
+    if (cached && cached.mtime === stat.mtimeMs) {
+      return cached.content;
+    }
+    const content = await fs.readFile(filePath, 'utf-8');
+    searchContentCache.set(filePath, { mtime: stat.mtimeMs, content });
+    return content;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract a snippet around the first occurrence of query in content.
+ * Returns ~150-200 chars centered on the match, trimmed to word boundaries,
+ * with the match wrapped in **bold** markdown.
+ */
+function extractSnippet(content: string, query: string): string {
+  const lowerContent = content.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const matchIndex = lowerContent.indexOf(lowerQuery);
+
+  if (matchIndex === -1) {
+    // Fallback: return start of content
+    const end = Math.min(content.length, 200);
+    return content.slice(0, end) + (content.length > end ? '...' : '');
+  }
+
+  const SNIPPET_RADIUS = 100;
+  const matchEnd = matchIndex + query.length;
+
+  let start = Math.max(0, matchIndex - SNIPPET_RADIUS);
+  let end = Math.min(content.length, matchEnd + SNIPPET_RADIUS);
+
+  // Expand to word boundaries
+  if (start > 0) {
+    const spaceBefore = content.lastIndexOf(' ', start);
+    if (spaceBefore > start - 40) start = spaceBefore + 1;
+  }
+  if (end < content.length) {
+    const spaceAfter = content.indexOf(' ', end);
+    if (spaceAfter !== -1 && spaceAfter < end + 40) end = spaceAfter;
+  }
+
+  const prefix = start > 0 ? '...' : '';
+  const suffix = end < content.length ? '...' : '';
+
+  const before = content.slice(start, matchIndex);
+  const matched = content.slice(matchIndex, matchEnd);
+  const after = content.slice(matchEnd, end);
+
+  return `${prefix}${before}**${matched}**${after}${suffix}`;
+}
+
+/**
+ * Search all workspace markdown files for the given query.
+ * Returns ranked results with snippets and scores.
+ */
 export async function searchNotes(
-  _workspaceRoot: string,
-  _query: string,
-  _maxResults?: number
+  workspaceRoot: string,
+  query: string,
+  maxResults: number = 20
 ): Promise<SearchResult[]> {
-  // Stub implementation - full search will be implemented in Step 07
-  return [];
+  if (!query.trim()) return [];
+
+  const workspacePath = path.normalize(workspaceRoot);
+  const files = await collectSearchFiles(workspaceRoot);
+  const lowerQuery = query.toLowerCase();
+  const results: SearchResult[] = [];
+
+  for (const filePath of files) {
+    const fileName = path.basename(filePath, '.md');
+    const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+    // Score: title/filename matching
+    let score = 0;
+    if (fileName.toLowerCase() === lowerQuery) {
+      score = 100;
+    } else if (fileName.toLowerCase().includes(lowerQuery)) {
+      score = 50;
+    }
+
+    const content = await getCachedContent(filePath);
+    if (!content) continue;
+
+    // Try frontmatter title for higher-quality title
+    let title = fileName;
+    const fmMatch = content.match(/^---\s*\ntitle:\s*(.+?)\s*$/m);
+    if (fmMatch) title = fmMatch[1].trim();
+
+    // Score: frontmatter title matching
+    if (score === 0) {
+      if (title.toLowerCase() === lowerQuery) {
+        score = 100;
+      } else if (title.toLowerCase().includes(lowerQuery)) {
+        score = 50;
+      }
+    }
+
+    // Score: body content matching
+    if (score === 0) {
+      if (content.toLowerCase().includes(lowerQuery)) {
+        score = 10;
+      } else {
+        continue; // No match at all
+      }
+    }
+
+    const snippet = extractSnippet(content, query);
+    results.push({ title, path: relativePath, snippet, score });
+  }
+
+  // Sort by score descending, then path ascending for determinism
+  results.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.path.localeCompare(b.path);
+  });
+
+  return results.slice(0, maxResults);
 }
 
-// Workspace-wide markdown helpers (stub — returns empty until Steps 05/07)
+// Workspace-wide markdown helpers
 
+/**
+ * Walks workspace recursively to find all markdown files.
+ * Excludes .command-center/, hidden directories, and symlinks per DEC-0014.
+ * Returns array of files with title (from filename or frontmatter), path, and modifiedAt.
+ */
 export async function listWorkspaceMarkdown(
-  _workspaceRoot: string,
-  _query?: string,
-  _maxResults?: number
+  workspaceRoot: string,
+  query?: string,
+  maxResults?: number
 ): Promise<WorkspaceMarkdownEntry[]> {
-  // Stub implementation - full search will be implemented in Step 07
-  return [];
+  const workspacePath = path.normalize(workspaceRoot);
+  const excludePath = path.normalize(path.join(workspaceRoot, '.command-center'));
+
+  const results: WorkspaceMarkdownEntry[] = [];
+  const processedDirs = new Set<string>();
+
+  async function walkDirectory(dirPath: string) {
+    // Normalize and check if we've already processed this directory
+    const normalizedDir = path.normalize(dirPath);
+    if (processedDirs.has(normalizedDir)) {
+      return;
+    }
+    processedDirs.add(normalizedDir);
+
+    // Skip .command-center/ directory
+    if (normalizedDir.startsWith(excludePath)) {
+      return;
+    }
+
+    let entries: import('node:fs').Dirent[];
+    try {
+      entries = await fs.readdir(normalizedDir, { withFileTypes: true });
+    } catch (err) {
+      // Skip directories we can't read
+      return;
+    }
+
+    for (const entry of entries) {
+      // Skip hidden files and directories
+      if (entry.name.startsWith('.')) {
+        continue;
+      }
+
+      const entryPath = path.join(normalizedDir, entry.name);
+
+      // Reject symlinks
+      try {
+        const stat = await fs.lstat(entryPath);
+        if (stat.isSymbolicLink()) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
+
+      if (entry.isDirectory()) {
+        await walkDirectory(entryPath);
+      } else if (entry.name.endsWith('.md')) {
+        let title = entry.name.replace(/\.md$/, '');
+
+        // Try to extract title from frontmatter
+        try {
+          const content = await fs.readFile(entryPath, 'utf-8');
+          const frontmatterMatch = content.match(/^---\s*\ntitle:\s*(.+?)\s*$/m);
+          if (frontmatterMatch) {
+            title = frontmatterMatch[1].trim();
+          }
+        } catch {
+          // Fall back to filename
+        }
+
+        let modifiedAt: string;
+        try {
+          const stat = await fs.stat(entryPath);
+          modifiedAt = stat.mtime.toISOString();
+        } catch {
+          modifiedAt = new Date().toISOString();
+        }
+
+        // Calculate relative path from workspace root
+        const relativePath = path.relative(workspacePath, entryPath).replace(/\\/g, '/');
+
+        results.push({ title, path: relativePath, modifiedAt });
+      }
+    }
+  }
+
+  await walkDirectory(workspacePath);
+
+  // Filter by query if provided
+  let filteredResults = results;
+  if (query) {
+    const lowerQuery = query.toLowerCase();
+    filteredResults = results.filter(
+      (entry) =>
+        entry.title.toLowerCase().includes(lowerQuery) ||
+        entry.path.toLowerCase().includes(lowerQuery)
+    );
+  }
+
+  // Sort by modifiedAt (newest first) and limit results
+  filteredResults.sort(
+    (a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime()
+  );
+
+  return filteredResults.slice(0, maxResults ?? 20);
 }
 
+/**
+ * Parses a wikilink target from [[Note Name]] or [[Note Name|Alias]] syntax.
+ * Returns the display name (for title matching) and the display text (for alias).
+ */
+function parseWikilinkTarget(wikilink: string): {
+  displayText: string;
+  displayName: string;
+} {
+  const inner = wikilink.slice(2, -2); // Remove [[ and ]]
+  const pipeIndex = inner.indexOf('|');
+
+  if (pipeIndex !== -1) {
+    return {
+      displayName: inner.slice(0, pipeIndex).trim(),
+      displayText: inner.slice(pipeIndex + 1).trim(),
+    };
+  }
+
+  return {
+    displayName: inner.trim(),
+    displayText: inner.trim(),
+  };
+}
+
+/**
+ * Normalizes a path for matching: removes .md extension and normalizes separators.
+ */
+function normalizePathForMatch(filePath: string): string {
+  return filePath
+    .replace(/\\/g, '/')
+    .replace(/\.md$/, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+/**
+ * Resolves a wikilink to a file path in the workspace.
+ * Per DEC-0014:
+ * - Can open existing files anywhere in workspace markdown tree
+ * - Missing-link creation only allowed when target resolves inside Notes/
+ * - Exclude .command-center/, hidden dirs, symlinks, non-markdown
+ */
 export async function resolveWikilink(
-  _workspaceRoot: string,
-  _wikilink: string
+  workspaceRoot: string,
+  wikilink: string,
+  currentFilePath?: string
 ): Promise<{ resolved: boolean; path: string; line?: number }> {
-  // Stub implementation - will be implemented when wikilink resolution is needed
-  return { resolved: false, path: '' };
+  if (!wikilink.startsWith('[[') || !wikilink.endsWith(']]')) {
+    return { resolved: false, path: '' };
+  }
+
+  const { displayName } = parseWikilinkTarget(wikilink);
+
+  // Try to extract line number from [[Note#123]] or [[Note|Alias#45]]
+  let targetLine: number | undefined;
+  const hashMatch = displayName.match(/^(.+?)#(\d+)$/);
+  if (hashMatch) {
+    targetLine = parseInt(hashMatch[2], 10);
+  }
+
+  const workspacePath = path.normalize(workspaceRoot);
+  const excludePath = path.normalize(path.join(workspaceRoot, '.command-center'));
+
+  // Helper to validate path is not in excluded area
+  const isValidPath = (p: string) => {
+    const normalized = path.normalize(p);
+    return !normalized.startsWith(excludePath) &&
+           !path.basename(normalized).startsWith('.') &&
+           normalized.endsWith('.md');
+  };
+
+  // Helper to check if file exists and is not a symlink
+  const fileExists = async (p: string): Promise<boolean> => {
+    try {
+      const stat = await fs.lstat(p);
+      return !stat.isSymbolicLink();
+    } catch {
+      return false;
+    }
+  };
+
+  // Step 1: Try relative resolution from current file's directory
+  if (currentFilePath) {
+    const currentDir = path.dirname(path.join(workspacePath, currentFilePath));
+    const relativePath = path.join(currentDir, `${displayName}.md`);
+
+    if (isValidPath(relativePath) && await fileExists(relativePath)) {
+      const relativeResult = path.relative(workspacePath, relativePath).replace(/\\/g, '/');
+      return { resolved: true, path: relativeResult, line: targetLine };
+    }
+  }
+
+  // Step 2: Try resolution from workspace root (for absolute-style wikilinks)
+  const absolutePath = path.join(workspacePath, `${displayName}.md`);
+  if (isValidPath(absolutePath) && await fileExists(absolutePath)) {
+    const absoluteResult = path.relative(workspacePath, absolutePath).replace(/\\/g, '/');
+    return { resolved: true, path: absoluteResult, line: targetLine };
+  }
+
+  // Step 3: Search for title match across workspace
+  const results = await listWorkspaceMarkdown(workspaceRoot, undefined, 500);
+  const targetWithoutLine = hashMatch ? hashMatch[1] : displayName;
+  const normalizedTargetForSearch = normalizePathForMatch(targetWithoutLine);
+
+  // First exact match on title
+  const exactMatch = results.find(
+    (entry) => normalizePathForMatch(entry.title) === normalizedTargetForSearch
+  );
+  if (exactMatch) {
+    return { resolved: true, path: exactMatch.path, line: targetLine };
+  }
+
+  // Then fuzzy match on title or path
+  const fuzzyMatch = results.find(
+    (entry) =>
+      normalizePathForMatch(entry.title).includes(normalizedTargetForSearch) ||
+      normalizePathForMatch(entry.path).includes(normalizedTargetForSearch)
+  );
+  if (fuzzyMatch) {
+    return { resolved: true, path: fuzzyMatch.path, line: targetLine };
+  }
+
+  // Step 4: Return unresolved with path for creation check
+  // The caller can decide whether to create the file based on DEC-0014 rules
+  const notesRelativePath = path.join('Notes', `${displayName}.md`);
+  return { resolved: false, path: notesRelativePath, line: targetLine };
 }
 
 // IPC handler registration
@@ -481,10 +866,10 @@ export function registerNotesHandlers(workspaceRoot: string): void {
     return { results } as NotesSearchResponse;
   });
 
-  // Resolve wikilink (stub)
+  // Resolve wikilink
   ipcMain.handle(ipcChannels.notesResolveWikilink, async (_event, rawPayload) => {
     const payload = parseSync(SNotesResolveWikilinkRequest, rawPayload);
-    return await resolveWikilink(workspaceRoot, payload.wikilink) as NotesResolveWikilinkResponse;
+    return await resolveWikilink(workspaceRoot, payload.wikilink, payload.currentFilePath) as NotesResolveWikilinkResponse;
   });
 
   // List workspace markdown files (stub)

@@ -18,6 +18,7 @@ import {
   SRunLogSaveResponse,
   SLaunchApprovalPayload,
   SLaunchApprovalResolveRequest,
+  SOpenExternalRequest,
 } from './contracts.js';
 
 describe('IPC Channel', () => {
@@ -243,6 +244,25 @@ describe('RunLog Save', () => {
       path: '/workspace/.command-center/runs/runlog-123.md',
     };
     expect(() => parseSync(SRunLogSaveResponse, response)).not.toThrow();
+  });
+});
+
+describe('Open External Request', () => {
+  it.each([
+    'https://example.com',
+    'http://example.com/path?q=1',
+    'mailto:test@example.com',
+  ])('accepts allowed external URL %s', (url) => {
+    expect(() => parseSync(SOpenExternalRequest, { url })).not.toThrow();
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'file:///etc/passwd',
+    'data:text/html,<script>alert(1)</script>',
+    'not-a-url',
+  ])('rejects disallowed external URL %s', (url) => {
+    expect(() => parseSync(SOpenExternalRequest, { url })).toThrow();
   });
 });
 

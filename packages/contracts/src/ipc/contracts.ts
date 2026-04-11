@@ -46,6 +46,7 @@ export const ipcChannels = {
   notesSearch: 'notes:search',
   notesResolveWikilink: 'notes:resolve-wikilink',
   notesListWorkspaceMarkdown: 'notes:list-workspace-markdown',
+  shellOpenExternal: 'shell:open-external',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -437,6 +438,7 @@ export type NotesSearchResponse = Schema.Schema.Type<typeof SNotesSearchResponse
 
 export const SNotesResolveWikilinkRequest = Schema.Struct({
   wikilink: Schema.String,
+  currentFilePath: Schema.optional(Schema.String),
 });
 export type NotesResolveWikilinkRequest = Schema.Schema.Type<typeof SNotesResolveWikilinkRequest>;
 
@@ -463,3 +465,10 @@ export const SNotesListWorkspaceMarkdownResponse = Schema.Struct({
   files: Schema.Array(SNotesWorkspaceMarkdownEntry),
 });
 export type NotesListWorkspaceMarkdownResponse = Schema.Schema.Type<typeof SNotesListWorkspaceMarkdownResponse>;
+
+const openExternalUrlPattern = /^(https?:\/\/.+|mailto:[^\s]+)$/i;
+
+export const SOpenExternalRequest = Schema.Struct({
+  url: Schema.String.pipe(Schema.pattern(openExternalUrlPattern)),
+});
+export type OpenExternalRequest = Schema.Schema.Type<typeof SOpenExternalRequest>;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNotes } from '../notes/NotesContext.js';
-import type { NoteEntry } from '../notes/NotesContext.js';
+import type { NoteEntry, SearchResultEntry } from '../notes/NotesContext.js';
 
 const FILE_ICON = (
   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
@@ -384,11 +384,83 @@ function EmptyState({
   );
 }
 
+const SEARCH_ICON = (
+  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+  </svg>
+);
+
+const CLEAR_ICON = (
+  <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+function renderSnippet(snippet: string): React.ReactNode {
+  const parts = snippet.split(/(\*\*.*?\*\*)/g).filter(Boolean);
+
+  return parts.map((part, index) => {
+    const isMatch = part.startsWith('**') && part.endsWith('**') && part.length >= 4;
+    const text = isMatch ? part.slice(2, -2) : part;
+
+    return isMatch ? (
+      <mark key={`${text}-${index}`} className="rounded bg-srgnt-500/15 px-0.5 text-text-primary">
+        {text}
+      </mark>
+    ) : (
+      <React.Fragment key={`${text}-${index}`}>{text}</React.Fragment>
+    );
+  });
+}
+
+function SearchResults({ results, onSelect }: { results: SearchResultEntry[]; onSelect: (path: string) => void }): React.ReactElement {
+  return (
+    <div className="flex flex-col">
+      {results.map((result) => (
+        <button
+          key={result.path}
+          type="button"
+          className="flex flex-col gap-0.5 px-3 py-1.5 text-left transition-colors hover:bg-surface-tertiary/40"
+          onClick={() => onSelect(result.path)}
+        >
+          <span className="truncate text-xs font-medium text-text-primary">{result.title}</span>
+          <span className="truncate text-[10px] text-text-tertiary">{result.path}</span>
+          <span className="line-clamp-2 text-[10px] leading-relaxed text-text-secondary">
+            {renderSnippet(result.snippet)}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function NotesSidePanel(): React.ReactElement {
-  const { rootEntries, isLoading, error, refresh } = useNotes();
+  const { rootEntries, isLoading, error, refresh, searchQuery, searchResults, searchLoading, searchError, selectNote, searchNotes, clearSearch } = useNotes();
   const [draftCreate, setDraftCreate] = React.useState<DraftCreateState>(null);
   const [renamingPath, setRenamingPath] = React.useState<string | null>(null);
   const [deletePath, setDeletePath] = React.useState<string | null>(null);
+  const [localSearchInput, setLocalSearchInput] = React.useState('');
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  const isSearchActive = searchQuery.length > 0;
+
+  const handleSearchChange = React.useCallback((value: string) => {
+    setLocalSearchInput(value);
+    searchNotes(value);
+  }, [searchNotes]);
+
+  const handleSearchClear = React.useCallback(() => {
+    setLocalSearchInput('');
+    clearSearch();
+    searchInputRef.current?.focus();
+  }, [clearSearch]);
+
+  const handleSearchResultClick = React.useCallback((resultPath: string) => {
+    // Search results return workspace-relative paths (e.g., 'Notes/Alpha.md')
+    // but selectNote expects notes-relative paths (e.g., 'Alpha.md')
+    const notesRelativePath = resultPath.startsWith('Notes/') ? resultPath.slice(6) : resultPath;
+    void selectNote(notesRelativePath);
+  }, [selectNote]);
 
   return (
     <div className="flex h-full flex-col">
@@ -437,8 +509,49 @@ export function NotesSidePanel(): React.ReactElement {
         </div>
       </div>
 
+      {/* Search input */}
+      <div className="border-b border-border-default px-3 py-2">
+        <div className="relative flex items-center">
+          <span className="pointer-events-none absolute left-1.5 text-text-tertiary">{SEARCH_ICON}</span>
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="input w-full rounded-md border-border-default py-1 pl-7 pr-6 text-xs placeholder:text-text-tertiary focus:ring-2 focus:ring-srgnt-500/20"
+            placeholder="Search notes..."
+            value={localSearchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                handleSearchClear();
+              }
+            }}
+          />
+          {localSearchInput && (
+            <button
+              type="button"
+              className="absolute right-1 rounded p-0.5 text-text-tertiary transition-colors hover:text-text-primary"
+              onClick={handleSearchClear}
+            >
+              {CLEAR_ICON}
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto py-2 scrollbar-thin">
-        {isLoading && rootEntries.length === 0 ? (
+        {isSearchActive ? (
+          searchLoading ? (
+            <div className="px-3 py-2 text-xs text-text-tertiary animate-pulse">Searching...</div>
+          ) : searchError ? (
+            <div className="px-3 py-2 text-xs text-error-500">{searchError}</div>
+          ) : searchResults.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-text-tertiary">
+              No results for &ldquo;{searchQuery}&rdquo;
+            </div>
+          ) : (
+            <SearchResults results={searchResults} onSelect={handleSearchResultClick} />
+          )
+        ) : isLoading && rootEntries.length === 0 ? (
           <div className="px-3 py-2 text-xs text-text-tertiary animate-pulse">Loading notes...</div>
         ) : rootEntries.length === 0 && !draftCreate ? (
           <EmptyState

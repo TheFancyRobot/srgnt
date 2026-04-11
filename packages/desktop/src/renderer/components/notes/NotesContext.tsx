@@ -11,6 +11,13 @@ interface DirectoryEntries {
   [dirPath: string]: NoteEntry[];
 }
 
+export interface SearchResultEntry {
+  title: string;
+  path: string;
+  snippet: string;
+  score: number;
+}
+
 export interface NotesState {
   rootEntries: NoteEntry[];
   selectedPath: string | null;
@@ -20,6 +27,10 @@ export interface NotesState {
   activeContent: string | null;
   activeModifiedAt: string | null;
   activeContentLoading: boolean;
+  searchQuery: string;
+  searchResults: SearchResultEntry[];
+  searchLoading: boolean;
+  searchError: string | null;
 }
 
 export interface NotesActions {
@@ -33,6 +44,8 @@ export interface NotesActions {
   renameEntry: (oldPath: string, newName: string) => Promise<string | null>;
   writeActiveContent: (content: string) => Promise<void>;
   clearSelection: () => void;
+  searchNotes: (query: string) => void;
+  clearSearch: () => void;
 }
 
 export type NotesContextValue = NotesState & NotesActions;
@@ -118,6 +131,12 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
   const [activeContent, setActiveContent] = React.useState<string | null>(null);
   const [activeModifiedAt, setActiveModifiedAt] = React.useState<string | null>(null);
   const [activeContentLoading, setActiveContentLoading] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<SearchResultEntry[]>([]);
+  const [searchLoading, setSearchLoading] = React.useState(false);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
+  const searchDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRequestIdRef = React.useRef(0);
   const notesRootRef = React.useRef('');
   const expandedDirsRef = React.useRef(expandedDirs);
   const selectedPathRef = React.useRef(selectedPath);
@@ -366,7 +385,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
   const writeActiveContent = React.useCallback(async (content: string) => {
     const currentSelectedPath = selectedPathRef.current;
     if (!currentSelectedPath) {
-      return;
+      throw new Error('No active note selected');
     }
 
     setError(null);
@@ -376,13 +395,76 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
       setActiveContent(content);
       setActiveModifiedAt(response.modifiedAt);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save note');
+      const error = err instanceof Error ? err : new Error('Failed to save note');
+      setError(error.message);
+      throw error;
     }
   }, []);
 
   const clearSelection = React.useCallback(() => {
     clearActiveSelection();
   }, [clearActiveSelection]);
+
+  const searchNotes = React.useCallback((query: string) => {
+    setSearchQuery(query);
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    if (!query.trim()) {
+      searchRequestIdRef.current += 1;
+      setSearchResults([]);
+      setSearchLoading(false);
+      setSearchError(null);
+      return;
+    }
+
+    const requestId = ++searchRequestIdRef.current;
+    setSearchLoading(true);
+    setSearchError(null);
+
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const response = await window.srgnt.notesSearch(query);
+        if (searchRequestIdRef.current !== requestId) {
+          return;
+        }
+        setSearchResults(response.results);
+      } catch (err) {
+        if (searchRequestIdRef.current !== requestId) {
+          return;
+        }
+        setSearchError(err instanceof Error ? err.message : 'Search failed');
+        setSearchResults([]);
+      } finally {
+        if (searchRequestIdRef.current === requestId) {
+          setSearchLoading(false);
+        }
+      }
+    }, 300);
+  }, []);
+
+  const clearSearch = React.useCallback(() => {
+    searchRequestIdRef.current += 1;
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchLoading(false);
+    setSearchError(null);
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+      searchRequestIdRef.current += 1;
+    };
+  }, []);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -426,6 +508,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
       activeContent,
       activeModifiedAt,
       activeContentLoading,
+      searchQuery,
+      searchResults,
+      searchLoading,
+      searchError,
       getChildEntries,
       refresh,
       selectNote,
@@ -436,6 +522,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
       renameEntry,
       writeActiveContent,
       clearSelection,
+      searchNotes,
+      clearSearch,
     }),
     [
       entriesByDir,
@@ -446,6 +534,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
       activeContent,
       activeModifiedAt,
       activeContentLoading,
+      searchQuery,
+      searchResults,
+      searchLoading,
+      searchError,
       getChildEntries,
       refresh,
       selectNote,
@@ -456,6 +548,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
       renameEntry,
       writeActiveContent,
       clearSelection,
+      searchNotes,
+      clearSearch,
     ],
   );
 

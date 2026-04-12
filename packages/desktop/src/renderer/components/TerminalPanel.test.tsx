@@ -227,6 +227,72 @@ describe('TerminalPanel', () => {
   });
 
   describe('approval flow', () => {
+    it('shows Launch Denied UI when tab is denied', async () => {
+      let approvalRequiredHandler:
+        | ((payload: { approvalId: string; launchContext: LaunchContext; command: string; riskLevel: string }) => void)
+        | undefined;
+      let denyResolve: ((result: unknown) => void) | undefined;
+
+      const launchContext: LaunchContext = {
+        launchId: 'launch-1',
+        sourceWorkflow: 'daily-briefing',
+        sourceArtifactId: 'SRGNT-138',
+        workingDirectory: '/workspace/demo',
+        intent: 'artifactAffecting',
+        createdAt: new Date().toISOString(),
+        labels: ['SRGNT-138'],
+      };
+
+      const { runUnsafe } = await import('../effects/terminal-ipc.js');
+      (runUnsafe as ReturnType<typeof vi.fn>).mockImplementation(async (effect: unknown) => {
+        const tag = (effect as { _tag?: string })?._tag;
+        if (tag === 'launch') {
+          // Trigger approval-required first (shows approval preview)
+          approvalRequiredHandler?.({
+            approvalId: 'approval-1',
+            launchContext,
+            command: 'bash',
+            riskLevel: 'high',
+          });
+          // Return pending promise — resolved only when deny() is called
+          return new Promise((resolve) => {
+            denyResolve = () => {
+              resolve({
+                sessionId: 'session-denied',
+                pid: 0,
+                launchId: 'launch-1',
+                status: 'denied',
+              });
+            };
+          });
+        }
+        return { sessionId: 'session-default', pid: 100 };
+      });
+
+      setupSrgntMocks({
+        onLaunchApprovalRequired: vi.fn((callback) => {
+          approvalRequiredHandler = callback;
+          return () => { approvalRequiredHandler = undefined; };
+        }),
+        resolveLaunchApproval: vi.fn().mockImplementation(async () => {
+          // When denied: resolveLaunchApproval(false) triggers handleDenied
+          denyResolve?.();
+        }),
+      });
+
+      render(<TerminalPanel launchContext={launchContext} />);
+
+      // Wait for approval preview to appear (tab shows approvalPending)
+      expect(await screen.findByText('Approval Required')).toBeInTheDocument();
+
+      // Click Deny — this triggers handleDeny which sets tab.denied = true
+      fireEvent.click(screen.getByRole('button', { name: 'Deny' }));
+
+      // Wait for denied UI to appear
+      await screen.findByText('Launch Denied');
+      expect(screen.getByText('This terminal launch was denied.')).toBeInTheDocument();
+    });
+
     it('shows approval preview and resolves on approve', async () => {
       let approvalRequiredHandler:
         | ((payload: { approvalId: string; launchContext: LaunchContext; command: string; riskLevel: string }) => void)

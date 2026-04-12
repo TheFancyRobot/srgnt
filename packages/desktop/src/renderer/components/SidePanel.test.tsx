@@ -166,4 +166,20 @@ describe('SidePanel', () => {
     expect(removeEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
     expect(removeEventListenerSpy).toHaveBeenCalledWith('mouseup', expect.any(Function));
   });
+
+  it('unmounting does not throw when dragCleanupRef.current is null', () => {
+    // The cleanup effect calls dragCleanupRef.current?.() — when current is null
+    // this should not throw. Test that unmount is clean.
+    const { unmount } = renderWithSidePanel(<div>Test Content</div>);
+    // No mouseDown — dragCleanupRef.current stays null
+    expect(() => unmount()).not.toThrow();
+  });
+
+  it('unmounting does not throw when clickTimeoutRef is falsy', () => {
+    // The cleanup effect clears clickTimeoutRef.current if truthy.
+    // When falsy (undefined), the if-check should be a no-op.
+    const { unmount } = renderWithSidePanel(<div>Test Content</div>);
+    // No click triggered — clickTimeoutRef.current remains falsy
+    expect(() => unmount()).not.toThrow();
+  });
 });

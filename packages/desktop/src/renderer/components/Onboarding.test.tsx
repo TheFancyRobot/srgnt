@@ -194,6 +194,24 @@ describe('OnboardingWizard', () => {
     window.removeEventListener('unhandledrejection', handler);
   });
 
+  it('resets isWorking state when window.srgnt.getWorkspaceRoot() rejects', async () => {
+    // The source catch block swallows getWorkspaceRoot() errors without crashing the UI
+    Object.defineProperty(window, 'srgnt', {
+      value: { getWorkspaceRoot: vi.fn().mockRejectedValue(new Error('workspace unavailable')) },
+      writable: true,
+      configurable: true,
+    });
+    const flow = makeFlow();
+    render(React.createElement(OnboardingWizard, { flow }));
+    // Click the workspace action button — getWorkspaceRoot() rejects, catch block swallows it
+    fireEvent.click(screen.getByText('Choose Folder'));
+    // Working indicator should appear then disappear (not stuck)
+    expect(screen.getByText('Working...')).toBeTruthy();
+    await vi.waitFor(() => {
+      expect(screen.queryByText('Working...')).toBeNull();
+    });
+  });
+
   it('shows step note when provided', () => {
     const flow = makeFlow({
       steps: [

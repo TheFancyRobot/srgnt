@@ -12,5 +12,22 @@ export default defineConfig({
       ['src/main/**/*.test.ts', 'node'],
       ['src/renderer/**/*.test.tsx', 'jsdom'],
     ],
+    coverage: {
+      provider: 'v8',
+      include: ['src/main/**/*.ts', 'src/preload/**/*.ts', 'src/renderer/**/*.{ts,tsx}'],
+      exclude: [
+        'src/main/index.ts',
+        'src/preload/index.ts',
+        'src/renderer/main.tsx',
+        'src/renderer/index.ts',
+        'src/renderer/test-utils.tsx',
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+        'src/e2e/**',
+        'src/**/*.d.ts',
+        'src/**/*.config.ts',
+        'src/**/*.config.js',
+      ],
+    },
   },
 });

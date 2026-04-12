@@ -9,6 +9,18 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    hmr: {
+      // Ensure HMR works correctly with Electron
+      overlay: true,
+    },
+    watch: {
+      // Ensure all source files are watched for changes
+      ignored: ['**/node_modules/**'],
+    },
+  },
+  // Force TypeScript and TSX files to be re-resolved
+  resolve: {
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
   },
   build: {
     outDir: path.resolve(__dirname, 'dist/renderer'),

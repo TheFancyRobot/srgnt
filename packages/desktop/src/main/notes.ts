@@ -50,8 +50,7 @@ export async function validateNotesPath(
   // Resolve the requested path to an absolute path
   const resolvedPath = path.resolve(notesDir, requestedPath);
 
-  // Check containment: resolved path must start with notesDir
-  // Using path.join ensures proper path normalization
+  // Check containment: resolved path must stay inside Notes
   const normalizedResolved = path.normalize(resolvedPath);
   const normalizedNotesDir = path.normalize(notesDir);
 
@@ -60,15 +59,24 @@ export async function validateNotesPath(
     return null;
   }
 
-  // Reject symlinks using lstat
-  try {
-    const stat = await fs.lstat(resolvedPath);
-    if (stat.isSymbolicLink()) {
-      return null;
-    }
-  } catch (err) {
-    // If file doesn't exist, that's okay for validation (read operations will handle missing files)
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+  // Reject symlinks on the final path AND any existing ancestor segment inside Notes.
+  // This blocks paths like Notes/link-dir/file.md where link-dir is a symlink escaping Notes.
+  const relativePath = path.relative(normalizedNotesDir, normalizedResolved);
+  const segments = relativePath ? relativePath.split(path.sep).filter(Boolean) : [];
+  let currentPath = normalizedNotesDir;
+
+  for (const segment of segments) {
+    currentPath = path.join(currentPath, segment);
+    try {
+      const stat = await fs.lstat(currentPath);
+      if (stat.isSymbolicLink()) {
+        return null;
+      }
+    } catch (err) {
+      // If a segment does not exist yet, remaining descendants cannot be symlinks yet.
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        break;
+      }
       return null;
     }
   }

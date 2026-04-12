@@ -1,7 +1,7 @@
 ---
 name: tester
 description: Agent from team 'srgnt-team'
-model: openadapter/qwen3.6-plus
+model: minimax/minimax-m2.7
 thinking: low
 ---
 

@@ -1,7 +1,7 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
+import { afterEach, describe, expect, it, vi, beforeAll, afterAll } from 'vitest';
 import { MarkdownEditor } from './MarkdownEditor.js';
 
 /**
@@ -143,6 +143,10 @@ afterAll(() => {
 });
 
 describe('MarkdownEditor', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('renders frontmatter as a read-only block', () => {
     const onContentChange = vi.fn();
 
@@ -352,7 +356,7 @@ describe('MarkdownEditor', () => {
     expect(codeLines.at(-1)).toHaveClass('cm-codeblock-last');
   });
 
-  it('keeps code block line decorations in rendered mode', () => {
+  it('keeps code block line decorations in rendered mode', async () => {
     const onContentChange = vi.fn();
 
     render(
@@ -364,7 +368,14 @@ describe('MarkdownEditor', () => {
       />,
     );
 
-    const codeLines = Array.from(document.querySelectorAll('.cm-codeblock-line'));
+    // Wait for CodeMirror to finish initial decoration pass (syntaxTree parsing may be async)
+    const codeLines = await waitFor(() => {
+      const lines = Array.from(document.querySelectorAll('.cm-codeblock-line'));
+      if (lines.length === 0) {
+        throw new Error('Waiting for codeblock line decorations');
+      }
+      return lines;
+    }, { timeout: 2000 });
 
     expect(codeLines).toHaveLength(4);
     expect(codeLines[0]).toHaveClass('cm-codeblock-first');
@@ -461,6 +472,105 @@ describe('MarkdownEditor', () => {
     });
 
     expect(openExternal).toHaveBeenCalledWith('https://example.com');
+  });
+
+  it('adds IDs to headings for fragment link navigation', async () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'# First Section\n\nContent\n\n## Second Section\n\nMore content'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />,
+    );
+
+    // Wait for editor to render
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    // Check that headings have IDs
+    const firstHeading = document.querySelector('[id="first-section"]');
+    expect(firstHeading).not.toBeNull();
+    expect(firstHeading?.className).toContain('cm-line');
+
+    const secondHeading = document.querySelector('[id="second-section"]');
+    expect(secondHeading).not.toBeNull();
+  });
+
+  it('handles fragment links by scrolling to the target heading', async () => {
+    const onContentChange = vi.fn();
+    const scrollIntoViewMock = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={
+          '# Top Section\n\n[Jump to bottom](#bottom-section)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n# Bottom Section'
+        }
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />,
+    );
+
+    // Wait for editor to render and heading decorations to be applied
+    await waitFor(() => {
+      const link = document.querySelector('a[href="#bottom-section"]');
+      const target = document.querySelector('[id="bottom-section"]');
+      if (!link || !target) {
+        throw new Error('Waiting for fragment link and target heading to render');
+      }
+    }, { timeout: 2000 });
+
+    // Find the fragment link and target element
+    const link = document.querySelector('a[href="#bottom-section"]');
+    const targetElement = document.querySelector('[id="bottom-section"]');
+    expect(link).not.toBeNull();
+    expect(targetElement).not.toBeNull();
+
+    // Mock scrollIntoView on the target element
+    targetElement!.scrollIntoView = scrollIntoViewMock;
+
+    // Click the fragment link — dispatch directly on the editor DOM to go through CodeMirror's event handler
+    const clickEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+    });
+    link!.dispatchEvent(clickEvent);
+
+    // Verify that scrollIntoView was called
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, { timeout: 2000 });
+  });
+
+  it('generates correct slugs for complex headings', async () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'# Hello World!\n## This is a Test\n### 123 Numbers\n#### Special @#$ Characters'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />,
+    );
+
+    // Wait for editor to render
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    // Check generated IDs
+    expect(document.querySelector('[id="hello-world"]')).not.toBeNull();
+    expect(document.querySelector('[id="this-is-a-test"]')).not.toBeNull();
+    expect(document.querySelector('[id="123-numbers"]')).not.toBeNull();
+    expect(document.querySelector('[id="special-characters"]')).not.toBeNull();
   });
 
   it('ArrowUp from line 3 lands on line 2 with a stable same-column fixture', async () => {

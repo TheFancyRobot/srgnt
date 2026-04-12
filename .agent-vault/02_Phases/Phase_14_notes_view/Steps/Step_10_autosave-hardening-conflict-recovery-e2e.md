@@ -5,8 +5,8 @@ contract_version: 1
 title: Autosave Hardening + Conflict Recovery + E2E
 step_id: STEP-14-10
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
-owner: ''
+status: done
+owner: coordinator
 created: '2026-04-09'
 updated: '2026-04-09'
 depends_on: []

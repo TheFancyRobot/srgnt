@@ -266,6 +266,9 @@ test('notes editor defaults to active-line editing and supports fully rendered m
   await page.getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('treeitem', { name: /Live Preview\.md/ }).click();
   await expect(page.getByRole('heading', { name: 'Live Preview.md' })).toBeVisible();
+  
+  // Wait for the markdown editor wrapper to be present and have the data attribute
+  await page.waitForSelector('[data-testid="markdown-editor-wrapper"][data-display-mode]');
 
   const initialMarkerState = await page.evaluate(() => {
     const markers = Array.from(document.querySelectorAll('.cm-formatting-inline, .cm-formatting-inline-visible, .cm-formatting-block, .cm-formatting-block-visible'))

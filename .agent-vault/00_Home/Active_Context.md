@@ -10,6 +10,13 @@ tags:
   - agent-vault
   - home
   - context
+last_updated: '2026-04-12'
+tests: 610/610 passing
+coverage: 93.42%
+target: 95%+ coverage
+blockers: none
+in_flight: 'researcher: notes.ts IPC handler coverage; executor-1: TerminalPanel + SidePanel + Onboarding + Titlebar coverage gaps'
+phase: Phase_08_product_hardening (coverage push)
 ---
 
 # Active Context
@@ -19,11 +26,11 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-04-09._
+_Last refreshed: 2026-04-12._
 - Session in progress: [[05_Sessions/2026-04-09-211751-autosave-hardening-conflict-recovery-e2e|SESSION-2026-04-09-211751 Session for Autosave Hardening + Conflict Recovery + E2E]] - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]] - updated: 2026-04-09
-- Current step: [[02_Phases/Phase_14_notes_view/Steps/Step_10_autosave-hardening-conflict-recovery-e2e|STEP-14-10 Autosave Hardening + Conflict Recovery + E2E]] - status: planned - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
-- Active phase: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] - status: complete - updated: 2026-04-09
-- Also active: 18 more additional sessions, 35 more additional steps, 1 open critical bug.
+- Current step: [[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]] - status: complete - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
+- Active phase: [[02_Phases/Phase_15_semantic_search_foundation/Phase|PHASE-15 Semantic Search Foundation]] - status: planned - updated: 2026-04-09
+- Also active: 19 more additional sessions, 35 more additional steps, 1 open critical bug.
 <!-- AGENT-END:current-focus -->
 - Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
 - Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]

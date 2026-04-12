@@ -1,8 +1,8 @@
-# SRGNT development team: coordinator (glm-5-turbo), 2 executors (glm-5.1, chunk tasks + spawn sub-agents), tester (qwen3.6-plus, e2e+unit testing), reviewer (gpt-5.4/codex). Active context management with 50% max utilization. Tester feedback routes through coordinator to executors.
+# SRGNT development team: coordinator (glm-5-turbo), researcher (minimax-m2.7), executor (glm-5.1), reviewer (gpt-5.4/codex), tester (minimax-m2.7). Active context management with 50% max utilization. Loop: researcher → executor → reviewer → tester until 100% pass.
 srgnt-team:
   - coordinator
+  - researcher
   - executor-1
-  - executor-2
-  - tester
   - reviewer
+  - tester
 

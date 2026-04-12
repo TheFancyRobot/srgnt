@@ -108,6 +108,26 @@ describe('TerminalPanel', () => {
       });
     });
 
+    it('sends a newline when Shift+Enter is pressed in the terminal surface', async () => {
+      setupSrgntMocks();
+      render(<TerminalPanel />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('terminal-host')).toBeInTheDocument();
+      });
+
+      fireEvent.keyDown(screen.getByTestId('terminal-host'), {
+        key: 'Enter',
+        code: 'Enter',
+        shiftKey: true,
+      });
+
+      const { TerminalIpc } = await import('../effects/terminal-ipc.js');
+      await waitFor(() => {
+        expect(TerminalIpc.write).toHaveBeenCalledWith('session-default', '\r');
+      });
+    });
+
     it('adds a new tab when + button is clicked', async () => {
       setupSrgntMocks();
       render(<TerminalPanel />);

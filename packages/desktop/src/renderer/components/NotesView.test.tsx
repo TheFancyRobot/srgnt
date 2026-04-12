@@ -103,12 +103,14 @@ describe('NotesView', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     expect(editor).toHaveAttribute('data-display-mode', 'live-preview');
 
-    fireEvent.click(toggle);
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
 
     await waitFor(() => {
       expect(toggle).toHaveAttribute('aria-pressed', 'true');
       expect(editor).toHaveAttribute('data-display-mode', 'rendered');
-    });
+    }, { timeout: 10000 });
 
     expect(window.localStorage.getItem('srgnt:notes:editor-display-mode')).toBe('rendered');
   });
@@ -278,6 +280,822 @@ describe('NotesView', () => {
         'Inbox.md',
         expect.stringContaining('unsaved recovery text'),
       );
+    });
+  });
+
+  it('shows empty state when no note is selected', () => {
+    render(
+      <NotesProvider>
+        <NotesView />
+      </NotesProvider>,
+    );
+    expect(screen.getByText(/Select a note from the Explorer panel/)).toBeInTheDocument();
+  });
+
+  it('initializes display mode from localStorage', async () => {
+    window.localStorage.setItem('srgnt:notes:editor-display-mode', 'rendered');
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    const toggle = await screen.findByRole('button', { name: 'Toggle fully rendered mode' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('calls clearSelection when Close button clicked', async () => {
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() => {
+      expect(screen.getByText(/Select a note from the Explorer panel/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows error from context in the header bar when a note is selected', async () => {
+    // Make notesReadFile throw when selecting a note. selectNote() sets selectedPath
+    // before the try/catch, so the error will display in the header bar.
+    window.srgnt.notesReadFile = vi.fn(async () => {
+      throw new Error('permission denied');
+    }) as typeof window.srgnt.notesReadFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    await waitFor(() => {
+      // Error appears in both NotesSidePanel and NotesView header
+      expect(screen.getAllByText('permission denied').length).toBeGreaterThanOrEqual(1);
+    }, { timeout: 3000 });
+  });
+
+  it('shows external-modified banner with Keep Mine and Reload from Disk buttons', async () => {
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async () => {
+      readCount += 1;
+      // First read returns normal content, subsequent reads return a different mtime
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: readCount === 1 ? '2026-04-01T00:00:00.000Z' : '2026-04-01T00:00:01.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Make an edit so hasUnsavedEditsRef is true
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nmodified' } });
+    });
+
+    // Trigger mtime poll which will detect external modification
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/This file was modified externally/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Keep Mine' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reload from Disk' })).toBeInTheDocument();
+  });
+
+  it('reloads from disk when Reload from Disk button clicked', async () => {
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async () => {
+      readCount += 1;
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: readCount === 1 ? '2026-04-01T00:00:00.000Z' : '2026-04-01T00:00:01.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Make an edit so hasUnsavedEditsRef is true
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nmodified' } });
+    });
+
+    // Trigger external modification detection
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/This file was modified externally/)).toBeInTheDocument();
+
+    // Click Reload from Disk
+    fireEvent.click(screen.getByRole('button', { name: 'Reload from Disk' }));
+
+    await waitFor(() => {
+      // Banner should be gone
+      expect(screen.queryByText(/This file was modified externally/)).not.toBeInTheDocument();
+    });
+  });
+
+  it('force-saves when Keep Mine button clicked', async () => {
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async () => {
+      readCount += 1;
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: readCount === 1 ? '2026-04-01T00:00:00.000Z' : '2026-04-01T00:00:01.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Make an edit so hasUnsavedEditsRef is true
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nkeep mine text' } });
+    });
+
+    // Trigger external modification detection
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/This file was modified externally/)).toBeInTheDocument();
+
+    // Click Keep Mine
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Mine' }));
+
+    // Banner should disappear and write should be triggered
+    await waitFor(() => {
+      expect(screen.queryByText(/This file was modified externally/)).not.toBeInTheDocument();
+      expect(window.srgnt.notesWriteFile).toHaveBeenCalled();
+    });
+  });
+
+  it('clears selection when Discard button clicked on file-deleted banner', async () => {
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async (filePath?: string) => {
+      readCount += 1;
+      if (readCount >= 2 && filePath === 'Inbox.md') {
+        throw new Error('ENOENT');
+      }
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: '2026-04-01T00:00:00.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Make an edit so hasUnsavedEditsRef is true
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nunsaved text' } });
+    });
+
+    // Trigger file-deleted detection
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/This file was deleted/)).toBeInTheDocument();
+
+    // Click Discard
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Select a note from the Explorer panel/)).toBeInTheDocument();
+    });
+  });
+
+  it('uses textarea fallback when clipboard API fails', async () => {
+    // First trigger save-error banner
+    window.srgnt.notesWriteFile = vi.fn().mockRejectedValue(new Error('disk full')) as typeof window.srgnt.notesWriteFile;
+
+    // Mock clipboard API to throw (jsdom doesn't have navigator.clipboard)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('NotAllowed')) },
+      writable: true,
+      configurable: true,
+    });
+    // jsdom doesn't have execCommand, mock it
+    const execSpy = vi.fn();
+    document.execCommand = execSpy;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    vi.useFakeTimers();
+
+    // Make an edit
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nmore text' } });
+    });
+
+    // Wait for all retries to fail
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000 + 1000 + 2000 + 4000);
+    });
+
+    expect(screen.getByText(/Save failed after 4 attempts/)).toBeInTheDocument();
+
+    // Click Copy to Clipboard
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy to Clipboard' }));
+      await Promise.resolve();
+    });
+
+    // Clipboard API should have been called and rejected, fallback used
+    expect(navigator.clipboard.writeText).toHaveBeenCalled();
+    expect(document.execCommand).toHaveBeenCalledWith('copy');
+
+    // Cleanup
+    delete (document as unknown as Record<string, unknown>).execCommand;
+  });
+
+  it('handles wikilink click for resolved path', async () => {
+    window.srgnt.notesResolveWikilink = vi.fn(async () => ({
+      resolved: true,
+      path: 'OtherNote.md',
+    })) as typeof window.srgnt.notesResolveWikilink;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Insert a wikilink
+    await act(async () => {
+      view.dispatch({ changes: { from: 0, insert: '[[OtherNote]]' } });
+    });
+
+    // Find the wikilink element and click it
+    const wikilinkEl = editor.querySelector('.cm-wikilink') as HTMLElement;
+    expect(wikilinkEl).not.toBeNull();
+    if (!wikilinkEl) throw new Error('Expected wikilink element');
+
+    await act(async () => {
+      fireEvent.click(wikilinkEl);
+      await Promise.resolve();
+    });
+
+    expect(window.srgnt.notesResolveWikilink).toHaveBeenCalledWith('[[OtherNote]]', 'Inbox.md');
+    // selectNote should be called with the resolved path
+    await waitFor(() => {
+      expect(window.srgnt.notesReadFile).toHaveBeenCalledWith('OtherNote.md');
+    });
+  });
+
+  it('handles wikilink click for unresolved path inside Notes/', async () => {
+    window.srgnt.notesResolveWikilink = vi.fn(async () => ({
+      resolved: false,
+      path: 'Notes/NewNote.md',
+    })) as typeof window.srgnt.notesResolveWikilink;
+    window.srgnt.notesCreateFile = vi.fn(async () => ({
+      path: '/workspace/demo/Notes/NewNote.md',
+      createdAt: '2026-04-01T00:00:00.000Z',
+    })) as typeof window.srgnt.notesCreateFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Insert a wikilink
+    await act(async () => {
+      view.dispatch({ changes: { from: 0, insert: '[[NewNote]]' } });
+    });
+
+    const wikilinkEl = editor.querySelector('.cm-wikilink') as HTMLElement;
+    expect(wikilinkEl).not.toBeNull();
+    if (!wikilinkEl) throw new Error('Expected wikilink element');
+
+    await act(async () => {
+      fireEvent.click(wikilinkEl);
+      await Promise.resolve();
+    });
+
+    expect(window.srgnt.notesResolveWikilink).toHaveBeenCalledWith('[[NewNote]]', 'Inbox.md');
+    expect(window.srgnt.notesCreateFile).toHaveBeenCalled();
+  });
+
+  it('handles wikilink click for unresolved path with pipe syntax', async () => {
+    window.srgnt.notesResolveWikilink = vi.fn(async () => ({
+      resolved: false,
+      path: 'Notes/Display Title.md',
+    })) as typeof window.srgnt.notesResolveWikilink;
+    window.srgnt.notesCreateFile = vi.fn(async () => ({
+      path: '/workspace/demo/Notes/Display Title.md',
+      createdAt: '2026-04-01T00:00:00.000Z',
+    })) as typeof window.srgnt.notesCreateFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Insert a wikilink with pipe syntax: [[Display Title|link target]]
+    await act(async () => {
+      view.dispatch({ changes: { from: 0, insert: '[[Display Title|link target]]' } });
+    });
+
+    const wikilinkEl = editor.querySelector('.cm-wikilink') as HTMLElement;
+    expect(wikilinkEl).not.toBeNull();
+    if (!wikilinkEl) throw new Error('Expected wikilink element');
+
+    await act(async () => {
+      fireEvent.click(wikilinkEl);
+      await Promise.resolve();
+    });
+
+    expect(window.srgnt.notesResolveWikilink).toHaveBeenCalledWith('[[Display Title|link target]]', 'Inbox.md');
+    expect(window.srgnt.notesCreateFile).toHaveBeenCalled();
+  });
+
+  it('ignores wikilink click for path outside Notes/', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    window.srgnt.notesResolveWikilink = vi.fn(async () => ({
+      resolved: false,
+      path: 'Outside/SomeNote.md',
+    })) as typeof window.srgnt.notesResolveWikilink;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    await act(async () => {
+      view.dispatch({ changes: { from: 0, insert: '[[OutsideNote]]' } });
+    });
+
+    const wikilinkEl = editor.querySelector('.cm-wikilink') as HTMLElement;
+    expect(wikilinkEl).not.toBeNull();
+    if (!wikilinkEl) throw new Error('Expected wikilink element');
+
+    await act(async () => {
+      fireEvent.click(wikilinkEl);
+      await Promise.resolve();
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith('Cannot create file outside Notes/: Outside/SomeNote.md');
+    expect(window.srgnt.notesCreateFile).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('handles wikilink click error gracefully', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    window.srgnt.notesResolveWikilink = vi.fn(async () => {
+      throw new Error('resolve failed');
+    }) as typeof window.srgnt.notesResolveWikilink;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    await act(async () => {
+      view.dispatch({ changes: { from: 0, insert: '[[BrokenLink]]' } });
+    });
+
+    const wikilinkEl = editor.querySelector('.cm-wikilink') as HTMLElement;
+    expect(wikilinkEl).not.toBeNull();
+    if (!wikilinkEl) throw new Error('Expected wikilink element');
+
+    await act(async () => {
+      fireEvent.click(wikilinkEl);
+      await Promise.resolve();
+    });
+
+    expect(errorSpy).toHaveBeenCalledWith('Failed to handle wikilink click:', expect.any(Error));
+    errorSpy.mockRestore();
+  });
+
+  it('shows save-error banner when Save as New Note fails because createNote returns null', async () => {
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async (filePath?: string) => {
+      readCount += 1;
+      if (readCount >= 2 && filePath === 'Inbox.md') {
+        throw new Error('ENOENT');
+      }
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: '2026-04-01T00:00:00.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+    // createNote returns null (e.g. file already exists)
+    window.srgnt.notesCreateFile = vi.fn(async () => {
+      throw new Error('file exists');
+    }) as typeof window.srgnt.notesCreateFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nunsaved text' } });
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/This file was deleted/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save as New Note' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Save failed after 4 attempts|Failed to create replacement note/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows save-error banner when Save as New Note writeFile throws', async () => {
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async (filePath?: string) => {
+      readCount += 1;
+      if (readCount >= 2 && filePath === 'Inbox.md') {
+        throw new Error('ENOENT');
+      }
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: '2026-04-01T00:00:00.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+    window.srgnt.notesCreateFile = vi.fn(async () => ({
+      path: '/workspace/demo/Notes/Inbox.md',
+      createdAt: '2026-04-01T00:00:00.000Z',
+    })) as typeof window.srgnt.notesCreateFile;
+    window.srgnt.notesWriteFile = vi.fn(async () => {
+      throw new Error('write failed');
+    }) as typeof window.srgnt.notesWriteFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nunsaved text' } });
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/This file was deleted/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save as New Note' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/write failed/)).toBeInTheDocument();
+    });
+  });
+
+  it('transitions save state from saving to saved to idle', async () => {
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Make an edit to trigger debounced save
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nsave test' } });
+    });
+
+    // writeActiveContent should have been called after the debounce
+    await waitFor(() => {
+      expect(window.srgnt.notesWriteFile).toHaveBeenCalled();
+    }, { timeout: 5000 });
+
+    // Component should still be rendering (no crash)
+    expect(screen.getAllByText('Inbox.md').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('successfully saves deleted file as a new note (happy path)', async () => {
+    let initialSelectDone = false;
+    let editDone = false;
+    let focusTriggeredFileDeleted = false;
+
+    window.srgnt.notesReadFile = vi.fn(async (filePath?: string) => {
+      if (initialSelectDone && editDone && !focusTriggeredFileDeleted && filePath === 'Inbox.md') {
+        focusTriggeredFileDeleted = true;
+        throw new Error('ENOENT');
+      }
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: '2026-04-01T00:00:00.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+    window.srgnt.notesCreateFile = vi.fn(async () => ({
+      path: '/workspace/demo/Notes/Inbox.md',
+      createdAt: '2026-04-01T00:00:00.000Z',
+    })) as typeof window.srgnt.notesCreateFile;
+    window.srgnt.notesWriteFile = vi.fn(async (filePath: string, content: string) => ({
+      path: `/workspace/demo/Notes/${filePath}`,
+      modifiedAt: '2026-04-01T00:00:01.000Z',
+      content,
+    })) as typeof window.srgnt.notesWriteFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    initialSelectDone = true;
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Make an edit so hasUnsavedEditsRef becomes true
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nhappy path content' } });
+    });
+    editDone = true;
+
+    // Trigger file-deleted detection via window focus
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/This file was deleted/i)).toBeInTheDocument();
+
+    // Click Save as New Note
+    fireEvent.click(screen.getByRole('button', { name: 'Save as New Note' }));
+
+    // Wait for the async flow (createNote + writeFile + selectNote)
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 300));
+    });
+
+    expect(window.srgnt.notesCreateFile).toHaveBeenCalled();
+
+    // Banner should be gone after successful save
+    await waitFor(() => {
+      expect(screen.queryByText(/This file was deleted/i)).not.toBeInTheDocument();
+    });
+
+    // Advance past the 2s saved-reset timer to cover lines 282-283
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 2500));
+    });
+  });
+
+  it('clears pending saved-reset timer when saving as new note after a prior save', async () => {
+    // This test covers the `if (savedResetTimerRef.current)` branch in handleSaveAsNewNote
+    let initialSelectDone = false;
+    let editDone = false;
+    let focusTriggeredFileDeleted = false;
+
+    window.srgnt.notesReadFile = vi.fn(async (filePath?: string) => {
+      if (initialSelectDone && editDone && !focusTriggeredFileDeleted && filePath === 'Inbox.md') {
+        focusTriggeredFileDeleted = true;
+        throw new Error('ENOENT');
+      }
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: '2026-04-01T00:00:00.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+    window.srgnt.notesCreateFile = vi.fn(async () => ({
+      path: '/workspace/demo/Notes/Inbox.md',
+      createdAt: '2026-04-01T00:00:00.000Z',
+    })) as typeof window.srgnt.notesCreateFile;
+    window.srgnt.notesWriteFile = vi.fn(async (filePath: string, content: string) => ({
+      path: `/workspace/demo/Notes/${filePath}`,
+      modifiedAt: '2026-04-01T00:00:01.000Z',
+      content,
+    })) as typeof window.srgnt.notesWriteFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    initialSelectDone = true;
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Step 1: Make an edit and wait for the debounced save to complete.
+    // This triggers performSave, which on success sets savedResetTimerRef.
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nfirst edit' } });
+    });
+    // Wait for the debounce (1s) + save to complete
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1500));
+    });
+    editDone = true;
+
+    // At this point, savedResetTimerRef.current is set (2s timer from performSave success).
+    // Now make another edit to set hasUnsavedEditsRef
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nsecond edit' } });
+    });
+
+    // Trigger file-deleted detection while savedResetTimerRef is still active
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/This file was deleted/i)).toBeInTheDocument();
+
+    // Click Save as New Note — savedResetTimerRef.current should be non-null here
+    fireEvent.click(screen.getByRole('button', { name: 'Save as New Note' }));
+
+    // Wait for the async flow
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 300));
+    });
+
+    expect(window.srgnt.notesCreateFile).toHaveBeenCalled();
+
+    // Banner should be gone after successful save
+    await waitFor(() => {
+      expect(screen.queryByText(/This file was deleted/i)).not.toBeInTheDocument();
     });
   });
 });

@@ -920,13 +920,12 @@
     color: var(--color-srgnt-300);
   }
 
-  /* Wiki links are not yet functional — neutralize interactive styling */
   .markdown-editor-wrapper .cm-wikilink-widget,
   .markdown-editor-wrapper .cm-wikilink {
-    color: inherit;
-    text-decoration: none;
-    cursor: text;
-    pointer-events: none;
+    color: var(--color-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
   }
 
   .markdown-editor-wrapper .cm-code {

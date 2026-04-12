@@ -5,13 +5,14 @@ contract_version: 1
 title: Add semantic search contracts, configuration, and domain errors
 step_id: STEP-15-01
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
-status: planned
-owner: ''
+status: in-progress
+owner: executor-1
 created: '2026-04-02'
-updated: '2026-04-02'
+updated: '2026-04-12'
 depends_on: []
 related_sessions:
   - '[[05_Sessions/2026-04-02-090000-plan-local-semantic-search-subsystem-opencode|SESSION-2026-04-02-090000 OpenCode session for Plan local semantic search subsystem]]'
+  - '[[05_Sessions/2026-04-12-021506-add-semantic-search-contracts-configuration-and-domain-errors-executor-1|SESSION-2026-04-12-021506 executor-1 session for Add semantic search contracts, configuration, and domain errors]]'
 related_bugs:
   - '[[03_Bugs/BUG-0001_research-query-engine-memory-scaling-for-thousands-of-documents|BUG-0001 Query engine memory scaling for thousands of documents]]'
 tags:
@@ -79,6 +80,7 @@ tags:
 
 <!-- AGENT-START:step-session-history -->
 - 2026-04-02 - [[05_Sessions/2026-04-02-090000-plan-local-semantic-search-subsystem-opencode|SESSION-2026-04-02-090000 OpenCode session for Plan local semantic search subsystem]] - Step created during initiative planning.
+- 2026-04-12 - [[05_Sessions/2026-04-12-021506-add-semantic-search-contracts-configuration-and-domain-errors-executor-1|SESSION-2026-04-12-021506 executor-1 session for Add semantic search contracts, configuration, and domain errors]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary

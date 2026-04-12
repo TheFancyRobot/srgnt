@@ -1,5 +1,5 @@
 import React from 'react';
-import { EditorState, type Range } from '@codemirror/state';
+import { EditorState, type Range, type Extension } from '@codemirror/state';
 import {
   defaultKeymap,
   history,
@@ -200,8 +200,10 @@ const blockFormattingRevealPlugin = ViewPlugin.fromClass(
     constructor(view: EditorView) {
       this.decorations = this.build(view);
     }
-    update(update: { docChanged: boolean; viewportChanged: boolean; selectionSet: boolean; view: EditorView }) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
+    update(update: { docChanged: boolean; viewportChanged: boolean; selectionSet?: boolean; view: EditorView }) {
+      // Only rebuild on doc change or viewport change - NOT on selectionSet
+      // (selectionSet triggers on every arrow key, causing excessive rebuilds)
+      if (update.docChanged || update.viewportChanged) {
         this.decorations = this.build(update.view);
       }
     }
@@ -334,8 +336,9 @@ const autolinkPlugin = ViewPlugin.fromClass(
     constructor(view: EditorView) {
       this.decorations = this.build(view);
     }
-    update(update: { docChanged: boolean; viewportChanged: boolean; selectionSet: boolean; view: EditorView }) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
+    update(update: { docChanged: boolean; viewportChanged: boolean; selectionSet?: boolean; view: EditorView }) {
+      // Only rebuild on doc change or viewport change - NOT on selectionSet
+      if (update.docChanged || update.viewportChanged) {
         this.decorations = this.build(update.view);
       }
     }
@@ -346,6 +349,10 @@ const autolinkPlugin = ViewPlugin.fromClass(
       syntaxTree(view.state).iterate({
         enter: (node) => {
           if (node.name !== 'URL' && node.name !== 'Autolink') return;
+
+          // Validate positions - skip if invalid ranges (from >= to or positions out of bounds)
+          const docLength = view.state.doc.length;
+          if (node.from >= node.to || node.from < 0 || node.to > docLength) return;
 
           const href = view.state.doc.sliceString(node.from, node.to);
           if (!/^(https?:\/\/|mailto:)/i.test(href)) return;
@@ -456,6 +463,107 @@ const horizontalRulePlugin = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
+/** Generate a slug from heading text for use as an ID attribute. */
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove non-word chars except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+}
+
+/** Add IDs to heading lines so they can be linked to via fragment links. */
+const headingIdPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          // Match ATXHeading1, ATXHeading2, etc.
+          if (!node.name.startsWith('ATXHeading')) return;
+
+          const line = view.state.doc.lineAt(node.from);
+          if (seen.has(line.number)) return;
+          seen.add(line.number);
+
+          // Extract heading text (without the # marks)
+          const headingText = line.text.replace(/^#+\s+/, '').trim();
+          if (!headingText) return;
+
+          const slug = slugifyHeading(headingText);
+          decs.push(
+            Decoration.line({
+              attributes: { id: slug },
+            }).range(line.from),
+          );
+        },
+      });
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/**
+ * Extension that intercepts clicks on links and handles navigation.
+ * Uses domEventHandlers which is the proper CodeMirror way to handle events.
+ */
+function createLinkClickExtension(
+  onExternalLink: (url: string) => void,
+  onFragmentLink: (fragment: string) => void,
+): Extension {
+  return ViewPlugin.fromClass(
+    class {
+      constructor(_view: EditorView) {
+        // No-op
+      }
+    },
+    {
+      eventHandlers: {
+        click: (event, _view) => {
+          const target = event.target as HTMLElement;
+          const anchor = target.closest('a');
+          
+          if (!anchor) return false;
+          
+          const href = anchor.getAttribute('href');
+          if (!href) return false;
+          
+          if (href.startsWith('#')) {
+            event.preventDefault();
+            event.stopPropagation();
+            onFragmentLink(href.slice(1));
+            return true;
+          }
+          
+          if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+            event.preventDefault();
+            event.stopPropagation();
+            onExternalLink(href);
+            return true;
+          }
+          
+          return false;
+        },
+      },
+    },
+  );
+}
+
 // Arrow key navigation is handled by CodeMirror's defaultKeymap (cursorLineUp/cursorLineDown).
 
 const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
@@ -489,6 +597,21 @@ export function MarkdownEditor({
       onWikilinkClick(wikilink);
     }
   }, [onWikilinkClick]);
+
+  // External link handler for markdown links
+  const handleExternalLinkClick = React.useCallback((url: string) => {
+    window.srgnt.openExternal(url).catch(() => {
+      /* silently handle rejected open-external calls */
+    });
+  }, []);
+
+  // Fragment link handler for in-document navigation
+  const handleFragmentLinkClick = React.useCallback((fragment: string) => {
+    const targetElement = document.querySelector(`[id="${fragment}"]`);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   // Wikilink suggestions fetcher
   const fetchWikilinkSuggestions = React.useCallback(async (query: string) => {
@@ -554,12 +677,15 @@ export function MarkdownEditor({
           codeBlockLinePlugin,
           blockFormattingRevealPlugin,
           horizontalRulePlugin,
+          headingIdPlugin,
           checkboxLinePlugin,
           imageField(),
           calloutLinePlugin,
           tableEditorPlugin(),
           linkPlugin({ openInNewTab: false }),
           autolinkPlugin,
+          // Handle markdown link clicks (external URLs and fragment links)
+          createLinkClickExtension(handleExternalLinkClick, handleFragmentLinkClick),
           // Wikilink extension (decoration, click handling, autocomplete)
           // Pass slash command source to merge with wikilink autocomplete to avoid override conflict
           ...createWikilinkExtension(handleWikilinkClick, fetchWikilinkSuggestions, [slashCommandSource]),
@@ -582,23 +708,11 @@ export function MarkdownEditor({
       });
     };
 
-    const handleEditorClick = (event: MouseEvent) => {
+    // Handler for checkbox clicks
+    const handleCheckboxClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
 
-      const anchor = target.closest('a');
-      if (anchor) {
-        const href = anchor.getAttribute('href');
-        if (!href) return;
-        if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
-          event.preventDefault();
-          event.stopPropagation();
-          window.srgnt.openExternal(href).catch(() => {
-            /* silently handle rejected open-external calls */
-          });
-        }
-        return;
-      }
-
+      // Check for checkbox clicks
       const checkboxLine = target.closest(
         '.cm-checkbox-unchecked-line, .cm-checkbox-checked-line',
       ) as HTMLElement | null;
@@ -633,12 +747,12 @@ export function MarkdownEditor({
 
     editorRef.current = view;
     view.contentDOM.addEventListener('mousedown', handleMouseDown);
-    mount.addEventListener('click', handleEditorClick);
+    mount.addEventListener('click', handleCheckboxClick);
     document.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       view.contentDOM.removeEventListener('mousedown', handleMouseDown);
-      mount.removeEventListener('click', handleEditorClick);
+      mount.removeEventListener('click', handleCheckboxClick);
       document.removeEventListener('mouseup', handleMouseUp);
       if (editorRef.current === view) {
         editorRef.current = null;

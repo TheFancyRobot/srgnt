@@ -354,5 +354,70 @@ describe('TerminalPanel', () => {
         expect(TerminalIpc.resolveLaunchApproval).toHaveBeenCalledWith('approval-1', true);
       });
     });
+
+    it('shows Launch Denied when approval is denied', async () => {
+      let approvalRequiredHandler:
+        | ((payload: { approvalId: string; launchContext: LaunchContext; command: string; riskLevel: string }) => void)
+        | undefined;
+      let rejectLaunch: (() => void) | undefined;
+
+      const launchContext: LaunchContext = {
+        launchId: 'launch-deny-1',
+        sourceWorkflow: 'daily-briefing',
+        sourceArtifactId: 'SRGNT-200',
+        workingDirectory: '/workspace/demo',
+        intent: 'artifactAffecting',
+        createdAt: new Date().toISOString(),
+        labels: ['SRGNT-200'],
+      };
+
+      const { runUnsafe } = await import('../effects/terminal-ipc.js');
+
+      (runUnsafe as ReturnType<typeof vi.fn>).mockImplementation(async (effect: unknown) => {
+        const tag = (effect as { _tag?: string })?._tag;
+        if (tag === 'launch') {
+          approvalRequiredHandler?.({
+            approvalId: 'approval-deny-1',
+            launchContext,
+            command: 'bash',
+            riskLevel: 'high',
+          });
+          return new Promise((resolve) => {
+            rejectLaunch = () => {
+              resolve({
+                sessionId: 'session-deny-1',
+                pid: 300,
+                launchId: 'launch-deny-1',
+                status: 'denied',
+              });
+            };
+          });
+        }
+        return { sessionId: 'session-default', pid: 100 };
+      });
+
+      setupSrgntMocks({
+        onLaunchApprovalRequired: vi.fn((callback) => {
+          approvalRequiredHandler = callback;
+          return () => {
+            approvalRequiredHandler = undefined;
+          };
+        }),
+        resolveLaunchApproval: vi.fn().mockImplementation(async () => {
+          rejectLaunch?.();
+        }),
+      });
+
+      render(<TerminalPanel launchContext={launchContext} />);
+      expect(await screen.findByText('Approval Required')).toBeInTheDocument();
+
+      // Deny the launch
+      const denyBtn = screen.getByRole('button', { name: 'Deny' });
+      fireEvent.click(denyBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText('Launch Denied')).toBeInTheDocument();
+      });
+    });
   });
 });

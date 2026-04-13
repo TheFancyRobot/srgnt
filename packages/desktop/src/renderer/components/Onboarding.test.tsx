@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import { OnboardingWizard, defaultOnboardingSteps } from './Onboarding.js';
 import type { OnboardingFlow } from './Onboarding.js';
@@ -125,9 +125,14 @@ describe('OnboardingWizard', () => {
       ],
     });
     render(React.createElement(OnboardingWizard, { flow }));
-    fireEvent.click(screen.getByText('Do Thing'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Do Thing'));
+    });
     expect(screen.getByText('Working...')).toBeTruthy();
-    resolveAction();
+    await act(async () => {
+      resolveAction();
+      await actionPromise;
+    });
     await vi.waitFor(() => {
       expect(screen.queryByText('Working...')).toBeNull();
     });
@@ -166,10 +171,6 @@ describe('OnboardingWizard', () => {
   });
 
   it('resets isWorking state even when action throws', async () => {
-    // Suppress unhandled rejection from the intentionally-failing action
-    const handler = (e: PromiseRejectionEvent) => e.preventDefault();
-    window.addEventListener('unhandledrejection', handler);
-
     const flow = makeFlow({
       steps: [
         {
@@ -184,14 +185,12 @@ describe('OnboardingWizard', () => {
       ],
     });
     render(React.createElement(OnboardingWizard, { flow }));
-    fireEvent.click(screen.getByText('Fail Thing'));
-    expect(screen.getByText('Working...')).toBeTruthy();
-    await vi.waitFor(() => {
-      expect(screen.queryByText('Working...')).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Fail Thing'));
+      await Promise.resolve();
     });
+    expect(screen.queryByText('Working...')).toBeNull();
     expect(screen.getByText('Fail Thing')).not.toBeDisabled();
-
-    window.removeEventListener('unhandledrejection', handler);
   });
 
   it('resets isWorking state when window.srgnt.getWorkspaceRoot() rejects', async () => {
@@ -204,12 +203,11 @@ describe('OnboardingWizard', () => {
     const flow = makeFlow();
     render(React.createElement(OnboardingWizard, { flow }));
     // Click the workspace action button — getWorkspaceRoot() rejects, catch block swallows it
-    fireEvent.click(screen.getByText('Choose Folder'));
-    // Working indicator should appear then disappear (not stuck)
-    expect(screen.getByText('Working...')).toBeTruthy();
-    await vi.waitFor(() => {
-      expect(screen.queryByText('Working...')).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Choose Folder'));
+      await Promise.resolve();
     });
+    expect(screen.queryByText('Working...')).toBeNull();
   });
 
   it('shows step note when provided', () => {

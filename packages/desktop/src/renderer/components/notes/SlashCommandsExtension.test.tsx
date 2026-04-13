@@ -2,7 +2,7 @@ import { CompletionContext } from '@codemirror/autocomplete';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
-import { slashCommandSource } from './SlashCommandsExtension.js';
+import { slashCommandSource, slashCommandsStyles } from './SlashCommandsExtension.js';
 
 describe('slashCommandSource', () => {
   it('triggers after indentation even when letters are typed after the slash', async () => {
@@ -24,6 +24,32 @@ describe('slashCommandSource', () => {
 
     const result = await slashCommandSource(context);
 
+    expect(result).toBeNull();
+  });
+
+  it('returns completions with validFor regex and info callback', async () => {
+    const state = EditorState.create({ doc: '/code' });
+    const context = new CompletionContext(state, state.doc.length, false);
+    const result = await slashCommandSource(context);
+
+    expect(result).not.toBeNull();
+    expect(result!.validFor).toEqual(/^\/[a-z]*$/);
+
+    // Test the info callback on a completion
+    const codeOption = result!.options.find((o) => o.label === '/code');
+    expect(codeOption).toBeDefined();
+    expect(typeof codeOption!.info).toBe('function');
+
+    const infoEl = codeOption!.info!(codeOption!);
+    expect(infoEl).toBeInstanceOf(HTMLElement);
+    expect(infoEl.className).toBe('cm-completion-info');
+    expect(infoEl.textContent).toBe('Inserts: Code block');
+  });
+
+  it('returns null when no commands match the filter', async () => {
+    const state = EditorState.create({ doc: '/zzzzz' });
+    const context = new CompletionContext(state, state.doc.length, false);
+    const result = await slashCommandSource(context);
     expect(result).toBeNull();
   });
 
@@ -54,5 +80,14 @@ describe('slashCommandSource', () => {
       view.destroy();
       parent.remove();
     }
+  });
+});
+
+describe('slashCommandsStyles', () => {
+  it('exports a CodeMirror theme extension', () => {
+    expect(slashCommandsStyles).toBeDefined();
+    // EditorView.baseTheme returns an Extension (non-null object)
+    expect(typeof slashCommandsStyles).toBe('object');
+    expect(slashCommandsStyles).not.toBeNull();
   });
 });

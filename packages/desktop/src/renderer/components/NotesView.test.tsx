@@ -283,12 +283,15 @@ describe('NotesView', () => {
     });
   });
 
-  it('shows empty state when no note is selected', () => {
-    render(
-      <NotesProvider>
-        <NotesView />
-      </NotesProvider>,
-    );
+  it('shows empty state when no note is selected', async () => {
+    await act(async () => {
+      render(
+        <NotesProvider>
+          <NotesView />
+        </NotesProvider>,
+      );
+      await Promise.resolve();
+    });
     expect(screen.getByText(/Select a note from the Explorer panel/)).toBeInTheDocument();
   });
 

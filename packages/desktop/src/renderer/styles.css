@@ -1002,13 +1002,15 @@
   }
 
   .markdown-editor-wrapper .cm-formatting-block {
-    display: inline;
+    display: inline-block;
+    width: 0;
+    max-width: 0;
     overflow: hidden;
     white-space: nowrap;
     font-size: 0.01em;
     line-height: inherit;
     opacity: 0;
-    transition: font-size 0.2s ease-out, opacity 0.2s ease-out;
+    transition: font-size 0.2s ease-out, opacity 0.2s ease-out, width 0s, max-width 0s;
   }
 
   .markdown-editor-wrapper .cm-formatting-block-visible,
@@ -1017,6 +1019,9 @@
   }
 
   .markdown-editor-wrapper .cm-formatting-block-visible {
+    display: inline;
+    width: auto;
+    max-width: none;
     font-size: 1em;
     opacity: 0.6;
   }
@@ -1032,6 +1037,9 @@
 
   .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-block,
   .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-block-visible {
+    display: inline-block;
+    width: 0;
+    max-width: 0;
     font-size: 0.01em;
     opacity: 0;
     transition: none;

@@ -573,6 +573,35 @@ describe('MarkdownEditor', () => {
     expect(document.querySelector('[id="special-characters"]')).not.toBeNull();
   });
 
+  it('applies cm-heading-line class to ATX headings for vertical whitespace', async () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'Paragraph text\n\n# Heading 1\n\nMore text\n\n## Heading 2'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />, 
+    );
+
+    // Wait for editor to render and markdownStylePlugin to apply decorations
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    // The markdownStylePlugin from codemirror-live-markdown adds .cm-heading-line
+    // to ATX heading lines, enabling CSS-based vertical whitespace separation.
+    const headingLines = document.querySelectorAll('.cm-heading-line');
+    expect(headingLines.length).toBeGreaterThan(0);
+
+    // Verify both heading levels are present
+    const h1Lines = document.querySelectorAll('.cm-header-1');
+    const h2Lines = document.querySelectorAll('.cm-header-2');
+    expect(h1Lines.length).toBeGreaterThan(0);
+    expect(h2Lines.length).toBeGreaterThan(0);
+  });
+
   it('ArrowUp from line 3 lands on line 2 with a stable same-column fixture', async () => {
     // Manual repro for the original bug:
     // 1. Open a multi-line markdown note.

@@ -893,12 +893,45 @@
     font-style: normal;
   }
 
-  .markdown-editor-wrapper .cm-header-1,
-  .markdown-editor-wrapper .cm-header-2,
-  .markdown-editor-wrapper .cm-header-3,
+  /* ── Heading vertical whitespace ── */
+
+  .markdown-editor-wrapper .cm-heading-line {
+    padding-top: 0.75rem;
+    padding-bottom: 0.25rem;
+  }
+
+  /* ── Heading visual hierarchy ── */
+
+  .markdown-editor-wrapper .cm-header-1 {
+    font-size: 1.75em;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--color-text-primary);
+  }
+
+  .markdown-editor-wrapper .cm-header-2 {
+    font-size: 1.375em;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text-primary);
+  }
+
+  .markdown-editor-wrapper .cm-header-3 {
+    font-size: 1.125em;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+  }
+
   .markdown-editor-wrapper .cm-header-4,
   .markdown-editor-wrapper .cm-header-5,
-  .markdown-editor-wrapper .cm-header-6,
+  .markdown-editor-wrapper .cm-header-6 {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  /* ── Inline formatting ── */
+
   .markdown-editor-wrapper .cm-strong,
   .markdown-editor-wrapper .cm-emphasis,
   .markdown-editor-wrapper .cm-strikethrough,
@@ -971,6 +1004,7 @@
   .markdown-editor-wrapper .cm-formatting-block {
     display: inline;
     overflow: hidden;
+    white-space: nowrap;
     font-size: 0.01em;
     line-height: inherit;
     opacity: 0;

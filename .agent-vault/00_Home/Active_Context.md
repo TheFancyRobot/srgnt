@@ -11,12 +11,14 @@ tags:
   - home
   - context
 last_updated: '2026-04-12'
-tests: 610/610 passing
-coverage: 93.42%
-target: 95%+ coverage
+tests: 641/641 passing, 0 failures
+coverage: 95.11% (statements + lines)
+target: 95%+ coverage — ACHIEVED
 blockers: none
-in_flight: 'researcher: notes.ts IPC handler coverage; executor-1: TerminalPanel + SidePanel + Onboarding + Titlebar coverage gaps'
-phase: Phase_08_product_hardening (coverage push)
+in_flight: none
+phase: Phase_08_product_hardening (coverage push COMPLETE)
+done: Titlebar 100%, pty-service 99.36%, crash.ts 96.41%, ConnectorStatus ~97%, SlashCommands 95.09%, notes.ts IPC ~95%, NotesView 93.15%, TerminalPanel 92.45%, Onboarding 96.08%, TodaySidePanel 100% (isolation)
+remaining: notes.ts 87.06%, SlashCommandsExtension.ts 91.69%, NotesView.tsx 93.15%, SidePanel.tsx 92.75%
 ---
 
 # Active Context

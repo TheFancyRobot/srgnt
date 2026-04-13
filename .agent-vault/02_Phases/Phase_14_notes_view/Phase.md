@@ -7,7 +7,7 @@ phase_id: PHASE-14
 status: complete
 owner: ''
 created: '2026-03-30'
-updated: '2026-04-09'
+updated: '2026-04-13'
 depends_on:
   - '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|PHASE-13 UI Layout Restructuring]]'
 related_architecture:
@@ -26,6 +26,7 @@ related_bugs:
   - '[[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]'
   - '[[03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues|BUG-0010 Slash commands trigger logic and indentation preservation issues]]'
   - '[[03_Bugs/BUG-0012_markdown-editor-shipped-commonmark-only-parsing-so-gfm-task-lists-tables-strikethrough-and-bare-autolinks-did-not-render|BUG-0012 Markdown editor shipped CommonMark-only parsing so GFM task lists, tables, strikethrough, and bare autolinks did not render]]'
+  - '[[03_Bugs/BUG-0015_desktop-dev-startup-is-blocked-by-typescript-errors-in-main-process-test-files|BUG-0015 Desktop dev startup is blocked by TypeScript errors in main-process test files]]'
 tags:
   - agent-vault
   - phase
@@ -119,6 +120,7 @@ Build the Notes view: a workspace-backed file/folder browser and markdown note e
 - [[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]
 - [[03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues|BUG-0010 Slash commands trigger logic and indentation preservation issues]]
 - [[03_Bugs/BUG-0012_markdown-editor-shipped-commonmark-only-parsing-so-gfm-task-lists-tables-strikethrough-and-bare-autolinks-did-not-render|BUG-0012 Markdown editor shipped CommonMark-only parsing so GFM task lists, tables, strikethrough, and bare autolinks did not render]]
+- [[03_Bugs/BUG-0015_desktop-dev-startup-is-blocked-by-typescript-errors-in-main-process-test-files|BUG-0015 Desktop dev startup is blocked by TypeScript errors in main-process test files]]
 <!-- AGENT-END:phase-related-bugs -->
 
 ## Steps
@@ -135,6 +137,7 @@ Build the Notes view: a workspace-backed file/folder browser and markdown note e
 - [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_08_wire-up-auto-save-error-handling-and-final-integration|STEP-14-08 Harden autosave, conflict recovery, and end-to-end Notes integration]] -- pending
 - [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]]
 - [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_10_autosave-hardening-conflict-recovery-e2e|STEP-14-10 Autosave Hardening + Conflict Recovery + E2E]]
+- [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]]
 <!-- AGENT-END:phase-steps -->
 
 ## Parallel Work Map

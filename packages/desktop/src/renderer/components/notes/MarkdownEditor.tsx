@@ -16,7 +16,6 @@ import {
   editorTheme,
   imageField,
   linkPlugin,
-  livePreviewPlugin,
   markdownStylePlugin,
   mouseSelectingField,
   setMouseSelecting,
@@ -24,6 +23,13 @@ import {
   tableEditorPlugin,
 
 } from 'codemirror-live-markdown';
+import { debouncedLivePreviewPlugin } from './debouncedLivePreview.js';
+import { installCoordsAtPosGuard } from './coordsAtPosGuard.js';
+
+// BUG-0014: Guard against InlineCoordsScan.scan infinite recursion in @codemirror/view.
+// Must be installed before any EditorView is created.
+installCoordsAtPosGuard();
+
 import { parseFrontmatter, serializeWithFrontmatter } from './markdown-serializer.js';
 import { createWikilinkExtension, wikilinkStyles } from './WikilinkExtension.js';
 import { slashCommandSource, slashCommandsStyles } from './SlashCommandsExtension.js';
@@ -670,7 +676,7 @@ export function MarkdownEditor({
           }),
           collapseOnSelectionFacet.of(true),
           mouseSelectingField,
-          livePreviewPlugin,
+          debouncedLivePreviewPlugin,
           markdownStylePlugin,
           listLinePlugin,
           blockquoteLinePlugin,

@@ -1,0 +1,64 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 0f6cc242d7f52a66069c8b68c7ff35774a7146db..72d5ccc31cc86cc8f1d1d273f94ed7a64d95cc02 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -3836,6 +3836,12 @@ class InlineCoordsScan {
+     // these will be character clusters, for a composite tile, these
+     // will be child tiles.
+     scan(positions, getRects) {
++        // Depth guard to prevent infinite recursion on pathological layouts
++        this._scanDepth = (this._scanDepth || 0) + 1;
++        if (this._scanDepth > 100) {
++            this._scanDepth = 0;
++            return { i: 0, after: false };
++        }
+         let lo = 0, hi = positions.length - 1, seen = new Set();
+         let bidi = this.bidiIn(positions[0], positions[hi]);
+         let above, below;
+@@ -3923,11 +3929,13 @@ class InlineCoordsScan {
+             }
+         }
+         let ltr = (bidi ? this.dirAt(positions[closestI], 1) : this.baseDir) == exports.Direction.LTR;
+-        return {
++        let result = {
+             i: closestI,
+             // Test whether x is closes to the start or end of this element
+             after: (this.x > (closestRect.left + closestRect.right) / 2) == ltr
+         };
++        this._scanDepth = 0;
++        return result;
+     }
+     scanText(tile, offset) {
+         let positions = [];
+diff --git a/dist/index.js b/dist/index.js
+index 05b89f2c14367934b8c0cd9b572502471e089590..4f840a138a52bac07ef33a53f242286c7eec2dfb 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -3832,6 +3832,12 @@ class InlineCoordsScan {
+     // these will be character clusters, for a composite tile, these
+     // will be child tiles.
+     scan(positions, getRects) {
++        // Depth guard to prevent infinite recursion on pathological layouts
++        this._scanDepth = (this._scanDepth || 0) + 1;
++        if (this._scanDepth > 100) {
++            this._scanDepth = 0;
++            return { i: 0, after: false };
++        }
+         let lo = 0, hi = positions.length - 1, seen = new Set();
+         let bidi = this.bidiIn(positions[0], positions[hi]);
+         let above, below;
+@@ -3919,11 +3925,13 @@ class InlineCoordsScan {
+             }
+         }
+         let ltr = (bidi ? this.dirAt(positions[closestI], 1) : this.baseDir) == Direction.LTR;
+-        return {
++        let result = {
+             i: closestI,
+             // Test whether x is closes to the start or end of this element
+             after: (this.x > (closestRect.left + closestRect.right) / 2) == ltr
+         };
++        this._scanDepth = 0;
++        return result;
+     }
+     scanText(tile, offset) {
+         let positions = [];

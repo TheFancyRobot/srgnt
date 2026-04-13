@@ -28,6 +28,9 @@
       "esbuild@0.21.5": "0.25.0",
       "picomatch@2.3.1": "2.3.2",
       "picomatch@4.0.3": "4.0.4"
+    },
+    "patchedDependencies": {
+      "@codemirror/view@6.41.0": "patches/@codemirror__view@6.41.0.patch"
     }
   }
 }

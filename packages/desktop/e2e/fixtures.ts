@@ -49,6 +49,23 @@ export const test = base.extend<E2EFixtures>({
 
 export { expect };
 
+/**
+ * Disable CSS animations and transitions for deterministic screenshots.
+ * Injects a style rule that forces animation-duration and transition-duration to 0.
+ */
+export async function disableAnimations(window: Page): Promise<void> {
+  await window.addStyleTag({
+    content: `
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    `,
+  });
+}
+
 export async function waitForDesktopReady(window: Page): Promise<void> {
   await window.waitForLoadState('domcontentloaded');
   await expect(window.locator('body')).toBeVisible();

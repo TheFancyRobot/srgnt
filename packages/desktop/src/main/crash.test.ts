@@ -76,7 +76,7 @@ describe('crash helpers', () => {
 
 describe('ElectronCrashReporter', () => {
   it('does not write crash report when opted out', async () => {
-    const reporter = createCrashReporter();
+    const reporter = createCrashReporter() as import('./crash.js').ElectronCrashReporter;
     reporter.setOptOut(true);
 
     const report = await reporter.writeCrashReport('diagnostic', new Error('test error'));
@@ -156,7 +156,7 @@ describe('RedactionAwareTelemetry', () => {
     telemetry.trackEvent('api_call', { config: { session_id: 'abc123tokenxyz' } });
     const events = telemetry.getEvents();
     expect(events).toHaveLength(1);
-    expect(events[0].properties.config.session_id).toBe('[REDACTED]');
+    expect((events[0].properties.config as Record<string, unknown>).session_id).toBe('[REDACTED]');
   });
 
   it('clears events', () => {

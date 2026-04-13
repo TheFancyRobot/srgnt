@@ -56,7 +56,7 @@ describe('registerNotesHandlers', () => {
   it('calls handle 10 times with correct channel strings', () => {
     registerNotesHandlers('/test-workspace');
     expect(mockHandle).toHaveBeenCalledTimes(10);
-    const handledChannels = mockHandle.mock.calls.map((call: [string]) => call[0]);
+    const handledChannels = mockHandle.mock.calls.map((call) => call[0] as string);
     for (const channel of notesChannelNames) {
       expect(handledChannels).toContain(channel);
     }

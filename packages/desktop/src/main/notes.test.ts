@@ -2,14 +2,12 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ipcChannels } from '@srgnt/contracts';
-
 // Mock electron IPC — hoisted by vitest before imports are evaluated
-const { ipcMain } = vi.hoisted(() => ({
-  handle: vi.fn(),
-  removeHandler: vi.fn(),
+const { mockHandle, mockRemoveHandler } = vi.hoisted(() => ({
+  mockHandle: vi.fn(),
+  mockRemoveHandler: vi.fn(),
 }));
-vi.mock('electron', () => ({ ipcMain }));
+vi.mock('electron', () => ({ ipcMain: { handle: mockHandle, removeHandler: mockRemoveHandler } }));
 
 import {
   getNotesDir,
@@ -25,7 +23,6 @@ import {
   searchNotes,
   listWorkspaceMarkdown,
   resolveWikilink,
-  registerNotesHandlers,
 } from './notes.js';
 
 const tempPaths: string[] = [];

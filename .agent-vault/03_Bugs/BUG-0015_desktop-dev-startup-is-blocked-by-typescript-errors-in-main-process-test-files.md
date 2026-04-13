@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: Desktop dev startup is blocked by TypeScript errors in main-process test files
 bug_id: BUG-0015
-status: new
+status: closed
 severity: sev-3
 category: logic
 reported_on: '2026-04-13'
-fixed_on: ''
+fixed_on: '2026-04-13'
 owner: ''
 created: '2026-04-13'
 updated: '2026-04-13'
@@ -85,6 +85,33 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - Not fully confirmed yet.
 - Current evidence points to stale test typings and mock definitions, not application runtime code, based on the concrete compiler errors captured from `pnpm dev` / `tsc -p tsconfig.main.json`.
 - The bug should remain in investigation until each failing file is reconciled against the current exported types and test-build policy.
+**Root cause (confirmed)**: Two separate issues compounded:
+
+1. **tsconfig.main.json included test files in the build path**. The `include` glob `src/main/**/*` matched `*.test.ts` files, which use vitest APIs not available in the production build. Test files should never be type-checked by the production tsconfig.
+
+2. **Stale/inconsistent test typings across 4 files** from recent rapid development. The source code contracts (e.g. `PtyProcessOptions` schema defaults, `CrashReporter` interface vs concrete class, mock shapes) had drifted from what the tests assumed.
+
+**Fixes applied**:
+
+- **tsconfig.main.json**: Added `src/**/*.test.ts` and `src/**/*.spec.ts` to `exclude` array so `build:main` never type-checks test files.
+
+- **crash.test.ts** (2 errors fixed):
+  - Line 85: Cast `createCrashReporter()` to `ElectronCrashReporter` to access the concrete class's `isOptedOut` getter (not on the `CrashReporter` interface).
+  - Line 159: Cast nested `properties.config` to `Record<string, unknown>` before accessing `session_id` (avoids `unknown` index error).
+
+- **notes-ipc.test.ts** (1 error fixed):
+  - Line 59: Changed `(call: [string]) => call[0]` to `(call) => call[0] as string` to match the actual 2-element tuple type of `mockHandle.mock.calls`.
+
+- **notes.test.ts** (3 errors fixed):
+  - Removed unused `ipcChannels` import.
+  - Removed unused `registerNotesHandlers` import.
+  - Fixed `vi.hoisted()` mock shape: returned `{ mockHandle, mockRemoveHandler }` and used them in a separate `vi.mock('electron', ...)` call, matching the working pattern from `notes-ipc.test.ts`.
+
+- **node-pty-service.test.ts** (13 errors fixed):
+  - Fixed import: `PtyProcess` imported from `./contracts.js` instead of `./session-manager.js` (not exported from there).
+  - Added required `args: []` and `env: {}` fields to all 10 `service.spawn()` calls (the `PtyProcessOptions` schema makes these required in the output type).
+
+**Verification**: `npx tsc -p tsconfig.main.json --noEmit` passes with 0 errors. All 647 tests pass across 40 test files.
 
 ## Workaround
 
@@ -123,3 +150,5 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 <!-- AGENT-START:bug-timeline -->
 - 2026-04-13 - Reported.
 <!-- AGENT-END:bug-timeline -->
+- 2026-04-13 - Reported.
+- 2026-04-13 - Fixed: excluded test files from tsconfig.main.json, fixed all 19 TS errors across 4 test files. Verified tsc passes and all 647 tests green.

@@ -2,7 +2,8 @@
  * @vitest-environment node
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { PtySession, PtyProcess } from './session-manager.js';
+import type { PtySession } from './session-manager.js';
+import type { PtyProcess } from './contracts.js';
 
 const mockWrite = vi.fn();
 const mockResize = vi.fn();
@@ -68,7 +69,7 @@ describe('createPtyService', () => {
     process.env.SECRET_THING = 'should-be-filtered';
 
     const { service } = createService();
-    const result = await service.spawn({ rows: 24, cols: 80 });
+    const result = await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
 
     expect(nodePtySpawn).toHaveBeenCalledWith(
       '/bin/bash',
@@ -91,7 +92,7 @@ describe('createPtyService', () => {
     process.env.SHELL = '/bin/zsh';
 
     const { service } = createService();
-    await service.spawn({ rows: 24, cols: 80 });
+    await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
 
     expect(nodePtySpawn).toHaveBeenCalledWith('/bin/zsh', ['-l'], expect.any(Object));
   });
@@ -101,7 +102,7 @@ describe('createPtyService', () => {
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
 
     const { service } = createService();
-    await service.spawn({ rows: 24, cols: 80 });
+    await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
 
     expect(nodePtySpawn).toHaveBeenCalledWith('powershell.exe', ['-NoLogo'], expect.any(Object));
   });
@@ -115,6 +116,7 @@ describe('createPtyService', () => {
     await service.spawn({
       rows: 24,
       cols: 80,
+      args: [],
       env: { FOO: 'bar', SECRET_TOKEN: 'abc' },
     });
 
@@ -129,7 +131,7 @@ describe('createPtyService', () => {
     process.env.SHELL = '/bin/bash';
 
     const { service } = createService();
-    const { session } = await service.spawn({ rows: 24, cols: 80 });
+    const { session } = await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
 
     service.write(session.id, 'hello');
 
@@ -149,7 +151,7 @@ describe('createPtyService', () => {
     process.env.SHELL = '/bin/bash';
 
     const { service } = createService();
-    const { session } = await service.spawn({ rows: 24, cols: 80 });
+    const { session } = await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
 
     service.resize(session.id, 40, 120);
 
@@ -169,7 +171,7 @@ describe('createPtyService', () => {
     process.env.SHELL = '/bin/bash';
 
     const { service, sessionManager } = createService();
-    const { session } = await service.spawn({ rows: 24, cols: 80 });
+    const { session } = await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
 
     service.kill(session.id);
 
@@ -184,7 +186,7 @@ describe('createPtyService', () => {
     process.env.SHELL = '/bin/bash';
 
     const { service } = createService();
-    const { session } = await service.spawn({ rows: 24, cols: 80 });
+    const { session } = await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
 
     // Register callbacks
     const dataSpy = vi.fn();
@@ -209,8 +211,8 @@ describe('createPtyService', () => {
     process.env.SHELL = '/bin/bash';
 
     const { service } = createService();
-    await service.spawn({ rows: 24, cols: 80 });
-    await service.spawn({ rows: 24, cols: 80 });
+    await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
+    await service.spawn({ rows: 24, cols: 80, args: [], env: {} });
 
     const sessions = service.list();
     expect(sessions).toHaveLength(2);

@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Arrow key navigation stack overflow - requires verification
 bug_id: BUG-0014
-status: not-a-bug
+status: fixed-verified
 severity: sev-3
 category: logic
 reported_on: '2026-04-12'
@@ -19,6 +19,8 @@ tags:
 date_created: '2026-04-12'
 investigation_status: closed_thorough_investigation_no_code_defect_found
 notes: All tests pass including cursorLineUp/cursorLineDown tests. No infinite loops found in code analysis. Likely a stale build or environment issue. Requires E2E testing in Electron context to verify.
+fix_type: library-patch + runtime-guards
+fix_summary: 'pnpm patch @codemirror/view: InlineCoordsScan.scan _scanDepth counter bails at 100 recursions + coordsAtPosGuard.ts try/catch + debouncedLivePreview.ts skip selection-only rebuilds'
 ---
 
 # BUG-0014 - Arrow key navigation stack overflow - requires verification

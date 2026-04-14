@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Heading whitespace visual issue - requires verification
 bug_id: BUG-0013
-status: closed
+status: fixed-verified
 severity: sev-3
 category: logic
 reported_on: '2026-04-12'
@@ -16,6 +16,8 @@ related_notes: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 Notes View]], [[0
 tags:
   - agent-vault
   - bug
+fix_type: CSS
+fix_summary: 'inline-block + width:0 + max-width:0 on .cm-formatting-block hidden state eliminates invisible # token space'
 ---
 
 # BUG-0013 - Heading whitespace visual issue - requires verification

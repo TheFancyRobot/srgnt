@@ -8,13 +8,15 @@ phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
 status: done
 owner: ''
 created: '2026-03-31'
-updated: '2026-04-03'
+updated: '2026-04-01'
 depends_on:
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_02_create-notes-file-service-with-path-scoped-operations|STEP-14-02]]'
 related_sessions:
   - '[[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]]'
-  - '[[05_Sessions/2026-04-01-210911-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-210911 OpenCode session for Build Notes tree and shared renderer selection state]]'
-  - '[[05_Sessions/2026-04-03-032924-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-03-032924 OpenCode session for Build Notes tree and shared renderer selection state]]'
+  - '[[05_Sessions/2026-04-01-191930-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-191930 OpenCode session for Build Notes tree and shared renderer selection state]]'
+  - '[[05_Sessions/2026-04-01-192158-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-192158 OpenCode session for Build Notes tree and shared renderer selection state]]'
+  - '[[05_Sessions/2026-04-01-192403-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-192403 OpenCode session for Build Notes tree and shared renderer selection state]]'
+  - '[[05_Sessions/2026-04-01-192803-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-192803 OpenCode session for Build Notes tree and shared renderer selection state]]'
 related_bugs:
   - '[[03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail|BUG-0004 Notes tree add-item input has white-on-white text (a11y AAA fail)]]'
 tags:
@@ -149,11 +151,13 @@ This section supersedes the vaguer template text above when they conflict.
 
 <!-- AGENT-START:step-session-history -->
 - 2026-04-01 - [[05_Sessions/2026-04-01-042638-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-042638 OpenCode session for Build Notes tree and shared renderer selection state]] - Session created.
-- 2026-04-01 - [[05_Sessions/2026-04-01-210911-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-210911 OpenCode session for Build Notes tree and shared renderer selection state]] - Session created.
-- 2026-04-03 - [[05_Sessions/2026-04-03-032924-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-03-032924 OpenCode session for Build Notes tree and shared renderer selection state]] - Session created.
+- 2026-04-01 - [[05_Sessions/2026-04-01-191930-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-191930 OpenCode session for Build Notes tree and shared renderer selection state]] - Session created.
+- 2026-04-01 - [[05_Sessions/2026-04-01-192158-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-192158 OpenCode session for Build Notes tree and shared renderer selection state]] - Session created.
+- 2026-04-01 - [[05_Sessions/2026-04-01-192403-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-192403 OpenCode session for Build Notes tree and shared renderer selection state]] - Session created.
+- 2026-04-01 - [[05_Sessions/2026-04-01-192803-build-notes-tree-and-shared-renderer-selection-state-opencode|SESSION-2026-04-01-192803 OpenCode session for Build Notes tree and shared renderer selection state]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- BUG-0004 fixed by updating the inline create/rename field to reuse the shared `.input` form-control contract instead of bespoke partial styling.
-- Validation: `pnpm --filter @srgnt/desktop test -- src/renderer/components/sidepanels/NotesSidePanel.test.tsx` and `pnpm --filter @srgnt/desktop typecheck` passed on 2026-04-01.
+- Record the final result, the validation performed, and any follow-up required.
+- If the step is blocked, say exactly what is blocking it.

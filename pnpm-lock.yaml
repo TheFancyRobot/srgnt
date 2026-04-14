@@ -9,6 +9,11 @@ overrides:
   picomatch@2.3.1: 2.3.2
   picomatch@4.0.3: 4.0.4
 
+patchedDependencies:
+  '@codemirror/view@6.41.0':
+    hash: xe4nfam3smstckqwkwp3wvuhp4
+    path: patches/@codemirror__view@6.41.0.patch
+
 importers:
 
   .:
@@ -118,7 +123,7 @@ importers:
         version: 6.6.0
       '@codemirror/view':
         specifier: ^6.41.0
-        version: 6.41.0
+        version: 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       '@effect/schema':
         specifier: ^0.75.5
         version: 0.75.5(effect@3.21.0)
@@ -133,7 +138,7 @@ importers:
         version: link:../runtime
       codemirror-live-markdown:
         specifier: 0.5.1-alpha.1
-        version: 0.5.1-alpha.1(@codemirror/lang-markdown@6.5.0)(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@lezer/markdown@1.6.3)
+        version: 0.5.1-alpha.1(@codemirror/lang-markdown@6.5.0)(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4))(@lezer/markdown@1.6.3)
       effect:
         specifier: ^3.21.0
         version: 3.21.0
@@ -3419,14 +3424,14 @@ snapshots:
     dependencies:
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       '@lezer/common': 1.5.1
 
   '@codemirror/commands@6.10.3':
     dependencies:
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       '@lezer/common': 1.5.1
 
   '@codemirror/lang-css@6.3.1':
@@ -3444,7 +3449,7 @@ snapshots:
       '@codemirror/lang-javascript': 6.2.5
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       '@lezer/common': 1.5.1
       '@lezer/css': 1.3.3
       '@lezer/html': 1.3.13
@@ -3455,7 +3460,7 @@ snapshots:
       '@codemirror/language': 6.12.3
       '@codemirror/lint': 6.9.5
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       '@lezer/common': 1.5.1
       '@lezer/javascript': 1.5.4
 
@@ -3465,14 +3470,14 @@ snapshots:
       '@codemirror/lang-html': 6.4.11
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       '@lezer/common': 1.5.1
       '@lezer/markdown': 1.6.3
 
   '@codemirror/language@6.12.3':
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       '@lezer/common': 1.5.1
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.8
@@ -3481,20 +3486,20 @@ snapshots:
   '@codemirror/lint@6.9.5':
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       crelt: 1.0.6
 
   '@codemirror/search@6.6.0':
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       crelt: 1.0.6
 
   '@codemirror/state@6.6.0':
     dependencies:
       '@marijn/find-cluster-break': 1.0.2
 
-  '@codemirror/view@6.41.0':
+  '@codemirror/view@6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)':
     dependencies:
       '@codemirror/state': 6.6.0
       crelt: 1.0.6
@@ -4502,12 +4507,12 @@ snapshots:
 
   clone@1.0.4: {}
 
-  codemirror-live-markdown@0.5.1-alpha.1(@codemirror/lang-markdown@6.5.0)(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@lezer/markdown@1.6.3):
+  codemirror-live-markdown@0.5.1-alpha.1(@codemirror/lang-markdown@6.5.0)(@codemirror/language@6.12.3)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4))(@lezer/markdown@1.6.3):
     dependencies:
       '@codemirror/lang-markdown': 6.5.0
       '@codemirror/language': 6.12.3
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.41.0(patch_hash=xe4nfam3smstckqwkwp3wvuhp4)
       '@lezer/markdown': 1.6.3
 
   color-convert@2.0.1:

@@ -11,11 +11,11 @@ Use create_predefined_team to spawn team "srgnt-team" from predefined template "
 ```
 
 The team consists of:
-- **coordinator** (openadapter/GLM-5-Turbo) - task routing, vault awareness, context management
-- **researcher** (minimax/minimax-m2.7) - investigation, codebase exploration, research briefs
-- **executor-1** (openadapter/glm-5.1) - task chunking, sub-agent spawning
+- **coordinator** (minimax/MiniMax-M2.7) - task routing, vault awareness, context management
+- **researcher** (minimax/MiniMax-M2.7) - investigation, codebase exploration, research briefs
+- **executor-1** (minimax/MiniMax-M2.7) - task chunking, sub-agent spawning
 - **reviewer** (openai-codex/gpt-5.4) - code review, gap filling
-- **tester** (minimax/minimax-m2.7) - e2e + unit testing after changes
+- **tester** (minimax/MiniMax-M2.7) - e2e + unit testing after changes
 
 All team members maintain context below 50% utilization. Tester routes issues back to coordinator.
 

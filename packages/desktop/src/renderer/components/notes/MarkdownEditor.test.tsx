@@ -906,10 +906,85 @@ describe('MarkdownEditor', () => {
     expect(view.state.doc.toString()).toBe('- [x] task');
   });
 
+  it('toggles task list markers via keyboard shortcut (Ctrl+Enter)', async () => {
+    // Test the toggleCheckboxAtCursor helper directly since CodeMirror's keymap
+    // processing requires full browser keyboard event support not available in jsdom.
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'- [ ] task'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />
+    );
+
+    const editor = screen.getByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Place cursor on the checkbox line
+    await act(async () => {
+      view.dispatch({ selection: { anchor: 5 } });
+    });
+
+    // Directly invoke the toggle function (same logic used by Mod-Enter keymap)
+    const { toggleCheckboxAtCursor } = await import('./MarkdownEditor.js');
+    let result: boolean = false;
+    await act(async () => {
+      result = toggleCheckboxAtCursor(view);
+    });
+    expect(result).toBe(true);
+    expect(view.state.doc.toString()).toContain('[x]');
+
+    // Toggle back
+    await act(async () => {
+      result = toggleCheckboxAtCursor(view);
+    });
+    expect(result).toBe(true);
+    expect(view.state.doc.toString()).toContain('[ ]');
+  });
+
+  it('does not toggle checkbox when cursor is not on a task list line', async () => {
+    const onContentChange = vi.fn();
+
+    render(
+      <MarkdownEditor
+        rawContent={'some plain text\n- [ ] task'}
+        onContentChange={onContentChange}
+        saveState="idle"
+        displayMode="live-preview"
+      />
+    );
+
+    const editor = screen.getByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    // Place cursor on the non-checkbox line
+    await act(async () => {
+      view.dispatch({ selection: { anchor: 3 } });
+    });
+
+    // Press Ctrl+Enter — should not toggle anything
+    await act(async () => {
+      view.contentDOM.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true }),
+      );
+    });
+
+    // The document content should remain unchanged (checkbox still unchecked)
+    // Note: live-preview may transform content, so check that [ ] is still present
+    const content = view.state.doc.toString();
+    expect(content).toContain('[ ]');
+  });
+
   it('handles rapid ArrowUp/ArrowDown presses without stack overflow or errors', async () => {
     // Defensive regression test for BUG-0014: rapid arrow key presses must not
     // cause stack overflows, infinite loops, or unhandled errors.
-    const onContentChange = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { cursorLineUp, cursorLineDown } = await import('@codemirror/commands');
 

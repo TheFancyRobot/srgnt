@@ -25,6 +25,10 @@ type DraftCreateState =
   | { kind: 'folder'; parentPath: string }
   | null;
 
+type SearchMode = 'notes' | 'semantic';
+
+type SemanticSearchModeState = 'idle' | 'disabled' | 'indexing' | 'error' | 'ready';
+
 function displayNameForRename(entry: NoteEntry): string {
   return entry.isDirectory ? entry.name : entry.name.replace(/\.md$/, '');
 }
@@ -132,12 +136,31 @@ function ConfirmDelete({
   );
 }
 
+/** Collect all visible, non-renaming entry paths in DFS order for arrow-key navigation. */
+function collectVisiblePaths(
+  entries: NoteEntry[],
+  expandedDirs: ReadonlySet<string>,
+  getChildEntries: (dirPath: string) => NoteEntry[],
+): string[] {
+  const result: string[] = [];
+  for (const entry of entries) {
+    result.push(entry.path);
+    if (entry.isDirectory && expandedDirs.has(entry.path)) {
+      const children = getChildEntries(entry.path);
+      result.push(...collectVisiblePaths(children, expandedDirs, getChildEntries));
+    }
+  }
+  return result;
+}
+
 function TreeBranch({
   parentPath,
   depth,
   draftCreate,
   renamingPath,
   deletePath,
+  focusedPath,
+  setFocusedPath,
   setDraftCreate,
   setRenamingPath,
   setDeletePath,
@@ -147,6 +170,8 @@ function TreeBranch({
   draftCreate: DraftCreateState;
   renamingPath: string | null;
   deletePath: string | null;
+  focusedPath: string | null;
+  setFocusedPath: React.Dispatch<React.SetStateAction<string | null>>;
   setDraftCreate: React.Dispatch<React.SetStateAction<DraftCreateState>>;
   setRenamingPath: React.Dispatch<React.SetStateAction<string | null>>;
   setDeletePath: React.Dispatch<React.SetStateAction<string | null>>;
@@ -165,6 +190,55 @@ function TreeBranch({
   } = useNotes();
 
   const entries = parentPath ? getChildEntries(parentPath) : rootEntries;
+
+  const visiblePaths = React.useMemo(
+    () => collectVisiblePaths(entries, expandedDirs, getChildEntries),
+    [entries, expandedDirs, getChildEntries],
+  );
+
+  const handleArrowKey = React.useCallback(
+    (event: React.KeyboardEvent, currentEntry: NoteEntry) => {
+      const idx = visiblePaths.indexOf(currentEntry.path);
+      if (idx === -1) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (idx < visiblePaths.length - 1) {
+          setFocusedPath(visiblePaths[idx + 1]);
+        }
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (idx > 0) {
+          setFocusedPath(visiblePaths[idx - 1]);
+        }
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (currentEntry.isDirectory) {
+          if (!expandedDirs.has(currentEntry.path)) {
+            toggleDir(currentEntry.path);
+          }
+        } else {
+          void selectNote(currentEntry.path);
+        }
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        if (currentEntry.isDirectory && expandedDirs.has(currentEntry.path)) {
+          toggleDir(currentEntry.path);
+        }
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        if (visiblePaths.length > 0) {
+          setFocusedPath(visiblePaths[0]);
+        }
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        if (visiblePaths.length > 0) {
+          setFocusedPath(visiblePaths[visiblePaths.length - 1]);
+        }
+      }
+    },
+    [expandedDirs, selectNote, setFocusedPath, toggleDir, visiblePaths],
+  );
 
   return (
     <>
@@ -211,10 +285,12 @@ function TreeBranch({
                 role="treeitem"
                 aria-expanded={isDirectory ? isExpanded : undefined}
                 aria-selected={isSelected}
-                tabIndex={0}
+                tabIndex={focusedPath === entry.path ? 0 : -1}
                 className={`group flex w-full items-center gap-1.5 py-1 px-1.5 text-left text-xs transition-colors ${isSelected ? 'bg-surface-tertiary/60' : 'hover:bg-surface-tertiary/40'}`}
                 style={{ paddingLeft: `${depth * 12 + 6}px` }}
+                onFocus={() => setFocusedPath(entry.path)}
                 onClick={() => {
+                  setFocusedPath(entry.path);
                   if (isDirectory) {
                     toggleDir(entry.path);
                     return;
@@ -223,6 +299,8 @@ function TreeBranch({
                   void selectNote(entry.path);
                 }}
                 onKeyDown={(event) => {
+                  handleArrowKey(event, entry);
+
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     if (isDirectory) {
@@ -264,6 +342,7 @@ function TreeBranch({
                         type="button"
                         className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-surface-tertiary/50 hover:text-text-primary"
                         title={`New note in ${entry.name}`}
+                        aria-label={`New note in ${entry.name}`}
                         onClick={(event) => {
                           event.stopPropagation();
                           setDeletePath(null);
@@ -279,6 +358,7 @@ function TreeBranch({
                         type="button"
                         className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-surface-tertiary/50 hover:text-text-primary"
                         title={`New folder in ${entry.name}`}
+                        aria-label={`New folder in ${entry.name}`}
                         onClick={(event) => {
                           event.stopPropagation();
                           setDeletePath(null);
@@ -297,6 +377,7 @@ function TreeBranch({
                     type="button"
                     className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-surface-tertiary/50 hover:text-text-primary"
                     title={`Rename ${entry.name}`}
+                    aria-label={`Rename ${entry.name}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       setDeletePath(null);
@@ -312,6 +393,7 @@ function TreeBranch({
                     type="button"
                     className="rounded p-0.5 text-text-tertiary transition-colors hover:bg-error-500/20 hover:text-error-500"
                     title={`Delete ${entry.name}`}
+                    aria-label={`Delete ${entry.name}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       setRenamingPath(null);
@@ -346,6 +428,8 @@ function TreeBranch({
                   draftCreate={draftCreate}
                   renamingPath={renamingPath}
                   deletePath={deletePath}
+                  focusedPath={focusedPath}
+                  setFocusedPath={setFocusedPath}
                   setDraftCreate={setDraftCreate}
                   setRenamingPath={setRenamingPath}
                   setDeletePath={setDeletePath}
@@ -435,25 +519,161 @@ function SearchResults({ results, onSelect }: { results: SearchResultEntry[]; on
 }
 
 export function NotesSidePanel(): React.ReactElement {
-  const { rootEntries, isLoading, error, refresh, searchQuery, searchResults, searchLoading, searchError, selectNote, searchNotes, clearSearch } = useNotes();
+  const {
+    rootEntries,
+    isLoading,
+    error,
+    refresh,
+    searchResults,
+    searchLoading,
+    searchError,
+    selectNote,
+    searchNotes,
+    clearSearch,
+  } = useNotes();
   const [draftCreate, setDraftCreate] = React.useState<DraftCreateState>(null);
   const [renamingPath, setRenamingPath] = React.useState<string | null>(null);
   const [deletePath, setDeletePath] = React.useState<string | null>(null);
+  const [focusedPath, setFocusedPath] = React.useState<string | null>(null);
   const [localSearchInput, setLocalSearchInput] = React.useState('');
+  const [searchMode, setSearchMode] = React.useState<SearchMode>('notes');
+  const [workspaceRoot, setWorkspaceRoot] = React.useState('');
+  const [semanticSearchResults, setSemanticSearchResults] = React.useState<SearchResultEntry[]>([]);
+  const [semanticSearchLoading, setSemanticSearchLoading] = React.useState(false);
+  const [semanticSearchError, setSemanticSearchError] = React.useState<string | null>(null);
+  const [semanticModeState, setSemanticModeState] = React.useState<SemanticSearchModeState>('idle');
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const semanticSearchDebounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const semanticSearchRequestIdRef = React.useRef(0);
 
-  const isSearchActive = searchQuery.length > 0;
+  const resolveWorkspaceRoot = React.useCallback(async () => {
+    if (workspaceRoot) {
+      return workspaceRoot;
+    }
+
+    const root = await window.srgnt.getWorkspaceRoot();
+    setWorkspaceRoot(root);
+    return root;
+  }, [workspaceRoot]);
+
+  const runSemanticSearch = React.useCallback(
+    (value: string) => {
+      if (semanticSearchDebounceRef.current) {
+        clearTimeout(semanticSearchDebounceRef.current);
+      }
+
+      if (!value.trim()) {
+        setSemanticSearchResults([]);
+        setSemanticSearchError(null);
+        setSemanticSearchLoading(false);
+        setSemanticModeState('idle');
+        return;
+      }
+
+      semanticSearchDebounceRef.current = setTimeout(async () => {
+        const requestId = ++semanticSearchRequestIdRef.current;
+        setSemanticSearchLoading(true);
+        setSemanticSearchError(null);
+
+        try {
+          const root = await resolveWorkspaceRoot();
+          const status = await window.srgnt.semanticSearchStatus(root);
+
+          if (requestId !== semanticSearchRequestIdRef.current) {
+            return;
+          }
+
+          if (status.state === 'error' && status.error) {
+            setSemanticModeState('error');
+            setSemanticSearchError(status.error);
+            setSemanticSearchResults([]);
+            return;
+          }
+
+          if (status.state === 'disabled' || status.state === 'uninitialized') {
+            setSemanticModeState('disabled');
+            setSemanticSearchError('Semantic search is disabled for this workspace. Enable it first.');
+            setSemanticSearchResults([]);
+            return;
+          }
+
+          setSemanticModeState(status.state === 'indexing' ? 'indexing' : 'ready');
+
+          const response = await window.srgnt.semanticSearchSearch(root, value, 10, 0.5);
+
+          if (requestId !== semanticSearchRequestIdRef.current) {
+            return;
+          }
+
+          setSemanticSearchResults(
+            response.results.map((result) => ({
+              score: result.score,
+              title: result.title,
+              path: result.workspaceRelativePath,
+              snippet: result.snippet,
+            })),
+          );
+        } catch (err) {
+          if (requestId !== semanticSearchRequestIdRef.current) {
+            return;
+          }
+          setSemanticModeState('error');
+          setSemanticSearchError(err instanceof Error ? err.message : 'Semantic search failed');
+          setSemanticSearchResults([]);
+        } finally {
+          if (requestId === semanticSearchRequestIdRef.current) {
+            setSemanticSearchLoading(false);
+          }
+        }
+      }, 300);
+    },
+    [resolveWorkspaceRoot],
+  );
+
+  const handleSearchModeChange = React.useCallback((nextMode: SearchMode) => {
+    setSearchMode(nextMode);
+    setLocalSearchInput('');
+    clearSearch();
+    if (semanticSearchDebounceRef.current) {
+      clearTimeout(semanticSearchDebounceRef.current);
+      semanticSearchDebounceRef.current = null;
+    }
+    setSemanticSearchResults([]);
+    setSemanticSearchLoading(false);
+    setSemanticSearchError(null);
+    setSemanticModeState('idle');
+  }, [clearSearch]);
+
+  const isSearchActive = localSearchInput.length > 0;
 
   const handleSearchChange = React.useCallback((value: string) => {
     setLocalSearchInput(value);
-    searchNotes(value);
-  }, [searchNotes]);
+
+    if (searchMode === 'notes') {
+      searchNotes(value);
+      return;
+    }
+
+    runSemanticSearch(value);
+  }, [searchMode, runSemanticSearch, searchNotes]);
 
   const handleSearchClear = React.useCallback(() => {
     setLocalSearchInput('');
-    clearSearch();
+    if (searchMode === 'notes') {
+      clearSearch();
+    } else {
+      if (semanticSearchDebounceRef.current) {
+        clearTimeout(semanticSearchDebounceRef.current);
+        semanticSearchDebounceRef.current = null;
+      }
+      setSemanticSearchResults([]);
+      setSemanticSearchError(null);
+      setSemanticSearchLoading(false);
+      setSemanticModeState('idle');
+    }
+
     searchInputRef.current?.focus();
-  }, [clearSearch]);
+  }, [clearSearch, searchMode]);
 
   const handleSearchResultClick = React.useCallback((resultPath: string) => {
     // Search results return workspace-relative paths (e.g., 'Notes/Alpha.md')
@@ -461,6 +681,15 @@ export function NotesSidePanel(): React.ReactElement {
     const notesRelativePath = resultPath.startsWith('Notes/') ? resultPath.slice(6) : resultPath;
     void selectNote(notesRelativePath);
   }, [selectNote]);
+
+  const searchResultList =
+    searchMode === 'semantic' ? semanticSearchResults : searchResults;
+  const searchLoadingState =
+    searchMode === 'semantic' ? semanticSearchLoading : searchLoading;
+  const searchErrorState =
+    searchMode === 'semantic'
+      ? semanticSearchError ?? searchError
+      : searchError;
 
   return (
     <div className="flex h-full flex-col">
@@ -471,6 +700,7 @@ export function NotesSidePanel(): React.ReactElement {
             type="button"
             className="rounded p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary/50 hover:text-text-primary"
             title="New note"
+            aria-label="New note"
             onClick={() => {
               setDeletePath(null);
               setRenamingPath(null);
@@ -485,6 +715,7 @@ export function NotesSidePanel(): React.ReactElement {
             type="button"
             className="rounded p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary/50 hover:text-text-primary"
             title="New folder"
+            aria-label="New folder"
             onClick={() => {
               setDeletePath(null);
               setRenamingPath(null);
@@ -500,6 +731,7 @@ export function NotesSidePanel(): React.ReactElement {
             type="button"
             className="rounded p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary/50 hover:text-text-primary"
             title="Refresh"
+            aria-label="Refresh notes"
             onClick={() => void refresh()}
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -511,13 +743,42 @@ export function NotesSidePanel(): React.ReactElement {
 
       {/* Search input */}
       <div className="border-b border-border-default px-3 py-2">
+        <div className="mb-2 flex items-center justify-start gap-1">
+          <button
+            type="button"
+            className={`rounded px-2 py-0.5 text-xs transition ${
+              searchMode === 'notes'
+                ? 'bg-srgnt-500/20 text-text-primary'
+                : 'text-text-tertiary hover:bg-surface-tertiary/50 hover:text-text-primary'
+            }`}
+            onClick={() => handleSearchModeChange('notes')}
+            data-testid="notes-search-mode"
+            aria-label="Full-text search"
+          >
+            Full-Text
+          </button>
+          <button
+            type="button"
+            className={`rounded px-2 py-0.5 text-xs transition ${
+              searchMode === 'semantic'
+                ? 'bg-srgnt-500/20 text-text-primary'
+                : 'text-text-tertiary hover:bg-surface-tertiary/50 hover:text-text-primary'
+            }`}
+            onClick={() => handleSearchModeChange('semantic')}
+            data-testid="semantic-search-mode"
+            aria-label="Semantic search"
+          >
+            Semantic
+          </button>
+        </div>
+
         <div className="relative flex items-center">
           <span className="pointer-events-none absolute left-1.5 text-text-tertiary">{SEARCH_ICON}</span>
           <input
             ref={searchInputRef}
             type="text"
             className="input w-full rounded-md border-border-default py-1 pl-7 pr-6 text-xs placeholder:text-text-tertiary focus:ring-2 focus:ring-srgnt-500/20"
-            placeholder="Search notes..."
+            placeholder={`Search ${searchMode === 'semantic' ? 'semantically...' : 'notes...'}`}
             value={localSearchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             onKeyDown={(e) => {
@@ -540,16 +801,20 @@ export function NotesSidePanel(): React.ReactElement {
 
       <div className="flex-1 overflow-y-auto py-2 scrollbar-thin">
         {isSearchActive ? (
-          searchLoading ? (
+          searchLoadingState ? (
             <div className="px-3 py-2 text-xs text-text-tertiary animate-pulse">Searching...</div>
-          ) : searchError ? (
-            <div className="px-3 py-2 text-xs text-error-500">{searchError}</div>
-          ) : searchResults.length === 0 ? (
+          ) : searchMode === 'semantic' && semanticModeState === 'disabled' ? (
+            <div className="px-3 py-2 text-xs text-text-tertiary">Enable semantic search for this workspace first.</div>
+          ) : searchMode === 'semantic' && semanticModeState === 'indexing' ? (
+            <div className="px-3 py-2 text-xs text-text-tertiary">Indexing workspace...</div>
+          ) : searchErrorState ? (
+            <div className="px-3 py-2 text-xs text-error-500">{searchErrorState}</div>
+          ) : searchResultList.length === 0 ? (
             <div className="px-3 py-2 text-xs text-text-tertiary">
-              No results for &ldquo;{searchQuery}&rdquo;
+              No results for &ldquo;{localSearchInput}&rdquo;
             </div>
           ) : (
-            <SearchResults results={searchResults} onSelect={handleSearchResultClick} />
+            <SearchResults results={searchResultList} onSelect={handleSearchResultClick} />
           )
         ) : isLoading && rootEntries.length === 0 ? (
           <div className="px-3 py-2 text-xs text-text-tertiary animate-pulse">Loading notes...</div>
@@ -566,6 +831,8 @@ export function NotesSidePanel(): React.ReactElement {
               draftCreate={draftCreate}
               renamingPath={renamingPath}
               deletePath={deletePath}
+              focusedPath={focusedPath}
+              setFocusedPath={setFocusedPath}
               setDraftCreate={setDraftCreate}
               setRenamingPath={setRenamingPath}
               setDeletePath={setDeletePath}

@@ -1,7 +1,7 @@
 ---
 name: coordinator
 description: Agent from team 'srgnt-team'
-model: openadapter/GLM-5-Turbo
+model: minimax/MiniMax-M2.7
 thinking: medium
 ---
 

@@ -7,7 +7,14 @@ import { SettingsPanel, defaultSettingsSections } from './Settings.js';
 
 /* ─── Helpers ─── */
 
-function makeSections(overrides: Record<string, unknown> = {}): defaultSettingsSections[number][] {
+type SettingsOverride = {
+  onChange?: (value: unknown) => void;
+  onBrowse?: () => void | Promise<void>;
+};
+
+type SettingsOverrides = Record<string, SettingsOverride>;
+
+function makeSections(overrides: SettingsOverrides = {}): typeof defaultSettingsSections {
   return [
     {
       id: 'general',
@@ -210,12 +217,11 @@ describe('SettingInput', () => {
 /* ─── defaultSettingsSections ─── */
 
 describe('defaultSettingsSections', () => {
-  it('contains 4 sections: general, privacy, connectors, advanced', () => {
-    expect(defaultSettingsSections).toHaveLength(4);
+  it('contains 3 sections: general, privacy, advanced', () => {
+    expect(defaultSettingsSections).toHaveLength(3);
     expect(defaultSettingsSections.map((s) => s.id)).toEqual([
       'general',
       'privacy',
-      'connectors',
       'advanced',
     ]);
   });

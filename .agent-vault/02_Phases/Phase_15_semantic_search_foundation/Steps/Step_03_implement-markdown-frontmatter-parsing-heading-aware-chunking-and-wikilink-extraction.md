@@ -5,8 +5,8 @@ contract_version: 1
 title: Implement markdown frontmatter parsing, heading-aware chunking, and wikilink extraction
 step_id: STEP-15-03
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
-status: planned
-owner: ''
+status: complete
+owner: executor-1
 created: '2026-04-02'
 updated: '2026-04-02'
 depends_on:

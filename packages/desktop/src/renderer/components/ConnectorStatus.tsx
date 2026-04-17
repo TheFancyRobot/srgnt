@@ -3,6 +3,8 @@ import React from 'react';
 export interface ConnectorInfo {
   id: string;
   name: string;
+  installed: boolean;
+  available: boolean;
   status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
   lastSyncAt?: string;
   lastError?: string;
@@ -11,6 +13,8 @@ export interface ConnectorInfo {
 
 export interface ConnectorStatusPanelProps {
   connectors: ConnectorInfo[];
+  onInstall?: (id: string) => void;
+  onUninstall?: (id: string) => void;
   onConnect?: (id: string) => void;
   onDisconnect?: (id: string) => void;
 }
@@ -66,28 +70,62 @@ function formatRelativeTime(isoDate: string): string {
 
 function ConnectorCard({
   connector,
+  onInstall,
+  onUninstall,
   onConnect,
   onDisconnect,
   stagger,
 }: {
   connector: ConnectorInfo;
+  onInstall?: (id: string) => void;
+  onUninstall?: (id: string) => void;
   onConnect?: (id: string) => void;
   onDisconnect?: (id: string) => void;
   stagger: number;
 }): React.ReactElement {
-  const isActive = connector.status === 'connected' || connector.status === 'refreshing';
+  const installed = connector.installed ?? false;
+  const available = connector.available ?? true;
   const isTransitioning = connector.status === 'connecting' || connector.status === 'refreshing';
   const config = statusConfig[connector.status];
   const meta = connectorMeta[connector.id];
+
+  const handlePrimaryAction = () => {
+    if (!available || isTransitioning) return;
+
+    if (!installed && onInstall) {
+      onInstall(connector.id);
+      return;
+    }
+
+    if (installed) {
+      if (connector.status === 'connected' && onDisconnect) {
+        onDisconnect(connector.id);
+        return;
+      }
+      if ((connector.status === 'error' || connector.status === 'disconnected') && onConnect) {
+        onConnect(connector.id);
+        return;
+      }
+    }
+  };
+
+  const primaryLabel =
+    !available
+      ? 'Unavailable'
+      : !installed
+        ? 'Install'
+        : connector.status === 'connected'
+          ? 'Disconnect'
+          : connector.status === 'connecting' || connector.status === 'refreshing'
+            ? 'Connecting...'
+            : 'Connect';
 
   return (
     <div id={`connector-${connector.id}`} className={`card p-5 animate-slide-up stagger-${stagger}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           {/* Icon */}
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            isActive ? 'bg-surface-brand text-text-brand' : 'bg-surface-tertiary text-text-secondary'
-          }`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${installed ? 'bg-surface-brand text-text-brand' : 'bg-surface-tertiary text-text-secondary'}`}>
             {meta?.icon || (
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
@@ -101,46 +139,40 @@ function ConnectorCard({
             {meta?.description && (
               <p className="text-xs text-text-tertiary mt-0.5">{meta.description}</p>
             )}
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${config.dot} ${config.animate ? 'animate-pulse' : ''}`} />
               <span className="text-xs text-text-secondary">{config.label}</span>
+              {installed ? (
+                <span className="badge badge-low">Installed</span>
+              ) : (
+                <span className="badge">Available</span>
+              )}
             </div>
           </div>
         </div>
 
         {/* Action */}
-        <div className="flex-shrink-0">
-          {isActive ? (
+        <div className="flex-shrink-0 flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={handlePrimaryAction}
+            disabled={isTransitioning}
+            aria-label={`${primaryLabel} ${connector.name}`}
+            className="btn btn-primary text-xs"
+          >
+            {primaryLabel}
+          </button>
+          {installed && onUninstall ? (
             <button
               type="button"
-              onClick={() => onDisconnect?.(connector.id)}
-              disabled={isTransitioning}
-              aria-label={`Disconnect ${connector.name}`}
+              onClick={onUninstall ? () => onUninstall(connector.id) : undefined}
               className="btn btn-ghost text-xs"
+              aria-label={`Uninstall ${connector.name}`}
+              disabled={isTransitioning || !onUninstall}
             >
-              Disconnect
+              Uninstall
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onConnect?.(connector.id)}
-              disabled={isTransitioning}
-              aria-label={`Connect ${connector.name}`}
-              className="btn btn-primary text-xs"
-            >
-              {isTransitioning ? (
-                <>
-                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Connecting...
-                </>
-              ) : (
-                'Connect'
-              )}
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -184,11 +216,28 @@ function ConnectorCard({
 
 export function ConnectorStatusPanel({
   connectors,
+  onInstall,
+  onUninstall,
   onConnect,
   onDisconnect,
 }: ConnectorStatusPanelProps): React.ReactElement {
-  const connected = connectors.filter((c) => c.status === 'connected' || c.status === 'refreshing');
-  const disconnected = connectors.filter((c) => c.status !== 'connected' && c.status !== 'refreshing');
+  const normalizedConnectors = connectors.map((connector) => ({
+    ...connector,
+    installed: connector.installed ?? false,
+    available: connector.available ?? true,
+  }));
+
+  const installed = normalizedConnectors.filter((c) => c.installed);
+  const connected = installed.filter((c) => c.status === 'connected' || c.status === 'refreshing');
+  const available = normalizedConnectors.filter((c) => !c.installed && c.available);
+
+  const installedButNotActive = installed.filter(
+    (c) => c.status === 'disconnected' || c.status === 'error' || c.status === 'connecting',
+  );
+
+  // Show "Installed" section only when there are installed-but-not-active connectors
+  // (connected/active connectors go under "Active" instead)
+  const showInstalledSection = installedButNotActive.length > 0;
 
   return (
     <div className="space-y-8">
@@ -198,19 +247,19 @@ export function ConnectorStatusPanel({
           Connectors
         </h1>
         <p className="text-sm text-text-secondary">
-          Connect your work tools to aggregate data into your daily briefing.
+          Bundled connectors are available here. Install before connecting.
         </p>
         <div className="flex items-center gap-3 mt-3">
           <span className="text-xs text-text-tertiary">
-            <span className="font-mono-data font-medium text-text-primary">{connected.length}</span> active
+            <span className="font-mono-data font-medium text-text-primary">{installed.length}</span> installed
           </span>
           <span className="text-xs text-text-tertiary">
-            <span className="font-mono-data font-medium text-text-primary">{disconnected.length}</span> available
+            <span className="font-mono-data font-medium text-text-primary">{available.length}</span> available
           </span>
         </div>
       </header>
 
-      {/* Connected */}
+      {/* Active */}
       {connected.length > 0 && (
         <section>
           <h2 className="section-heading mb-3 flex items-center gap-2">
@@ -219,26 +268,62 @@ export function ConnectorStatusPanel({
           </h2>
           <div className="space-y-4">
             {connected.map((c, i) => (
-              <ConnectorCard key={c.id} connector={c} onConnect={onConnect} onDisconnect={onDisconnect} stagger={i + 1} />
+              <ConnectorCard
+                key={c.id}
+                connector={c}
+                onInstall={onInstall}
+                onUninstall={onUninstall}
+                onConnect={onConnect}
+                onDisconnect={onDisconnect}
+                stagger={i + 1}
+              />
             ))}
           </div>
         </section>
       )}
 
-      {/* Disconnected */}
-      {disconnected.length > 0 && (
+      {/* Installed (installed but not yet connected) */}
+      {showInstalledSection && (
+        <section>
+          <h2 className="section-heading mb-3">Installed</h2>
+          <div className="space-y-4">
+            {installedButNotActive.map((c, i) => (
+              <ConnectorCard
+                key={c.id}
+                connector={c}
+                onInstall={onInstall}
+                onUninstall={onUninstall}
+                onConnect={onConnect}
+                onDisconnect={onDisconnect}
+                stagger={i + connected.length + 1}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Available */}
+      {available.length > 0 && (
         <section>
           <h2 className="section-heading mb-3">Available</h2>
           <div className="space-y-4">
-            {disconnected.map((c, i) => (
-              <ConnectorCard key={c.id} connector={c} onConnect={onConnect} onDisconnect={onDisconnect} stagger={i + connected.length + 1} />
+            {available.map((c, i) => (
+              <ConnectorCard
+                key={c.id}
+                connector={c}
+                onInstall={onInstall}
+                onUninstall={onUninstall}
+                onConnect={onConnect}
+                onDisconnect={onDisconnect}
+                stagger={i + installed.length + 1}
+              />
             ))}
           </div>
         </section>
       )}
 
       {/* Empty */}
-      {connectors.length === 0 && (
+      {normalizedConnectors.length === 0 && (
         <div className="text-center py-16 animate-fade-in">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-tertiary flex items-center justify-center">
             <svg className="w-7 h-7 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -254,7 +339,7 @@ export function ConnectorStatusPanel({
 }
 
 export const defaultConnectors: ConnectorInfo[] = [
-  { id: 'jira', name: 'Jira', status: 'disconnected' },
-  { id: 'outlook', name: 'Outlook Calendar', status: 'disconnected' },
-  { id: 'teams', name: 'Microsoft Teams', status: 'disconnected' },
+  { id: 'jira', name: 'Jira', installed: false, available: true, status: 'disconnected' },
+  { id: 'outlook', name: 'Outlook Calendar', installed: false, available: true, status: 'disconnected' },
+  { id: 'teams', name: 'Microsoft Teams', installed: false, available: true, status: 'disconnected' },
 ];

@@ -16,6 +16,8 @@ related_sessions:
   - '[[05_Sessions/2026-04-12-072442-whole-workspace-markdown-search-with-bounded-indexing-team-lead|SESSION-2026-04-12-072442 team-lead session for Whole-workspace markdown search with bounded indexing]]'
   - '[[05_Sessions/2026-04-13-042410-whole-workspace-markdown-search-with-bounded-indexing-team-lead|SESSION-2026-04-13-042410 team-lead session for Whole-workspace markdown search with bounded indexing]]'
 related_bugs: []
+related_architecture:
+  - '[[01_Architecture/System_Overview|System Overview]]'
 tags:
   - agent-vault
   - step
@@ -47,6 +49,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Required Reading
 
+- [[01_Architecture/System_Overview|System Overview]]
 - Link the minimum notes, docs, source files, or tests that must be read before editing.
 - If a reader can skip something safely, do not list it here.
 

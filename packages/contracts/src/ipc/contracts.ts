@@ -12,6 +12,8 @@ export const ipcChannels = {
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
   connectorList: 'connector:list',
   connectorStatus: 'connector:status',
+  connectorInstall: 'connector:install',
+  connectorUninstall: 'connector:uninstall',
   connectorConnect: 'connector:connect',
   connectorDisconnect: 'connector:disconnect',
   settingsGet: 'settings:get',
@@ -47,6 +49,12 @@ export const ipcChannels = {
   notesResolveWikilink: 'notes:resolve-wikilink',
   notesListWorkspaceMarkdown: 'notes:list-workspace-markdown',
   shellOpenExternal: 'shell:open-external',
+  semanticSearchInit: 'semantic-search:init',
+  semanticSearchEnableForWorkspace: 'semantic-search:enable-for-workspace',
+  semanticSearchIndexWorkspace: 'semantic-search:index-workspace',
+  semanticSearchRebuildAll: 'semantic-search:rebuild-all',
+  semanticSearchSearch: 'semantic-search:search',
+  semanticSearchStatus: 'semantic-search:status',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -58,6 +66,9 @@ export const SIpcChannel = Schema.Literal(
   ...ipcChannelValues
 );
 export type IpcChannel = Schema.Schema.Type<typeof SIpcChannel>;
+
+export const SConnectorId = Schema.String.pipe(Schema.pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/));
+export type ConnectorId = Schema.Schema.Type<typeof SConnectorId>;
 
 export const SIpcRequest = Schema.Struct({
   channel: SIpcChannel,
@@ -91,9 +102,10 @@ export const SUpdateChannel = Schema.Literal('stable', 'beta', 'nightly');
 export type UpdateChannel = Schema.Schema.Type<typeof SUpdateChannel>;
 
 export const SDesktopConnectorPreferences = Schema.Struct({
-  jira: Schema.Boolean,
-  outlook: Schema.Boolean,
-  teams: Schema.Boolean,
+  installedConnectorIds: Schema.optionalWith(
+    Schema.Array(SConnectorId),
+    { default: () => [] as readonly string[] },
+  ),
 });
 export type DesktopConnectorPreferences = Schema.Schema.Type<typeof SDesktopConnectorPreferences>;
 
@@ -136,6 +148,11 @@ export const SConnectorListEntry = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
   status: Schema.String,
+  installed: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+  available: Schema.optionalWith(Schema.Boolean, { default: () => true }),
+  description: Schema.optional(Schema.String),
+  provider: Schema.optional(Schema.String),
+  version: Schema.optional(Schema.String),
 });
 
 export const SConnectorListResponse = Schema.Struct({
@@ -472,3 +489,82 @@ export const SOpenExternalRequest = Schema.Struct({
   url: Schema.String.pipe(Schema.pattern(openExternalUrlPattern)),
 });
 export type OpenExternalRequest = Schema.Schema.Type<typeof SOpenExternalRequest>;
+
+// Semantic Search IPC types
+
+export const SSemanticSearchInitRequest = Schema.Struct({});
+export type SemanticSearchInitRequest = Schema.Schema.Type<typeof SSemanticSearchInitRequest>;
+
+export const SSemanticSearchInitResponse = Schema.Struct({
+  initialized: Schema.Boolean,
+  modelId: Schema.optional(Schema.String),
+});
+export type SemanticSearchInitResponse = Schema.Schema.Type<typeof SSemanticSearchInitResponse>;
+
+export const SSemanticSearchEnableForWorkspaceRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+});
+export type SemanticSearchEnableForWorkspaceRequest = Schema.Schema.Type<typeof SSemanticSearchEnableForWorkspaceRequest>;
+
+export const SSemanticSearchEnableForWorkspaceResponse = Schema.Struct({
+  enabled: Schema.Boolean,
+});
+export type SemanticSearchEnableForWorkspaceResponse = Schema.Schema.Type<typeof SSemanticSearchEnableForWorkspaceResponse>;
+
+export const SSemanticSearchIndexWorkspaceRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+  force: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+});
+export type SemanticSearchIndexWorkspaceRequest = Schema.Schema.Type<typeof SSemanticSearchIndexWorkspaceRequest>;
+
+export const SSemanticSearchIndexWorkspaceResponse = Schema.Struct({
+  indexedChunkCount: Schema.Number,
+  skippedCount: Schema.Number,
+  durationMs: Schema.Number,
+});
+export type SemanticSearchIndexWorkspaceResponse = Schema.Schema.Type<typeof SSemanticSearchIndexWorkspaceResponse>;
+
+export const SSemanticSearchRebuildAllRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+});
+export type SemanticSearchRebuildAllRequest = Schema.Schema.Type<typeof SSemanticSearchRebuildAllRequest>;
+
+export const SSemanticSearchRebuildAllResponse = Schema.Struct({
+  totalChunkCount: Schema.Number,
+  durationMs: Schema.Number,
+});
+export type SemanticSearchRebuildAllResponse = Schema.Schema.Type<typeof SSemanticSearchRebuildAllResponse>;
+
+export const SSemanticSearchSearchRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+  query: Schema.String,
+  maxResults: Schema.optionalWith(Schema.Number, { default: () => 10 }),
+  minScore: Schema.optionalWith(Schema.Number, { default: () => 0.5 }),
+});
+export type SemanticSearchSearchRequest = Schema.Schema.Type<typeof SSemanticSearchSearchRequest>;
+
+export const SSemanticSearchSearchResultEntry = Schema.Struct({
+  score: Schema.Number,
+  title: Schema.String,
+  workspaceRelativePath: Schema.String,
+  snippet: Schema.String,
+});
+
+export const SSemanticSearchSearchResponse = Schema.Struct({
+  results: Schema.Array(SSemanticSearchSearchResultEntry),
+});
+export type SemanticSearchSearchResponse = Schema.Schema.Type<typeof SSemanticSearchSearchResponse>;
+
+export const SSemanticSearchStatusRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+});
+export type SemanticSearchStatusRequest = Schema.Schema.Type<typeof SSemanticSearchStatusRequest>;
+
+export const SSemanticSearchStatusResponse = Schema.Struct({
+  state: Schema.Literal('uninitialized', 'initializing', 'ready', 'indexing', 'disabled', 'error'),
+  chunkCount: Schema.optionalWith(Schema.Number, { default: () => 0 }),
+  modelId: Schema.optional(Schema.String),
+  lastIndexedAt: Schema.optional(Schema.String),
+  error: Schema.optional(Schema.String),
+});
+export type SemanticSearchStatusResponse = Schema.Schema.Type<typeof SSemanticSearchStatusResponse>;

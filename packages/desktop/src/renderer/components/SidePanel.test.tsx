@@ -182,4 +182,68 @@ describe('SidePanel', () => {
     // No click triggered — clickTimeoutRef.current remains falsy
     expect(() => unmount()).not.toThrow();
   });
+
+  it('calls cancelAnimationFrame on unmount when a drag frame is pending', () => {
+    const cancelAnimationFrameSpy = vi.spyOn(window, 'cancelAnimationFrame');
+    const rafCallbacks: number[] = [];
+    const originalRAF = window.requestAnimationFrame;
+    window.requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
+      const id = originalRAF(cb);
+      rafCallbacks.push(id);
+      return id;
+    });
+
+    try {
+      const { unmount } = renderWithSidePanel(<div>Test Content</div>);
+
+      const resizeHandle = screen.getByRole('separator', { name: 'Resize side panel' });
+      fireEvent.mouseDown(resizeHandle, { clientX: 100 });
+      // Move to schedule a requestAnimationFrame, but don't let it fire
+      fireEvent.mouseMove(document, { clientX: 160 });
+
+      // mouseUp calls cleanupDrag which clears frameRef, so we can't unmount mid-frame
+      // after mouseUp. Instead, unmount directly while the frame is pending (before rAF fires).
+      unmount();
+
+      // cancelAnimationFrame should have been called from the useEffect cleanup
+      expect(cancelAnimationFrameSpy).toHaveBeenCalled();
+    } finally {
+      window.requestAnimationFrame = originalRAF;
+    }
+  });
+
+  it('calls clearTimeout on unmount when a click timeout is pending', () => {
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+    const { unmount } = renderWithSidePanel(<div>Test Content</div>);
+
+    const resizeHandle = screen.getByRole('separator', { name: 'Resize side panel' });
+    // Single click starts the timeout (doesn't clear it)
+    fireEvent.click(resizeHandle);
+
+    // Unmount before the 300ms timeout fires
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+  });
+
+  it('calls dragCleanupRef on unmount during active drag, canceling pending frame', () => {
+    const cancelAnimationFrameSpy = vi.spyOn(window, 'cancelAnimationFrame');
+    const clearTimeoutSpy = vi.spyOn(window, 'clearTimeout');
+    const { unmount } = renderWithSidePanel(<div>Test Content</div>);
+
+    const resizeHandle = screen.getByRole('separator', { name: 'Resize side panel' });
+    fireEvent.mouseDown(resizeHandle, { clientX: 100 });
+    fireEvent.mouseMove(document, { clientX: 200 });
+
+    // Click starts a timeout while drag is active
+    fireEvent.click(resizeHandle);
+
+    unmount();
+
+    // dragCleanupRef.current?.() should have been called, which internally
+    // cancels the animation frame from the drag cleanup
+    expect(cancelAnimationFrameSpy).toHaveBeenCalled();
+    // The useEffect cleanup should also clear the click timeout
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+  });
 });

@@ -1,4 +1,4 @@
-# SRGNT development team: coordinator (glm-5-turbo), researcher (minimax-m2.7), executor (glm-5.1), reviewer (gpt-5.4/codex), tester (minimax-m2.7). Active context management with 50% max utilization. Loop: researcher → executor → reviewer → tester until 100% pass.
+# SRGNT development team: coordinator/researcher/executor/tester (minimax/MiniMax-M2.7), reviewer (openai-codex/gpt-5.4). Active context management with 50% max utilization. Loop: researcher → executor → reviewer → tester until 100% pass.
 srgnt-team:
   - coordinator
   - researcher

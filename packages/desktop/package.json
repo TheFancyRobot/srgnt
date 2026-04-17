@@ -14,9 +14,10 @@
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "lint": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "test": "vitest run",
-    "test:e2e": "pnpm run build && playwright test e2e/app.spec.ts e2e/gfm-compliance.spec.ts",
-    "test:e2e:headed": "pnpm run build && playwright test e2e/app.spec.ts e2e/gfm-compliance.spec.ts --headed",
+    "test:e2e": "pnpm run build && playwright test e2e/app.spec.ts e2e/gfm-compliance.spec.ts e2e/ui-coverage-matrix.spec.ts e2e/bug-0013-visual.spec.ts",
+    "test:e2e:headed": "pnpm run build && playwright test e2e/app.spec.ts e2e/gfm-compliance.spec.ts e2e/ui-coverage-matrix.spec.ts e2e/bug-0013-visual.spec.ts --headed",
     "test:e2e:packaged:linux": "pnpm run pack && playwright test e2e/packaged.spec.ts",
+    "test:e2e:full": "pnpm run build && playwright test e2e/app.spec.ts e2e/gfm-compliance.spec.ts e2e/ui-coverage-matrix.spec.ts e2e/bug-0013-visual.spec.ts e2e/packaged.spec.ts",
     "dev": "pnpm run build:main && pnpm run build:preload && concurrently -k -n vite,electron \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "dev:electron": "electron .",
     "dev:renderer": "vite",
@@ -44,6 +45,13 @@
     "files": [
       "dist/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../assets/model",
+        "to": "model",
+        "filter": ["**/*"]
+      }
     ],
     "directories": {
       "output": "release",
@@ -107,6 +115,7 @@
     "codemirror-live-markdown": "0.5.1-alpha.1",
     "effect": "^3.21.0",
     "electron-updater": "^6.3.9",
+    "@huggingface/transformers": "^3.4.1",
     "fast-check": "^4.6.0",
     "ghostty-web": "^0.4.0",
     "node-pty": "^1.1.0",

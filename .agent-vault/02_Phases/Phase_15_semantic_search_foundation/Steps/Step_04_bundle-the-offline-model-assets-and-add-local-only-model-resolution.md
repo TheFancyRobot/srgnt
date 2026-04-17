@@ -5,7 +5,7 @@ contract_version: 1
 title: Bundle the offline model assets and add local-only model resolution
 step_id: STEP-15-04
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
-status: planned
+status: complete
 owner: ''
 created: '2026-04-02'
 updated: '2026-04-02'

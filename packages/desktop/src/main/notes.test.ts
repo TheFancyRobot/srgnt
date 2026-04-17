@@ -23,6 +23,7 @@ import {
   searchNotes,
   listWorkspaceMarkdown,
   resolveWikilink,
+  registerNotesHandlers,
 } from './notes.js';
 
 const tempPaths: string[] = [];
@@ -1142,5 +1143,333 @@ describe('notes service - search content cache behavior', () => {
     expect(results2[0].title).toBe('cached');
     expect(results2[0].path).toBe(results1[0].path);
     expect(results2[0].snippet).toBe(results1[0].snippet);
+  });
+});
+
+describe('notes service - registerNotesHandlers IPC error paths', () => {
+  /**
+   * Helper: call registerNotesHandlers, then extract the handler function
+   * that was passed to ipcMain.handle for a given channel name.
+   */
+  function getRegisteredHandler(channel: string): (...args: unknown[]) => Promise<unknown> {
+    const call = mockHandle.mock.calls.find((c: unknown[]) => c[0] === channel);
+    if (!call) throw new Error(`No handler registered for channel: ${channel}`);
+    return call[1] as (...args: unknown[]) => Promise<unknown>;
+  }
+
+  let workspaceRoot: string;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    workspaceRoot = await makeTempDir('srgnt-ipc-');
+    await fs.mkdir(getNotesDir(workspaceRoot), { recursive: true });
+    registerNotesHandlers(workspaceRoot);
+  });
+
+  // Verify all 10 handlers were registered and all 10 removeHandler calls were made
+  it('registers all 10 IPC handlers and removes previous ones', () => {
+    const channels = mockHandle.mock.calls.map((c: unknown[]) => c[0]);
+    expect(channels).toHaveLength(10);
+    expect(channels).toContain('notes:list-dir');
+    expect(channels).toContain('notes:read-file');
+    expect(channels).toContain('notes:write-file');
+    expect(channels).toContain('notes:create-file');
+    expect(channels).toContain('notes:create-folder');
+    expect(channels).toContain('notes:delete');
+    expect(channels).toContain('notes:rename');
+    expect(channels).toContain('notes:search');
+    expect(channels).toContain('notes:resolve-wikilink');
+    expect(channels).toContain('notes:list-workspace-markdown');
+    expect(mockRemoveHandler).toHaveBeenCalledTimes(10);
+  });
+
+  // --- notes:list-dir ---
+  describe('notes:list-dir handler', () => {
+    it('returns entries for valid payload', async () => {
+      const handler = getRegisteredHandler('notes:list-dir');
+      const result = await handler(null, { dirPath: '' });
+      expect(result).toHaveProperty('entries');
+      expect(Array.isArray(result.entries)).toBe(true);
+    });
+
+    it('works with null/undefined payload (fallback to empty dirPath)', async () => {
+      const handler = getRegisteredHandler('notes:list-dir');
+      const result = await handler(null, null);
+      expect(result).toHaveProperty('entries');
+      expect(Array.isArray(result.entries)).toBe(true);
+    });
+
+    it('throws on invalid payload (missing dirPath is OK due to fallback, but wrong type fails)', async () => {
+      const handler = getRegisteredHandler('notes:list-dir');
+      // dirPath must be a string, not a number
+      await expect(handler(null, { dirPath: 123 })).rejects.toThrow();
+    });
+  });
+
+  // --- notes:read-file ---
+  describe('notes:read-file handler', () => {
+    it('throws on invalid payload (missing filePath)', async () => {
+      const handler = getRegisteredHandler('notes:read-file');
+      await expect(handler(null, {})).rejects.toThrow();
+    });
+
+    it('throws on invalid payload (wrong type for filePath)', async () => {
+      const handler = getRegisteredHandler('notes:read-file');
+      await expect(handler(null, { filePath: 42 })).rejects.toThrow();
+    });
+
+    it('returns content for valid existing file', async () => {
+      const handler = getRegisteredHandler('notes:read-file');
+      await writeNote(workspaceRoot, 'test-read.md', '# Hello');
+      const result = await handler(null, { filePath: 'test-read.md' });
+      expect(result).toHaveProperty('content', '# Hello');
+      expect(result).toHaveProperty('modifiedAt');
+    });
+
+    it('throws when file does not exist', async () => {
+      const handler = getRegisteredHandler('notes:read-file');
+      await expect(handler(null, { filePath: 'nonexistent.md' })).rejects.toThrow();
+    });
+  });
+
+  // --- notes:write-file ---
+  describe('notes:write-file handler', () => {
+    it('throws on invalid payload (missing content)', async () => {
+      const handler = getRegisteredHandler('notes:write-file');
+      await expect(handler(null, { filePath: 'test.md' })).rejects.toThrow();
+    });
+
+    it('throws on invalid payload (wrong type)', async () => {
+      const handler = getRegisteredHandler('notes:write-file');
+      await expect(handler(null, { filePath: 'test.md', content: 999 })).rejects.toThrow();
+    });
+
+    it('writes file and returns path + modifiedAt', async () => {
+      const handler = getRegisteredHandler('notes:write-file');
+      const result = await handler(null, { filePath: 'ipc-write.md', content: '# IPC Write' });
+      expect(result).toHaveProperty('path');
+      expect(result).toHaveProperty('modifiedAt');
+      const read = await readNote(workspaceRoot, 'ipc-write.md');
+      expect(read.content).toBe('# IPC Write');
+    });
+  });
+
+  // --- notes:create-file ---
+  describe('notes:create-file handler', () => {
+    it('throws on invalid payload (missing title)', async () => {
+      const handler = getRegisteredHandler('notes:create-file');
+      await expect(handler(null, { filePath: 'new.md' })).rejects.toThrow();
+    });
+
+    it('throws on invalid payload (wrong type)', async () => {
+      const handler = getRegisteredHandler('notes:create-file');
+      await expect(handler(null, { filePath: 123, title: 'Test' })).rejects.toThrow();
+    });
+
+    it('creates file and returns path + createdAt', async () => {
+      const handler = getRegisteredHandler('notes:create-file');
+      const result = await handler(null, { filePath: 'ipc-create.md', title: 'IPC Created' });
+      expect(result).toHaveProperty('path');
+      expect(result).toHaveProperty('createdAt');
+    });
+
+    it('throws when file already exists', async () => {
+      const handler = getRegisteredHandler('notes:create-file');
+      await createNote(workspaceRoot, 'dup.md', 'Existing');
+      await expect(handler(null, { filePath: 'dup.md', title: 'Dup' })).rejects.toThrow('File already exists');
+    });
+  });
+
+  // --- notes:create-folder ---
+  describe('notes:create-folder handler', () => {
+    it('throws on invalid payload (missing dirPath)', async () => {
+      const handler = getRegisteredHandler('notes:create-folder');
+      await expect(handler(null, {})).rejects.toThrow();
+    });
+
+    it('throws on invalid payload (wrong type)', async () => {
+      const handler = getRegisteredHandler('notes:create-folder');
+      await expect(handler(null, { dirPath: 42 })).rejects.toThrow();
+    });
+
+    it('creates folder and returns path', async () => {
+      const handler = getRegisteredHandler('notes:create-folder');
+      const result = await handler(null, { dirPath: 'ipc-folder' });
+      expect(result).toHaveProperty('path');
+      expect(result.path).toContain('ipc-folder');
+    });
+
+    it('throws when folder already exists', async () => {
+      const handler = getRegisteredHandler('notes:create-folder');
+      await createFolder(workspaceRoot, 'existing-folder');
+      await expect(handler(null, { dirPath: 'existing-folder' })).rejects.toThrow('Directory already exists');
+    });
+  });
+
+  // --- notes:delete ---
+  describe('notes:delete handler', () => {
+    it('throws on invalid payload (missing path)', async () => {
+      const handler = getRegisteredHandler('notes:delete');
+      await expect(handler(null, { isDirectory: false })).rejects.toThrow();
+    });
+
+    it('throws on invalid payload (wrong type for isDirectory)', async () => {
+      const handler = getRegisteredHandler('notes:delete');
+      await expect(handler(null, { path: 'test.md', isDirectory: 'yes' })).rejects.toThrow();
+    });
+
+    it('deletes a file and returns deleted: true', async () => {
+      const handler = getRegisteredHandler('notes:delete');
+      await writeNote(workspaceRoot, 'to-delete.md', 'bye');
+      const result = await handler(null, { path: 'to-delete.md', isDirectory: false });
+      expect(result).toEqual({ deleted: true });
+      await expect(readNote(workspaceRoot, 'to-delete.md')).rejects.toThrow();
+    });
+  });
+
+  // --- notes:rename ---
+  describe('notes:rename handler', () => {
+    it('throws on invalid payload (missing newName)', async () => {
+      const handler = getRegisteredHandler('notes:rename');
+      await expect(handler(null, { oldPath: 'old.md' })).rejects.toThrow();
+    });
+
+    it('throws on invalid payload (wrong type)', async () => {
+      const handler = getRegisteredHandler('notes:rename');
+      await expect(handler(null, { oldPath: 'old.md', newName: 123 })).rejects.toThrow();
+    });
+
+    it('renames a file and returns newPath', async () => {
+      const handler = getRegisteredHandler('notes:rename');
+      await writeNote(workspaceRoot, 'rename-old.md', 'content');
+      const result = await handler(null, { oldPath: 'rename-old.md', newName: 'rename-new.md' });
+      expect(result).toHaveProperty('newPath');
+      expect(result.newPath).toContain('rename-new.md');
+    });
+
+    it('throws when destination already exists', async () => {
+      const handler = getRegisteredHandler('notes:rename');
+      await writeNote(workspaceRoot, 'src.md', 'src');
+      await writeNote(workspaceRoot, 'dst.md', 'dst');
+      await expect(handler(null, { oldPath: 'src.md', newName: 'dst.md' })).rejects.toThrow('Destination already exists');
+    });
+  });
+
+  // --- notes:search ---
+  describe('notes:search handler', () => {
+    it('throws on invalid payload (missing query)', async () => {
+      const handler = getRegisteredHandler('notes:search');
+      await expect(handler(null, {})).rejects.toThrow();
+    });
+
+    it('throws on invalid payload (wrong type for query)', async () => {
+      const handler = getRegisteredHandler('notes:search');
+      await expect(handler(null, { query: 42 })).rejects.toThrow();
+    });
+
+    it('works with null/undefined payload (fallback defaults)', async () => {
+      const handler = getRegisteredHandler('notes:search');
+      const result = await handler(null, null);
+      expect(result).toHaveProperty('results');
+      expect(Array.isArray(result.results)).toBe(true);
+    });
+
+    it('returns search results for valid payload', async () => {
+      const handler = getRegisteredHandler('notes:search');
+      await writeNote(workspaceRoot, 'searchable.md', '# Find Me');
+      const result = await handler(null, { query: 'Find Me', maxResults: 10 });
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].title).toBe('searchable');
+    });
+  });
+
+  // --- notes:resolve-wikilink ---
+  describe('notes:resolve-wikilink handler', () => {
+    it('throws on invalid payload (missing wikilink)', async () => {
+      const handler = getRegisteredHandler('notes:resolve-wikilink');
+      await expect(handler(null, {})).rejects.toThrow();
+    });
+
+    it('throws on invalid payload (wrong type)', async () => {
+      const handler = getRegisteredHandler('notes:resolve-wikilink');
+      await expect(handler(null, { wikilink: 42 })).rejects.toThrow();
+    });
+
+    it('returns unresolved for non-existent wikilink', async () => {
+      const handler = getRegisteredHandler('notes:resolve-wikilink');
+      const result = await handler(null, { wikilink: '[[nonexistent]]' });
+      expect(result.resolved).toBe(false);
+      expect(result.path).toContain('Notes/');
+    });
+
+    it('resolves an existing wikilink', async () => {
+      const handler = getRegisteredHandler('notes:resolve-wikilink');
+      await writeNote(workspaceRoot, 'target.md', '# Target');
+      const result = await handler(null, { wikilink: '[[target]]' });
+      expect(result.resolved).toBe(true);
+      expect(result.path).toContain('target.md');
+    });
+  });
+
+  // --- notes:list-workspace-markdown ---
+  describe('notes:list-workspace-markdown handler', () => {
+    it('throws on invalid payload (query must be string if provided)', async () => {
+      const handler = getRegisteredHandler('notes:list-workspace-markdown');
+      await expect(handler(null, { query: 42 })).rejects.toThrow();
+    });
+
+    it('works with null/undefined payload (fallback defaults)', async () => {
+      const handler = getRegisteredHandler('notes:list-workspace-markdown');
+      const result = await handler(null, null);
+      expect(result).toHaveProperty('files');
+      expect(Array.isArray(result.files)).toBe(true);
+    });
+
+    it('returns workspace markdown files for valid payload', async () => {
+      const handler = getRegisteredHandler('notes:list-workspace-markdown');
+      await fs.writeFile(path.join(workspaceRoot, 'ws-note.md'), '# WS Note');
+      const result = await handler(null, { query: undefined, maxResults: 20 });
+      expect(result.files.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // --- extra internal helper coverage ---
+  describe('resolveWikilink internal paths (parseWikilinkTarget / normalizePathForMatch)', () => {
+    it('resolves wikilink with pipe alias and line number', async () => {
+      // This exercises parseWikilinkTarget with pipe AND hash
+      await writeNote(workspaceRoot, 'aliased.md', '# Aliased');
+      // Pipe alias: target is before |, alias after. Line number must be on target side.
+      const result = await resolveWikilink(workspaceRoot, '[[aliased#42|Short Alias]]');
+      expect(result.resolved).toBe(true);
+      expect(result.path).toContain('aliased.md');
+      expect(result.line).toBe(42);
+    });
+
+    it('returns unresolved for wikilink with invalid syntax (no brackets)', async () => {
+      const result = await resolveWikilink(workspaceRoot, 'plain-text');
+      expect(result.resolved).toBe(false);
+      expect(result.path).toBe('');
+    });
+
+    it('returns unresolved with Notes path for creation when wikilink not found in workspace', async () => {
+      const result = await resolveWikilink(workspaceRoot, '[[brand-new-note]]');
+      expect(result.resolved).toBe(false);
+      expect(result.path).toBe('Notes/brand-new-note.md');
+    });
+
+    it('excludes .command-center files from wikilink resolution', async () => {
+      const ccDir = path.join(workspaceRoot, '.command-center');
+      await fs.mkdir(ccDir, { recursive: true });
+      await fs.writeFile(path.join(ccDir, 'secret.md'), '# Secret');
+      const result = await resolveWikilink(workspaceRoot, '[[secret]]');
+      // Should not resolve to .command-center
+      expect(result.resolved).toBe(false);
+    });
+
+    it('does not resolve hidden files via wikilink', async () => {
+      await fs.writeFile(path.join(workspaceRoot, '.hidden.md'), '# Hidden');
+      const result = await resolveWikilink(workspaceRoot, '[[hidden]]');
+      expect(result.resolved).toBe(false);
+    });
   });
 });

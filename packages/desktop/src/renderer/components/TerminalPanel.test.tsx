@@ -231,7 +231,7 @@ describe('TerminalPanel', () => {
       let approvalRequiredHandler:
         | ((payload: { approvalId: string; launchContext: LaunchContext; command: string; riskLevel: string }) => void)
         | undefined;
-      let denyResolve: ((result: unknown) => void) | undefined;
+      let denyResolve: (() => void) | undefined;
 
       const launchContext: LaunchContext = {
         launchId: 'launch-1',

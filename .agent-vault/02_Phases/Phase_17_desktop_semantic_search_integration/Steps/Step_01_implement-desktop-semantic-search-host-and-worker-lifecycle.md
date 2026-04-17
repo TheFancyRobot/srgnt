@@ -5,10 +5,10 @@ contract_version: 1
 title: Implement desktop semantic search host and worker lifecycle
 step_id: STEP-17-01
 phase: '[[02_Phases/Phase_17_desktop_semantic_search_integration/Phase|Phase 17 desktop semantic search integration]]'
-status: planned
-owner: ''
+status: in_progress
+owner: executor-1
 created: '2026-04-02'
-updated: '2026-04-02'
+updated: '2026-04-16'
 depends_on:
   - '[[02_Phases/Phase_16_runtime_semantic_search_engine/Phase|PHASE-16]]'
 related_sessions: []
@@ -76,3 +76,10 @@ tags:
 ## Outcome Summary
 
 - Not started yet. Completion means desktop can host semantic search without running heavy work in the renderer or Electron UI thread.
+STEP-17-01 COMPLETE — validated 2026-04-16.
+
+Created SemanticSearchHost class, worker thread, and lifecycle tests:
+- host.ts (93.45% coverage), worker.ts (97.02% coverage), index.ts (100%)
+- 22+ tests (745 desktop total), 95.17% semantic-search coverage
+- Workspace switch teardown wired in main/index.ts
+- No new typecheck regressions, no runtime test regressions (466/466)

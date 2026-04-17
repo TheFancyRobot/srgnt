@@ -1,13 +1,11 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EditorView, Decoration, ViewPlugin } from '@codemirror/view';
-import { autocompletion, type CompletionContext } from '@codemirror/autocomplete';
+import { describe, it, expect, vi } from 'vitest';
+import { CompletionContext } from '@codemirror/autocomplete';
 import {
   wikilinkPlugin,
   wikilinkStyles,
-  wikilinkClickHandler,
   wikilinkCompletionSource,
   normalizeCompletionSources,
   createWikilinkExtension,
@@ -18,24 +16,19 @@ import {
 // ---------------------------------------------------------------------------
 
 /** Build a minimal CompletionContext-like object for wikilinkCompletionSource. */
-const createMockContext = (text: string, pos: number, explicit = false) => ({
-  pos,
-  explicit,
-  state: {
-    doc: {
-      length: text.length,
-      sliceString: (from: number, to: number) => text.slice(from, to),
-      lineAt: () => ({ text }),
-      toString: () => text,
+const createMockContext = (text: string, pos: number, explicit = false) =>
+  ({
+    pos,
+    explicit,
+    state: {
+      doc: {
+        length: text.length,
+        sliceString: (from: number, to: number) => text.slice(from, to),
+        lineAt: () => ({ text }),
+        toString: () => text,
+      },
     },
-  },
-});
-
-/** Build a minimal EditorView-like object for click-handler tests. */
-const createMockView = () => ({
-  dom: document.createElement('div'),
-});
-
+  }) as unknown as CompletionContext;
 // ---------------------------------------------------------------------------
 // Module exports
 // ---------------------------------------------------------------------------
@@ -210,7 +203,7 @@ describe('normalizeCompletionSources', () => {
     expect(normalized).toHaveLength(1);
     // Call the wrapped source – should return a thenable (Promise)
     const ctx = createMockContext('[[X', 3);
-    const result = normalized[0](ctx as unknown as CompletionContext);
+    const result = normalized[0](ctx as unknown as CompletionContext) as unknown as Promise<unknown>;
     // Must be a Promise-like object
     expect(typeof result.then).toBe('function');
     await result;

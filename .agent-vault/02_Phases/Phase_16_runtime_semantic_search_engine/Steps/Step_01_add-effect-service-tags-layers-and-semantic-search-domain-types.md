@@ -5,13 +5,14 @@ contract_version: 1
 title: Add Effect service tags, layers, and semantic search domain types
 step_id: STEP-16-01
 phase: '[[02_Phases/Phase_16_runtime_semantic_search_engine/Phase|Phase 16 runtime semantic search engine]]'
-status: planned
+status: complete
 owner: ''
 created: '2026-04-02'
-updated: '2026-04-02'
+updated: '2026-04-14'
 depends_on:
   - '[[02_Phases/Phase_15_semantic_search_foundation/Phase|PHASE-15]]'
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-04-14-212015-add-effect-service-tags-layers-and-semantic-search-domain-types-executor-1|SESSION-2026-04-14-212015 executor-1 session for Add Effect service tags, layers, and semantic search domain types]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -71,7 +72,7 @@ tags:
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-04-14 - [[05_Sessions/2026-04-14-212015-add-effect-service-tags-layers-and-semantic-search-domain-types-executor-1|SESSION-2026-04-14-212015 executor-1 session for Add Effect service tags, layers, and semantic search domain types]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary

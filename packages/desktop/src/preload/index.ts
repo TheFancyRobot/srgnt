@@ -21,6 +21,8 @@ const ipcChannels = {
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
   connectorList: 'connector:list',
   connectorStatus: 'connector:status',
+  connectorInstall: 'connector:install',
+  connectorUninstall: 'connector:uninstall',
   connectorConnect: 'connector:connect',
   connectorDisconnect: 'connector:disconnect',
   settingsGet: 'settings:get',
@@ -56,12 +58,24 @@ const ipcChannels = {
   notesResolveWikilink: 'notes:resolve-wikilink',
   notesListWorkspaceMarkdown: 'notes:list-workspace-markdown',
   shellOpenExternal: 'shell:open-external',
+  // Semantic search (inline - preload cannot import from @srgnt/contracts)
+  semanticSearchInit: 'semantic-search:init',
+  semanticSearchEnableForWorkspace: 'semantic-search:enable-for-workspace',
+  semanticSearchIndexWorkspace: 'semantic-search:index-workspace',
+  semanticSearchRebuildAll: 'semantic-search:rebuild-all',
+  semanticSearchSearch: 'semantic-search:search',
+  semanticSearchStatus: 'semantic-search:status',
 } as const;
 
 export interface DesktopConnectorState {
   id: 'jira' | 'outlook' | 'teams';
   name: string;
-  status: 'disconnected' | 'connected' | 'error' | 'refreshing';
+  description: string;
+  provider: string;
+  version: string;
+  installed: boolean;
+  available: boolean;
+  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
   lastSyncAt?: string;
   lastError?: string;
   entityCounts?: Record<string, number>;
@@ -76,6 +90,8 @@ const api = {
   createDefaultWorkspaceRoot: (): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceCreateDefaultRoot),
 
   listConnectors: (): Promise<{ connectors: DesktopConnectorState[] }> => ipcRenderer.invoke(ipcChannels.connectorList),
+  installConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorInstall, id),
+  uninstallConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorUninstall, id),
   connectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorConnect, id),
   disconnectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorDisconnect, id),
 
@@ -155,6 +171,51 @@ const api = {
     ipcRenderer.on('window:maximized-changed', handler);
     return () => ipcRenderer.removeListener('window:maximized-changed', handler);
   },
+
+  // Semantic search
+  semanticSearchInit: (): Promise<{ initialized: boolean; modelId?: string }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchInit),
+  semanticSearchEnableForWorkspace: (workspaceRoot: string): Promise<{ enabled: boolean }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchEnableForWorkspace, { workspaceRoot }),
+  semanticSearchIndexWorkspace: (workspaceRoot: string, force?: boolean): Promise<{
+    indexedChunkCount: number;
+    skippedCount: number;
+    durationMs: number;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchIndexWorkspace, { workspaceRoot, force }),
+  semanticSearchRebuildAll: (workspaceRoot: string): Promise<{
+    totalChunkCount: number;
+    durationMs: number;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchRebuildAll, { workspaceRoot }),
+  semanticSearchSearch: (
+    workspaceRoot: string,
+    query: string,
+    maxResults?: number,
+    minScore?: number,
+  ): Promise<{
+    results: Array<{
+      score: number;
+      title: string;
+      workspaceRelativePath: string;
+      snippet: string;
+    }>;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchSearch, {
+      workspaceRoot,
+      query,
+      maxResults,
+      minScore,
+    }),
+  semanticSearchStatus: (workspaceRoot: string): Promise<{
+    state: 'uninitialized' | 'initializing' | 'ready' | 'indexing' | 'disabled' | 'error';
+    indexedFileCount: number;
+    totalChunkCount: number;
+    progressPercent: number;
+    lastIndexedAt: string | null;
+    error: string | null;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchStatus, { workspaceRoot }),
 
   platform: process.platform,
 };

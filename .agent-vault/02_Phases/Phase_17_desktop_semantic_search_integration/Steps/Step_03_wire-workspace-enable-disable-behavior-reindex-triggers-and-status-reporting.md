@@ -5,10 +5,10 @@ contract_version: 1
 title: Wire workspace enable-disable behavior, reindex triggers, and status reporting
 step_id: STEP-17-03
 phase: '[[02_Phases/Phase_17_desktop_semantic_search_integration/Phase|Phase 17 desktop semantic search integration]]'
-status: planned
-owner: ''
+status: in_progress
+owner: executor-1
 created: '2026-04-02'
-updated: '2026-04-02'
+updated: '2026-04-16'
 depends_on:
   - '[[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_01_implement-desktop-semantic-search-host-and-worker-lifecycle|STEP-17-01]]'
   - '[[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_02_add-typed-ipc-handlers-preload-bridge-and-renderer-facing-semantic-search-api|STEP-17-02]]'
@@ -77,3 +77,10 @@ tags:
 ## Outcome Summary
 
 - Not started yet. Completion means semantic search behaves like a real workspace feature instead of an isolated API.
+STEP-17-03 COMPLETE — validated 2026-04-16.
+
+Workspace enable/disable, file watcher, status reporting implemented.
+- 14 new tests (791 desktop total), 80 semantic-search tests
+- 96.55% semantic-search coverage
+- Exclusions: .agent-vault, .git, hidden files, backups, index directory
+- Debouncing, rename handling, extended status tracking

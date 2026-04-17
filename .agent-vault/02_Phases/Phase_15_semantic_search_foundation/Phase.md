@@ -4,10 +4,10 @@ template_version: 2
 contract_version: 1
 title: Semantic Search Foundation
 phase_id: PHASE-15
-status: planned
-owner: ''
+status: complete
+owner: coordinator
 created: '2026-04-02'
-updated: '2026-04-09'
+updated: '2026-04-14'
 depends_on:
   - '[[02_Phases/Phase_03_runtime_foundation/Phase|PHASE-03 Runtime Foundation]]'
   - '[[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]]'
@@ -23,6 +23,7 @@ related_decisions:
   - '[[04_Decisions/DEC-0011_dec-0011-use-simplequeryengine-over-in-memory-canonicalstore-for-v1-query-index|DEC-0011 Use SimpleQueryEngine over in-memory CanonicalStore for v1 query/index]]'
   - '[[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Notes workspace boundary and cross-workspace navigation rules]]'
   - '[[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015 Semantic search runtime and hosting model]]'
+  - '[[04_Decisions/DEC-0016_keep-semantic-search-ipc-high-level-and-hide-internal-paths|DEC-0016 Keep semantic search IPC high-level and hide internal paths]]'
 related_bugs:
   - '[[03_Bugs/BUG-0001_research-query-engine-memory-scaling-for-thousands-of-documents|BUG-0001 Query engine memory scaling for thousands of documents]]'
 tags:
@@ -99,6 +100,7 @@ tags:
 - [[04_Decisions/DEC-0011_dec-0011-use-simplequeryengine-over-in-memory-canonicalstore-for-v1-query-index|DEC-0011 Use SimpleQueryEngine over in-memory CanonicalStore for v1 query/index]]
 - [[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Notes workspace boundary and cross-workspace navigation rules]]
 - [[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015 Semantic search runtime and hosting model]]
+- [[04_Decisions/DEC-0016_keep-semantic-search-ipc-high-level-and-hide-internal-paths|DEC-0016 Keep semantic search IPC high-level and hide internal paths]]
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs

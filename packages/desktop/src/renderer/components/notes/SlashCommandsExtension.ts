@@ -186,19 +186,15 @@ function shouldTriggerSlashCommand(context: CompletionContext, slashFrom: number
  * Completion source for slash commands.
  */
 export const slashCommandSource: CompletionSource = (context: CompletionContext): CompletionResult | null => {
-  console.debug('[slashCommandSource]', { pos: context.pos, explicit: context.explicit, line: context.state.doc.lineAt(context.pos).text });
   // Check if we're typing "/"
   const word = context.matchBefore(/\/[a-z]*$/);
-  console.debug('[slashCommandSource:match]', { word });
 
   if (!word) {
-    console.debug('[slashCommandSource:return]', 'no-word');
     return null;
   }
 
   // Check if slash command should be triggered
   if (!shouldTriggerSlashCommand(context, word.from)) {
-    console.debug('[slashCommandSource:return]', 'shouldTrigger=false');
     return null;
   }
 
@@ -209,11 +205,8 @@ export const slashCommandSource: CompletionSource = (context: CompletionContext)
   );
 
   if (filteredCommands.length === 0) {
-    console.debug('[slashCommandSource:return]', 'no-filtered-commands', { query });
     return null;
   }
-
-  console.debug('[slashCommandSource:return]', 'result', { query, count: filteredCommands.length });
 
   const completions: Completion[] = filteredCommands.map((cmd) => ({
     label: `/${cmd.label}`, // Include slash prefix so CodeMirror filtering works correctly

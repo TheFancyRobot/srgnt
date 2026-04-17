@@ -217,33 +217,6 @@ export const defaultSettingsSections: SettingsSection[] = [
     ],
   },
   {
-    id: 'connectors',
-    title: 'Connectors',
-    settings: [
-      {
-        id: 'jira-enabled',
-        label: 'Jira Integration',
-        description: 'Sync tasks and sprint data',
-        type: 'boolean',
-        value: false,
-      },
-      {
-        id: 'outlook-enabled',
-        label: 'Outlook Integration',
-        description: 'Sync calendar events',
-        type: 'boolean',
-        value: false,
-      },
-      {
-        id: 'teams-enabled',
-        label: 'Teams Integration',
-        description: 'Sync messages and mentions',
-        type: 'boolean',
-        value: false,
-      },
-    ],
-  },
-  {
     id: 'advanced',
     title: 'Advanced',
     settings: [

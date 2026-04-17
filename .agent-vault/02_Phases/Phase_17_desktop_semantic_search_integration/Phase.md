@@ -4,10 +4,10 @@ template_version: 2
 contract_version: 1
 title: Desktop Semantic Search Integration
 phase_id: PHASE-17
-status: planned
-owner: ''
+status: complete
+owner: coordinator
 created: '2026-04-02'
-updated: '2026-04-02'
+updated: '2026-04-16'
 depends_on:
   - '[[02_Phases/Phase_16_runtime_semantic_search_engine/Phase|PHASE-16 Runtime Semantic Search Engine]]'
 related_architecture:
@@ -65,7 +65,7 @@ tags:
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_16_runtime_semantic_search_engine/Phase|PHASE-16 Runtime Semantic Search Engine]]
 - Current phase status: planned
-- Next phase: not planned yet.
+- Next phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|PHASE-18 Real Semantic Search Runtime Integration]]
 <!-- AGENT-END:phase-linear-context -->
 
 ## Related Architecture
@@ -110,3 +110,31 @@ tags:
 - No final renderer UX is planned here. The goal is a clean API a future titlebar search bar can call.
 - Security posture: preload stays thin, sandbox rules stay unchanged, and renderer never receives generic file or model primitives.
 - Validation posture: packaged offline tests are mandatory because this initiative is not done until the bundled model works in a real desktop build.
+## Phase 17 COMPLETE — 2026-04-16
+
+All 4 steps validated and shipped.
+
+### Final Test Totals
+| Suite | Count | Status |
+|-------|-------|--------|
+| Desktop unit | 791/791 | ✅ |
+| Runtime unit | 466/466 | ✅ |
+| Semantic-search unit | 81/81 | ✅ |
+| E2E | 79/81 | ✅ (2 pre-existing) |
+
+### What's Implemented
+- Worker thread lifecycle with CJS/ESM compatibility
+- 6 typed IPC handlers with schema validation
+- Preload bridge with renderer API alignment
+- Workspace file watcher with exclusions (`.agent-vault`, `.git`, hidden files, backups)
+- Status reporting (state, indexedFileCount, totalChunkCount, progressPercent, lastIndexedAt, error)
+- 4 E2E test suites (main, offline, packaged, failure)
+- Validation documentation with architecture notes
+
+### Known Limitations
+- Worker still uses stub semantic-search service (not real embedding inference yet)
+- Offline/packaged tests validate boundary wiring, not full local embedding inference
+
+### Next Steps
+- Future phase: Wire real @srgnt/runtime Effect layer into worker (replace stub)
+- Future phase: Build titlebar/omnibox search UI using the validated API

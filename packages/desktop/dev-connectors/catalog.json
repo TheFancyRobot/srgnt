@@ -1,0 +1,122 @@
+{
+  "connectors": [
+    {
+      "manifest": {
+        "id": "jira",
+        "name": "Jira",
+        "version": "0.2.0",
+        "description": "Atlassian Jira connector for issue tracking",
+        "provider": "atlassian",
+        "authType": "oauth2",
+        "config": {
+          "authType": "oauth2",
+          "baseUrl": "https://api.atlassian.com",
+          "timeout": 30000,
+          "retryAttempts": 3
+        },
+        "capabilities": [
+          { "capability": "read", "supportedOperations": ["getIssue", "searchIssues", "getProjects"] },
+          { "capability": "write", "supportedOperations": ["transitionIssue", "addComment"] }
+        ],
+        "entityTypes": ["Task", "Person"],
+        "freshnessThresholdMs": 300000,
+        "metadata": {}
+      },
+      "packagePath": "/connectors/packages/jira.json"
+    },
+    {
+      "manifest": {
+        "id": "outlook",
+        "name": "Outlook Calendar",
+        "version": "0.2.0",
+        "description": "Microsoft Outlook Calendar connector for events and contacts",
+        "provider": "microsoft",
+        "authType": "oauth2",
+        "config": {
+          "authType": "oauth2",
+          "baseUrl": "https://graph.microsoft.com/v1.0",
+          "timeout": 30000,
+          "retryAttempts": 3
+        },
+        "capabilities": [
+          { "capability": "read", "supportedOperations": ["getEvent", "listEvents", "getContacts"] },
+          { "capability": "write", "supportedOperations": ["createEvent", "updateEvent", "respondToEvent"] }
+        ],
+        "entityTypes": ["Event", "Person"],
+        "freshnessThresholdMs": 300000,
+        "metadata": {}
+      },
+      "packagePath": "/connectors/packages/outlook.json"
+    },
+    {
+      "manifest": {
+        "id": "teams",
+        "name": "Microsoft Teams",
+        "version": "0.2.0",
+        "description": "Microsoft Teams connector for messages and team members",
+        "provider": "microsoft",
+        "authType": "oauth2",
+        "config": {
+          "authType": "oauth2",
+          "baseUrl": "https://graph.microsoft.com/v1.0",
+          "timeout": 30000,
+          "retryAttempts": 3
+        },
+        "capabilities": [
+          { "capability": "read", "supportedOperations": ["getMessage", "listMessages", "getMembers"] },
+          { "capability": "write", "supportedOperations": ["sendMessage", "replyToMessage"] },
+          { "capability": "subscribe", "supportedOperations": ["onNewMessage"] }
+        ],
+        "entityTypes": ["Message", "Person"],
+        "freshnessThresholdMs": 300000,
+        "metadata": {}
+      },
+      "packagePath": "/connectors/packages/teams.json"
+    },
+    {
+      "manifest": {
+        "id": "notes-connector",
+        "name": "Notes Connector",
+        "version": "0.1.0",
+        "description": "Example pluggable notes connector (dummy extension).",
+        "provider": "local-dev",
+        "authType": "none",
+        "config": {
+          "authType": "none",
+          "timeout": 15000,
+          "retryAttempts": 2
+        },
+        "capabilities": [
+          { "capability": "read", "supportedOperations": ["getMessage", "listMessages"] }
+        ],
+        "entityTypes": ["Message", "Person"],
+        "freshnessThresholdMs": 120000,
+        "metadata": { "category": "dummy" }
+      },
+      "packagePath": "/connectors/packages/notes-connector.json"
+    },
+    {
+      "manifest": {
+        "id": "calendar-plus",
+        "name": "Calendar Plus",
+        "version": "0.1.0",
+        "description": "Example pluggable calendar connector (dummy extension).",
+        "provider": "local-dev",
+        "authType": "none",
+        "config": {
+          "authType": "none",
+          "timeout": 20000,
+          "retryAttempts": 2
+        },
+        "capabilities": [
+          { "capability": "read", "supportedOperations": ["getEvent", "listEvents"] },
+          { "capability": "write", "supportedOperations": ["createEvent", "updateEvent"] }
+        ],
+        "entityTypes": ["Event", "Person"],
+        "freshnessThresholdMs": 120000,
+        "metadata": { "category": "dummy" }
+      },
+      "packagePath": "/connectors/packages/calendar-plus.json"
+    }
+  ]
+}

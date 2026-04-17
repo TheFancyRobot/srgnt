@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement canonical workspace markdown corpus policy and exclusions
 step_id: STEP-15-02
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
-status: planned
+status: complete
 owner: ''
 created: '2026-04-02'
 updated: '2026-04-02'

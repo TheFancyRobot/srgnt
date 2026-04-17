@@ -10,13 +10,13 @@ tags:
   - agent-vault
   - home
   - context
-last_updated: '2026-04-12'
+last_updated: '2026-04-17'
 tests: 641/641 passing, 0 failures
 coverage: 95.11% (statements + lines)
 target: 95%+ coverage — ACHIEVED
-blockers: none
+blockers: Phase 10 user-blocked pending explicit authorization
 in_flight: none
-phase: Phase_08_product_hardening (coverage push COMPLETE)
+phase: Phase_19_SHIPPED_all_suites_green
 done: Titlebar 100%, pty-service 99.36%, crash.ts 96.41%, ConnectorStatus ~97%, SlashCommands 95.09%, notes.ts IPC ~95%, NotesView 93.15%, TerminalPanel 92.45%, Onboarding 96.08%, TodaySidePanel 100% (isolation)
 remaining: notes.ts 87.06%, SlashCommandsExtension.ts 91.69%, NotesView.tsx 93.15%, SidePanel.tsx 92.75%
 ---
@@ -28,11 +28,11 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-04-13._
-- Session in progress: [[05_Sessions/2026-04-13-054136-add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage-team-lead|SESSION-2026-04-13-054136 team-lead session for Add Playwright/Electron interactive UI validation matrix and visual regression coverage]] - owner: team-lead - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]] - updated: 2026-04-13
-- Current step: [[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]] - status: in_progress - phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]
-- Active phase: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] - status: complete - updated: 2026-04-13
-- Also active: 23 more additional sessions, 36 more additional steps, 1 open critical bug.
+_Last refreshed: 2026-04-16._
+- Session in progress: [[05_Sessions/2026-04-16-043916-replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer-team-lead|SESSION-2026-04-16-043916 team-lead session for Replace desktop worker stub with real runtime semantic-search Effect layer]] - owner: team-lead - phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]] - updated: 2026-04-16
+- Current step: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation|STEP-18-05 Add a minimal semantic-search UI slice for end-to-end query and result validation]] - status: done_limited - phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]] - owner: executor-1
+- Active phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|PHASE-18 Real Semantic Search Runtime Integration]] - status: complete - updated: 2026-04-16
+- Also active: 46 more additional sessions, 32 more additional steps, 1 open critical bug.
 <!-- AGENT-END:current-focus -->
 - Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
 - Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]

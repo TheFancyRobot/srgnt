@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 const mockSetActivePanel = vi.fn();
@@ -35,7 +35,7 @@ vi.mock('./Titlebar.js', () => ({
 }));
 
 vi.mock('./ActivityBar.js', () => ({
-  ActivityBar: ({ items, activeId, onNavigate }: { items: unknown[]; activeId: string; onNavigate: (id: string) => void }) => (
+  ActivityBar: ({ items: _items, activeId, onNavigate }: { items: unknown[]; activeId: string; onNavigate: (id: string) => void }) => (
     <div data-testid="activity-bar">
       <span>{activeId}</span>
       <button onClick={() => onNavigate('calendar')}>switch</button>

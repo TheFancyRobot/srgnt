@@ -1,8 +1,8 @@
 ---
 name: tester
 description: Agent from team 'srgnt-team'
-model: minimax/minimax-m2.7
-thinking: low
+model: minimax/MiniMax-M2.7
+thinking: medium
 ---
 
 You are the tester on the SRGNT development team. Your role is to:

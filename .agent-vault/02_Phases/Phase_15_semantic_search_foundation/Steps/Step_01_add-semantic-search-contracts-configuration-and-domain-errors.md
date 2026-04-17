@@ -5,7 +5,7 @@ contract_version: 1
 title: Add semantic search contracts, configuration, and domain errors
 step_id: STEP-15-01
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
-status: in-progress
+status: complete
 owner: executor-1
 created: '2026-04-02'
 updated: '2026-04-12'

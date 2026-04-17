@@ -34,6 +34,24 @@ import { parseFrontmatter, serializeWithFrontmatter } from './markdown-serialize
 import { createWikilinkExtension, wikilinkStyles } from './WikilinkExtension.js';
 import { slashCommandSource, slashCommandsStyles } from './SlashCommandsExtension.js';
 
+/** Toggle the checkbox marker on the task list line under the cursor. Returns true if toggled. */
+export function toggleCheckboxAtCursor(view: EditorView): boolean {
+  const pos = view.state.selection.main.head;
+  const line = view.state.doc.lineAt(pos);
+  const match = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+\[)( |x|X)(\].*)$/);
+  if (!match) {
+    return false;
+  }
+  const markerPos = line.from + match[1].length;
+  const nextMarker = match[2] === ' ' ? 'x' : ' ';
+  view.dispatch({
+    changes: { from: markerPos, to: markerPos + 1, insert: nextMarker },
+    selection: view.state.selection.main,
+    userEvent: 'input',
+  });
+  return true;
+}
+
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 export type EditorDisplayMode = 'live-preview' | 'rendered';
 
@@ -654,6 +672,15 @@ export function MarkdownEditor({
             indentWithTab,
             ...historyKeymap,
             ...defaultKeymap,
+            // Toggle task list checkbox via keyboard (Ctrl/Cmd+Enter or Ctrl/Cmd+Space)
+            {
+              key: 'Mod-Enter',
+              run: (v) => toggleCheckboxAtCursor(v),
+            },
+            {
+              key: 'Mod- ',
+              run: (v) => toggleCheckboxAtCursor(v),
+            },
           ]),
           placeholder('Start writing...'),
           EditorView.contentAttributes.of({

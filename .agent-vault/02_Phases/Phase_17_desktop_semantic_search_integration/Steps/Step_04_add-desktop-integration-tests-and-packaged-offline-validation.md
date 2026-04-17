@@ -5,10 +5,10 @@ contract_version: 1
 title: Add desktop integration tests and packaged offline validation
 step_id: STEP-17-04
 phase: '[[02_Phases/Phase_17_desktop_semantic_search_integration/Phase|Phase 17 desktop semantic search integration]]'
-status: planned
-owner: ''
+status: complete
+owner: executor-1
 created: '2026-04-02'
-updated: '2026-04-02'
+updated: '2026-04-16'
 depends_on:
   - '[[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_03_wire-workspace-enable-disable-behavior-reindex-triggers-and-status-reporting|STEP-17-03]]'
 related_sessions: []

@@ -91,14 +91,30 @@ test('GFM: single-level blockquote has visual quote styling', async ({ userDataD
 });
 
 test('GFM: nested blockquotes have increasing depth', async ({ userDataDir, window: page }) => {
-  await setupNote(page, userDataDir, 'NestedBQ.md', '> outer\n> > inner');
+  // Use proper GFM multi-line nested blockquote:
+  // Line 1: outer blockquote marker
+  // Line 2: outer continuation + nested blockquote marker (the >> is on its own line = nested)
+  // Line 3: nested continuation
+  await setupNote(page, userDataDir, 'NestedBQ.md', '> outer\n>> inner\n');
   await page.getByRole('treeitem', { name: /NestedBQ\.md/ }).click();
 
-  const depths = await page.evaluate(() => {
-    return Array.from(document.querySelectorAll('.cm-blockquote-line')).map(
+  // Poll until blockquote decorations are applied (plugin updates are async).
+  await expect
+    .poll(async () => {
+      const els = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('.cm-blockquote-line')).map(
+          (el) => Number(el.getAttribute('data-blockquote-depth')),
+        ),
+      );
+      return els.length > 0 ? els : null;
+    })
+    .not.toBeNull();
+
+  const depths = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.cm-blockquote-line')).map(
       (el) => Number(el.getAttribute('data-blockquote-depth')),
-    );
-  });
+    ),
+  );
 
   expect(depths).toContain(1);
   expect(depths).toContain(2);

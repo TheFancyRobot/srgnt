@@ -46,15 +46,36 @@ test('navigates across key surfaces and updates connector status', async ({ wind
   await page.getByRole('button', { name: 'Connectors' }).click();
   await expect(page.locator('main h1').filter({ hasText: 'Connectors' })).toBeVisible();
 
+  // Fresh workspace: all connectors are available but NOT installed
+  await expect(page.getByRole('button', { name: 'Install Jira' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Install Outlook Calendar' })).toBeVisible();
+
+  // Install Jira before connecting (install-before-use enforced)
+  await page.getByRole('button', { name: 'Install Jira' }).click();
+  await expect(page.getByRole('button', { name: 'Connect Jira' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Uninstall Jira' })).toBeVisible();
+
+  // Connect Jira
   await page.getByRole('button', { name: 'Connect Jira' }).click();
   await expect(page.getByRole('button', { name: 'Disconnect Jira' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Uninstall Jira' })).toBeVisible();
+
+  // Disconnect Jira
   await page.getByRole('button', { name: 'Disconnect Jira' }).click();
   await expect(page.getByRole('button', { name: 'Connect Jira' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Uninstall Jira' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Notes' }).click();
+  // Uninstall Jira
+  await page.getByRole('button', { name: 'Uninstall Jira' }).click();
+  await expect(page.getByRole('button', { name: 'Install Jira' })).toBeVisible();
+  // Outlook and Teams remain uninstalled
+  await expect(page.getByRole('button', { name: 'Install Outlook Calendar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Install Microsoft Teams' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Notes', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('button', { name: 'Notes', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Side panel' })).toHaveAttribute('data-collapsed', 'true');
   await page.getByRole('button', { name: 'Expand side panel' }).click();
   await expect(page.getByRole('complementary', { name: 'Side panel' })).toHaveAttribute('data-collapsed', 'false');

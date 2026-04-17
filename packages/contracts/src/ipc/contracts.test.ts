@@ -5,8 +5,11 @@ import {
   SIpcRequest,
   SIpcResponse,
   SAppVersionResponse,
-  SUserDataPathResponse,
+  SConnectorId,
   SConnectorListResponse,
+  SDesktopConnectorPreferences,
+  SDesktopSettings,
+  SUserDataPathResponse,
   SSkillListResponse,
   SSkillRunRequest,
   SSkillRunResponse,
@@ -19,6 +22,18 @@ import {
   SLaunchApprovalPayload,
   SLaunchApprovalResolveRequest,
   SOpenExternalRequest,
+  SSemanticSearchInitRequest,
+  SSemanticSearchInitResponse,
+  SSemanticSearchEnableForWorkspaceRequest,
+  SSemanticSearchEnableForWorkspaceResponse,
+  SSemanticSearchIndexWorkspaceRequest,
+  SSemanticSearchIndexWorkspaceResponse,
+  SSemanticSearchRebuildAllRequest,
+  SSemanticSearchRebuildAllResponse,
+  SSemanticSearchSearchRequest,
+  SSemanticSearchSearchResponse,
+  SSemanticSearchStatusRequest,
+  SSemanticSearchStatusResponse,
 } from './contracts.js';
 
 describe('IPC Channel', () => {
@@ -28,6 +43,10 @@ describe('IPC Channel', () => {
       'app:get-user-data-path',
       'workspace:get-root',
       'connector:list',
+      'connector:install',
+      'connector:uninstall',
+      'connector:connect',
+      'connector:disconnect',
       'skill:run',
       'approval:request',
     ] as const;
@@ -94,6 +113,67 @@ describe('User Data Path Response', () => {
   });
 });
 
+describe('Connector Id Validation', () => {
+  it('accepts connector IDs that match id shape', () => {
+    const knownIds = ['jira', 'outlook', 'teams', 'notes-connector', 'calendar-plus'];
+    for (const id of knownIds) {
+      expect(() => parseSync(SConnectorId, id)).not.toThrow();
+    }
+  });
+
+  it('rejects malformed connector IDs', () => {
+    const malformed = ['', 'bad id', '-invalid', 'Invalid', 'A-Z'];
+    for (const id of malformed) {
+      expect(() => parseSync(SConnectorId, id)).toThrow();
+    }
+  });
+});
+
+describe('Desktop Settings Migration & Schema', () => {
+  it('accepts the new installed array shape with jira installed', () => {
+    const parsed = parseSync(SDesktopSettings, {
+      theme: 'system',
+      updateChannel: 'stable',
+      telemetryEnabled: false,
+      crashReportsEnabled: false,
+      connectors: {
+        installedConnectorIds: ['jira'],
+      },
+      debugMode: false,
+      maxConcurrentRuns: '3',
+      layout: {
+        sidebarWidth: 300,
+        sidebarCollapsed: true,
+      },
+    });
+
+    expect(parsed.connectors).toEqual({
+      installedConnectorIds: ['jira'],
+    });
+  });
+
+  it('fills the install array with empty defaults when omitted', () => {
+    const parsed = parseSync(SDesktopConnectorPreferences, {});
+    expect(parsed).toMatchObject({
+      installedConnectorIds: [],
+    });
+  });
+
+  it('accepts desktop settings with connector install array omitted', () => {
+    const parsed = parseSync(SDesktopSettings, {
+      theme: 'light',
+      updateChannel: 'beta',
+      telemetryEnabled: true,
+      crashReportsEnabled: true,
+      connectors: {},
+      debugMode: true,
+      maxConcurrentRuns: '1',
+    });
+
+    expect(parsed.connectors.installedConnectorIds).toEqual([]);
+  });
+});
+
 describe('Connector List Response', () => {
   it('validates empty connector list', () => {
     const response = { connectors: [] };
@@ -108,6 +188,48 @@ describe('Connector List Response', () => {
       ],
     };
     expect(() => parseSync(SConnectorListResponse, response)).not.toThrow();
+  });
+
+  it('applies connector list defaults', () => {
+    const response = {
+      connectors: [
+        {
+          id: 'jira',
+          name: 'Jira',
+          status: 'connected',
+          installed: true,
+          available: false,
+          description: 'Fixture-backed connector',
+          provider: 'atlassian',
+          version: '0.1.0',
+        },
+      ],
+    };
+    const parsed = parseSync(SConnectorListResponse, response);
+    expect(parsed.connectors[0]).toMatchObject({
+      installed: true,
+      available: false,
+      description: 'Fixture-backed connector',
+      provider: 'atlassian',
+      version: '0.1.0',
+    });
+  });
+
+  it('fills connector list defaults when omitted', () => {
+    const response = {
+      connectors: [
+        {
+          id: 'teams',
+          name: 'Teams',
+          status: 'disconnected',
+        },
+      ],
+    };
+    const parsed = parseSync(SConnectorListResponse, response);
+    expect(parsed.connectors[0]).toMatchObject({
+      installed: false,
+      available: true,
+    });
   });
 });
 
@@ -333,5 +455,105 @@ describe('Launch Approval Payload', () => {
       requiresApproval: true,
     };
     expect(() => parseSync(SLaunchApprovalPayload, payload)).toThrow();
+  });
+});
+
+describe('Semantic Search IPC', () => {
+  it('accepts all semantic search channels', () => {
+    const channels = [
+      'semantic-search:init',
+      'semantic-search:enable-for-workspace',
+      'semantic-search:index-workspace',
+      'semantic-search:rebuild-all',
+      'semantic-search:search',
+      'semantic-search:status',
+    ] as const;
+
+    for (const channel of channels) {
+      expect(() => parseSync(SIpcChannel, channel)).not.toThrow();
+    }
+  });
+
+  describe('Init', () => {
+    it('validates init request without renderer-facing model internals', () => {
+      expect(() => parseSync(SSemanticSearchInitRequest, {})).not.toThrow();
+    });
+    it('validates init response', () => {
+      expect(() => parseSync(SSemanticSearchInitResponse, { initialized: true, modelId: 'model-v1' })).not.toThrow();
+      expect(() => parseSync(SSemanticSearchInitResponse, { initialized: false })).not.toThrow();
+    });
+  });
+
+  describe('Enable For Workspace', () => {
+    it('validates enable request', () => {
+      expect(() => parseSync(SSemanticSearchEnableForWorkspaceRequest, { workspaceRoot: '/workspace' })).not.toThrow();
+    });
+    it('validates enable response', () => {
+      const parsed = parseSync(SSemanticSearchEnableForWorkspaceResponse, { enabled: true });
+      expect(parsed.enabled).toBe(true);
+    });
+  });
+
+  describe('Index Workspace', () => {
+    it('applies force default', () => {
+      const parsed = parseSync(SSemanticSearchIndexWorkspaceRequest, { workspaceRoot: '/w' });
+      expect(parsed.force).toBe(false);
+    });
+    it('validates index response', () => {
+      const parsed = parseSync(SSemanticSearchIndexWorkspaceResponse, { indexedChunkCount: 50, skippedCount: 3, durationMs: 1200 });
+      expect(parsed.indexedChunkCount).toBe(50);
+    });
+  });
+
+  describe('Rebuild All', () => {
+    it('validates rebuild request', () => {
+      expect(() => parseSync(SSemanticSearchRebuildAllRequest, { workspaceRoot: '/w' })).not.toThrow();
+    });
+    it('validates rebuild response', () => {
+      expect(() => parseSync(SSemanticSearchRebuildAllResponse, { totalChunkCount: 100, durationMs: 5000 })).not.toThrow();
+    });
+  });
+
+  describe('Search', () => {
+    it('applies defaults', () => {
+      const parsed = parseSync(SSemanticSearchSearchRequest, { workspaceRoot: '/w', query: 'test' });
+      expect(parsed.maxResults).toBe(10);
+      expect(parsed.minScore).toBe(0.5);
+    });
+    it('validates search response', () => {
+      const parsed = parseSync(SSemanticSearchSearchResponse, {
+        results: [{ score: 0.9, title: 'Test', workspaceRelativePath: 'notes/test.md', snippet: '...' }],
+      });
+      expect(parsed.results).toHaveLength(1);
+    });
+    it('validates empty search results', () => {
+      const parsed = parseSync(SSemanticSearchSearchResponse, { results: [] });
+      expect(parsed.results).toHaveLength(0);
+    });
+  });
+
+  describe('Status', () => {
+    it('validates status request', () => {
+      expect(() => parseSync(SSemanticSearchStatusRequest, { workspaceRoot: '/w' })).not.toThrow();
+    });
+    it('applies chunkCount default', () => {
+      const parsed = parseSync(SSemanticSearchStatusRequest, { workspaceRoot: '/w' });
+      // chunkCount default is on the response, not request
+      expect(parsed.workspaceRoot).toBe('/w');
+    });
+    it('validates status response with defaults', () => {
+      const parsed = parseSync(SSemanticSearchStatusResponse, { state: 'ready' });
+      expect(parsed.chunkCount).toBe(0);
+      expect(parsed.modelId).toBeUndefined();
+    });
+    it('validates all status states', () => {
+      const states = ['uninitialized', 'initializing', 'ready', 'indexing', 'disabled', 'error'];
+      for (const state of states) {
+        expect(() => parseSync(SSemanticSearchStatusResponse, { state })).not.toThrow();
+      }
+    });
+    it('rejects invalid status state', () => {
+      expect(() => parseSync(SSemanticSearchStatusResponse, { state: 'invalid' })).toThrow();
+    });
   });
 });

@@ -1,8 +1,8 @@
 ---
 name: executor-1
 description: Agent from team 'srgnt-team'
-model: openadapter/glm-5.1
-thinking: low
+model: minimax/MiniMax-M2.7
+thinking: medium
 ---
 
 You are executor-1 on the SRGNT development team. Your role is to:

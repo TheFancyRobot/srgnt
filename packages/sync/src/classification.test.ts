@@ -1,19 +1,20 @@
 import { describe, it, expect } from 'vitest';
+import { parseSync } from '@srgnt/contracts';
 import {
   SDataClassification,
-  SSyncSafeEntity,
-  dataClassificationMap,
-  getClassification,
-  isSyncSafe,
-  requiresEncryption,
-} from './classification.js';
-import { parseSync } from '@srgnt/contracts';
+  SSyncEligibility,
+  SStorageFormat,
+  SAuthoritative,
+  SDataClassEntry,
+  SClassificationMatrix,
+  classificationMatrix,
+} from './schemas/classification.js';
 
-// --- Schema validation tests ---
+// --- SDataClassification tests ---
 
 describe('SDataClassification', () => {
   it('accepts valid classification values', () => {
-    for (const value of ['public', 'internal', 'confidential', 'restricted'] as const) {
+    for (const value of ['public', 'internal', 'confidential', 'secret'] as const) {
       const result = parseSync(SDataClassification, value);
       expect(result).toBe(value);
     }
@@ -27,216 +28,197 @@ describe('SDataClassification', () => {
   });
 });
 
-describe('SSyncSafeEntity', () => {
-  it('parses a minimal entity (only id + classification + canSync)', () => {
-    const entity = parseSync(SSyncSafeEntity, {
-      id: 'Task',
+// --- SSyncEligibility tests ---
+
+describe('SSyncEligibility', () => {
+  it('accepts valid eligibility values', () => {
+    for (const value of ['syncSafe', 'encryptedOnly', 'localOnly', 'rebuildable'] as const) {
+      const result = parseSync(SSyncEligibility, value);
+      expect(result).toBe(value);
+    }
+  });
+
+  it('rejects invalid eligibility values', () => {
+    expect(() => parseSync(SSyncEligibility, 'safe')).toThrow();
+    expect(() => parseSync(SSyncEligibility, 'local')).toThrow();
+    expect(() => parseSync(SSyncEligibility, '')).toThrow();
+  });
+});
+
+// --- SStorageFormat tests ---
+
+describe('SStorageFormat', () => {
+  it('accepts valid format values', () => {
+    const validFormats = [
+      'markdown-file',
+      'yaml-frontmatter',
+      'json-structured',
+      'derived-index',
+      'secure-storage',
+      'log-file',
+      'binary-cache',
+    ];
+    for (const value of validFormats as (typeof validFormats)[number][]) {
+      const result = parseSync(SStorageFormat, value);
+      expect(result).toBe(value);
+    }
+  });
+
+  it('rejects invalid format values', () => {
+    expect(() => parseSync(SStorageFormat, 'json')).toThrow();
+    expect(() => parseSync(SStorageFormat, 'file')).toThrow();
+  });
+});
+
+// --- SAuthoritative tests ---
+
+describe('SAuthoritative', () => {
+  it('accepts valid authoritative values', () => {
+    for (const value of ['authoritative', 'derived', 'cache'] as const) {
+      const result = parseSync(SAuthoritative, value);
+      expect(result).toBe(value);
+    }
+  });
+
+  it('rejects invalid authoritative values', () => {
+    expect(() => parseSync(SAuthoritative, 'primary')).toThrow();
+    expect(() => parseSync(SAuthoritative, 'source')).toThrow();
+  });
+});
+
+// --- SDataClassEntry tests ---
+
+describe('SDataClassEntry', () => {
+  it('parses a valid data class entry', () => {
+    const entry = {
+      name: 'workspace-markdown-files',
+      format: 'markdown-file',
       classification: 'internal',
-      canSync: true,
-    });
-    expect(entity).toEqual({
-      id: 'Task',
-      classification: 'internal',
-      canSync: true,
-      encryption: 'none',
-      conflictStrategy: 'last-write-wins',
-    });
+      eligibility: 'syncSafe',
+      authoritative: 'authoritative',
+      rationale: 'Primary user content.',
+    };
+    const result = parseSync(SDataClassEntry, entry);
+    expect(result.name).toBe('workspace-markdown-files');
+    expect(result.format).toBe('markdown-file');
+    expect(result.classification).toBe('internal');
+    expect(result.eligibility).toBe('syncSafe');
+    expect(result.authoritative).toBe('authoritative');
   });
 
-  it('parses a full entity with all fields', () => {
-    const entity = parseSync(SSyncSafeEntity, {
-      id: 'Message',
-      classification: 'confidential',
-      canSync: true,
-      encryption: 'both',
-      conflictStrategy: 'server-wins',
-    });
-    expect(entity.encryption).toBe('both');
-    expect(entity.conflictStrategy).toBe('server-wins');
-  });
-
-  it('rejects entity without required fields', () => {
-    expect(() => parseSync(SSyncSafeEntity, { id: 'X' })).toThrow();
-  });
-
-  it('rejects entity with invalid classification', () => {
+  it('rejects entry without required fields', () => {
     expect(() =>
-      parseSync(SSyncSafeEntity, { id: 'X', classification: 'secret', canSync: false })
+      parseSync(SDataClassEntry, { name: 'test' })
     ).toThrow();
   });
 
-  it('rejects entity with invalid encryption', () => {
+  it('rejects entry with invalid format', () => {
     expect(() =>
-      parseSync(SSyncSafeEntity, {
-        id: 'X',
-        classification: 'public',
-        canSync: true,
-        encryption: 'military-grade',
+      parseSync(SDataClassEntry, {
+        name: 'test',
+        format: 'invalid-format',
+        classification: 'internal',
+        eligibility: 'syncSafe',
+        authoritative: 'authoritative',
+        rationale: 'test',
       })
     ).toThrow();
   });
 
-  it('rejects entity with invalid conflictStrategy', () => {
+  it('rejects entry with invalid classification', () => {
     expect(() =>
-      parseSync(SSyncSafeEntity, {
-        id: 'X',
-        classification: 'public',
-        canSync: true,
-        conflictStrategy: 'always-mine',
+      parseSync(SDataClassEntry, {
+        name: 'test',
+        format: 'markdown-file',
+        classification: 'top-secret',
+        eligibility: 'syncSafe',
+        authoritative: 'authoritative',
+        rationale: 'test',
       })
     ).toThrow();
   });
 });
 
-// --- dataClassificationMap tests ---
+// --- Classification Matrix tests ---
 
-describe('dataClassificationMap', () => {
-  const knownTypes = ['Task', 'Event', 'Message', 'Person', 'Artifact'] as const;
-
-  it('has entries for all known entity types', () => {
-    for (const type of knownTypes) {
-      expect(dataClassificationMap[type]).toBeDefined();
+describe('classificationMatrix', () => {
+  it('contains entries for all required data classes', () => {
+    const requiredClasses = [
+      'workspace-markdown-files',
+      'yaml-frontmatter',
+      'dataview-indexes',
+      'connector-credentials',
+      'crash-logs',
+      'user-settings',
+      'run-history',
+      'approval-records',
+    ];
+    const matrixNames = classificationMatrix.map((e) => e.name);
+    for (const required of requiredClasses) {
+      expect(matrixNames).toContain(required);
     }
   });
 
-  it('each entry has matching id and key', () => {
-    for (const type of knownTypes) {
-      expect(dataClassificationMap[type].id).toBe(type);
+  it('each entry has required fields', () => {
+    for (const entry of classificationMatrix) {
+      expect(entry.name).toBeDefined();
+      expect(entry.format).toBeDefined();
+      expect(entry.classification).toBeDefined();
+      expect(entry.eligibility).toBeDefined();
+      expect(entry.authoritative).toBeDefined();
+      expect(entry.rationale).toBeDefined();
     }
   });
 
-  it('all known types are sync-safe', () => {
-    for (const type of knownTypes) {
-      expect(dataClassificationMap[type].canSync).toBe(true);
+  it('credentials are local-only and secret', () => {
+    const credentials = classificationMatrix.find((e) => e.name === 'connector-credentials');
+    expect(credentials?.eligibility).toBe('localOnly');
+    expect(credentials?.classification).toBe('secret');
+  });
+
+  it('dataview indexes are rebuildable and derived', () => {
+    const indexes = classificationMatrix.find((e) => e.name === 'dataview-indexes');
+    expect(indexes?.eligibility).toBe('rebuildable');
+    expect(indexes?.authoritative).toBe('derived');
+  });
+
+  it('confidential data requires encryption', () => {
+    const confidentialEntries = classificationMatrix.filter(
+      (e) => e.classification === 'confidential'
+    );
+    for (const entry of confidentialEntries) {
+      expect(entry.eligibility).toMatch(/^(encryptedOnly|localOnly)$/);
     }
   });
 
-  it('confidential types require encryption', () => {
-    const confidential = ['Message', 'Person'];
-    for (const type of confidential) {
-      expect(dataClassificationMap[type].encryption).not.toBe('none');
-    }
-  });
-
-  it('Person uses manual-merge conflict strategy', () => {
-    expect(dataClassificationMap['Person'].conflictStrategy).toBe('manual-merge');
-  });
-
-  it('Message uses server-wins conflict strategy', () => {
-    expect(dataClassificationMap['Message'].conflictStrategy).toBe('server-wins');
-  });
-
-  it('Task, Event, Artifact use last-write-wins conflict strategy', () => {
-    for (const type of ['Task', 'Event', 'Artifact']) {
-      expect(dataClassificationMap[type].conflictStrategy).toBe('last-write-wins');
-    }
+  it('markdown files are authoritative and sync-safe', () => {
+    const markdown = classificationMatrix.find((e) => e.name === 'workspace-markdown-files');
+    expect(markdown?.authoritative).toBe('authoritative');
+    expect(markdown?.eligibility).toBe('syncSafe');
   });
 });
 
-// --- getClassification tests ---
+// --- SClassificationMatrix tests ---
 
-describe('getClassification', () => {
-  it('returns the classification for known types', () => {
-    const task = getClassification('Task');
-    expect(task.id).toBe('Task');
-    expect(task.classification).toBe('internal');
-    expect(task.canSync).toBe(true);
+describe('SClassificationMatrix', () => {
+  it('parses the full classification matrix', () => {
+    const result = parseSync(SClassificationMatrix, classificationMatrix);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result.length).toBe(classificationMatrix.length);
   });
 
-  it('returns the classification for Message', () => {
-    const msg = getClassification('Message');
-    expect(msg.classification).toBe('confidential');
-    expect(msg.encryption).toBe('both');
-  });
-
-  it('returns the classification for Person', () => {
-    const person = getClassification('Person');
-    expect(person.classification).toBe('confidential');
-    expect(person.conflictStrategy).toBe('manual-merge');
-  });
-
-  it('returns safe defaults for unknown types', () => {
-    const unknown = getClassification('UnknownEntityType');
-    expect(unknown.id).toBe('UnknownEntityType');
-    expect(unknown.classification).toBe('internal');
-    expect(unknown.canSync).toBe(false);
-    expect(unknown.encryption).toBe('none');
-    expect(unknown.conflictStrategy).toBe('server-wins');
-  });
-
-  it('returns defaults with empty string input', () => {
-    const empty = getClassification('');
-    expect(empty.id).toBe('');
-    expect(empty.canSync).toBe(false);
-  });
-
-  it('returns defaults for arbitrary strings', () => {
-    const rand = getClassification('SomeRandomThing-123');
-    expect(rand.id).toBe('SomeRandomThing-123');
-    expect(rand.canSync).toBe(false);
-  });
-});
-
-// --- isSyncSafe tests ---
-
-describe('isSyncSafe', () => {
-  it('returns true for Task', () => {
-    expect(isSyncSafe('Task')).toBe(true);
-  });
-
-  it('returns true for Event', () => {
-    expect(isSyncSafe('Event')).toBe(true);
-  });
-
-  it('returns true for Message', () => {
-    expect(isSyncSafe('Message')).toBe(true);
-  });
-
-  it('returns true for Person', () => {
-    expect(isSyncSafe('Person')).toBe(true);
-  });
-
-  it('returns true for Artifact', () => {
-    expect(isSyncSafe('Artifact')).toBe(true);
-  });
-
-  it('returns false for unknown type', () => {
-    expect(isSyncSafe('NotAType')).toBe(false);
-  });
-
-  it('returns false for empty string', () => {
-    expect(isSyncSafe('')).toBe(false);
-  });
-});
-
-// --- requiresEncryption tests ---
-
-describe('requiresEncryption', () => {
-  it('returns true for Message (both)', () => {
-    expect(requiresEncryption('Message')).toBe(true);
-  });
-
-  it('returns true for Person (both)', () => {
-    expect(requiresEncryption('Person')).toBe(true);
-  });
-
-  it('returns true for Task (at-rest)', () => {
-    expect(requiresEncryption('Task')).toBe(true);
-  });
-
-  it('returns true for Event (at-rest)', () => {
-    expect(requiresEncryption('Event')).toBe(true);
-  });
-
-  it('returns true for Artifact (at-rest)', () => {
-    expect(requiresEncryption('Artifact')).toBe(true);
-  });
-
-  it('returns false for unknown type (defaults to none)', () => {
-    expect(requiresEncryption('NotAType')).toBe(false);
-  });
-
-  it('returns false for empty string', () => {
-    expect(requiresEncryption('')).toBe(false);
+  it('rejects matrix with invalid entry', () => {
+    const invalidMatrix = [
+      ...classificationMatrix,
+      {
+        name: 'invalid',
+        format: 'markdown-file',
+        classification: 'invalid-class',
+        eligibility: 'syncSafe',
+        authoritative: 'authoritative',
+        rationale: 'test',
+      },
+    ];
+    expect(() => parseSync(SClassificationMatrix, invalidMatrix)).toThrow();
   });
 });

@@ -13,6 +13,8 @@ depends_on: []
 related_sessions:
   - '[[05_Sessions/2026-04-09-211751-autosave-hardening-conflict-recovery-e2e|SESSION-2026-04-09-211751 Session for Autosave Hardening + Conflict Recovery + E2E]]'
 related_bugs: []
+related_architecture:
+  - '[[01_Architecture/System_Overview|System Overview]]'
 tags:
   - agent-vault
   - step
@@ -44,6 +46,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Required Reading
 
+- [[01_Architecture/System_Overview|System Overview]]
 - Link the minimum notes, docs, source files, or tests that must be read before editing.
 - If a reader can skip something safely, do not list it here.
 

@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "id": "teams",
+    "name": "Microsoft Teams",
+    "version": "0.2.0",
+    "description": "Microsoft Teams connector for messages and team members",
+    "provider": "microsoft",
+    "authType": "oauth2",
+    "config": {
+      "authType": "oauth2",
+      "baseUrl": "https://graph.microsoft.com/v1.0",
+      "timeout": 30000,
+      "retryAttempts": 3
+    },
+    "capabilities": [
+      { "capability": "read", "supportedOperations": ["getMessage", "listMessages", "getMembers"] },
+      { "capability": "write", "supportedOperations": ["sendMessage", "replyToMessage"] },
+      { "capability": "subscribe", "supportedOperations": ["onNewMessage"] }
+    ],
+    "entityTypes": ["Message", "Person"],
+    "freshnessThresholdMs": 300000,
+    "metadata": {}
+  },
+  "entityCounts": {
+    "message": 3,
+    "mention": 2
+  }
+}

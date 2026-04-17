@@ -33,9 +33,7 @@ const defaultSettings: DesktopSettings = {
   telemetryEnabled: false,
   crashReportsEnabled: false,
   connectors: {
-    jira: false,
-    outlook: false,
-    teams: false,
+    installedConnectorIds: [] as readonly string[],
   },
   debugMode: false,
   maxConcurrentRuns: '3',
@@ -228,6 +226,16 @@ function AppContent({
     await reloadConnectors();
   }, [reloadConnectors, syncSettings]);
 
+  const handleInstallConnector = React.useCallback(async (id: string) => {
+    await window.srgnt.installConnector(id);
+    await refreshWorkspaceState();
+  }, [refreshWorkspaceState]);
+
+  const handleUninstallConnector = React.useCallback(async (id: string) => {
+    await window.srgnt.uninstallConnector(id);
+    await refreshWorkspaceState();
+  }, [refreshWorkspaceState]);
+
   const handleConnect = React.useCallback(async (id: string) => {
     await window.srgnt.connectConnector(id);
     await refreshWorkspaceState();
@@ -316,7 +324,7 @@ function AppContent({
       {
         id: 'connectors',
         title: 'Know What Connects First',
-        description: 'Teams, Jira, and Outlook stay fixture-backed by default. The Connectors view lets you verify status without needing live credentials on first run.',
+        description: 'Teams, Jira, and Outlook are discoverable by default, but none are installed yet. Install first, then connect when you are ready.',
         note: 'Live auth is still optional. Offline validation stays first-class for release QA.',
       },
       {
@@ -409,42 +417,6 @@ function AppContent({
       ],
     },
     {
-      id: 'connectors',
-      title: 'Connectors',
-      settings: [
-        {
-          id: 'jira-enabled',
-          label: 'Jira Integration',
-          description: 'Persist whether Jira is connected for the next launch.',
-          type: 'boolean',
-          value: settings.connectors.jira,
-          onChange: (value) => {
-            void patchSettings({ connectors: { ...settings.connectors, jira: Boolean(value) } });
-          },
-        },
-        {
-          id: 'outlook-enabled',
-          label: 'Outlook Integration',
-          description: 'Persist whether Outlook Calendar is connected for the next launch.',
-          type: 'boolean',
-          value: settings.connectors.outlook,
-          onChange: (value) => {
-            void patchSettings({ connectors: { ...settings.connectors, outlook: Boolean(value) } });
-          },
-        },
-        {
-          id: 'teams-enabled',
-          label: 'Teams Integration',
-          description: 'Persist whether Microsoft Teams is connected for the next launch.',
-          type: 'boolean',
-          value: settings.connectors.teams,
-          onChange: (value) => {
-            void patchSettings({ connectors: { ...settings.connectors, teams: Boolean(value) } });
-          },
-        },
-      ],
-    },
-    {
       id: 'advanced',
       title: 'Advanced',
       settings: [
@@ -475,7 +447,7 @@ function AppContent({
         },
       ],
     },
-  ]), [handleChooseWorkspaceRoot, patchSettings, settings, workspaceRootDraft]);
+  ]), [handleChooseWorkspaceRoot, handleInstallConnector, handleUninstallConnector, patchSettings, settings, workspaceRootDraft]);
 
   if (simulateRenderCrash) {
     throw new Error('Simulated renderer crash for release QA');
@@ -516,6 +488,12 @@ function AppContent({
         return (
           <ConnectorStatusPanel
             connectors={connectors}
+            onInstall={(id) => {
+              void handleInstallConnector(id);
+            }}
+            onUninstall={(id) => {
+              void handleUninstallConnector(id);
+            }}
             onConnect={(id) => {
               void handleConnect(id);
             }}

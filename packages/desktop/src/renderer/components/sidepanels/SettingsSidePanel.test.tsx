@@ -11,9 +11,9 @@ describe('SettingsSidePanel', () => {
     expect(screen.getByText('Categories')).toBeInTheDocument();
   });
 
-  it('renders all 4 category buttons', () => {
+  it('renders all 3 category buttons', () => {
     render(<SettingsSidePanel />);
-    const categories = ['General', 'Privacy', 'Connectors', 'Advanced'];
+    const categories = ['General', 'Privacy', 'Advanced'];
     for (const cat of categories) {
       expect(screen.getByText(cat)).toBeInTheDocument();
     }

@@ -2,7 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { waitForDesktopReady } from './fixtures';
+import { completeOnboarding, waitForDesktopReady } from './fixtures';
 
 test.skip(process.platform !== 'linux', 'Packaged smoke test is currently Linux-only.');
 
@@ -65,6 +65,7 @@ test('launches the packaged Linux build and shows first-run onboarding', async (
  * errors.
  */
 test('BUG-0014: rapid arrow key navigation through large document does not stack overflow (packaged Linux)', async () => {
+  test.setTimeout(90_000);
   const userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'srgnt-bug-0014-'));
   const executablePath = path.join(process.cwd(), 'release', 'linux-unpacked', 'srgnt');
 
@@ -83,22 +84,22 @@ test('BUG-0014: rapid arrow key navigation through large document does not stack
     await waitForDesktopReady(page);
 
     // Complete onboarding to reach the main app
-    await page.getByRole('button', { name: 'Create Workspace' }).click();
-    await page.getByRole('button', { name: 'Next' }).click();
-    await page.getByRole('button', { name: 'Next' }).click();
-    await page.getByRole('button', { name: 'Get Started' }).click();
-    await expect(page.getByRole('button', { name: 'Daily Dashboard' })).toHaveAttribute('aria-pressed', 'true');
+    await completeOnboarding(page);
 
     // Determine workspace root from the created workspace
     const workspaceRoot = await page.evaluate(async () => {
       return await window.srgnt.getWorkspaceRoot();
     });
 
-    // Copy the large test document into the workspace Notes folder
-    const srcNote = path.join(os.homedir(), 'srgnt-workspace', 'Notes', 'Your mom.md');
+    // Write a deterministic large test document into the workspace Notes folder.
     const notesDir = path.join(workspaceRoot, 'Notes');
     await fs.mkdir(notesDir, { recursive: true });
-    await fs.copyFile(srcNote, path.join(notesDir, 'Your mom.md'));
+    const largeDocument = Array.from({ length: 350 }, (_, index) => {
+      if (index % 25 === 0) return `## Heading ${index}`;
+      if (index % 10 === 0) return `- bullet item ${index}`;
+      return `Line ${index} with some markdown content for navigation regression coverage.`;
+    }).join('\n');
+    await fs.writeFile(path.join(notesDir, 'Your mom.md'), `# Your mom\n\n${largeDocument}\n`, 'utf8');
 
     // Reload to pick up the new note
     await page.reload();
@@ -117,8 +118,13 @@ test('BUG-0014: rapid arrow key navigation through large document does not stack
 
     // Navigate to Notes and open the large document
     await page.getByRole('button', { name: 'Notes' }).click();
-    await page.getByRole('treeitem', { name: /Your mom\.md/ }).click();
-    await expect(page.getByRole('heading', { name: 'Your mom.md' })).toBeVisible();
+    const noteTreeItem = page.getByRole('treeitem', { name: /Your mom\.md/ });
+    await expect(noteTreeItem).toBeVisible();
+    await noteTreeItem.evaluate((element) => {
+      (element as HTMLElement).click();
+    });
+    await expect(noteTreeItem).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { name: 'Your mom.md' })).toBeVisible({ timeout: 10_000 });
 
     // Focus the editor
     await page.locator('.cm-content').click();

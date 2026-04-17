@@ -83,10 +83,16 @@ function sendWorkerError(id: string, error: string) {
 describe('SemanticSearchHost', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     workerMessageHandler = null;
     workerErrorHandler = null;
     workerExitHandler = null;
     MockedWorker.mockClear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   // -------------------------------------------------------------------------

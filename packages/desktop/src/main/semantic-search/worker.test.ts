@@ -6,7 +6,7 @@
  * semantic search service layer construction.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Effect, Layer, Context } from 'effect';
 
 // Create mock tags using Context.Tag
@@ -128,8 +128,15 @@ describe('semantic-search worker', () => {
   beforeEach(async () => {
     vi.resetModules();
     vi.clearAllMocks();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     messageHandler = null;
     await import('./worker.js');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   async function send(msg: Record<string, unknown>) {

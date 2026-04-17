@@ -2,8 +2,10 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { completeOnboarding, waitForDesktopReady } from './fixtures';
 
 test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo) => {
+  test.setTimeout(60_000);
   const userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'srgnt-bug-0013-'));
   const executablePath = path.join(process.cwd(), 'release', 'linux-unpacked', 'srgnt');
 
@@ -19,16 +21,11 @@ test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo
 
   try {
     const page = await electronApp.firstWindow();
-    await page.waitForLoadState('domcontentloaded');
+    await waitForDesktopReady(page);
 
-    // Complete onboarding
-    const createBtn = page.getByRole('button', { name: 'Create Workspace' });
-    if (await createBtn.count() > 0) {
-      await createBtn.click();
-      await page.getByRole('button', { name: 'Next' }).click();
-      await page.getByRole('button', { name: 'Next' }).click();
-      await page.getByRole('button', { name: 'Get Started' }).click();
-      await expect(page.getByRole('button', { name: 'Daily Dashboard' })).toHaveAttribute('aria-pressed', 'true');
+    // Complete onboarding when needed.
+    if (await page.getByRole('button', { name: 'Create Workspace' }).count()) {
+      await completeOnboarding(page);
     }
 
     // Get workspace and write test note content directly
@@ -42,12 +39,17 @@ test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo
     );
 
     await page.reload();
-    await page.waitForLoadState('domcontentloaded');
+    await waitForDesktopReady(page);
 
     // Navigate to Notes
     await page.getByRole('button', { name: 'Notes' }).click();
-    await page.getByRole('treeitem', { name: /Your mom\.md/ }).click();
-    await expect(page.getByRole('heading', { name: 'Your mom.md' })).toBeVisible();
+    const noteTreeItem = page.getByRole('treeitem', { name: /Your mom\.md/ });
+    await expect(noteTreeItem).toBeVisible();
+    await noteTreeItem.evaluate((element) => {
+      (element as HTMLElement).click();
+    });
+    await expect(noteTreeItem).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { name: 'Your mom.md' })).toBeVisible({ timeout: 10_000 });
 
     // Focus editor
     await page.locator('.cm-content').click();

@@ -39,7 +39,9 @@ describe('LayoutContext', () => {
       return <div />;
     }
 
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<BadConsumer />)).toThrow('useLayout must be used within a LayoutProvider');
+    consoleErrorSpy.mockRestore();
   });
 
   it('initial state has correct defaults', () => {

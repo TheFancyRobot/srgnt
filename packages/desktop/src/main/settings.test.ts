@@ -146,7 +146,7 @@ describe('desktop settings helpers', () => {
 
     await expect(readDesktopSettings(workspaceRoot)).resolves.toMatchObject({
       connectors: {
-        installedConnectorIds: ['jira', 'teams'],
+        installedConnectorIds: ['jira', 'teams', 'unknown'],
       },
     });
   });

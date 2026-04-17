@@ -8,6 +8,11 @@ async function waitForBootstrap(result: { current: ReturnType<typeof useNotes> }
   });
 }
 
+async function flushAsyncState(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 describe('NotesContext', () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -232,8 +237,9 @@ describe('NotesContext', () => {
       const { result } = renderHook(() => useNotes(), { wrapper: NotesProvider });
       await waitForBootstrap(result);
 
-      act(() => {
+      await act(async () => {
         result.current.toggleDir('Projects');
+        await flushAsyncState();
       });
 
       expect(result.current.expandedDirs.has('Projects')).toBe(true);
@@ -244,8 +250,9 @@ describe('NotesContext', () => {
       const { result } = renderHook(() => useNotes(), { wrapper: NotesProvider });
       await waitForBootstrap(result);
 
-      act(() => {
+      await act(async () => {
         result.current.toggleDir('Projects');
+        await flushAsyncState();
       });
 
       expect(result.current.expandedDirs.has('Projects')).toBe(true);
@@ -261,8 +268,9 @@ describe('NotesContext', () => {
       const { result } = renderHook(() => useNotes(), { wrapper: NotesProvider });
       await waitForBootstrap(result);
 
-      act(() => {
+      await act(async () => {
         result.current.toggleDir('./Projects/');
+        await flushAsyncState();
       });
 
       expect(result.current.expandedDirs.has('Projects')).toBe(true);
@@ -957,6 +965,10 @@ describe('NotesContext', () => {
         });
       }).not.toThrow();
 
+      await act(async () => {
+        await flushAsyncState();
+      });
+
       expect(result.current.expandedDirs.has('NonExistent/Folder')).toBe(true);
     });
 
@@ -964,8 +976,9 @@ describe('NotesContext', () => {
       const { result } = renderHook(() => useNotes(), { wrapper: NotesProvider });
       await waitForBootstrap(result);
 
-      act(() => {
+      await act(async () => {
         result.current.toggleDir('Projects\\SubFolder');
+        await flushAsyncState();
       });
 
       expect(result.current.expandedDirs.has('Projects/SubFolder')).toBe(true);

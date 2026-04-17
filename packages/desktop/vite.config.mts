@@ -35,6 +35,12 @@ export default defineConfig({
           if (normalizedId.includes('/node_modules/ghostty-web/')) {
             return 'terminal-runtime';
           }
+          if (
+            normalizedId.includes('/node_modules/@codemirror/') ||
+            normalizedId.includes('/node_modules/codemirror')
+          ) {
+            return 'codemirror';
+          }
         },
       },
     },

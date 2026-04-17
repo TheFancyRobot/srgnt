@@ -59,6 +59,18 @@ export async function validateNotesPath(
     return null;
   }
 
+  // Reject symlinked Notes root itself
+  try {
+    const notesDirStat = await fs.lstat(notesDir);
+    if (notesDirStat.isSymbolicLink()) {
+      return null;
+    }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      return null;
+    }
+  }
+
   // Reject symlinks on the final path AND any existing ancestor segment inside Notes.
   // This blocks paths like Notes/link-dir/file.md where link-dir is a symlink escaping Notes.
   const relativePath = path.relative(normalizedNotesDir, normalizedResolved);
@@ -247,9 +259,11 @@ export async function createNote(
   }
 
   const createdAt = new Date().toISOString();
+  // Escape title for YAML double-quoted scalar: escape backslashes first, then double-quotes
+  const escapedTitle = title.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const frontmatter = `---
-title: ${title}
-created: ${createdAt}
+title: "${escapedTitle}"
+created: "${createdAt}"
 ---
 
 `;
@@ -550,9 +564,10 @@ export async function searchNotes(
 // Workspace-wide markdown helpers
 
 /**
- * Walks workspace recursively to find all markdown files.
- * Excludes .command-center/, hidden directories, and symlinks per DEC-0014.
- * Returns array of files with title (from filename or frontmatter), path, and modifiedAt.
+ * Scoped walk of Notes/ subdirectory to find markdown files.
+ * Excludes .command-center/, hidden directories, and symlinks.
+ * Uses stat-first early filtering, bounded frontmatter reads, and early query
+ * filtering to avoid unbounded full-file scanning for wikilink suggestions.
  */
 export async function listWorkspaceMarkdown(
   workspaceRoot: string,
@@ -560,101 +575,113 @@ export async function listWorkspaceMarkdown(
   maxResults?: number
 ): Promise<WorkspaceMarkdownEntry[]> {
   const workspacePath = path.normalize(workspaceRoot);
-  const excludePath = path.normalize(path.join(workspaceRoot, '.command-center'));
+  const notesDir = path.normalize(path.join(workspacePath, 'Notes'));
+  const excludePath = path.normalize(path.join(workspacePath, '.command-center'));
+  const effectiveMaxResults = maxResults ?? 20;
+
+  // Bounded frontmatter read: only read first N bytes to find title
+  const FRONTMATTER_READ_LIMIT = 500;
 
   const results: WorkspaceMarkdownEntry[] = [];
   const processedDirs = new Set<string>();
 
-  async function walkDirectory(dirPath: string) {
-    // Normalize and check if we've already processed this directory
+  // Early query filter: check filename (cheap) before reading frontmatter (expensive)
+  const hasQuery = !!query;
+  const lowerQuery = hasQuery ? query!.toLowerCase() : '';
+
+  async function walkDirectory(dirPath: string): Promise<void> {
     const normalizedDir = path.normalize(dirPath);
-    if (processedDirs.has(normalizedDir)) {
-      return;
-    }
+    if (processedDirs.has(normalizedDir)) return;
     processedDirs.add(normalizedDir);
 
-    // Skip .command-center/ directory
-    if (normalizedDir.startsWith(excludePath)) {
-      return;
-    }
+    if (normalizedDir.startsWith(excludePath)) return;
 
     let entries: import('node:fs').Dirent[];
     try {
       entries = await fs.readdir(normalizedDir, { withFileTypes: true });
-    } catch (err) {
-      // Skip directories we can't read
+    } catch {
       return;
     }
 
     for (const entry of entries) {
-      // Skip hidden files and directories
-      if (entry.name.startsWith('.')) {
-        continue;
-      }
+      if (entry.name.startsWith('.')) continue;
 
       const entryPath = path.join(normalizedDir, entry.name);
 
-      // Reject symlinks
       try {
         const stat = await fs.lstat(entryPath);
-        if (stat.isSymbolicLink()) {
-          continue;
+        if (stat.isSymbolicLink()) continue;
+
+        if (entry.isDirectory()) {
+          await walkDirectory(entryPath);
+        } else if (entry.name.endsWith('.md')) {
+          // Stat-first filter: check size and mtime before content reads
+          if (stat.size > MAX_FILE_SIZE_BYTES) continue;
+
+          let title = entry.name.replace(/\.md$/, '');
+          let modifiedAt = stat.mtime.toISOString();
+
+          // Try frontmatter title — bounded read to avoid large file scans
+          try {
+            const fd = await fs.open(entryPath, 'r');
+            try {
+              const buffer = Buffer.alloc(FRONTMATTER_READ_LIMIT);
+              const { bytesRead } = await fd.read(buffer, 0, FRONTMATTER_READ_LIMIT, 0);
+              const content = buffer.subarray(0, bytesRead).toString('utf-8');
+              const frontmatterMatch = content.match(/^---\s*\ntitle:\s*(.+?)\s*$/m);
+              if (frontmatterMatch) {
+                let extracted = frontmatterMatch[1].trim();
+                if (extracted.startsWith('"') && extracted.endsWith('"') && extracted.length >= 2) {
+                  extracted = extracted
+                    .slice(1, -1)
+                    .replace(/\\"/g, '"')
+                    .replace(/\\\\/g, '\\');
+                }
+                title = extracted || title;
+              }
+            } finally {
+              await fd.close();
+            }
+          } catch {
+            // Fall back to filename
+          }
+
+          // Early query filter on title before pushing to results
+          if (hasQuery) {
+            const titleLower = title.toLowerCase();
+            const pathLower = entry.name.toLowerCase();
+            if (!titleLower.includes(lowerQuery) && !pathLower.includes(lowerQuery)) {
+              continue;
+            }
+          }
+
+          const relativePath = path.relative(workspacePath, entryPath).replace(/\\/g, '/');
+          results.push({ title, path: relativePath, modifiedAt });
+
+          // Early exit if we already have enough results (for query-filtered case)
+          if (results.length >= effectiveMaxResults * 2) return;
         }
       } catch {
         continue;
       }
-
-      if (entry.isDirectory()) {
-        await walkDirectory(entryPath);
-      } else if (entry.name.endsWith('.md')) {
-        let title = entry.name.replace(/\.md$/, '');
-
-        // Try to extract title from frontmatter
-        try {
-          const content = await fs.readFile(entryPath, 'utf-8');
-          const frontmatterMatch = content.match(/^---\s*\ntitle:\s*(.+?)\s*$/m);
-          if (frontmatterMatch) {
-            title = frontmatterMatch[1].trim();
-          }
-        } catch {
-          // Fall back to filename
-        }
-
-        let modifiedAt: string;
-        try {
-          const stat = await fs.stat(entryPath);
-          modifiedAt = stat.mtime.toISOString();
-        } catch {
-          modifiedAt = new Date().toISOString();
-        }
-
-        // Calculate relative path from workspace root
-        const relativePath = path.relative(workspacePath, entryPath).replace(/\\/g, '/');
-
-        results.push({ title, path: relativePath, modifiedAt });
-      }
     }
   }
 
-  await walkDirectory(workspacePath);
-
-  // Filter by query if provided
-  let filteredResults = results;
-  if (query) {
-    const lowerQuery = query.toLowerCase();
-    filteredResults = results.filter(
-      (entry) =>
-        entry.title.toLowerCase().includes(lowerQuery) ||
-        entry.path.toLowerCase().includes(lowerQuery)
-    );
+  // Scope walk to Notes/ subdirectory only
+  try {
+    await fs.access(notesDir);
+  } catch {
+    return [];
   }
 
+  await walkDirectory(notesDir);
+
   // Sort by modifiedAt (newest first) and limit results
-  filteredResults.sort(
+  results.sort(
     (a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime()
   );
 
-  return filteredResults.slice(0, maxResults ?? 20);
+  return results.slice(0, effectiveMaxResults);
 }
 
 /**
@@ -738,6 +765,15 @@ export async function resolveWikilink(
     }
   };
 
+  // Helper to strip Notes/ prefix for Notes-relative return convention
+  const stripNotesPrefix = (workspaceRelPath: string): string => {
+    const normalized = workspaceRelPath.replace(/\\/g, '/');
+    if (normalized.startsWith('Notes/')) {
+      return normalized.slice('Notes/'.length);
+    }
+    return normalized;
+  };
+
   // Step 1: Try relative resolution from current file's directory
   if (currentFilePath) {
     const currentDir = path.dirname(path.join(workspacePath, currentFilePath));
@@ -745,7 +781,7 @@ export async function resolveWikilink(
 
     if (isValidPath(relativePath) && await fileExists(relativePath)) {
       const relativeResult = path.relative(workspacePath, relativePath).replace(/\\/g, '/');
-      return { resolved: true, path: relativeResult, line: targetLine };
+      return { resolved: true, path: stripNotesPrefix(relativeResult), line: targetLine };
     }
   }
 
@@ -753,7 +789,7 @@ export async function resolveWikilink(
   const absolutePath = path.join(workspacePath, `${displayName}.md`);
   if (isValidPath(absolutePath) && await fileExists(absolutePath)) {
     const absoluteResult = path.relative(workspacePath, absolutePath).replace(/\\/g, '/');
-    return { resolved: true, path: absoluteResult, line: targetLine };
+    return { resolved: true, path: stripNotesPrefix(absoluteResult), line: targetLine };
   }
 
   // Step 3: Search for title match across workspace
@@ -766,7 +802,7 @@ export async function resolveWikilink(
     (entry) => normalizePathForMatch(entry.title) === normalizedTargetForSearch
   );
   if (exactMatch) {
-    return { resolved: true, path: exactMatch.path, line: targetLine };
+    return { resolved: true, path: stripNotesPrefix(exactMatch.path), line: targetLine };
   }
 
   // Then fuzzy match on title or path
@@ -776,13 +812,13 @@ export async function resolveWikilink(
       normalizePathForMatch(entry.path).includes(normalizedTargetForSearch)
   );
   if (fuzzyMatch) {
-    return { resolved: true, path: fuzzyMatch.path, line: targetLine };
+    return { resolved: true, path: stripNotesPrefix(fuzzyMatch.path), line: targetLine };
   }
 
   // Step 4: Return unresolved with path for creation check
   // The caller can decide whether to create the file based on DEC-0014 rules
-  const notesRelativePath = path.join('Notes', `${displayName}.md`);
-  return { resolved: false, path: notesRelativePath, line: targetLine };
+  // Return Notes-relative path (no Notes/ prefix) for notesReadFile/notesWriteFile compatibility
+  return { resolved: false, path: `${displayName}.md`, line: targetLine };
 }
 
 // IPC handler registration

@@ -27,6 +27,8 @@ describe('WorkspaceWatcher', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     watchCallback = null;
     existsSync.mockReturnValue(true);
     vi.useFakeTimers();
@@ -34,6 +36,7 @@ describe('WorkspaceWatcher', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   async function makeWatcher(onFileChange = vi.fn()) {

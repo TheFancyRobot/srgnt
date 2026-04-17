@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import { OnboardingWizard, defaultOnboardingSteps } from './Onboarding.js';
@@ -18,11 +18,17 @@ function makeFlow(overrides?: Partial<OnboardingFlow>): OnboardingFlow {
 
 describe('OnboardingWizard', () => {
   beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     Object.defineProperty(window, 'srgnt', {
       value: { getWorkspaceRoot: vi.fn().mockResolvedValue('/test') },
       writable: true,
       configurable: true,
     });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders step title and description', () => {

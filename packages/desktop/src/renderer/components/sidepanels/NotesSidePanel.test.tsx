@@ -1,8 +1,48 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, act } from '@testing-library/react';
 import { NotesProvider } from '../notes/NotesContext.js';
 import { NotesView } from '../NotesView.js';
 import { NotesSidePanel } from './NotesSidePanel.js';
+
+async function flushAsyncState(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+async function clickAndFlush(element: HTMLElement): Promise<void> {
+  await act(async () => {
+    fireEvent.click(element);
+    await flushAsyncState();
+  });
+}
+
+async function keyDownAndFlush(element: HTMLElement, key: string): Promise<void> {
+  await act(async () => {
+    fireEvent.keyDown(element, { key });
+    await flushAsyncState();
+  });
+}
+
+async function focusAndFlush(element: HTMLElement): Promise<void> {
+  await act(async () => {
+    fireEvent.focus(element);
+    await flushAsyncState();
+  });
+}
+
+async function changeAndFlush(element: HTMLElement, value: string): Promise<void> {
+  await act(async () => {
+    fireEvent.change(element, { target: { value } });
+    await flushAsyncState();
+  });
+}
+
+async function waitForDebounce(ms = 350): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    await flushAsyncState();
+  });
+}
 
 describe('NotesSidePanel', () => {
   beforeEach(() => {
@@ -67,17 +107,19 @@ describe('NotesSidePanel', () => {
   });
 
   it('loads the root notes tree and reveals nested files after expanding a folder', async () => {
-    render(
-      <NotesProvider>
-        <NotesSidePanel />
-      </NotesProvider>,
-    );
+    await act(async () => {
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+    });
 
     expect(await screen.findByRole('tree', { name: 'Notes file tree' })).toBeInTheDocument();
     expect(screen.getByRole('treeitem', { name: /Projects/ })).toBeInTheDocument();
     expect(screen.getByRole('treeitem', { name: /Inbox\.md/ })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('treeitem', { name: /Projects/ }));
+    await clickAndFlush(screen.getByRole('treeitem', { name: /Projects/ }));
 
     expect(await screen.findByRole('treeitem', { name: /Roadmap\.md/ })).toBeInTheDocument();
     expect(window.srgnt.notesListDir).toHaveBeenCalledWith('Projects');
@@ -93,7 +135,7 @@ describe('NotesSidePanel', () => {
       </NotesProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    await clickAndFlush(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
 
     await waitFor(() => {
       expect(window.srgnt.notesReadFile).toHaveBeenCalledWith('Inbox.md');
@@ -110,7 +152,7 @@ describe('NotesSidePanel', () => {
       </NotesProvider>,
     );
 
-    fireEvent.click(await screen.findByRole('treeitem', { name: /Projects/ }));
+    await clickAndFlush(await screen.findByRole('treeitem', { name: /Projects/ }));
     fireEvent.click(await screen.findByTitle('New note in Projects'));
 
     const input = screen.getByPlaceholderText('note title...');
@@ -162,12 +204,12 @@ describe('NotesSidePanel', () => {
     const firstItem = await screen.findByRole('treeitem', { name: /Projects/ });
     const secondItem = screen.getByRole('treeitem', { name: /Inbox\.md/ });
 
-    // Click first item to give it focus
-    fireEvent.click(firstItem);
+    // Focus first item without triggering directory expansion
+    await focusAndFlush(firstItem);
     expect(firstItem).toHaveAttribute('tabIndex', '0');
 
     // ArrowDown should move focus to the second item
-    fireEvent.keyDown(firstItem, { key: 'ArrowDown' });
+    await keyDownAndFlush(firstItem, 'ArrowDown');
     expect(secondItem).toHaveAttribute('tabIndex', '0');
     expect(firstItem).toHaveAttribute('tabIndex', '-1');
   });
@@ -182,12 +224,12 @@ describe('NotesSidePanel', () => {
     const firstItem = await screen.findByRole('treeitem', { name: /Projects/ });
     const secondItem = screen.getByRole('treeitem', { name: /Inbox\.md/ });
 
-    // Click second item to give it focus
-    fireEvent.click(secondItem);
+    // Focus second item without triggering note selection
+    await focusAndFlush(secondItem);
     expect(secondItem).toHaveAttribute('tabIndex', '0');
 
     // ArrowUp should move focus to the first item
-    fireEvent.keyDown(secondItem, { key: 'ArrowUp' });
+    await keyDownAndFlush(secondItem, 'ArrowUp');
     expect(firstItem).toHaveAttribute('tabIndex', '0');
     expect(secondItem).toHaveAttribute('tabIndex', '-1');
   });
@@ -200,15 +242,15 @@ describe('NotesSidePanel', () => {
     );
 
     const folderItem = await screen.findByRole('treeitem', { name: /Projects/ });
-    fireEvent.click(folderItem);
+    await focusAndFlush(folderItem);
 
     // ArrowRight should expand
-    fireEvent.keyDown(folderItem, { key: 'ArrowRight' });
+    await keyDownAndFlush(folderItem, 'ArrowRight');
     const childItem = await screen.findByRole('treeitem', { name: /Roadmap\.md/ });
     expect(childItem).toBeInTheDocument();
 
     // ArrowLeft should collapse
-    fireEvent.keyDown(folderItem, { key: 'ArrowLeft' });
+    await keyDownAndFlush(folderItem, 'ArrowLeft');
     expect(screen.queryByRole('treeitem', { name: /Roadmap\.md/ })).not.toBeInTheDocument();
   });
 
@@ -222,17 +264,17 @@ describe('NotesSidePanel', () => {
     const firstItem = await screen.findByRole('treeitem', { name: /Projects/ });
     const secondItem = screen.getByRole('treeitem', { name: /Inbox\.md/ });
 
-    // Click the second item to focus it
-    fireEvent.click(secondItem);
+    // Focus the second item without triggering note selection
+    await focusAndFlush(secondItem);
     expect(secondItem).toHaveAttribute('tabIndex', '0');
 
     // Home should jump to first item
-    fireEvent.keyDown(secondItem, { key: 'Home' });
+    await keyDownAndFlush(secondItem, 'Home');
     expect(firstItem).toHaveAttribute('tabIndex', '0');
     expect(secondItem).toHaveAttribute('tabIndex', '-1');
 
     // End should jump to last item
-    fireEvent.keyDown(firstItem, { key: 'End' });
+    await keyDownAndFlush(firstItem, 'End');
     expect(secondItem).toHaveAttribute('tabIndex', '0');
     expect(firstItem).toHaveAttribute('tabIndex', '-1');
   });
@@ -257,7 +299,7 @@ describe('NotesSidePanel', () => {
     );
 
     // Expand the Projects folder
-    fireEvent.click(await screen.findByRole('treeitem', { name: /Projects/ }));
+    await clickAndFlush(await screen.findByRole('treeitem', { name: /Projects/ }));
 
     // Check that the row action buttons for the folder have aria-labels
     expect(screen.getByLabelText('New note in Projects')).toBeInTheDocument();
@@ -278,13 +320,13 @@ describe('NotesSidePanel', () => {
       );
 
       const searchInput = screen.getByPlaceholderText('Search notes...');
-      fireEvent.change(searchInput, { target: { value: 'test query' } });
+      await changeAndFlush(searchInput, 'test query');
 
       // Debounce should prevent immediate IPC call
       expect(window.srgnt.notesSearch).not.toHaveBeenCalled();
 
       // Advance past the 300ms debounce
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await waitForDebounce();
 
       expect(window.srgnt.notesSearch).toHaveBeenCalledWith('test query');
     });
@@ -305,9 +347,9 @@ describe('NotesSidePanel', () => {
       );
 
       const searchInput = screen.getByPlaceholderText('Search notes...');
-      fireEvent.change(searchInput, { target: { value: 'test' } });
+      await changeAndFlush(searchInput, 'test');
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await waitForDebounce();
 
       expect(screen.getByText('Searching...')).toBeInTheDocument();
 
@@ -334,9 +376,9 @@ describe('NotesSidePanel', () => {
       );
 
       const searchInput = screen.getByPlaceholderText('Search notes...');
-      fireEvent.change(searchInput, { target: { value: 'alpha' } });
+      await changeAndFlush(searchInput, 'alpha');
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await waitForDebounce();
 
       await waitFor(() => {
         expect(screen.getByText('Alpha Note')).toBeInTheDocument();
@@ -360,15 +402,15 @@ describe('NotesSidePanel', () => {
       );
 
       const searchInput = screen.getByPlaceholderText('Search notes...');
-      fireEvent.change(searchInput, { target: { value: 'alpha' } });
+      await changeAndFlush(searchInput, 'alpha');
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await waitForDebounce();
 
       await waitFor(() => {
         expect(screen.getByText('Alpha')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('Alpha'));
+      await clickAndFlush(screen.getByText('Alpha'));
 
       await waitFor(() => {
         expect(window.srgnt.notesReadFile).toHaveBeenCalledWith('Alpha.md');
@@ -385,10 +427,9 @@ describe('NotesSidePanel', () => {
       );
 
       const searchInput = screen.getByPlaceholderText('Search notes...');
-      fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
+      await changeAndFlush(searchInput, 'nonexistent');
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
-
+      await waitForDebounce();
 
       expect(screen.getByText((content) => {
         return content.includes('No results for') && content.includes('nonexistent');
@@ -407,9 +448,9 @@ describe('NotesSidePanel', () => {
       );
 
       const searchInput = screen.getByPlaceholderText('Search notes...');
-      fireEvent.change(searchInput, { target: { value: 'test' } });
+      await changeAndFlush(searchInput, 'test');
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await waitForDebounce();
 
       expect(screen.getByText('Search failed')).toBeInTheDocument();
     });
@@ -426,16 +467,16 @@ describe('NotesSidePanel', () => {
       );
 
       const searchInput = screen.getByPlaceholderText('Search notes...');
-      fireEvent.change(searchInput, { target: { value: 'alpha' } });
+      await changeAndFlush(searchInput, 'alpha');
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      await waitForDebounce();
 
       await waitFor(() => {
         expect(screen.getByText('Alpha')).toBeInTheDocument();
       });
 
       // Clear via Escape key
-      fireEvent.keyDown(searchInput, { key: 'Escape' });
+      await keyDownAndFlush(searchInput, 'Escape');
 
       await waitFor(() => {
         expect(screen.queryByText((content) => {

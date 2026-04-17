@@ -214,14 +214,6 @@ test.describe('Semantic Search Integration', () => {
   test('status updates after indexing operation', async ({ window: page }) => {
     const workspaceRoot = await page.evaluate(() => window.srgnt.getWorkspaceRoot());
 
-    // Get status before indexing
-    const statusBefore = await page.evaluate(
-      async (root) => {
-        return await window.srgnt.semanticSearchStatus(root);
-      },
-      workspaceRoot,
-    );
-
     // Enable and index
     await page.evaluate(
       async (root) => {

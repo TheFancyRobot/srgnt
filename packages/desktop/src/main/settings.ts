@@ -51,14 +51,16 @@ function migrateConnectorSettings(rawConnectors: unknown): string[] {
   const parsed = rawConnectors as Record<string, unknown>;
 
   // New shape already present — wins over legacy
+  // Preserve ALL valid non-empty string IDs in new shape (knownCatalogConnectorIds
+  // filter only applies to legacy boolean migration to avoid unexpectedly dropping
+  // arbitrary valid custom connector IDs).
   if (Object.prototype.hasOwnProperty.call(parsed, 'installedConnectorIds')) {
     const installed = parsed.installedConnectorIds;
     if (Array.isArray(installed)) {
       const uniqueIds = [...new Set(installed
         .map((candidate) => normalizeInstalledConnectorId(candidate))
-        .filter((candidate): candidate is string =>
-          candidate !== undefined && knownCatalogConnectorIds.includes(candidate as any)
-        ))].sort();
+        .filter((candidate): candidate is string => candidate !== undefined)
+      )].sort();
 
       return uniqueIds;
     }

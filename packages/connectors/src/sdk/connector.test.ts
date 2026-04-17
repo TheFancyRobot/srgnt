@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import type { ConnectorManifest, ConnectorHealth } from '@srgnt/contracts';
 import { BaseConnector, SyncableConnector } from './connector.js';
 

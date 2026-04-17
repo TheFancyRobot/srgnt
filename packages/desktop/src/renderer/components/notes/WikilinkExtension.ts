@@ -100,7 +100,6 @@ export function wikilinkCompletionSource(
   getSuggestions: (query: string) => Promise<{ label: string; detail?: string; info?: string }[]>
 ): (context: CompletionContext) => Promise<CompletionResult | null> {
   return async (context: CompletionContext) => {
-    console.debug('[wikilinkCompletionSource]', { pos: context.pos, explicit: context.explicit, line: context.state.doc.lineAt(context.pos).text });
     // Check if we're at a position where [[ is expected or was just typed
     const doc = context.state.doc;
     const pos = context.pos;

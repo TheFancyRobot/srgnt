@@ -126,7 +126,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
   const [entriesByDir, setEntriesByDir] = React.useState<DirectoryEntries>({ '': [] });
   const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
   const [expandedDirs, setExpandedDirs] = React.useState<Set<string>>(() => new Set());
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [activeContent, setActiveContent] = React.useState<string | null>(null);
   const [activeModifiedAt, setActiveModifiedAt] = React.useState<string | null>(null);
@@ -470,7 +470,6 @@ export function NotesProvider({ children }: { children: React.ReactNode }): Reac
     let cancelled = false;
 
     const bootstrap = async () => {
-      setIsLoading(true);
       setError(null);
 
       try {

@@ -165,10 +165,10 @@ function ConnectorCard({
           {installed && onUninstall ? (
             <button
               type="button"
-              onClick={onUninstall ? () => onUninstall(connector.id) : undefined}
+              onClick={() => onUninstall(connector.id)}
               className="btn btn-ghost text-xs"
               aria-label={`Uninstall ${connector.name}`}
-              disabled={isTransitioning || !onUninstall}
+              disabled={isTransitioning}
             >
               Uninstall
             </button>

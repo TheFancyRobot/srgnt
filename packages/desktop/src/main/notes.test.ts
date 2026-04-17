@@ -417,7 +417,7 @@ describe('notes service - write operations', () => {
 
 describe('notes service - create operations', () => {
   describe('createNote', () => {
-    it('creates new file with frontmatter', async () => {
+    it('creates new file with quoted YAML frontmatter', async () => {
       const workspaceRoot = await makeTempDir('srgnt-create-note-');
       const notesDir = getNotesDir(workspaceRoot);
       await fs.mkdir(notesDir, { recursive: true });
@@ -427,9 +427,20 @@ describe('notes service - create operations', () => {
       expect(result.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
       const content = await fs.readFile(path.join(notesDir, 'note.md'), 'utf-8');
-      expect(content).toContain('title: My Note Title');
-      expect(content).toContain('created:');
+      expect(content).toContain('title: "My Note Title"');
+      expect(content).toContain('created: "');
       expect(content).toMatch(/^---\s*\ntitle:/);
+    });
+
+    it('escapes YAML-significant characters in frontmatter titles', async () => {
+      const workspaceRoot = await makeTempDir('srgnt-create-note-escaped-title-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
+
+      await createNote(workspaceRoot, 'special.md', 'Title: #1 "quoted" \\ path');
+
+      const content = await fs.readFile(path.join(notesDir, 'special.md'), 'utf-8');
+      expect(content).toContain('title: "Title: #1 \\"quoted\\" \\\\ path"');
     });
 
     it('creates intermediate directories if needed', async () => {
@@ -766,72 +777,97 @@ describe('notes service - search functionality', () => {
 
 describe('notes service - workspace-wide markdown helpers', () => {
   describe('listWorkspaceMarkdown', () => {
-    it('lists all markdown files in workspace', async () => {
+    it('lists all markdown files in Notes workspace subtree', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-list-all-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(path.join(notesDir, 'docs'), { recursive: true });
 
-      await fs.writeFile(path.join(workspaceRoot, 'readme.md'), '# Readme');
-      await fs.mkdir(path.join(workspaceRoot, 'docs'));
-      await fs.writeFile(path.join(workspaceRoot, 'docs/guide.md'), '# Guide');
+      await fs.writeFile(path.join(notesDir, 'readme.md'), '# Readme');
+      await fs.writeFile(path.join(notesDir, 'docs/guide.md'), '# Guide');
 
       const results = await listWorkspaceMarkdown(workspaceRoot);
       expect(results).toHaveLength(2);
+      expect(results.map((entry) => entry.path).sort()).toEqual(['Notes/docs/guide.md', 'Notes/readme.md']);
     });
 
-    it('excludes .command-center directory', async () => {
+    it('excludes .command-center directory while staying scoped to Notes', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-exclude-cc-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
       const commandCenter = path.join(workspaceRoot, '.command-center');
       await fs.mkdir(commandCenter, { recursive: true });
       await fs.writeFile(path.join(commandCenter, 'secret.md'), '# Secret');
 
-      await fs.writeFile(path.join(workspaceRoot, 'public.md'), '# Public');
+      await fs.writeFile(path.join(notesDir, 'public.md'), '# Public');
 
       const results = await listWorkspaceMarkdown(workspaceRoot);
       expect(results).toHaveLength(1);
-      expect(results[0].path).toBe('public.md');
+      expect(results[0].path).toBe('Notes/public.md');
     });
 
-    it('excludes hidden directories', async () => {
+    it('excludes hidden directories inside Notes', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-exclude-hidden-');
-
-      await fs.mkdir(path.join(workspaceRoot, '.hidden'), { recursive: true });
-      await fs.writeFile(path.join(workspaceRoot, '.hidden/note.md'), '# Hidden');
-      await fs.writeFile(path.join(workspaceRoot, 'visible.md'), '# Visible');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(path.join(notesDir, '.hidden'), { recursive: true });
+      await fs.writeFile(path.join(notesDir, '.hidden/note.md'), '# Hidden');
+      await fs.writeFile(path.join(notesDir, 'visible.md'), '# Visible');
 
       const results = await listWorkspaceMarkdown(workspaceRoot);
       expect(results).toHaveLength(1);
-      expect(results[0].path).toBe('visible.md');
+      expect(results[0].path).toBe('Notes/visible.md');
     });
 
-    it('excludes symlinks', async () => {
+    it('excludes symlinks inside Notes', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-exclude-symlink-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
-      const linkPath = path.join(workspaceRoot, 'link.md');
+      const linkPath = path.join(notesDir, 'link.md');
       await fs.symlink(path.join(workspaceRoot, 'outside.md'), linkPath);
 
-      await fs.writeFile(path.join(workspaceRoot, 'regular.md'), '# Regular');
+      await fs.writeFile(path.join(notesDir, 'regular.md'), '# Regular');
 
       const results = await listWorkspaceMarkdown(workspaceRoot);
       expect(results).toHaveLength(1);
-      expect(results[0].path).toBe('regular.md');
+      expect(results[0].path).toBe('Notes/regular.md');
     });
 
-    it('extracts title from frontmatter if available', async () => {
+    it('extracts title from legacy unquoted frontmatter if available', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-frontmatter-title-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
       await fs.writeFile(
-        path.join(workspaceRoot, 'file.md'),
+        path.join(notesDir, 'file.md'),
         '---\ntitle: Custom Title\n---\n\nContent',
       );
 
       const results = await listWorkspaceMarkdown(workspaceRoot);
       expect(results[0].title).toBe('Custom Title');
+      expect(results[0].path).toBe('Notes/file.md');
+    });
+
+    it('extracts title from quoted frontmatter and unescapes quotes', async () => {
+      const workspaceRoot = await makeTempDir('srgnt-ws-frontmatter-title-quoted-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
+
+      await fs.writeFile(
+        path.join(notesDir, 'quoted.md'),
+        '---\ntitle: "Title: #1 \\"quoted\\" \\\\ path"\n---\n\nContent',
+      );
+
+      const results = await listWorkspaceMarkdown(workspaceRoot);
+      expect(results[0].title).toBe('Title: #1 \\"quoted\\" \\\\ path'.replace(/\\\\/g, '\\').replace(/\\"/g, '"'));
     });
 
     it('falls back to filename if no frontmatter title', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-filename-title-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
-      await fs.writeFile(path.join(workspaceRoot, 'file.md'), '# Content');
+      await fs.writeFile(path.join(notesDir, 'file.md'), '# Content');
 
       const results = await listWorkspaceMarkdown(workspaceRoot);
       expect(results[0].title).toBe('file');
@@ -839,33 +875,39 @@ describe('notes service - workspace-wide markdown helpers', () => {
 
     it('filters by query on title or path', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-filter-query-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
-      await fs.writeFile(path.join(workspaceRoot, 'readme.md'), '# Readme');
-      await fs.writeFile(path.join(workspaceRoot, 'changelog.md'), '# Changelog');
+      await fs.writeFile(path.join(notesDir, 'readme.md'), '# Readme');
+      await fs.writeFile(path.join(notesDir, 'changelog.md'), '# Changelog');
 
       const results = await listWorkspaceMarkdown(workspaceRoot, 'readme');
       expect(results).toHaveLength(1);
-      expect(results[0].path).toBe('readme.md');
+      expect(results[0].path).toBe('Notes/readme.md');
     });
 
     it('sorts by modifiedAt descending (newest first)', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-sort-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
-      await fs.writeFile(path.join(workspaceRoot, 'old.md'), '# Old');
+      await fs.writeFile(path.join(notesDir, 'old.md'), '# Old');
       await new Promise((resolve) => setTimeout(resolve, 10));
-      await fs.writeFile(path.join(workspaceRoot, 'new.md'), '# New');
+      await fs.writeFile(path.join(notesDir, 'new.md'), '# New');
 
       const results = await listWorkspaceMarkdown(workspaceRoot);
       expect(results).toHaveLength(2);
-      expect(results[0].path).toBe('new.md');
-      expect(results[1].path).toBe('old.md');
+      expect(results[0].path).toBe('Notes/new.md');
+      expect(results[1].path).toBe('Notes/old.md');
     });
 
     it('limits results to maxResults parameter', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-max-results-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
       for (let i = 0; i < 5; i++) {
-        await fs.writeFile(path.join(workspaceRoot, `file${i}.md`), `# File ${i}`);
+        await fs.writeFile(path.join(notesDir, `file${i}.md`), `# File ${i}`);
       }
 
       const results = await listWorkspaceMarkdown(workspaceRoot, undefined, 3);
@@ -893,7 +935,7 @@ describe('notes service - wikilink resolution', () => {
 
       const result = await resolveWikilink(workspaceRoot, '[[meeting]]', 'Notes/meeting.md');
       expect(result.resolved).toBe(true);
-      expect(result.path).toBe('Notes/meeting.md');
+      expect(result.path).toBe('meeting.md');
     });
 
     it('resolves wikilink with display text alias', async () => {
@@ -905,7 +947,7 @@ describe('notes service - wikilink resolution', () => {
 
       const result = await resolveWikilink(workspaceRoot, '[[long-file-name|short]]', 'Notes/short.md');
       expect(result.resolved).toBe(true);
-      expect(result.path).toBe('Notes/long-file-name.md');
+      expect(result.path).toBe('long-file-name.md');
     });
 
     it('resolves wikilink with line number', async () => {
@@ -917,15 +959,17 @@ describe('notes service - wikilink resolution', () => {
 
       const result = await resolveWikilink(workspaceRoot, '[[note#10]]', 'Notes/note.md');
       expect(result.resolved).toBe(true);
-      expect(result.path).toBe('Notes/note.md');
+      expect(result.path).toBe('note.md');
       expect(result.line).toBe(10);
     });
 
-    it('resolves wikilink by exact title match in workspace', async () => {
+    it('resolves wikilink by exact title match in Notes subtree', async () => {
       const workspaceRoot = await makeTempDir('srgnt-wiki-title-match-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
       await fs.writeFile(
-        path.join(workspaceRoot, 'file.md'),
+        path.join(notesDir, 'file.md'),
         '---\ntitle: Project Roadmap\n---\n\nContent',
       );
 
@@ -934,22 +978,24 @@ describe('notes service - wikilink resolution', () => {
       expect(result.path).toBe('file.md');
     });
 
-    it('resolves wikilink by fuzzy match', async () => {
+    it('resolves wikilink by fuzzy match in Notes subtree', async () => {
       const workspaceRoot = await makeTempDir('srgnt-wiki-fuzzy-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
 
-      await fs.writeFile(path.join(workspaceRoot, 'project-planning.md'), '# Project Planning');
+      await fs.writeFile(path.join(notesDir, 'project-planning.md'), '# Project Planning');
 
       const result = await resolveWikilink(workspaceRoot, '[[planning]]');
       expect(result.resolved).toBe(true);
       expect(result.path).toBe('project-planning.md');
     });
 
-    it('returns unresolved with Notes path for creation', async () => {
+    it('returns unresolved with Notes-relative path for creation', async () => {
       const workspaceRoot = await makeTempDir('srgnt-wiki-unresolved-');
 
       const result = await resolveWikilink(workspaceRoot, '[[new-note]]');
       expect(result.resolved).toBe(false);
-      expect(result.path).toBe('Notes/new-note.md');
+      expect(result.path).toBe('new-note.md');
     });
 
     it('excludes .command-center from resolution', async () => {
@@ -1395,11 +1441,11 @@ describe('notes service - registerNotesHandlers IPC error paths', () => {
       await expect(handler(null, { wikilink: 42 })).rejects.toThrow();
     });
 
-    it('returns unresolved for non-existent wikilink', async () => {
+    it('returns unresolved Notes-relative path for non-existent wikilink', async () => {
       const handler = getRegisteredHandler('notes:resolve-wikilink');
       const result = await handler(null, { wikilink: '[[nonexistent]]' });
       expect(result.resolved).toBe(false);
-      expect(result.path).toContain('Notes/');
+      expect(result.path).toBe('nonexistent.md');
     });
 
     it('resolves an existing wikilink', async () => {
@@ -1425,11 +1471,12 @@ describe('notes service - registerNotesHandlers IPC error paths', () => {
       expect(Array.isArray(result.files)).toBe(true);
     });
 
-    it('returns workspace markdown files for valid payload', async () => {
+    it('returns Notes workspace markdown files for valid payload', async () => {
       const handler = getRegisteredHandler('notes:list-workspace-markdown');
-      await fs.writeFile(path.join(workspaceRoot, 'ws-note.md'), '# WS Note');
+      await writeNote(workspaceRoot, 'ws-note.md', '# WS Note');
       const result = await handler(null, { query: undefined, maxResults: 20 });
       expect(result.files.length).toBeGreaterThanOrEqual(1);
+      expect(result.files[0]?.path).toContain('Notes/');
     });
   });
 
@@ -1451,10 +1498,10 @@ describe('notes service - registerNotesHandlers IPC error paths', () => {
       expect(result.path).toBe('');
     });
 
-    it('returns unresolved with Notes path for creation when wikilink not found in workspace', async () => {
+    it('returns unresolved Notes-relative path for creation when wikilink not found in workspace', async () => {
       const result = await resolveWikilink(workspaceRoot, '[[brand-new-note]]');
       expect(result.resolved).toBe(false);
-      expect(result.path).toBe('Notes/brand-new-note.md');
+      expect(result.path).toBe('brand-new-note.md');
     });
 
     it('excludes .command-center files from wikilink resolution', async () => {

@@ -17,7 +17,8 @@
     "release:rc:linux": "pnpm run release:check:repo && pnpm run release:artifacts:linux"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.1"
   },
   "engines": {
     "node": ">=20.0.0",

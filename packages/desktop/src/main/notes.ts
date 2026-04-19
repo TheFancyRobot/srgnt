@@ -581,11 +581,6 @@ export async function listWorkspaceMarkdown(
 
   // Only read a small prefix when trying to extract a frontmatter title.
   const FRONTMATTER_READ_LIMIT = 4 * 1024;
-  const FRONTMATTER_CANDIDATE_MULTIPLIER = 4;
-  const FRONTMATTER_CANDIDATE_LIMIT = Math.max(
-    effectiveMaxResults * FRONTMATTER_CANDIDATE_MULTIPLIER,
-    effectiveMaxResults,
-  );
 
   const processedDirs = new Set<string>();
   const hasQuery = !!query?.trim();
@@ -607,10 +602,6 @@ export async function listWorkspaceMarkdown(
       list.push(candidate);
     } else {
       list.splice(insertIndex, 0, candidate);
-    }
-
-    if (list.length > FRONTMATTER_CANDIDATE_LIMIT) {
-      list.length = FRONTMATTER_CANDIDATE_LIMIT;
     }
   }
 
@@ -737,9 +728,6 @@ export async function listWorkspaceMarkdown(
 
   for (const candidate of pathMatchedCandidates) {
     results.push(await toWorkspaceEntry(candidate, true));
-    if (results.length >= effectiveMaxResults) {
-      return results;
-    }
   }
 
   for (const candidate of titleProbeCandidates) {
@@ -749,12 +737,13 @@ export async function listWorkspaceMarkdown(
     }
 
     results.push(entry);
-    if (results.length >= effectiveMaxResults) {
-      break;
-    }
   }
 
-  return results;
+  results.sort(
+    (a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime()
+  );
+
+  return results.slice(0, effectiveMaxResults);
 }
 
 /**

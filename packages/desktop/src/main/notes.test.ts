@@ -918,6 +918,27 @@ describe('notes service - workspace-wide markdown helpers', () => {
       expect(results[1].path).toBe('Notes/old.md');
     });
 
+    it('keeps query results globally sorted by modifiedAt across path and title matches', async () => {
+      const workspaceRoot = await makeTempDir('srgnt-ws-query-sort-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(path.join(notesDir, 'docs'), { recursive: true });
+
+      await fs.writeFile(
+        path.join(notesDir, 'query-path-match.md'),
+        '---\ntitle: Something Else\n---\n\nBody',
+      );
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      await fs.writeFile(
+        path.join(notesDir, 'docs/latest.md'),
+        '---\ntitle: Query Match\n---\n\nBody',
+      );
+
+      const results = await listWorkspaceMarkdown(workspaceRoot, 'query');
+      expect(results).toHaveLength(2);
+      expect(results[0].path).toBe('Notes/docs/latest.md');
+      expect(results[1].path).toBe('Notes/query-path-match.md');
+    });
+
     it('limits results to maxResults parameter', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-max-results-');
       const notesDir = getNotesDir(workspaceRoot);

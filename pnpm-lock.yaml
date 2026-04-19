@@ -136,6 +136,9 @@ importers:
       '@lezer/markdown':
         specifier: ^1.6.3
         version: 1.6.3
+      '@srgnt/connectors':
+        specifier: workspace:*
+        version: link:../connectors
       '@srgnt/contracts':
         specifier: workspace:*
         version: link:../contracts

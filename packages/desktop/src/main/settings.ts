@@ -1,6 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { defaultWorkspaceLayout, type DesktopSettings } from '@srgnt/contracts';
+import { defaultWorkspaceLayout, type DesktopSettings, type ConnectorPackageRegistry } from '@srgnt/contracts';
 
 const knownCatalogConnectorIds = ['jira', 'outlook', 'teams'] as const;
 export interface DesktopBootstrapState {
@@ -23,6 +23,7 @@ export const defaultDesktopSettings: DesktopSettings = {
   crashReportsEnabled: false,
   connectors: {
     installedConnectorIds: [] as readonly string[],
+    installedPackages: { packages: [] } as ConnectorPackageRegistry,
   },
   debugMode: false,
   maxConcurrentRuns: '3',
@@ -153,11 +154,22 @@ export async function writeDesktopSettings(workspaceRoot: string, settings: Desk
 export function mergeDesktopSettings(settings?: Partial<DesktopSettings>): DesktopSettings {
   const installedConnectorIds: readonly string[] = migrateConnectorSettings(settings?.connectors);
 
+  // Handle installedPackages - extract from connectors if present, otherwise use default
+  const rawConnectors = settings?.connectors;
+  let installedPackages: ConnectorPackageRegistry | undefined;
+  if (rawConnectors && typeof rawConnectors === 'object' && 'installedPackages' in rawConnectors) {
+    const pkgs = (rawConnectors as Record<string, unknown>).installedPackages;
+    if (pkgs && typeof pkgs === 'object' && 'packages' in pkgs && Array.isArray((pkgs as { packages: unknown }).packages)) {
+      installedPackages = pkgs as ConnectorPackageRegistry;
+    }
+  }
+
   return {
     ...defaultDesktopSettings,
     ...settings,
     connectors: {
       installedConnectorIds,
+      installedPackages: installedPackages ?? { packages: [] },
     },
     layout: {
       ...defaultDesktopSettings.layout,

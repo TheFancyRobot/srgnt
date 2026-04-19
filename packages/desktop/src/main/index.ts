@@ -50,6 +50,9 @@ import {
   type TerminalLaunchWithContextRequest,
   type UpdateCheckResponse,
 } from '@srgnt/contracts';
+import {
+  BUILTIN_CONNECTOR_MANIFESTS,
+} from '@srgnt/connectors';
 import { CanonicalStore, createRunLogService, createApprovalService, redactEnv, truncateOutput, DEFAULT_REDACTION_POLICY } from '@srgnt/runtime';
 import { taskFixtures, eventFixtures, messageFixtures } from '@srgnt/contracts';
 import { createPtySessionManager } from './pty/session-manager.js';
@@ -117,114 +120,9 @@ const DEV_CONNECTOR_REGISTRY_ROOT = path.resolve(__dirname, '../dev-connectors')
 const DEV_CONNECTOR_REGISTRY_HOST = '127.0.0.1';
 const DEV_CONNECTOR_REGISTRY_URL = `${`http://${DEV_CONNECTOR_REGISTRY_HOST}`}:${DEV_CONNECTOR_REGISTRY_PORT}`;
 
-const builtinConnectorDefinitions: Record<string, Omit<ConnectorDefinition, 'packageUrl'>> = {
-  jira: {
-    manifest: {
-      id: 'jira',
-      name: 'Jira',
-      version: '0.1.0',
-      description: 'Atlassian Jira connector for issue tracking',
-      provider: 'atlassian',
-      authType: 'oauth2',
-      config: {
-        authType: 'oauth2',
-        timeout: 30000,
-        retryAttempts: 3,
-      },
-      capabilities: [
-        {
-          capability: 'read',
-          supportedOperations: ['getIssue', 'searchIssues', 'getProjects'],
-          entityMappings: [{ canonicalType: 'Task', providerType: 'Issue' }, { canonicalType: 'Person', providerType: 'User' }],
-        },
-        {
-          capability: 'write',
-          supportedOperations: ['transitionIssue', 'addComment'],
-          entityMappings: [{ canonicalType: 'Task', providerType: 'Issue' }],
-        },
-      ],
-      entityTypes: ['Task', 'Person'],
-      freshnessThresholdMs: 300000,
-      metadata: {},
-    },
-  },
-  outlook: {
-    manifest: {
-      id: 'outlook',
-      name: 'Outlook Calendar',
-      version: '0.1.0',
-      description: 'Microsoft Outlook Calendar connector for events and contacts',
-      provider: 'microsoft',
-      authType: 'oauth2',
-      config: {
-        authType: 'oauth2',
-        timeout: 30000,
-        retryAttempts: 3,
-      },
-      capabilities: [
-        {
-          capability: 'read',
-          supportedOperations: ['getEvent', 'listEvents', 'getContacts'],
-          entityMappings: [
-            { canonicalType: 'Event', providerType: 'CalendarEvent' },
-            { canonicalType: 'Person', providerType: 'Contact' },
-          ],
-        },
-        {
-          capability: 'write',
-          supportedOperations: ['createEvent', 'updateEvent', 'respondToEvent'],
-          entityMappings: [{ canonicalType: 'Event', providerType: 'CalendarEvent' }],
-        },
-      ],
-      entityTypes: ['Event', 'Person'],
-      freshnessThresholdMs: 300000,
-      metadata: {},
-    },
-    entityCounts: {
-      event: 5,
-      person: 3,
-    },
-  },
-  teams: {
-    manifest: {
-      id: 'teams',
-      name: 'Microsoft Teams',
-      version: '0.1.0',
-      description: 'Microsoft Teams connector for messages and team members',
-      provider: 'microsoft',
-      authType: 'oauth2',
-      config: {
-        authType: 'oauth2',
-        timeout: 30000,
-        retryAttempts: 3,
-      },
-      capabilities: [
-        {
-          capability: 'read',
-          supportedOperations: ['getMessage', 'listMessages', 'getMembers'],
-          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }, { canonicalType: 'Person', providerType: 'TeamMember' }],
-        },
-        {
-          capability: 'write',
-          supportedOperations: ['sendMessage', 'replyToMessage'],
-          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }],
-        },
-        {
-          capability: 'subscribe',
-          supportedOperations: ['onNewMessage'],
-          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }],
-        },
-      ],
-      entityTypes: ['Message', 'Person'],
-      freshnessThresholdMs: 300000,
-      metadata: {},
-    },
-    entityCounts: {
-      message: 3,
-      mention: 2,
-    },
-  },
-};
+const builtinConnectorDefinitions: Record<string, Omit<ConnectorDefinition, 'packageUrl'>> = Object.fromEntries(
+  BUILTIN_CONNECTOR_MANIFESTS.map((manifest: ConnectorManifest) => [manifest.id, { manifest }])
+);
 
 let connectorDefinitions: Record<string, ConnectorDefinition> = Object.entries(builtinConnectorDefinitions).reduce((next, [id, def]) => {
   next[id] = {

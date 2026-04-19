@@ -4,7 +4,7 @@
   "private": true,
   "description": "Jira, Outlook Calendar, Teams connector SDK for srgnt",
   "main": "./src/index.ts",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",

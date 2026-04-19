@@ -110,6 +110,7 @@
     "@codemirror/view": "^6.41.0",
     "@effect/schema": "^0.75.5",
     "@lezer/markdown": "^1.6.3",
+    "@srgnt/connectors": "workspace:*",
     "@srgnt/contracts": "workspace:*",
     "@srgnt/runtime": "workspace:*",
     "codemirror-live-markdown": "0.5.1-alpha.1",

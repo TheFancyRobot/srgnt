@@ -5,13 +5,14 @@ contract_version: 1
 title: Define the public connector factory contract and package runtime shape
 step_id: STEP-20-01
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
-status: planned
-owner: ''
+status: completed
+owner: coordinator
 created: '2026-04-19'
 updated: '2026-04-19'
 depends_on: []
 related_sessions:
   - '[[05_Sessions/2026-04-19-063125-define-the-public-connector-factory-contract-and-package-runtime-shape-team-lead|SESSION-2026-04-19-063125 team-lead session for Define the public connector factory contract and package runtime shape]]'
+  - '[[05_Sessions/2026-04-19-064251-define-the-public-connector-factory-contract-and-package-runtime-shape-executor-1|SESSION-2026-04-19-064251 executor-1 session for Define the public connector factory contract and package runtime shape]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -150,10 +151,10 @@ tags:
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner:
+- Status: completed
+- Current owner: coordinator
 - Last touched: 2026-04-19
-- Next action: Freeze the public factory API before any runtime or CLI work starts.
+- Next action: Use this contract as the implementation baseline for STEP-20-02 and STEP-20-03.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -171,9 +172,13 @@ tags:
 
 <!-- AGENT-START:step-session-history -->
 - 2026-04-19 - [[05_Sessions/2026-04-19-063125-define-the-public-connector-factory-contract-and-package-runtime-shape-team-lead|SESSION-2026-04-19-063125 team-lead session for Define the public connector factory contract and package runtime shape]] - Session created.
+- 2026-04-19 - [[05_Sessions/2026-04-19-064251-define-the-public-connector-factory-contract-and-package-runtime-shape-executor-1|SESSION-2026-04-19-064251 executor-1 session for Define the public connector factory contract and package runtime shape]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Success means the repo has one documented, test-backed connector factory contract and package entrypoint shape that later steps can implement without guessing.
-- The expected deliverable is a stable contract, not a partial loader implementation.
+- Completed 2026-04-19 through the delegated team pipeline (researcher → executor-1 → reviewer → tester).
+- Added `packages/contracts/src/connectors/package-runtime.ts` and `packages/contracts/src/connectors/package-runtime.test.ts` to define package runtime metadata, package manifest shape, and the closed lifecycle state union.
+- Added `packages/connectors/src/sdk/factory.ts` and `packages/connectors/src/sdk/factory.test.ts` to define `HostCapabilities`, `HostContext`, `ConnectorFactory`, and `ConnectorPackage`.
+- Updated package exports so later steps can consume the new public contract directly.
+- Validation reported green for `@srgnt/contracts` and `@srgnt/connectors` tests, typecheck, and lint, with no regressions.

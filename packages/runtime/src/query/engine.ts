@@ -22,6 +22,7 @@ export interface DataviewQuery {
   where?: string;
   sort?: SortSpec[];
   limit?: number;
+  offset?: number;
   select?: string[];
 }
 
@@ -36,6 +37,7 @@ export interface QueryEngine {
 export class SimpleQueryEngine implements QueryEngine {
   private indexedFields: Set<string> = new Set();
   private entityIndex: Map<string, EntityEnvelope> = new Map();
+  private typeIndex: Map<string, Set<string>> = new Map();
 
   async query<T>(query: string | DataviewQuery): Promise<QueryResult<T>> {
     const start = Date.now();
@@ -68,57 +70,117 @@ export class SimpleQueryEngine implements QueryEngine {
   }
 
   addToIndex(entity: EntityEnvelope): void {
+    const existing = this.entityIndex.get(entity.id);
+    if (existing && existing.canonicalType !== entity.canonicalType) {
+      const previousTypeSet = this.typeIndex.get(existing.canonicalType);
+      if (previousTypeSet) {
+        previousTypeSet.delete(entity.id);
+        if (previousTypeSet.size === 0) this.typeIndex.delete(existing.canonicalType);
+      }
+    }
+
     this.entityIndex.set(entity.id, entity);
+    let typeSet = this.typeIndex.get(entity.canonicalType);
+    if (!typeSet) {
+      typeSet = new Set();
+      this.typeIndex.set(entity.canonicalType, typeSet);
+    }
+    typeSet.add(entity.id);
   }
 
   removeFromIndex(id: string): void {
+    const entity = this.entityIndex.get(id);
+    if (entity) {
+      const typeSet = this.typeIndex.get(entity.canonicalType);
+      if (typeSet) {
+        typeSet.delete(id);
+        if (typeSet.size === 0) this.typeIndex.delete(entity.canonicalType);
+      }
+    }
     this.entityIndex.delete(id);
+  }
+
+  private getEntitiesByType(entityType: string): EntityEnvelope[] {
+    return this.collectEntitiesByType(entityType);
+  }
+
+  private collectEntitiesByType(entityType: string, offset = 0, limit?: number): EntityEnvelope[] {
+    const typeSet = this.typeIndex.get(entityType);
+    if (!typeSet) return [];
+
+    const end = limit === undefined ? Number.POSITIVE_INFINITY : offset + limit;
+    const results: EntityEnvelope[] = [];
+    let index = 0;
+
+    for (const id of typeSet) {
+      if (index >= end) {
+        break;
+      }
+
+      if (index >= offset) {
+        const entity = this.entityIndex.get(id);
+        if (entity) results.push(entity);
+      }
+
+      index += 1;
+    }
+
+    return results;
   }
 
   private executeDql<T>(query: string, start: number): Promise<QueryResult<T>> {
     const fromMatch = query.match(/FROM\s+["']?(\w+)["']?/i);
     const entityType = fromMatch ? fromMatch[1] : null;
 
-    let results = Array.from(this.entityIndex.values()) as unknown as T[];
-
+    let results: EntityEnvelope[];
     if (entityType) {
-      results = results.filter((e: unknown) => {
-        const entity = e as Record<string, unknown>;
-        return entity.canonicalType === entityType;
-      });
+      results = this.getEntitiesByType(entityType);
+    } else {
+      results = Array.from(this.entityIndex.values());
     }
 
     const durationMs = Date.now() - start;
     return Promise.resolve({
-      data: results,
+      data: results as unknown as T[],
       total: results.length,
       durationMs,
     });
   }
 
   private executeStructuredQuery<T>(query: DataviewQuery, start: number): Promise<QueryResult<T>> {
-    let results = Array.from(this.entityIndex.values()) as unknown as T[];
+    const offset = query.offset ?? 0;
+    const total = query.from
+      ? this.typeIndex.get(query.from)?.size ?? 0
+      : this.entityIndex.size;
 
-    if (query.from) {
-      const entityType = query.from;
-      results = results.filter((e: unknown) => {
-        const entity = e as Record<string, unknown>;
-        return entity.canonicalType === entityType;
-      });
+    let results: EntityEnvelope[];
+    if (query.from && !query.sort) {
+      results = this.collectEntitiesByType(query.from, offset, query.limit);
+    } else if (query.from) {
+      results = this.getEntitiesByType(query.from);
+    } else {
+      results = Array.from(this.entityIndex.values());
     }
 
     if (query.sort) {
       results = this.applySort(results, query.sort);
-    }
-
-    if (query.limit) {
-      results = results.slice(0, query.limit);
+      if (query.limit !== undefined) {
+        results = results.slice(offset, offset + query.limit);
+      } else if (offset > 0) {
+        results = results.slice(offset);
+      }
+    } else if (!query.from) {
+      if (query.limit !== undefined) {
+        results = results.slice(offset, offset + query.limit);
+      } else if (offset > 0) {
+        results = results.slice(offset);
+      }
     }
 
     const durationMs = Date.now() - start;
     return Promise.resolve({
-      data: results,
-      total: results.length,
+      data: results as unknown as T[],
+      total,
       durationMs,
     });
   }

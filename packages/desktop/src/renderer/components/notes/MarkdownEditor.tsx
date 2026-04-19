@@ -1,0 +1,829 @@
+import React from 'react';
+import { EditorState, type Range, type Extension } from '@codemirror/state';
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from '@codemirror/commands';
+import { syntaxTree } from '@codemirror/language';
+import { markdown } from '@codemirror/lang-markdown';
+import { GFM } from '@lezer/markdown';
+import { Decoration, EditorView, WidgetType, keymap, placeholder, ViewPlugin, type DecorationSet } from '@codemirror/view';
+import { completionKeymap, acceptCompletion } from '@codemirror/autocomplete';
+import {
+  collapseOnSelectionFacet,
+  editorTheme,
+  imageField,
+  linkPlugin,
+  markdownStylePlugin,
+  mouseSelectingField,
+  setMouseSelecting,
+  shouldShowSource,
+  tableEditorPlugin,
+
+} from 'codemirror-live-markdown';
+import { debouncedLivePreviewPlugin } from './debouncedLivePreview.js';
+import { installCoordsAtPosGuard } from './coordsAtPosGuard.js';
+
+// BUG-0014: Guard against InlineCoordsScan.scan infinite recursion in @codemirror/view.
+// Must be installed before any EditorView is created.
+installCoordsAtPosGuard();
+
+import { parseFrontmatter, serializeWithFrontmatter } from './markdown-serializer.js';
+import { createWikilinkExtension, wikilinkStyles } from './WikilinkExtension.js';
+import { slashCommandSource, slashCommandsStyles } from './SlashCommandsExtension.js';
+
+/** Toggle the checkbox marker on the task list line under the cursor. Returns true if toggled. */
+export function toggleCheckboxAtCursor(view: EditorView): boolean {
+  const pos = view.state.selection.main.head;
+  const line = view.state.doc.lineAt(pos);
+  const match = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+\[)( |x|X)(\].*)$/);
+  if (!match) {
+    return false;
+  }
+  const markerPos = line.from + match[1].length;
+  const nextMarker = match[2] === ' ' ? 'x' : ' ';
+  view.dispatch({
+    changes: { from: markerPos, to: markerPos + 1, insert: nextMarker },
+    selection: view.state.selection.main,
+    userEvent: 'input',
+  });
+  return true;
+}
+
+export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+export type EditorDisplayMode = 'live-preview' | 'rendered';
+
+interface MarkdownEditorProps {
+  rawContent: string;
+  onContentChange: (markdown: string) => void;
+  saveState: SaveState;
+  displayMode: EditorDisplayMode;
+  currentFilePath?: string;
+  onWikilinkClick?: (wikilink: string) => void;
+}
+
+/** Decorate lines that contain list items so CSS can render bullets/numbers. */
+const listLinePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'ListItem') return;
+          const line = view.state.doc.lineAt(node.from);
+          if (seen.has(line.number)) return;
+          seen.add(line.number);
+          const parent = node.node.parent;
+          if (parent?.name === 'OrderedList') {
+            // Extract the actual number from the ListMark child (e.g. "1.")
+            let mark = '';
+            node.node.cursor().iterate((child) => {
+              if (child.name === 'ListMark') {
+                mark = view.state.doc.sliceString(child.from, child.to);
+              }
+            });
+            decs.push(
+              Decoration.line({
+                class: 'cm-list-ordered-line',
+                attributes: { 'data-list-num': mark || '1.' },
+              }).range(line.from),
+            );
+          } else {
+            decs.push(Decoration.line({ class: 'cm-list-bullet-line' }).range(line.from));
+          }
+        },
+      });
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/** Decorate blockquote lines so CSS can restore visual quote styling. */
+const blockquoteLinePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Map<number, number>();
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'Blockquote') return;
+
+          let depth = 0;
+          let parent: typeof node.node | null = node.node;
+          while (parent) {
+            if (parent.name === 'Blockquote') {
+              depth += 1;
+            }
+            parent = parent.parent;
+          }
+
+          const fromLine = view.state.doc.lineAt(node.from).number;
+          const toLine = view.state.doc.lineAt(node.to).number;
+          for (let lineNumber = fromLine; lineNumber <= toLine; lineNumber += 1) {
+            const currentDepth = seen.get(lineNumber) ?? 0;
+            if (depth <= currentDepth) continue;
+            seen.set(lineNumber, depth);
+          }
+        },
+      });
+
+      for (const [lineNumber, depth] of seen) {
+        const line = view.state.doc.line(lineNumber);
+        decs.push(
+          Decoration.line({
+            class: 'cm-blockquote-line',
+            attributes: { 'data-blockquote-depth': String(depth) },
+          }).range(line.from),
+        );
+      }
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/** Decorate block code lines so CSS can render a shared code container. */
+const codeBlockLinePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'CodeBlock' && node.name !== 'FencedCode') {
+            return;
+          }
+
+          const firstLine = view.state.doc.lineAt(node.from).number;
+          const lastPos = Math.max(node.from, node.to - 1);
+          const lastLine = view.state.doc.lineAt(lastPos).number;
+
+          for (let lineNumber = firstLine; lineNumber <= lastLine; lineNumber += 1) {
+            if (seen.has(lineNumber)) {
+              continue;
+            }
+
+            seen.add(lineNumber);
+            const line = view.state.doc.line(lineNumber);
+            const classes = ['cm-codeblock-line'];
+
+            if (lineNumber === firstLine) {
+              classes.push('cm-codeblock-first');
+            }
+            if (lineNumber === lastLine) {
+              classes.push('cm-codeblock-last');
+            }
+
+            decs.push(Decoration.line({ class: classes.join(' ') }).range(line.from));
+          }
+        },
+      });
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+const blockFormattingRevealPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; selectionSet?: boolean; view: EditorView }) {
+      // Only rebuild on doc change or viewport change - NOT on selectionSet
+      // (selectionSet triggers on every arrow key, causing excessive rebuilds)
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const activeLines = new Set<number>();
+
+      for (const range of view.state.selection.ranges) {
+        const startLine = view.state.doc.lineAt(range.from).number;
+        const endLine = view.state.doc.lineAt(range.to).number;
+        for (let lineNumber = startLine; lineNumber <= endLine; lineNumber += 1) {
+          activeLines.add(lineNumber);
+        }
+      }
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          const isFencedCodeMark =
+            node.name === 'CodeMark' && node.node.parent?.name === 'FencedCode';
+          const isBlockFormattingMark =
+            node.name === 'HeaderMark' ||
+            node.name === 'ListMark' ||
+            node.name === 'QuoteMark' ||
+            node.name === 'TaskMarker';
+
+          if (!isFencedCodeMark && !isBlockFormattingMark) {
+            return;
+          }
+
+          const lineNumber = view.state.doc.lineAt(node.from).number;
+          const className = activeLines.has(lineNumber)
+            ? 'cm-formatting-block cm-formatting-block-visible'
+            : 'cm-formatting-block';
+
+          let from = node.from;
+          let to = node.to;
+
+          if (node.name === 'TaskMarker') {
+            const line = view.state.doc.lineAt(node.from);
+            if (to < line.to && view.state.doc.sliceString(to, to + 1) === ' ') {
+              to += 1;
+            }
+          }
+
+          decs.push(Decoration.mark({ class: className }).range(from, to));
+
+          if (node.name === 'HeaderMark') {
+            const line = view.state.doc.lineAt(node.from);
+            if (to < line.to && view.state.doc.sliceString(to, to + 1) === ' ') {
+              decs.push(Decoration.mark({ class: className }).range(to, to + 1));
+            }
+          }
+        },
+      });
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/** Decorate checkbox list items so CSS can render interactive checkboxes. */
+const checkboxLinePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+      
+      // GFM task lists are parsed as Task nodes with a TaskMarker child.
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'Task') return;
+
+          const line = view.state.doc.lineAt(node.from);
+          if (seen.has(line.number)) return;
+          seen.add(line.number);
+
+          const taskText = view.state.doc.sliceString(node.from, Math.min(node.to, line.to));
+          const isChecked = /^\[(?:x|X)\]/.test(taskText);
+
+          decs.push(
+            Decoration.line({
+              class: isChecked ? 'cm-checkbox-checked-line' : 'cm-checkbox-unchecked-line',
+            }).range(line.from),
+          );
+        },
+      });
+      
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+class AutolinkWidget extends WidgetType {
+  constructor(private readonly href: string) {
+    super();
+  }
+
+  eq(other: AutolinkWidget): boolean {
+    return other.href === this.href;
+  }
+
+  toDOM(): HTMLElement {
+    const anchor = document.createElement('a');
+    anchor.setAttribute('href', this.href);
+    anchor.textContent = this.href;
+    anchor.className = 'cm-link-widget';
+    return anchor;
+  }
+
+  ignoreEvent(): boolean {
+    return false;
+  }
+}
+
+/** Render bare GFM autolinks as clickable anchors when the cursor is outside the URL. */
+const autolinkPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; selectionSet?: boolean; view: EditorView }) {
+      // Only rebuild on doc change or viewport change - NOT on selectionSet
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const isDrag = view.state.field(mouseSelectingField, false);
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'URL' && node.name !== 'Autolink') return;
+
+          // Validate positions - skip if invalid ranges (from >= to or positions out of bounds)
+          const docLength = view.state.doc.length;
+          if (node.from >= node.to || node.from < 0 || node.to > docLength) return;
+
+          const href = view.state.doc.sliceString(node.from, node.to);
+          if (!/^(https?:\/\/|mailto:)/i.test(href)) return;
+          if (shouldShowSource(view.state, node.from, node.to) || isDrag) return;
+
+          decs.push(
+            Decoration.replace({ widget: new AutolinkWidget(href) }).range(node.from, node.to),
+          );
+        },
+      });
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/** Decorate callout blockquotes so CSS can render styled callout boxes. */
+const calloutLinePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Map<number, string>(); // line number -> callout type
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'Blockquote') return;
+
+          const fromLine = view.state.doc.lineAt(node.from).number;
+          const toLine = view.state.doc.lineAt(Math.max(node.from, node.to - 1)).number;
+
+          // Check the first line of the blockquote for callout syntax
+          const firstLine = view.state.doc.line(fromLine);
+          const lineText = view.state.doc.sliceString(firstLine.from, firstLine.to);
+          
+          // Match > [!type] pattern
+          const calloutMatch = lineText.match(/^> \s*\[!([a-zA-Z]+)\]/);
+          if (!calloutMatch) return;
+          
+          const calloutType = calloutMatch[1].toLowerCase();
+          
+          // Mark all lines in this blockquote as callout
+          for (let lineNumber = fromLine; lineNumber <= toLine; lineNumber += 1) {
+            // Only set if not already set or if this is a deeper/nested callout
+            if (!seen.has(lineNumber)) {
+              seen.set(lineNumber, calloutType);
+            }
+          }
+        },
+      });
+
+      for (const [lineNumber, calloutType] of seen) {
+        const line = view.state.doc.line(lineNumber);
+        decs.push(
+          Decoration.line({
+            class: `cm-callout-line cm-callout-${calloutType}`,
+            attributes: { 'data-callout-type': calloutType },
+          }).range(line.from),
+        );
+      }
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/** Decorate thematic break lines so hidden markdown markers still render a visible rule. */
+const horizontalRulePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          if (node.name !== 'HorizontalRule' && node.name !== 'ThematicBreak') return;
+
+          const line = view.state.doc.lineAt(node.from);
+          if (seen.has(line.number)) return;
+          seen.add(line.number);
+
+          decs.push(Decoration.line({ class: 'cm-hr-line' }).range(line.from));
+        },
+      });
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/** Generate a slug from heading text for use as an ID attribute. */
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove non-word chars except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+}
+
+/** Add IDs to heading lines so they can be linked to via fragment links. */
+const headingIdPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const decs: Range<Decoration>[] = [];
+      const seen = new Set<number>();
+
+      syntaxTree(view.state).iterate({
+        enter: (node) => {
+          // Match ATXHeading1, ATXHeading2, etc.
+          if (!node.name.startsWith('ATXHeading')) return;
+
+          const line = view.state.doc.lineAt(node.from);
+          if (seen.has(line.number)) return;
+          seen.add(line.number);
+
+          // Extract heading text (without the # marks)
+          const headingText = line.text.replace(/^#+\s+/, '').trim();
+          if (!headingText) return;
+
+          const slug = slugifyHeading(headingText);
+          decs.push(
+            Decoration.line({
+              attributes: { id: slug },
+            }).range(line.from),
+          );
+        },
+      });
+
+      return Decoration.set(decs, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+/**
+ * Extension that intercepts clicks on links and handles navigation.
+ * Uses domEventHandlers which is the proper CodeMirror way to handle events.
+ */
+function createLinkClickExtension(
+  onExternalLink: (url: string) => void,
+  onFragmentLink: (fragment: string) => void,
+): Extension {
+  return ViewPlugin.fromClass(
+    class {
+      constructor(_view: EditorView) {
+        // No-op
+      }
+    },
+    {
+      eventHandlers: {
+        click: (event, _view) => {
+          const target = event.target as HTMLElement;
+          const anchor = target.closest('a');
+          
+          if (!anchor) return false;
+          
+          const href = anchor.getAttribute('href');
+          if (!href) return false;
+          
+          if (href.startsWith('#')) {
+            event.preventDefault();
+            event.stopPropagation();
+            onFragmentLink(href.slice(1));
+            return true;
+          }
+          
+          if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
+            event.preventDefault();
+            event.stopPropagation();
+            onExternalLink(href);
+            return true;
+          }
+          
+          return false;
+        },
+      },
+    },
+  );
+}
+
+// Arrow key navigation is handled by CodeMirror's defaultKeymap (cursorLineUp/cursorLineDown).
+
+const SAVE_STATE_LABELS: Record<SaveState, string | null> = {
+  idle: null,
+  saving: 'Saving...',
+  saved: 'Saved',
+  error: 'Save failed',
+};
+
+export function MarkdownEditor({
+  rawContent,
+  onContentChange,
+  saveState,
+  displayMode,
+  currentFilePath: _currentFilePath,
+  onWikilinkClick,
+}: MarkdownEditorProps): React.ReactElement {
+  const parsed = React.useMemo(() => parseFrontmatter(rawContent), [rawContent]);
+  const editorMountRef = React.useRef<HTMLDivElement | null>(null);
+  const editorRef = React.useRef<EditorView | null>(null);
+  const frontmatterRef = React.useRef<string | null>(parsed.frontmatter);
+  const isExternalUpdateRef = React.useRef(false);
+  const onContentChangeRef = React.useRef(onContentChange);
+
+  frontmatterRef.current = parsed.frontmatter;
+  onContentChangeRef.current = onContentChange;
+
+  // Wikilink click handler
+  const handleWikilinkClick = React.useCallback((wikilink: string) => {
+    if (onWikilinkClick) {
+      onWikilinkClick(wikilink);
+    }
+  }, [onWikilinkClick]);
+
+  // External link handler for markdown links
+  const handleExternalLinkClick = React.useCallback((url: string) => {
+    window.srgnt.openExternal(url).catch(() => {
+      /* silently handle rejected open-external calls */
+    });
+  }, []);
+
+  // Fragment link handler for in-document navigation
+  const handleFragmentLinkClick = React.useCallback((fragment: string) => {
+    const targetElement = document.querySelector(`[id="${fragment}"]`);
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
+  // Wikilink suggestions fetcher
+  const fetchWikilinkSuggestions = React.useCallback(async (query: string) => {
+    try {
+      const response = await window.srgnt.notesListWorkspaceMarkdown(query, 20);
+      return response.files.map((file) => ({
+        label: file.path.replace(/\.md$/, ''),
+        detail: file.path,
+        info: file.title,
+      }));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const mount = editorMountRef.current;
+    if (!mount) {
+      return;
+    }
+
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: parsed.body,
+        extensions: [
+          EditorView.cspNonce.of('srgnt-renderer'),
+          EditorView.lineWrapping,
+          markdown({ extensions: [GFM] }),
+          history(),
+          keymap.of([
+            // Completion keymap with explicit Tab support
+            ...completionKeymap,
+            { key: 'Tab', run: acceptCompletion },
+            indentWithTab,
+            ...historyKeymap,
+            ...defaultKeymap,
+            // Toggle task list checkbox via keyboard (Ctrl/Cmd+Enter or Ctrl/Cmd+Space)
+            {
+              key: 'Mod-Enter',
+              run: (v) => toggleCheckboxAtCursor(v),
+            },
+            {
+              key: 'Mod- ',
+              run: (v) => toggleCheckboxAtCursor(v),
+            },
+          ]),
+          placeholder('Start writing...'),
+          EditorView.contentAttributes.of({
+            class: 'markdown-editor-body',
+            'aria-label': 'Markdown editor',
+            spellcheck: 'false',
+            'data-testid': 'markdown-editor-content',
+          }),
+          EditorView.updateListener.of((update) => {
+            if (!update.docChanged) {
+              return;
+            }
+            if (isExternalUpdateRef.current) {
+              isExternalUpdateRef.current = false;
+              return;
+            }
+
+            const fullContent = serializeWithFrontmatter(frontmatterRef.current, update.state.doc.toString());
+            onContentChangeRef.current(fullContent);
+          }),
+          collapseOnSelectionFacet.of(true),
+          mouseSelectingField,
+          debouncedLivePreviewPlugin,
+          markdownStylePlugin,
+          listLinePlugin,
+          blockquoteLinePlugin,
+          codeBlockLinePlugin,
+          blockFormattingRevealPlugin,
+          horizontalRulePlugin,
+          headingIdPlugin,
+          checkboxLinePlugin,
+          imageField(),
+          calloutLinePlugin,
+          tableEditorPlugin(),
+          linkPlugin({ openInNewTab: false }),
+          autolinkPlugin,
+          // Handle markdown link clicks (external URLs and fragment links)
+          createLinkClickExtension(handleExternalLinkClick, handleFragmentLinkClick),
+          // Wikilink extension (decoration, click handling, autocomplete)
+          // Pass slash command source to merge with wikilink autocomplete to avoid override conflict
+          ...createWikilinkExtension(handleWikilinkClick, fetchWikilinkSuggestions, [slashCommandSource]),
+          wikilinkStyles,
+          slashCommandsStyles,
+          editorTheme,
+        ],
+      }),
+      parent: mount,
+    });
+
+    const handleMouseDown = () => {
+      view.dispatch({ effects: setMouseSelecting.of(true) });
+    };
+    const handleMouseUp = () => {
+      requestAnimationFrame(() => {
+        if (editorRef.current === view) {
+          view.dispatch({ effects: setMouseSelecting.of(false) });
+        }
+      });
+    };
+
+    // Handler for checkbox clicks
+    const handleCheckboxClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      // Check for checkbox clicks
+      const checkboxLine = target.closest(
+        '.cm-checkbox-unchecked-line, .cm-checkbox-checked-line',
+      ) as HTMLElement | null;
+      if (!checkboxLine) {
+        return;
+      }
+
+      const rect = checkboxLine.getBoundingClientRect();
+      const offsetX = event.clientX - rect.left;
+      if (offsetX < 0 || offsetX > 24) {
+        return;
+      }
+
+      const lineStart = view.posAtDOM(checkboxLine, 0);
+      const line = view.state.doc.lineAt(lineStart);
+      const match = line.text.match(/^(\s*(?:[-*+]|\d+[.)])\s+\[)( |x|X)(\].*)$/);
+      if (!match) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const markerPos = line.from + match[1].length;
+      const nextMarker = match[2] === ' ' ? 'x' : ' ';
+      view.dispatch({
+        changes: { from: markerPos, to: markerPos + 1, insert: nextMarker },
+        selection: view.state.selection.main,
+        userEvent: 'input',
+      });
+    };
+
+    editorRef.current = view;
+    view.contentDOM.addEventListener('mousedown', handleMouseDown);
+    mount.addEventListener('click', handleCheckboxClick);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      view.contentDOM.removeEventListener('mousedown', handleMouseDown);
+      mount.removeEventListener('click', handleCheckboxClick);
+      document.removeEventListener('mouseup', handleMouseUp);
+      if (editorRef.current === view) {
+        editorRef.current = null;
+      }
+      view.destroy();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const view = editorRef.current;
+    if (!view) {
+      return;
+    }
+
+    const currentBody = view.state.doc.toString();
+    if (currentBody === parsed.body) {
+      return;
+    }
+
+    isExternalUpdateRef.current = true;
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: parsed.body },
+    });
+  }, [parsed.body]);
+
+  const saveLabel = SAVE_STATE_LABELS[saveState];
+
+  return (
+    <div className="markdown-editor-wrapper" data-display-mode={displayMode} data-testid="markdown-editor-wrapper">
+      {parsed.frontmatter && (
+        <div className="markdown-frontmatter" data-testid="frontmatter-block">
+          <pre className="markdown-frontmatter-content">{parsed.frontmatter}</pre>
+        </div>
+      )}
+      <div className="markdown-save-indicator">
+        {saveLabel && <span className={`markdown-save-${saveState}`}>{saveLabel}</span>}
+      </div>
+      <div className="markdown-editor-codemirror" data-testid="markdown-editor-root" ref={editorMountRef} />
+    </div>
+  );
+}

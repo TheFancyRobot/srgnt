@@ -1,0 +1,27 @@
+{
+  "manifest": {
+    "id": "outlook",
+    "name": "Outlook Calendar",
+    "version": "0.2.0",
+    "description": "Microsoft Outlook Calendar connector for events and contacts",
+    "provider": "microsoft",
+    "authType": "oauth2",
+    "config": {
+      "authType": "oauth2",
+      "baseUrl": "https://graph.microsoft.com/v1.0",
+      "timeout": 30000,
+      "retryAttempts": 3
+    },
+    "capabilities": [
+      { "capability": "read", "supportedOperations": ["getEvent", "listEvents", "getContacts"] },
+      { "capability": "write", "supportedOperations": ["createEvent", "updateEvent", "respondToEvent"] }
+    ],
+    "entityTypes": ["Event", "Person"],
+    "freshnessThresholdMs": 300000,
+    "metadata": {}
+  },
+  "entityCounts": {
+    "event": 5,
+    "person": 3
+  }
+}

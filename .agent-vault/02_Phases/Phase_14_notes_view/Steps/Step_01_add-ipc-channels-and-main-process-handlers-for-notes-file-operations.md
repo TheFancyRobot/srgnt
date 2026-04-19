@@ -5,7 +5,7 @@ contract_version: 1
 title: Freeze Notes workspace contract and typed IPC surface
 step_id: STEP-14-01
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
+status: completed
 owner: ''
 created: '2026-03-31'
 updated: '2026-03-31'
@@ -14,6 +14,7 @@ related_sessions:
   - '[[05_Sessions/2026-03-31-033706-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-033706 OpenCode session for Add IPC channels and main process handlers for notes file operations]]'
   - '[[05_Sessions/2026-03-31-034222-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-034222 OpenCode session for Add IPC channels and main process handlers for notes file operations]]'
   - '[[05_Sessions/2026-03-31-042636-freeze-notes-workspace-contract-and-typed-ipc-surface-opencode|SESSION-2026-03-31-042636 OpenCode session for Freeze Notes workspace contract and typed IPC surface]]'
+  - '[[05_Sessions/2026-03-31-043739-freeze-notes-workspace-contract-and-typed-ipc-surface-opencode|SESSION-2026-03-31-043739 OpenCode session for Freeze Notes workspace contract and typed IPC surface]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -171,9 +172,32 @@ This section supersedes the vaguer template text above when they conflict.
 - 2026-03-31 - [[05_Sessions/2026-03-31-033706-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-033706 OpenCode session for Add IPC channels and main process handlers for notes file operations]] - Session created.
 - 2026-03-31 - [[05_Sessions/2026-03-31-034222-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-034222 OpenCode session for Add IPC channels and main process handlers for notes file operations]] - Session created.
 - 2026-03-31 - [[05_Sessions/2026-03-31-042636-freeze-notes-workspace-contract-and-typed-ipc-surface-opencode|SESSION-2026-03-31-042636 OpenCode session for Freeze Notes workspace contract and typed IPC surface]] - Session created.
+- 2026-03-31 - [[05_Sessions/2026-03-31-043739-freeze-notes-workspace-contract-and-typed-ipc-surface-opencode|SESSION-2026-03-31-043739 OpenCode session for Freeze Notes workspace contract and typed IPC surface]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Record the final result, the validation performed, and any follow-up required.
 - If the step is blocked, say exactly what is blocking it.
+## Outcome Summary
+
+**Status**: Completed 2026-03-31
+
+**What was done**:
+- Added `"notes"` to `SWorkspaceDirectoryType` literal
+- Added Notes directory entry to `defaultWorkspaceLayout.rootDirectories` (`{ type: 'notes', path: 'Notes', description: 'Operational notes and artifacts' }`)
+- Added 10 notes IPC channels to `ipcChannels` in contracts.ts: `notes:list-dir`, `notes:read-file`, `notes:write-file`, `notes:create-file`, `notes:create-folder`, `notes:delete`, `notes:rename`, `notes:search`, `notes:resolve-wikilink`, `notes:list-workspace-markdown`
+- Added Effect Schema types for all request/response pairs (forward-looking channels like search, wikilink resolution have schemas defined but return empty/not-implemented until their respective steps)
+- Added duplicate channel strings to preload `ipcChannels` (sandbox: true requires inlined copy)
+- Added typed invoke wrappers in preload API
+- Added typed method signatures in `env.d.ts` SrgntAPI interface
+
+**Validation**: `pnpm run typecheck` passed across all packages
+
+**Files changed**:
+- `packages/contracts/src/ipc/contracts.ts`
+- `packages/contracts/src/workspace/layout.ts`
+- `packages/desktop/src/preload/index.ts`
+- `packages/desktop/src/renderer/env.d.ts`
+
+**Handoff to Step 02**: Channel list finalized. Step 02 will implement main-process handlers for all notes operations with path-scoped filesystem access.

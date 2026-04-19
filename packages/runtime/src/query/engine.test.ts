@@ -79,6 +79,111 @@ describe('SimpleQueryEngine', () => {
   });
 });
 
+describe('SimpleQueryEngine total and pagination', () => {
+  let engine: SimpleQueryEngine;
+
+  beforeEach(() => {
+    engine = new SimpleQueryEngine();
+    for (let i = 0; i < 10; i++) {
+      engine.addToIndex({ id: `task-${i}`, canonicalType: 'Task' });
+    }
+  });
+
+  it('reports total before limit is applied', async () => {
+    const result = await engine.query({ from: 'Task', limit: 3 });
+    expect(result.data).toHaveLength(3);
+    expect(result.total).toBe(10);
+  });
+
+  it('supports offset in structured query', async () => {
+    const result = await engine.query({ from: 'Task', offset: 7 });
+    expect(result.data).toHaveLength(3);
+    expect(result.total).toBe(10);
+  });
+
+  it('supports limit and offset together', async () => {
+    const result = await engine.query({ from: 'Task', limit: 2, offset: 5 });
+    expect(result.data).toHaveLength(2);
+    expect(result.total).toBe(10);
+  });
+
+  it('paginates typed queries without materializing the full result window first', async () => {
+    for (let i = 10; i < 3000; i++) {
+      engine.addToIndex({ id: `task-${i}`, canonicalType: 'Task' });
+    }
+
+    const result = await engine.query<EntityEnvelope>({ from: 'Task', limit: 3, offset: 2500 });
+    expect(result.data).toHaveLength(3);
+    expect(result.total).toBe(3000);
+    expect(result.data[0]?.id).toBe('task-2500');
+    expect(result.data[2]?.id).toBe('task-2502');
+  });
+});
+
+describe('SimpleQueryEngine type index', () => {
+  let engine: SimpleQueryEngine;
+
+  beforeEach(() => {
+    engine = new SimpleQueryEngine();
+  });
+
+  it('uses type index for DQL FROM queries', async () => {
+    engine.addToIndex({ id: 'task-1', canonicalType: 'Task' });
+    engine.addToIndex({ id: 'event-1', canonicalType: 'Event' });
+
+    const result = await engine.query('FROM Task');
+    expect(result.data).toHaveLength(1);
+    expect((result.data[0] as EntityEnvelope).id).toBe('task-1');
+  });
+
+  it('cleans up type index on removeFromIndex', async () => {
+    engine.addToIndex({ id: 'task-1', canonicalType: 'Task' });
+    engine.addToIndex({ id: 'task-2', canonicalType: 'Task' });
+    engine.removeFromIndex('task-1');
+
+    const result = await engine.query({ from: 'Task' });
+    expect(result.data).toHaveLength(1);
+    expect((result.data[0] as EntityEnvelope).id).toBe('task-2');
+  });
+
+  it('moves an entity between type indexes when re-indexed with a new canonical type', async () => {
+    engine.addToIndex({ id: 'item-1', canonicalType: 'Task' });
+    engine.addToIndex({ id: 'item-1', canonicalType: 'Event' });
+
+    const taskResult = await engine.query({ from: 'Task' });
+    const eventResult = await engine.query({ from: 'Event' });
+
+    expect(taskResult.data).toHaveLength(0);
+    expect(eventResult.data).toHaveLength(1);
+    expect((eventResult.data[0] as EntityEnvelope).id).toBe('item-1');
+  });
+
+  it('returns empty for non-existent type', async () => {
+    engine.addToIndex({ id: 'task-1', canonicalType: 'Task' });
+
+    const result = await engine.query({ from: 'NonExistent' });
+    expect(result.data).toHaveLength(0);
+    expect(result.total).toBe(0);
+  });
+
+  it('handles large entity sets efficiently', async () => {
+    for (let i = 0; i < 1000; i++) {
+      engine.addToIndex({ id: `task-${i}`, canonicalType: 'Task' });
+    }
+    for (let i = 0; i < 1000; i++) {
+      engine.addToIndex({ id: `event-${i}`, canonicalType: 'Event' });
+    }
+
+    const start = Date.now();
+    const result = await engine.query({ from: 'Task', limit: 10 });
+    const elapsed = Date.now() - start;
+
+    expect(result.data).toHaveLength(10);
+    expect(result.total).toBe(1000);
+    expect(elapsed).toBeLessThan(100); // should be well under 100ms
+  });
+});
+
 describe('createQueryEngine', () => {
   it('creates a SimpleQueryEngine instance', () => {
     const engine = createQueryEngine();

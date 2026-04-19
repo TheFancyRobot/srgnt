@@ -765,4 +765,782 @@
   .dark .surface-gradient {
     background: linear-gradient(135deg, var(--color-surface-primary) 0%, var(--color-surface-secondary) 50%, rgba(183, 148, 246, 0.02) 100%);
   }
+
+  /* ──────────────── Markdown editor ──────────────── */
+
+  .markdown-editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+  }
+
+  .markdown-frontmatter {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    background-color: var(--color-surface-tertiary);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 8px;
+  }
+
+  .markdown-frontmatter-content {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--color-text-tertiary);
+    margin: 0;
+    white-space: pre-wrap;
+    user-select: text;
+  }
+
+  .markdown-save-indicator {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 5;
+  }
+
+  .markdown-save-saving,
+  .markdown-save-saved,
+  .markdown-save-error {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    animation: fade-in 200ms ease;
+  }
+
+  .markdown-save-saving {
+    color: var(--color-text-tertiary);
+    background-color: var(--color-surface-tertiary);
+  }
+
+  .markdown-save-saved {
+    color: var(--color-success-600);
+    background-color: var(--color-success-50);
+  }
+
+  .markdown-save-error {
+    color: var(--color-error-600);
+    background-color: var(--color-error-50);
+  }
+
+  .markdown-editor-codemirror {
+    min-height: 200px;
+  }
+
+  .markdown-editor-wrapper .cm-editor {
+    min-height: 200px;
+    border-radius: 10px;
+    outline: none;
+  }
+
+  .markdown-editor-wrapper .cm-scroller {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .markdown-editor-wrapper .cm-content {
+    min-height: 200px;
+    padding: 0.5rem 0;
+    color: var(--color-text-primary);
+    caret-color: var(--color-srgnt-500);
+  }
+
+  .markdown-editor-wrapper .cm-line {
+    padding: 0 0.5rem;
+  }
+
+  .markdown-editor-wrapper .cm-codeblock-line {
+    background-color: var(--color-surface-tertiary);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .markdown-editor-wrapper .cm-codeblock-first {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding-top: 0.5rem;
+  }
+
+  .markdown-editor-wrapper .cm-codeblock-last {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    padding-bottom: 0.5rem;
+  }
+
+  .markdown-editor-wrapper .cm-focused {
+    outline: none;
+  }
+
+  .markdown-editor-wrapper .cm-editor.cm-focused {
+    outline: none;
+  }
+
+  .markdown-editor-wrapper .cm-cursor,
+  .markdown-editor-wrapper .cm-dropCursor {
+    border-left-color: var(--color-srgnt-500);
+  }
+
+  .markdown-editor-wrapper .cm-selectionBackground,
+  .markdown-editor-wrapper.cm-focused .cm-selectionBackground,
+  .markdown-editor-wrapper .cm-content ::selection {
+    background-color: rgba(183, 148, 246, 0.22) !important;
+  }
+
+  .markdown-editor-wrapper .cm-placeholder {
+    color: var(--color-text-tertiary);
+    font-style: normal;
+  }
+
+  /* ── Heading vertical whitespace ── */
+
+  .markdown-editor-wrapper .cm-heading-line {
+    padding-top: 0.75rem;
+    padding-bottom: 0.25rem;
+  }
+
+  /* ── Heading visual hierarchy ── */
+
+  .markdown-editor-wrapper .cm-header-1 {
+    font-size: 1.75em;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--color-text-primary);
+  }
+
+  .markdown-editor-wrapper .cm-header-2 {
+    font-size: 1.375em;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-text-primary);
+  }
+
+  .markdown-editor-wrapper .cm-header-3 {
+    font-size: 1.125em;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+  }
+
+  .markdown-editor-wrapper .cm-header-4,
+  .markdown-editor-wrapper .cm-header-5,
+  .markdown-editor-wrapper .cm-header-6 {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  /* ── Inline formatting ── */
+
+  .markdown-editor-wrapper .cm-strong,
+  .markdown-editor-wrapper .cm-emphasis,
+  .markdown-editor-wrapper .cm-strikethrough,
+  .markdown-editor-wrapper .cm-link,
+  .markdown-editor-wrapper .cm-code {
+    color: var(--color-text-primary);
+  }
+
+  .markdown-editor-wrapper .cm-link,
+  .markdown-editor-wrapper .cm-link-widget {
+    color: var(--color-srgnt-500);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .dark .markdown-editor-wrapper .cm-link,
+  .dark .markdown-editor-wrapper .cm-link-widget {
+    color: var(--color-srgnt-300);
+  }
+
+  .markdown-editor-wrapper .cm-wikilink-widget,
+  .markdown-editor-wrapper .cm-wikilink {
+    color: var(--color-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .markdown-editor-wrapper .cm-code {
+    background-color: var(--color-surface-tertiary);
+    color: var(--color-srgnt-600);
+    border-radius: 4px;
+    padding: 0.125rem 0.375rem;
+  }
+
+  .markdown-editor-wrapper .cm-strikethrough {
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+  }
+
+  .dark .markdown-editor-wrapper .cm-code {
+    color: var(--color-srgnt-300);
+  }
+
+  .markdown-editor-wrapper .cm-formatting-inline,
+  .markdown-editor-wrapper .cm-formatting-block {
+    color: var(--color-text-tertiary);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  .markdown-editor-wrapper .cm-formatting-inline {
+    display: inline;
+    overflow: hidden;
+    white-space: pre;
+    font-size: 0.01em;
+    line-height: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: font-size 0.2s ease-out, opacity 0.15s ease-out;
+  }
+
+  .markdown-editor-wrapper .cm-formatting-inline-visible {
+    font-size: 1em;
+    opacity: 1;
+    margin: 0 1px;
+    pointer-events: auto;
+  }
+
+  .markdown-editor-wrapper .cm-formatting-block {
+    display: inline-block;
+    width: 0;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 0.01em;
+    line-height: inherit;
+    opacity: 0;
+    transition: font-size 0.2s ease-out, opacity 0.2s ease-out, width 0s, max-width 0s;
+  }
+
+  .markdown-editor-wrapper .cm-formatting-block-visible,
+  .markdown-editor-wrapper .cm-formatting-inline-visible {
+    color: var(--color-text-tertiary);
+  }
+
+  .markdown-editor-wrapper .cm-formatting-block-visible {
+    display: inline;
+    width: auto;
+    max-width: none;
+    font-size: 1em;
+    opacity: 0.6;
+  }
+
+  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-inline,
+  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-inline-visible {
+    font-size: 0.01em;
+    opacity: 0;
+    margin: 0;
+    pointer-events: none;
+    transition: none;
+  }
+
+  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-block,
+  .markdown-editor-wrapper[data-display-mode='rendered'] .cm-formatting-block-visible {
+    display: inline-block;
+    width: 0;
+    max-width: 0;
+    font-size: 0.01em;
+    opacity: 0;
+    transition: none;
+  }
+
+  .markdown-editor-wrapper .cm-editor.cm-focused {
+    outline: none;
+    border: none;
+    box-shadow: none;
+  }
+
+  .markdown-editor-wrapper .cm-content:focus {
+    outline: none;
+  }
+
+  .markdown-editor-wrapper .cm-editor textarea {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* ── List bullet indicators ── */
+
+  .markdown-editor-wrapper .cm-list-bullet-line {
+    position: relative;
+  }
+
+  .markdown-editor-wrapper .cm-list-bullet-line::before {
+    content: '\2022'; /* bullet: • */
+    position: absolute;
+    left: 0.5rem;
+    color: var(--color-text-tertiary);
+    pointer-events: none;
+  }
+
+  /* Hide the CSS bullet when the markdown syntax mark is visible (active line) */
+  .markdown-editor-wrapper .cm-list-bullet-line:has(.cm-formatting-block-visible)::before {
+    display: none;
+  }
+
+  .markdown-editor-wrapper .cm-list-ordered-line {
+    position: relative;
+  }
+
+  .markdown-editor-wrapper .cm-list-ordered-line::before {
+    content: attr(data-list-num);
+    position: absolute;
+    left: 0.5rem;
+    color: var(--color-text-tertiary);
+    font-size: 0.875em;
+    pointer-events: none;
+  }
+
+  .markdown-editor-wrapper .cm-list-ordered-line:has(.cm-formatting-block-visible)::before {
+    display: none;
+  }
+
+  /* Checkbox styling */
+  .markdown-editor-wrapper .cm-checkbox-unchecked-line,
+  .markdown-editor-wrapper .cm-checkbox-checked-line {
+    position: relative;
+    padding-left: 1.5rem !important;
+  }
+
+  .markdown-editor-wrapper .cm-checkbox-unchecked-line::before,
+  .markdown-editor-wrapper .cm-checkbox-checked-line::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--color-border-default);
+    border-radius: 3px;
+    background-color: var(--color-surface-elevated);
+    pointer-events: none;
+  }
+
+  .markdown-editor-wrapper .cm-checkbox-checked-line::after {
+    content: '';
+    position: absolute;
+    left: 0.625rem; /* 0.5rem + 2px border */
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 6px;
+    height: 10px;
+    border: solid var(--color-text-primary);
+    border-width: 0 2px 2px 0;
+    pointer-events: none;
+  }
+
+  .dark .markdown-editor-wrapper .cm-checkbox-checked-line::after {
+    border-color: var(--color-text-primary);
+  }
+
+  /* Hide the markdown syntax when checkbox decoration is visible */
+  .markdown-editor-wrapper .cm-checkbox-unchecked-line:has(.cm-formatting-block-visible)::before,
+  .markdown-editor-wrapper .cm-checkbox-checked-line:has(.cm-formatting-block-visible)::before,
+  .markdown-editor-wrapper .cm-checkbox-checked-line:has(.cm-formatting-block-visible)::after {
+    display: none;
+  }
+
+  /* Shift list line text right to make room for the bullet/number */
+  .markdown-editor-wrapper .cm-list-bullet-line,
+  .markdown-editor-wrapper .cm-list-ordered-line {
+    padding-left: 1.5rem !important;
+  }
+
+  /* Restore visible quote treatment after live-preview hides `>` markers. */
+  .markdown-editor-wrapper .cm-blockquote-line {
+    position: relative;
+    margin-left: calc((var(--blockquote-depth, 1) - 1) * 0.75rem);
+    padding-left: calc(1rem + (var(--blockquote-depth, 1) - 1) * 0.25rem) !important;
+    border-left: 3px solid color-mix(in srgb, var(--color-text-brand) 55%, transparent);
+    background: color-mix(in srgb, var(--color-surface-brand) 70%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='1'] {
+    --blockquote-depth: 1;
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='2'] {
+    --blockquote-depth: 2;
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='3'] {
+    --blockquote-depth: 3;
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='4'] {
+    --blockquote-depth: 4;
+  }
+
+  .markdown-editor-wrapper .cm-blockquote-line[data-blockquote-depth='5'] {
+    --blockquote-depth: 5;
+  }
+
+  .markdown-editor-wrapper .cm-hr-line {
+    position: relative;
+    height: 1.5rem;
+    margin: 0.75rem 0;
+    color: transparent;
+  }
+
+  .markdown-editor-wrapper .cm-hr-line::after {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: calc(50% - 0.5px);
+    border-bottom: 1px solid var(--color-border-default);
+    pointer-events: none;
+  }
+
+  /* Callout styling */
+  .markdown-editor-wrapper .cm-callout-line {
+    position: relative;
+    margin-left: 0 !important;
+    padding-left: 1.25rem !important;
+    border-left-width: 3px;
+    border-left-style: solid;
+    background-color: transparent;
+  }
+
+  /* Callout type colors */
+  .markdown-editor-wrapper .cm-callout-note,
+  .markdown-editor-wrapper .cm-callout-info,
+  .markdown-editor-wrapper .cm-callout-abstract {
+    border-left-color: var(--color-srgnt-400);
+    background-color: color-mix(in srgb, var(--color-surface-brand) 60%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-callout-tip {
+    border-left-color: var(--color-success-500);
+    background-color: color-mix(in srgb, var(--color-success-50) 60%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-callout-warning {
+    border-left-color: var(--color-warning-500);
+    background-color: color-mix(in srgb, var(--color-warning-50) 60%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-callout-danger,
+  .markdown-editor-wrapper .cm-callout-failure,
+  .markdown-editor-wrapper .cm-callout-bug {
+    border-left-color: var(--color-error-500);
+    background-color: color-mix(in srgb, var(--color-error-50) 60%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-callout-success {
+    border-left-color: var(--color-success-500);
+    background-color: color-mix(in srgb, var(--color-success-50) 60%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-callout-question {
+    border-left-color: var(--color-warning-500);
+    background-color: color-mix(in srgb, var(--color-warning-50) 60%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-callout-example {
+    border-left-color: var(--color-info-500);
+    background-color: color-mix(in srgb, var(--color-info-50) 60%, transparent);
+  }
+
+  .markdown-editor-wrapper .cm-callout-quote {
+    border-left-color: var(--color-text-tertiary);
+    background-color: color-mix(in srgb, var(--color-surface-tertiary) 40%, transparent);
+  }
+
+  /* Dark mode callout overrides */
+  .dark .markdown-editor-wrapper .cm-callout-note,
+  .dark .markdown-editor-wrapper .cm-callout-info,
+  .dark .markdown-editor-wrapper .cm-callout-abstract {
+    border-left-color: var(--color-srgnt-300);
+    background-color: rgba(183, 148, 246, 0.08);
+  }
+
+  .dark .markdown-editor-wrapper .cm-callout-tip,
+  .dark .markdown-editor-wrapper .cm-callout-success {
+    border-left-color: var(--color-success-500);
+    background-color: rgba(123, 184, 142, 0.08);
+  }
+
+  .dark .markdown-editor-wrapper .cm-callout-warning,
+  .dark .markdown-editor-wrapper .cm-callout-question {
+    border-left-color: var(--color-warning-500);
+    background-color: rgba(224, 180, 94, 0.08);
+  }
+
+  .dark .markdown-editor-wrapper .cm-callout-danger,
+  .dark .markdown-editor-wrapper .cm-callout-failure,
+  .dark .markdown-editor-wrapper .cm-callout-bug {
+    border-left-color: var(--color-error-500);
+    background-color: rgba(236, 142, 132, 0.08);
+  }
+
+  .dark .markdown-editor-wrapper .cm-callout-example {
+    border-left-color: var(--color-info-500);
+    background-color: rgba(133, 172, 198, 0.08);
+  }
+
+  .dark .markdown-editor-wrapper .cm-callout-quote {
+    border-left-color: var(--color-text-tertiary);
+    background-color: rgba(138, 134, 126, 0.08);
+  }
+
+  /* Hide the > character when callout decoration is visible */
+  .markdown-editor-wrapper .cm-callout-line:has(.cm-formatting-block-visible) {
+    padding-left: 1.25rem !important;
+  }
+
+  /* Table styling */
+  .markdown-editor-wrapper .cm-table-widget {
+    font-family: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+    margin: 1rem 0;
+  }
+
+  .markdown-editor-wrapper .cm-table-widget table {
+    border-collapse: collapse;
+    width: 100%;
+    border: 1px solid var(--color-border-default);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .markdown-editor-wrapper .cm-table-widget th,
+  .markdown-editor-wrapper .cm-table-widget td {
+    border: 1px solid var(--color-border-muted);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .markdown-editor-wrapper .cm-table-widget th {
+    background-color: var(--color-surface-tertiary);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--color-text-primary);
+    border-bottom: 2px solid var(--color-border-default);
+  }
+
+  .markdown-editor-wrapper .cm-table-widget td {
+    color: var(--color-text-primary);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+
+  .dark .markdown-editor-wrapper .cm-table-widget table {
+    border-color: var(--color-border-default);
+  }
+
+  .dark .markdown-editor-wrapper .cm-table-widget th,
+  .dark .markdown-editor-wrapper .cm-table-widget td {
+    border-color: var(--color-border-muted);
+  }
+
+  .dark .markdown-editor-wrapper .cm-table-widget th {
+    background-color: var(--color-surface-tertiary);
+    color: var(--color-text-primary);
+  }
+
+  .dark .markdown-editor-wrapper .cm-table-widget td {
+    color: var(--color-text-primary);
+  }
+
+  /* Image widget styling */
+  .markdown-editor-wrapper .cm-image-widget {
+    display: inline-flex;
+    align-items: center;
+    margin: 0.5rem 0;
+    vertical-align: middle;
+  }
+
+  .markdown-editor-wrapper .cm-image-widget img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .dark .markdown-editor-wrapper .cm-image-widget img {
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Image loading state */
+  .markdown-editor-wrapper .cm-image-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 100px;
+    min-width: 150px;
+    padding: 1rem;
+    background-color: var(--color-surface-tertiary);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 8px;
+    color: var(--color-text-tertiary);
+    font-size: 0.8125rem;
+  }
+
+  .markdown-editor-wrapper .cm-image-spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--color-border-muted);
+    border-top-color: var(--color-srgnt-400);
+    border-radius: 50%;
+    animation: image-spinner 1s linear infinite;
+  }
+
+  @keyframes image-spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Image alt text placeholder */
+  .markdown-editor-wrapper .cm-image-alt {
+    color: var(--color-text-secondary);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  /* Image error state */
+  .markdown-editor-wrapper .cm-image-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 100px;
+    min-width: 150px;
+    padding: 1rem;
+    background-color: var(--color-error-50);
+    border: 1px solid var(--color-error-100);
+    border-radius: 8px;
+    color: var(--color-error-600);
+    font-size: 0.8125rem;
+  }
+
+  .markdown-editor-wrapper .cm-image-error-icon {
+    font-size: 1.5rem;
+  }
+
+  .dark .markdown-editor-wrapper .cm-image-error {
+    background-color: rgba(236, 142, 132, 0.08);
+    border-color: rgba(236, 142, 132, 0.12);
+    color: var(--color-error-500);
+  }
+
+  /* Hide image source markdown when rendered */
+  .markdown-editor-wrapper .cm-image-source {
+    display: none;
+  }
+
+  .markdown-editor-wrapper .cm-image-source:has(.cm-formatting-block-visible) {
+    display: block;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .markdown-editor-wrapper .cm-formatting-inline,
+    .markdown-editor-wrapper .cm-formatting-inline-visible,
+    .markdown-editor-wrapper .cm-formatting-block,
+    .markdown-editor-wrapper .cm-formatting-block-visible {
+      transition: none;
+    }
+  }
+}
+
+/* Slash command autocomplete dropdown - must be at global level for dark mode */
+.cm-tooltip-autocomplete {
+  background-color: #ffffff;
+  border: 1px solid #e2e0db;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: Barlow, ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+}
+
+.cm-tooltip-autocomplete::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cm-tooltip-autocomplete::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cm-tooltip-autocomplete::-webkit-scrollbar-thumb {
+  background: #eeedea;
+  border-radius: 4px;
+}
+
+.cm-tooltip-autocomplete::-webkit-scrollbar-thumb:hover {
+  background: #e2e0db;
+}
+
+.cm-tooltip-autocomplete ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cm-tooltip-autocomplete li {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.1s ease;
+}
+
+.cm-tooltip-autocomplete li:hover {
+  background-color: #faf9f8;
+}
+
+.cm-tooltip-autocomplete li[aria-selected="true"] {
+  background-color: #f2f0ee;
+}
+
+/* Dark mode for autocomplete */
+.dark .cm-tooltip-autocomplete {
+  background-color: #1b1b22;
+  border-color: #2a2a34;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dark .cm-tooltip-autocomplete::-webkit-scrollbar-thumb {
+  background: #2a2a34;
+}
+
+.dark .cm-tooltip-autocomplete::-webkit-scrollbar-thumb:hover {
+  background: #3a3a46;
+}
+
+.dark .cm-tooltip-autocomplete li:hover {
+  background-color: #131318;
+}
+
+.dark .cm-tooltip-autocomplete li[aria-selected="true"] {
+  background-color: #1b1b22;
+}
+
+.cm-completionLabel {
+  color: #1a1a1e;
+  font-weight: 500;
+  flex: 1;
+}
+
+.dark .cm-completionLabel {
+  color: #e2e0db;
+}
+
+.cm-completionDetail {
+  color: #52504b;
+  font-size: 12px;
+}
+
+.dark .cm-completionDetail {
+  color: #b0ada4;
 }

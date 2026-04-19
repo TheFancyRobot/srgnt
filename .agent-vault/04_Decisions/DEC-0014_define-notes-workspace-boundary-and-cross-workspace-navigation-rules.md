@@ -14,6 +14,8 @@ superseded_by: []
 related_notes:
   - '[[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]]'
   - '[[05_Sessions/2026-03-31-033706-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-033706 OpenCode session for Add IPC channels and main process handlers for notes file operations]]'
+  - '[[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation|STEP-14-05 Add workspace-wide wikilink resolution, navigation, and note creation]]'
+  - '[[02_Phases/Phase_14_notes_view/Steps/Step_07_add-basic-full-text-search-across-notes|STEP-14-07 Add whole-workspace markdown search with bounded indexing]]'
 tags:
   - agent-vault
   - decision
@@ -75,6 +77,8 @@ Lock the Notes surface boundary for Phase 14 so the Electron IPC layer, renderer
 <!-- AGENT-START:decision-related-notes -->
 - Phase: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]]
 - Session: [[05_Sessions/2026-03-31-033706-add-ipc-channels-and-main-process-handlers-for-notes-file-operations-opencode|SESSION-2026-03-31-033706 OpenCode session for Add IPC channels and main process handlers for notes file operations]]
+- Wikilink step: [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation|STEP-14-05 Add workspace-wide wikilink resolution, navigation, and note creation]]
+- Search step: [[02_Phases/Phase_14_notes_view/Steps/Step_07_add-basic-full-text-search-across-notes|STEP-14-07 Add whole-workspace markdown search with bounded indexing]]
 <!-- AGENT-END:decision-related-notes -->
 
 ## Change Log

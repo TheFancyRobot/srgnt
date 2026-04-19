@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: Today View launch flow fails in live desktop app
 bug_id: BUG-0002
-status: fixed
+status: closed
 severity: sev-3
 category: logic
 reported_on: '2026-03-28'
-fixed_on: '2026-03-28'
+fixed_on: '2026-04-01'
 owner: opencode
 created: '2026-03-28'
 updated: '2026-03-28'
@@ -68,6 +68,9 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - The desktop window runs with `sandbox: true`, so the preload script must remain self-contained; that runtime workspace-package import prevented the preload bridge from exposing `window.srgnt` in the live Electron renderer.
 - Without `window.srgnt`, Today View launch handlers threw before routing to Terminal, and `TerminalPanel` could not call `terminalSpawn` or `terminalLaunchWithContext`, leaving the panel disconnected.
 - Fix: inline the IPC channel constants inside the preload script so the built preload only requires `electron`, then rebuild and re-run the live smoke path.
+- Regression coverage added on 2026-04-01:
+  - `src/preload/preload-self-contained.test.ts`: Two unit tests that (1) verify the preload only uses `import type` for `@srgnt/*` packages (no runtime value imports), and (2) verify the inlined `ipcChannels` keys and values match the canonical definition in `@srgnt/contracts`. These catch the exact class of regression that caused BUG-0002.
+  - `e2e/app.spec.ts` — "today view launch button navigates to terminal with a connected session (BUG-0002)": E2e test that clicks a Today View Launch button, verifies navigation to the Terminal view, and confirms the terminal host renders with a tab (connected session).
 
 ## Workaround
 

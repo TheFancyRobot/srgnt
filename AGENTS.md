@@ -1,5 +1,7 @@
 # AGENTS
 
+> Pi workflow note: shared Pi team templates are maintained globally in `~/.pi/` only. See `docs/pi-teams.md` for the current review/bugfix orchestration workflow.
+
 <!-- agent-vault:start -->
 
 ## Agent Vault

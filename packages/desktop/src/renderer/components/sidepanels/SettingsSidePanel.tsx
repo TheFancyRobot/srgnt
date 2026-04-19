@@ -3,7 +3,6 @@ import React from 'react';
 const CATEGORIES = [
   { id: 'general', label: 'General' },
   { id: 'privacy', label: 'Privacy' },
-  { id: 'connectors', label: 'Connectors' },
   { id: 'advanced', label: 'Advanced' },
 ] as const;
 

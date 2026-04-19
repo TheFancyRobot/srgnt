@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { existsSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { createServer, type Server } from 'node:http';
 
 // On Linux, use ANGLE's Vulkan backend when available to avoid eglCreateImage
 // EGL_BAD_MATCH crashes with Mesa drivers on Wayland. Falls back to default
@@ -25,11 +26,21 @@ import {
   parseSync,
   SApprovalResolveRequest,
   SBriefingSaveRequest,
+  ConnectorId,
+  ConnectorManifest,
+  SConnectorId,
+  SConnectorManifest,
   SDesktopSettings,
   SIpcApprovalRequest,
   SLaunchApprovalResolveRequest,
   SRunHistoryGetRequest,
   SRunLogSaveRequest,
+  SSemanticSearchInitRequest,
+  SSemanticSearchEnableForWorkspaceRequest,
+  SSemanticSearchIndexWorkspaceRequest,
+  SSemanticSearchRebuildAllRequest,
+  SSemanticSearchSearchRequest,
+  SSemanticSearchStatusRequest,
   STerminalCloseRequest,
   STerminalLaunchWithContextRequest,
   STerminalResizeRequest,
@@ -45,6 +56,18 @@ import { createPtySessionManager } from './pty/session-manager.js';
 import { createPtyService } from './pty/node-pty-service.js';
 import { createCrashReporter } from './crash.js';
 import { checkForUpdates } from './updater.js';
+import { ensureNotesDir, registerNotesHandlers } from './notes.js';
+import { createShellOpenExternalHandler } from './shell-open-external.js';
+import {
+  createSemanticSearchHost,
+  createWorkspaceWatcher,
+  createEmptyStatus,
+  createStatusFromIndexResult,
+  createIndexingStatus,
+  createErrorStatus,
+  type SemanticSearchStatus,
+  type WorkspaceWatcher,
+} from './semantic-search/index.js';
 import {
   defaultDesktopSettings,
   ensureWorkspaceLayout,
@@ -56,22 +79,163 @@ import {
   writeDesktopSettings,
 } from './settings.js';
 
-type ConnectorId = 'jira' | 'outlook' | 'teams';
-
 interface ConnectorState {
   id: ConnectorId;
   name: string;
-  status: 'disconnected' | 'connected' | 'error' | 'refreshing';
+  description: string;
+  provider: string;
+  version: string;
+  installed: boolean;
+  available: boolean;
+  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
   lastSyncAt?: string;
   lastError?: string;
   entityCounts?: Record<string, number>;
 }
 
-const connectorDefinitions: Record<ConnectorId, { name: string; entityCounts: Record<string, number> }> = {
-  jira: { name: 'Jira', entityCounts: { task: 6, project: 2 } },
-  outlook: { name: 'Outlook Calendar', entityCounts: { event: 5, person: 3 } },
-  teams: { name: 'Microsoft Teams', entityCounts: { message: 3, mention: 2 } },
+interface ConnectorDefinition {
+  manifest: ConnectorManifest;
+  packageUrl?: string;
+  entityCounts?: Record<string, number>;
+}
+
+interface RegistryConnectorResponse {
+  manifest: ConnectorManifest;
+  packagePath?: string;
+  packageUrl?: string;
+  entityCounts?: Record<string, number>;
+}
+
+interface RegistryCatalogResponse {
+  connectors: RegistryConnectorResponse[];
+}
+
+const DEV_CONNECTOR_REGISTRY_PORT = Number(process.env.SRGNT_CONNECTOR_REGISTRY_PORT ?? 4311);
+const DEV_CONNECTOR_REGISTRY_PATH = '/connectors';
+const DEFAULT_CONNECTOR_CATALOG_PATH = `${DEV_CONNECTOR_REGISTRY_PATH}/catalog.json`;
+const DEV_CONNECTOR_REGISTRY_ROOT = path.resolve(__dirname, '../dev-connectors');
+const DEV_CONNECTOR_REGISTRY_HOST = '127.0.0.1';
+const DEV_CONNECTOR_REGISTRY_URL = `${`http://${DEV_CONNECTOR_REGISTRY_HOST}`}:${DEV_CONNECTOR_REGISTRY_PORT}`;
+
+const builtinConnectorDefinitions: Record<string, Omit<ConnectorDefinition, 'packageUrl'>> = {
+  jira: {
+    manifest: {
+      id: 'jira',
+      name: 'Jira',
+      version: '0.1.0',
+      description: 'Atlassian Jira connector for issue tracking',
+      provider: 'atlassian',
+      authType: 'oauth2',
+      config: {
+        authType: 'oauth2',
+        timeout: 30000,
+        retryAttempts: 3,
+      },
+      capabilities: [
+        {
+          capability: 'read',
+          supportedOperations: ['getIssue', 'searchIssues', 'getProjects'],
+          entityMappings: [{ canonicalType: 'Task', providerType: 'Issue' }, { canonicalType: 'Person', providerType: 'User' }],
+        },
+        {
+          capability: 'write',
+          supportedOperations: ['transitionIssue', 'addComment'],
+          entityMappings: [{ canonicalType: 'Task', providerType: 'Issue' }],
+        },
+      ],
+      entityTypes: ['Task', 'Person'],
+      freshnessThresholdMs: 300000,
+      metadata: {},
+    },
+  },
+  outlook: {
+    manifest: {
+      id: 'outlook',
+      name: 'Outlook Calendar',
+      version: '0.1.0',
+      description: 'Microsoft Outlook Calendar connector for events and contacts',
+      provider: 'microsoft',
+      authType: 'oauth2',
+      config: {
+        authType: 'oauth2',
+        timeout: 30000,
+        retryAttempts: 3,
+      },
+      capabilities: [
+        {
+          capability: 'read',
+          supportedOperations: ['getEvent', 'listEvents', 'getContacts'],
+          entityMappings: [
+            { canonicalType: 'Event', providerType: 'CalendarEvent' },
+            { canonicalType: 'Person', providerType: 'Contact' },
+          ],
+        },
+        {
+          capability: 'write',
+          supportedOperations: ['createEvent', 'updateEvent', 'respondToEvent'],
+          entityMappings: [{ canonicalType: 'Event', providerType: 'CalendarEvent' }],
+        },
+      ],
+      entityTypes: ['Event', 'Person'],
+      freshnessThresholdMs: 300000,
+      metadata: {},
+    },
+    entityCounts: {
+      event: 5,
+      person: 3,
+    },
+  },
+  teams: {
+    manifest: {
+      id: 'teams',
+      name: 'Microsoft Teams',
+      version: '0.1.0',
+      description: 'Microsoft Teams connector for messages and team members',
+      provider: 'microsoft',
+      authType: 'oauth2',
+      config: {
+        authType: 'oauth2',
+        timeout: 30000,
+        retryAttempts: 3,
+      },
+      capabilities: [
+        {
+          capability: 'read',
+          supportedOperations: ['getMessage', 'listMessages', 'getMembers'],
+          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }, { canonicalType: 'Person', providerType: 'TeamMember' }],
+        },
+        {
+          capability: 'write',
+          supportedOperations: ['sendMessage', 'replyToMessage'],
+          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }],
+        },
+        {
+          capability: 'subscribe',
+          supportedOperations: ['onNewMessage'],
+          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }],
+        },
+      ],
+      entityTypes: ['Message', 'Person'],
+      freshnessThresholdMs: 300000,
+      metadata: {},
+    },
+    entityCounts: {
+      message: 3,
+      mention: 2,
+    },
+  },
 };
+
+let connectorDefinitions: Record<string, ConnectorDefinition> = Object.entries(builtinConnectorDefinitions).reduce((next, [id, def]) => {
+  next[id] = {
+    ...def,
+    packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
+  };
+  return next;
+}, {} as Record<string, ConnectorDefinition>);
+
+let devConnectorRegistryServer: Server | null = null;
+let connectorRegistryBaseUrl: string | null = null;
 
 let mainWindow: BrowserWindow | null = null;
 let workspaceRoot = '';
@@ -104,6 +268,10 @@ const approvalService = createApprovalService();
 const pendingLaunches = new Map<string, { resolve: (approved: boolean) => void }>();
 const crashReporter = createCrashReporter();
 crashReporter.start();
+const semanticSearchHost = createSemanticSearchHost();
+let semanticSearchEnabled = false;
+let semanticSearchWatcher: WorkspaceWatcher | null = null;
+let semanticSearchStatus: SemanticSearchStatus = createEmptyStatus();
 
 process.on('uncaughtException', async (error) => {
   console.error('[crash] Uncaught exception:', error);
@@ -143,6 +311,217 @@ function sanitizeStorageStem(value: string, fallback: string): string {
     .slice(0, 120);
 
   return sanitized || `${fallback}-${Date.now()}`;
+}
+
+async function getConnectorRegistrySourcePath(): Promise<string | null> {
+  const candidates = [
+    process.env.SRGNT_CONNECTOR_REGISTRY_ROOT,
+    DEV_CONNECTOR_REGISTRY_ROOT,
+    process.env.SRGNT_DEV_CONNECTORS_PATH,
+    path.resolve(process.cwd(), 'packages/desktop/dev-connectors'),
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+
+    try {
+      const info = await fs.stat(candidate);
+      if (info.isDirectory()) {
+        return candidate;
+      }
+    } catch {
+      // continue
+    }
+  }
+
+  return null;
+}
+
+async function startDevConnectorRegistryServer(): Promise<void> {
+  if (!isDev || process.env.SRGNT_DISABLE_DEV_CONNECTOR_REGISTRY === '1') {
+    return;
+  }
+
+  if (devConnectorRegistryServer) {
+    return;
+  }
+
+  const sourcePath = await getConnectorRegistrySourcePath();
+  if (!sourcePath) {
+    return;
+  }
+
+  const requestCatalog = async (pathname: string, response: import('node:http').ServerResponse): Promise<void> => {
+    const normalized = pathname.split('?')[0];
+
+    if (normalized === DEFAULT_CONNECTOR_CATALOG_PATH) {
+      const catalogPath = path.join(sourcePath, 'catalog.json');
+      const raw = await fs.readFile(catalogPath, 'utf8');
+      response.setHeader('Content-Type', 'application/json');
+      response.writeHead(200);
+      response.end(raw);
+      return;
+    }
+
+    if (!normalized.startsWith(`${DEV_CONNECTOR_REGISTRY_PATH}/packages/`) || !normalized.endsWith('.json')) {
+      response.writeHead(404);
+      response.end('not found');
+      return;
+    }
+
+    const packageFile = normalized.slice(`${DEV_CONNECTOR_REGISTRY_PATH}/packages/`.length);
+    if (packageFile.includes('/') || packageFile.includes('..')) {
+      response.writeHead(400);
+      response.end('invalid package path');
+      return;
+    }
+
+    const packagePath = path.join(sourcePath, 'packages', packageFile);
+    const raw = await fs.readFile(packagePath, 'utf8');
+    response.setHeader('Content-Type', 'application/json');
+    response.writeHead(200);
+    response.end(raw);
+  };
+
+  const requestListener = (req: import('node:http').IncomingMessage, response: import('node:http').ServerResponse): void => {
+    const target = new URL(req.url ?? '/', DEV_CONNECTOR_REGISTRY_URL);
+    void requestCatalog(target.pathname, response).catch(() => {
+      response.writeHead(500);
+      response.end('connector registry error');
+    });
+  };
+
+  devConnectorRegistryServer = createServer(requestListener);
+
+  await new Promise<void>((resolve, reject) => {
+    devConnectorRegistryServer!.listen(DEV_CONNECTOR_REGISTRY_PORT, DEV_CONNECTOR_REGISTRY_HOST, () => {
+      connectorRegistryBaseUrl = DEV_CONNECTOR_REGISTRY_URL;
+      console.log('[main] started local connector registry server', connectorRegistryBaseUrl);
+      resolve();
+    });
+
+    devConnectorRegistryServer!.once('error', (error) => {
+      const nextError = error as NodeJS.ErrnoException;
+      if (nextError.code === 'EADDRINUSE') {
+        console.warn('[main] connector registry port already in use', DEV_CONNECTOR_REGISTRY_PORT);
+      } else {
+        console.warn('[main] failed to start local connector registry', nextError.message);
+      }
+      connectorRegistryBaseUrl = null;
+      reject(error);
+      void devConnectorRegistryServer?.close();
+      devConnectorRegistryServer = null;
+    });
+  }).catch(() => {
+    // fallback to static built-in catalog
+    devConnectorRegistryServer = null;
+  });
+}
+
+async function fetchConnectorCatalogFromRemote(url: string): Promise<Record<string, ConnectorDefinition>> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch connector catalog from ${url}`);
+  }
+
+  const rawPayload = await response.json();
+  const parsedPayload = rawPayload as RegistryCatalogResponse;
+
+  const entries = Array.isArray(parsedPayload?.connectors) ? parsedPayload.connectors : [];
+  const nextDefinitions: Record<string, ConnectorDefinition> = {};
+
+  for (const entry of entries) {
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
+
+    const manifest = parseSync(SConnectorManifest, entry.manifest);
+    const packageUrl = entry.packageUrl ?? (entry.packagePath ? `${connectorRegistryBaseUrl ?? DEV_CONNECTOR_REGISTRY_URL}${entry.packagePath}` : undefined);
+
+    nextDefinitions[manifest.id] = {
+      manifest,
+      packageUrl,
+      entityCounts: entry.entityCounts,
+    };
+  }
+
+  return nextDefinitions;
+}
+
+function buildConnectorCatalogSource(): string | null {
+  if (process.env.SRGNT_CONNECTOR_CATALOG_URL) {
+    return process.env.SRGNT_CONNECTOR_CATALOG_URL;
+  }
+
+  return isDev ? `${connectorRegistryBaseUrl ?? DEV_CONNECTOR_REGISTRY_URL}${DEFAULT_CONNECTOR_CATALOG_PATH}` : null;
+}
+
+async function refreshConnectorDefinitions(): Promise<void> {
+  await startDevConnectorRegistryServer();
+
+  const registryUrl = buildConnectorCatalogSource();
+  if (!registryUrl) {
+    connectorDefinitions = {
+      ...Object.fromEntries(
+        Object.entries(builtinConnectorDefinitions).map(([id, definition]) => [
+          id,
+          {
+            manifest: definition.manifest,
+            entityCounts: definition.entityCounts,
+            packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
+          },
+        ]),
+      ),
+    };
+    return;
+  }
+
+  try {
+    connectorDefinitions = await fetchConnectorCatalogFromRemote(registryUrl);
+    if (Object.keys(connectorDefinitions).length === 0) {
+      throw new Error('Empty catalog payload.');
+    }
+  } catch (error) {
+    console.warn('[main] connector catalog fetch failed, using built-in catalog', error);
+    connectorDefinitions = {
+      ...Object.fromEntries(
+        Object.entries(builtinConnectorDefinitions).map(([id, definition]) => [
+          id,
+          {
+            manifest: definition.manifest,
+            entityCounts: definition.entityCounts,
+            packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
+          },
+        ]),
+      ),
+    };
+  }
+}
+
+async function fetchAndValidateConnectorPackage(connectorId: string, definition: ConnectorDefinition): Promise<void> {
+  if (!definition.packageUrl) {
+    return;
+  }
+
+  const response = await fetch(definition.packageUrl);
+  if (!response.ok) {
+    throw new Error(`Connector package download failed: ${definition.packageUrl}`);
+  }
+
+  const rawPayload = (await response.json()) as { manifest?: unknown };
+  const packageManifest = parseSync(SConnectorManifest, rawPayload.manifest ?? rawPayload);
+
+  if (packageManifest.id !== connectorId) {
+    throw new Error(`Connector package id mismatch for ${connectorId}`);
+  }
+
+  connectorDefinitions[connectorId] = {
+    ...definition,
+    manifest: packageManifest,
+    packageUrl: definition.packageUrl,
+  };
 }
 
 function getManagedMarkdownPath(directory: 'runs' | 'artifacts', stem: string): string {
@@ -203,6 +582,8 @@ async function initializeDesktopState(): Promise<void> {
   const userDataPath = app.getPath('userData');
   crashReporter.setCrashDirectory(path.join(userDataPath, 'crashes'));
 
+  await refreshConnectorDefinitions();
+
   const bootstrapState = await readBootstrapState(userDataPath);
   if (!bootstrapState.workspaceRoot) {
     syncConnectorStateFromSettings(defaultDesktopSettings);
@@ -214,9 +595,25 @@ async function initializeDesktopState(): Promise<void> {
 
 async function setWorkspaceRootInternal(root: string): Promise<string> {
   const resolvedRoot = path.resolve(root);
+  const previousWorkspaceRoot = workspaceRoot;
   workspaceRoot = resolvedRoot;
 
+  // Stop semantic search watcher if running
+  if (semanticSearchWatcher) {
+    console.log('[main] stopping semantic search watcher');
+    semanticSearchWatcher.stop();
+    semanticSearchWatcher = null;
+  }
+
+  // Tear down semantic search if workspace root changes
+  if (previousWorkspaceRoot !== '' && previousWorkspaceRoot !== resolvedRoot) {
+    console.log('[main] workspace root changed, tearing down semantic search');
+    await semanticSearchHost.teardown();
+    semanticSearchEnabled = false;
+  }
+
   await ensureWorkspaceLayout(resolvedRoot);
+  await ensureNotesDir(resolvedRoot);
   await writeBootstrapState(app.getPath('userData'), { workspaceRoot: resolvedRoot });
 
   desktopSettings = mergeDesktopSettings(await readDesktopSettings(resolvedRoot));
@@ -224,6 +621,15 @@ async function setWorkspaceRootInternal(root: string): Promise<string> {
 
   crashReporter.setWorkspaceRoot(resolvedRoot);
   syncConnectorStateFromSettings(desktopSettings);
+  registerNotesHandlers(workspaceRoot);
+
+  // Initialize semantic search for the new workspace
+  try {
+    await semanticSearchHost.initialize(resolvedRoot);
+  } catch (err) {
+    console.error('[main] failed to initialize semantic search:', err);
+  }
+
   return resolvedRoot;
 }
 
@@ -235,25 +641,106 @@ async function persistDesktopSettings(nextSettings: DesktopSettings): Promise<vo
   syncConnectorStateFromSettings(desktopSettings);
 }
 
+function connectorDefinition(id: string): ConnectorDefinition | undefined {
+  return connectorDefinitions[id];
+}
+
+function createUnknownConnectorManifest(id: string): ConnectorManifest {
+  return {
+    id,
+    name: `Connector ${id}`,
+    version: '0.1.0',
+    description: `External connector package: ${id}`,
+    provider: 'external',
+    authType: 'none',
+    config: {
+      authType: 'none',
+      timeout: 30000,
+      retryAttempts: 3,
+    },
+    capabilities: [],
+    entityTypes: [],
+    freshnessThresholdMs: 300000,
+    metadata: {},
+  };
+}
+
+function createConnectorManifest(id: string): ConnectorManifest {
+  return connectorDefinitions[id]?.manifest ?? createUnknownConnectorManifest(id);
+}
+
+function getInstalledStateFromSettings(settings: DesktopSettings, id: ConnectorId): boolean {
+  return settings.connectors?.installedConnectorIds?.includes(id) ?? false;
+}
+
 function syncConnectorStateFromSettings(settings: DesktopSettings): void {
-  for (const [id, definition] of Object.entries(connectorDefinitions) as Array<[ConnectorId, (typeof connectorDefinitions)[ConnectorId]]>) {
-    const isConnected = settings.connectors[id];
-    connectorState.set(id, isConnected ? createConnectedConnector(id, definition.name) : createDisconnectedConnector(id, definition.name));
+  const installedConnectorIds = new Set(settings.connectors?.installedConnectorIds ?? []);
+  const manifestIds = new Set<string>([...Object.keys(connectorDefinitions), ...installedConnectorIds]);
+
+  const nextState = new Map<ConnectorId, ConnectorState>();
+
+  for (const id of manifestIds) {
+    const definition = connectorDefinitions[id];
+    const isInstalled = installedConnectorIds.has(id);
+    const current = connectorState.get(id);
+    const status =
+      current?.status === 'connected' || current?.status === 'refreshing'
+        ? current.status
+        : current?.status === 'connecting' || current?.status === 'error'
+          ? current.status
+          : 'disconnected';
+
+    if (isInstalled) {
+      nextState.set(id, createInstalledConnectorState(id, definition, status));
+      continue;
+    }
+
+    if (definition) {
+      nextState.set(id, createAvailableConnectorState(id, definition));
+    }
+  }
+
+  connectorState.clear();
+  for (const [id, state] of nextState.entries()) {
+    connectorState.set(id, state);
   }
 }
 
-function createDisconnectedConnector(id: ConnectorId, name: string): ConnectorState {
-  return { id, name, status: 'disconnected' };
+function createAvailableConnectorState(id: string, definition?: ConnectorDefinition): ConnectorState {
+  const manifest = createConnectorManifest(id);
+  return {
+    ...manifest,
+    id,
+    installed: false,
+    available: Boolean(definition),
+    status: 'disconnected',
+    entityCounts: definition?.entityCounts,
+  };
 }
 
-function createConnectedConnector(id: ConnectorId, name: string): ConnectorState {
-  return {
+function createInstalledConnectorState(
+  id: string,
+  definition?: ConnectorDefinition,
+  status: ConnectorState['status'] = 'disconnected',
+): ConnectorState {
+  const manifest = createConnectorManifest(id);
+  const state: ConnectorState = {
+    ...manifest,
     id,
-    name,
-    status: 'connected',
-    lastSyncAt: new Date().toISOString(),
-    entityCounts: connectorDefinitions[id].entityCounts,
+    installed: true,
+    available: true,
+    status,
+    entityCounts: definition?.entityCounts,
   };
+
+  if (status === 'connected' || status === 'refreshing') {
+    return {
+      ...state,
+      lastSyncAt: new Date().toISOString(),
+    };
+  }
+
+  return state;
 }
 
 async function chooseWorkspaceRoot(): Promise<string> {
@@ -286,6 +773,16 @@ app.whenReady().then(async () => {
   createWindow();
   void recordUpdateCheck();
 
+  // Initialize semantic search after desktop state is ready
+  if (workspaceRoot) {
+    try {
+      await semanticSearchHost.initialize(workspaceRoot);
+      console.log('[main] semantic search initialized on startup for', workspaceRoot);
+    } catch (err) {
+      console.error('[main] failed to initialize semantic search on startup:', err);
+    }
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -317,48 +814,102 @@ ipcMain.handle(ipcChannels.connectorList, () => ({
   connectors: Array.from(connectorState.values()),
 }));
 
-ipcMain.handle(ipcChannels.connectorStatus, (_event, id: ConnectorId) => {
-  const connector = connectorState.get(id);
-  if (!connector) {
-    throw new Error(`Unknown connector: ${id}`);
-  }
-  return connector;
+function normalizeConnectorId(id: string): ConnectorId {
+  return parseSync(SConnectorId, id);
+}
+
+function getConnectorOrFallbackState(connectorId: ConnectorId): ConnectorState {
+  return (
+    connectorState.get(connectorId) ??
+    createAvailableConnectorState(connectorId, connectorDefinition(connectorId))
+  );
+}
+
+ipcMain.handle(ipcChannels.connectorStatus, (_event, id: string) => {
+  const connectorId = normalizeConnectorId(id);
+  return getConnectorOrFallbackState(connectorId);
 });
 
-ipcMain.handle(ipcChannels.connectorConnect, async (_event, id: ConnectorId) => {
-  const definition = connectorDefinitions[id];
+ipcMain.handle(ipcChannels.connectorInstall, async (_event, id: string) => {
+  const connectorId = normalizeConnectorId(id);
+  const definition = connectorDefinition(connectorId);
+
   if (!definition) {
-    throw new Error(`Unknown connector: ${id}`);
+    throw new Error(`Connector ${connectorId} is not available in catalog`);
   }
 
-  connectorState.set(id, createConnectedConnector(id, definition.name));
+  try {
+    await fetchAndValidateConnectorPackage(connectorId, definition);
+  } catch (error) {
+    console.warn('[main] failed to validate connector package before install', error);
+  }
+
+  const current = desktopSettings.connectors.installedConnectorIds;
+  const next = current.includes(connectorId) ? current : [...current, connectorId];
+
   await persistDesktopSettings({
     ...desktopSettings,
     connectors: {
       ...desktopSettings.connectors,
-      [id]: true,
+      installedConnectorIds: next,
     },
   });
 
-  return connectorState.get(id);
+  return createInstalledConnectorState(connectorId, definition, 'disconnected');
 });
 
-ipcMain.handle(ipcChannels.connectorDisconnect, async (_event, id: ConnectorId) => {
-  const definition = connectorDefinitions[id];
-  if (!definition) {
-    throw new Error(`Unknown connector: ${id}`);
+ipcMain.handle(ipcChannels.connectorUninstall, async (_event, id: string) => {
+  const connectorId = normalizeConnectorId(id);
+
+  // Idempotent: if not installed, just return available-not-installed state
+  if (!getInstalledStateFromSettings(desktopSettings, connectorId)) {
+    return createAvailableConnectorState(connectorId, connectorDefinition(connectorId));
   }
 
-  connectorState.set(id, createDisconnectedConnector(id, definition.name));
+  const next = desktopSettings.connectors.installedConnectorIds.filter((installedId) => installedId !== connectorId);
+
   await persistDesktopSettings({
     ...desktopSettings,
     connectors: {
       ...desktopSettings.connectors,
-      [id]: false,
+      installedConnectorIds: next,
     },
   });
 
-  return connectorState.get(id);
+  // connectorState is updated by syncConnectorStateFromSettings inside persistDesktopSettings
+  return createAvailableConnectorState(connectorId, connectorDefinition(connectorId));
+});
+
+ipcMain.handle(ipcChannels.connectorConnect, async (_event, id: string) => {
+  const connectorId = normalizeConnectorId(id);
+  if (!getInstalledStateFromSettings(desktopSettings, connectorId)) {
+    throw new Error(`Connector ${connectorId} is not installed`);
+  }
+
+  const definition = connectorDefinition(connectorId);
+  if (!definition) {
+    throw new Error(`Connector package metadata for ${connectorId} is unavailable`);
+  }
+
+  connectorState.set(
+    connectorId,
+    createInstalledConnectorState(connectorId, definition, 'connected'),
+  );
+
+  return connectorState.get(connectorId);
+});
+
+ipcMain.handle(ipcChannels.connectorDisconnect, async (_event, id: string) => {
+  const connectorId = normalizeConnectorId(id);
+  const definition = connectorDefinition(connectorId);
+
+  const nextState = getInstalledStateFromSettings(desktopSettings, connectorId)
+    ? createInstalledConnectorState(connectorId, definition, 'disconnected')
+    : createAvailableConnectorState(connectorId, definition);
+
+  connectorState.set(connectorId, nextState);
+
+  return connectorState.get(connectorId);
 });
 
 ipcMain.handle(ipcChannels.settingsGet, () => ({
@@ -656,6 +1207,11 @@ ipcMain.handle(ipcChannels.briefingList, async () => {
   }
 });
 
+ipcMain.handle(
+  ipcChannels.shellOpenExternal,
+  createShellOpenExternalHandler(shell.openExternal),
+);
+
 ipcMain.handle('window:minimize', () => {
   mainWindow?.minimize();
 });
@@ -685,5 +1241,150 @@ ipcMain.handle(ipcChannels.crashWriteTestLog, async () => {
   });
   return {
     directory: path.join(app.getPath('userData'), 'crashes'),
+  };
+});
+
+// ---------------------------------------------------------------------------
+// Semantic Search IPC handlers
+// ---------------------------------------------------------------------------
+
+ipcMain.handle(ipcChannels.semanticSearchInit, async (_event, rawRequest) => {
+  parseSync(SSemanticSearchInitRequest, rawRequest ?? {});
+  try {
+    await semanticSearchHost.initialize(workspaceRoot);
+    return {
+      initialized: true,
+    };
+  } catch {
+    return {
+      initialized: false,
+    };
+  }
+});
+
+ipcMain.handle(ipcChannels.semanticSearchEnableForWorkspace, async (_event, rawRequest) => {
+  const request = parseSync(SSemanticSearchEnableForWorkspaceRequest, rawRequest ?? {});
+  try {
+    await semanticSearchHost.enableForWorkspace(request.workspaceRoot);
+
+    // Start watching workspace for file changes
+    if (!semanticSearchWatcher) {
+      const indexRoot = path.join(request.workspaceRoot, '.srgnt-semantic-search');
+      semanticSearchWatcher = createWorkspaceWatcher({
+        workspaceRoot: request.workspaceRoot,
+        indexRoot,
+        debounceMs: 500,
+        onFileChange: (relativePath, _event) => {
+          console.log('[main] semantic search: file changed, triggering reindex:', relativePath);
+          // Trigger incremental reindex for the changed file
+          semanticSearchHost.indexWorkspace(request.workspaceRoot, false).catch((err) => {
+            console.error('[main] semantic search: reindex failed:', err);
+          });
+        },
+      });
+      semanticSearchWatcher.start();
+    }
+
+    semanticSearchEnabled = true;
+
+    // Trigger first-time full indexing
+    console.log('[main] semantic search: first enable, triggering full index');
+    const result = await semanticSearchHost.indexWorkspace(request.workspaceRoot, false);
+    semanticSearchStatus = createStatusFromIndexResult(
+      semanticSearchHost.getStatus(),
+      request.workspaceRoot,
+      result,
+      semanticSearchStatus,
+    );
+
+    return { enabled: true };
+  } catch (err) {
+    console.error('[main] semantic search enable failed:', err);
+    return { enabled: false };
+  }
+});
+
+ipcMain.handle(ipcChannels.semanticSearchIndexWorkspace, async (_event, rawRequest) => {
+  const request = parseSync(SSemanticSearchIndexWorkspaceRequest, rawRequest ?? {});
+
+  // Update status to indexing with progress
+  semanticSearchStatus = createIndexingStatus(
+    request.workspaceRoot,
+    50, // mid-progress since we don't have real progress tracking yet
+    semanticSearchStatus,
+  );
+
+  try {
+    const result = await semanticSearchHost.indexWorkspace(request.workspaceRoot, request.force);
+    semanticSearchStatus = createStatusFromIndexResult(
+      semanticSearchHost.getStatus(),
+      request.workspaceRoot,
+      result,
+      semanticSearchStatus,
+    );
+    return result;
+  } catch (err) {
+    semanticSearchStatus = createErrorStatus(
+      request.workspaceRoot,
+      err instanceof Error ? err.message : 'Indexing failed',
+      semanticSearchStatus,
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle(ipcChannels.semanticSearchRebuildAll, async (_event, rawRequest) => {
+  const request = parseSync(SSemanticSearchRebuildAllRequest, rawRequest ?? {});
+
+  // Update status to indexing
+  semanticSearchStatus = createIndexingStatus(request.workspaceRoot, 50, semanticSearchStatus);
+
+  try {
+    const result = await semanticSearchHost.rebuildAll(request.workspaceRoot);
+    semanticSearchStatus = {
+      ...semanticSearchStatus,
+      state: semanticSearchHost.getStatus(),
+      indexedFileCount: result.totalChunkCount,
+      totalChunkCount: result.totalChunkCount,
+      progressPercent: 100,
+      lastIndexedAt: new Date().toISOString(),
+    };
+    return result;
+  } catch (err) {
+    semanticSearchStatus = createErrorStatus(
+      request.workspaceRoot,
+      err instanceof Error ? err.message : 'Rebuild failed',
+      semanticSearchStatus,
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle(ipcChannels.semanticSearchSearch, async (_event, rawRequest) => {
+  const request = parseSync(SSemanticSearchSearchRequest, rawRequest ?? {});
+  const results = await semanticSearchHost.search(
+    request.query,
+    request.workspaceRoot,
+    request.maxResults,
+    request.minScore,
+  );
+  return { results };
+});
+
+ipcMain.handle(ipcChannels.semanticSearchStatus, async (_event, rawRequest) => {
+  const request = parseSync(SSemanticSearchStatusRequest, rawRequest ?? {});
+  void request;
+
+  // Get current state from host
+  const hostState = semanticSearchHost.getStatus();
+
+  // Return current status with available information
+  return {
+    state: semanticSearchEnabled ? hostState : 'disabled',
+    indexedFileCount: semanticSearchStatus.indexedFileCount,
+    totalChunkCount: semanticSearchStatus.totalChunkCount,
+    progressPercent: semanticSearchStatus.progressPercent,
+    lastIndexedAt: semanticSearchStatus.lastIndexedAt,
+    error: semanticSearchStatus.error,
   };
 });

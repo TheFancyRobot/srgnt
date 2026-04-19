@@ -68,6 +68,8 @@ export function OnboardingWizard({ flow }: { flow: OnboardingFlow }): React.Reac
     setIsWorking(true);
     try {
       await step.action.action();
+    } catch {
+      // Action failed — swallow so the UI still resets via finally
     } finally {
       setIsWorking(false);
     }

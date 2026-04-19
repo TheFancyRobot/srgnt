@@ -12,6 +12,8 @@ export const ipcChannels = {
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
   connectorList: 'connector:list',
   connectorStatus: 'connector:status',
+  connectorInstall: 'connector:install',
+  connectorUninstall: 'connector:uninstall',
   connectorConnect: 'connector:connect',
   connectorDisconnect: 'connector:disconnect',
   settingsGet: 'settings:get',
@@ -36,6 +38,23 @@ export const ipcChannels = {
   briefingSave: 'briefing:save',
   briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
+  notesListDir: 'notes:list-dir',
+  notesReadFile: 'notes:read-file',
+  notesWriteFile: 'notes:write-file',
+  notesCreateFile: 'notes:create-file',
+  notesCreateFolder: 'notes:create-folder',
+  notesDelete: 'notes:delete',
+  notesRename: 'notes:rename',
+  notesSearch: 'notes:search',
+  notesResolveWikilink: 'notes:resolve-wikilink',
+  notesListWorkspaceMarkdown: 'notes:list-workspace-markdown',
+  shellOpenExternal: 'shell:open-external',
+  semanticSearchInit: 'semantic-search:init',
+  semanticSearchEnableForWorkspace: 'semantic-search:enable-for-workspace',
+  semanticSearchIndexWorkspace: 'semantic-search:index-workspace',
+  semanticSearchRebuildAll: 'semantic-search:rebuild-all',
+  semanticSearchSearch: 'semantic-search:search',
+  semanticSearchStatus: 'semantic-search:status',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -47,6 +66,9 @@ export const SIpcChannel = Schema.Literal(
   ...ipcChannelValues
 );
 export type IpcChannel = Schema.Schema.Type<typeof SIpcChannel>;
+
+export const SConnectorId = Schema.String.pipe(Schema.pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/));
+export type ConnectorId = Schema.Schema.Type<typeof SConnectorId>;
 
 export const SIpcRequest = Schema.Struct({
   channel: SIpcChannel,
@@ -80,9 +102,10 @@ export const SUpdateChannel = Schema.Literal('stable', 'beta', 'nightly');
 export type UpdateChannel = Schema.Schema.Type<typeof SUpdateChannel>;
 
 export const SDesktopConnectorPreferences = Schema.Struct({
-  jira: Schema.Boolean,
-  outlook: Schema.Boolean,
-  teams: Schema.Boolean,
+  installedConnectorIds: Schema.optionalWith(
+    Schema.Array(SConnectorId),
+    { default: () => [] as readonly string[] },
+  ),
 });
 export type DesktopConnectorPreferences = Schema.Schema.Type<typeof SDesktopConnectorPreferences>;
 
@@ -125,6 +148,11 @@ export const SConnectorListEntry = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
   status: Schema.String,
+  installed: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+  available: Schema.optionalWith(Schema.Boolean, { default: () => true }),
+  description: Schema.optional(Schema.String),
+  provider: Schema.optional(Schema.String),
+  version: Schema.optional(Schema.String),
 });
 
 export const SConnectorListResponse = Schema.Struct({
@@ -320,3 +348,223 @@ export const SBriefingListResponse = Schema.Struct({
   briefings: Schema.Array(SBriefingListEntry),
 });
 export type BriefingListResponse = Schema.Schema.Type<typeof SBriefingListResponse>;
+
+// Notes IPC types
+
+export const SNotesListDirRequest = Schema.Struct({
+  dirPath: Schema.String,
+});
+export type NotesListDirRequest = Schema.Schema.Type<typeof SNotesListDirRequest>;
+
+export const SNotesFileEntry = Schema.Struct({
+  name: Schema.String,
+  path: Schema.String,
+  isDirectory: Schema.Boolean,
+  modifiedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+
+export const SNotesListDirResponse = Schema.Struct({
+  entries: Schema.Array(SNotesFileEntry),
+});
+export type NotesListDirResponse = Schema.Schema.Type<typeof SNotesListDirResponse>;
+
+export const SNotesReadFileRequest = Schema.Struct({
+  filePath: Schema.String,
+});
+export type NotesReadFileRequest = Schema.Schema.Type<typeof SNotesReadFileRequest>;
+
+export const SNotesReadFileResponse = Schema.Struct({
+  content: Schema.String,
+  modifiedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+export type NotesReadFileResponse = Schema.Schema.Type<typeof SNotesReadFileResponse>;
+
+export const SNotesWriteFileRequest = Schema.Struct({
+  filePath: Schema.String,
+  content: Schema.String,
+});
+export type NotesWriteFileRequest = Schema.Schema.Type<typeof SNotesWriteFileRequest>;
+
+export const SNotesWriteFileResponse = Schema.Struct({
+  path: Schema.String,
+  modifiedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+export type NotesWriteFileResponse = Schema.Schema.Type<typeof SNotesWriteFileResponse>;
+
+export const SNotesCreateFileRequest = Schema.Struct({
+  filePath: Schema.String,
+  title: Schema.String,
+});
+export type NotesCreateFileRequest = Schema.Schema.Type<typeof SNotesCreateFileRequest>;
+
+export const SNotesCreateFileResponse = Schema.Struct({
+  path: Schema.String,
+  createdAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+export type NotesCreateFileResponse = Schema.Schema.Type<typeof SNotesCreateFileResponse>;
+
+export const SNotesCreateFolderRequest = Schema.Struct({
+  dirPath: Schema.String,
+});
+export type NotesCreateFolderRequest = Schema.Schema.Type<typeof SNotesCreateFolderRequest>;
+
+export const SNotesCreateFolderResponse = Schema.Struct({
+  path: Schema.String,
+});
+export type NotesCreateFolderResponse = Schema.Schema.Type<typeof SNotesCreateFolderResponse>;
+
+export const SNotesDeleteRequest = Schema.Struct({
+  path: Schema.String,
+  isDirectory: Schema.Boolean,
+});
+export type NotesDeleteRequest = Schema.Schema.Type<typeof SNotesDeleteRequest>;
+
+export const SNotesDeleteResponse = Schema.Struct({
+  deleted: Schema.Boolean,
+});
+export type NotesDeleteResponse = Schema.Schema.Type<typeof SNotesDeleteResponse>;
+
+export const SNotesRenameRequest = Schema.Struct({
+  oldPath: Schema.String,
+  newName: Schema.String,
+});
+export type NotesRenameRequest = Schema.Schema.Type<typeof SNotesRenameRequest>;
+
+export const SNotesRenameResponse = Schema.Struct({
+  newPath: Schema.String,
+});
+export type NotesRenameResponse = Schema.Schema.Type<typeof SNotesRenameResponse>;
+
+export const SNotesSearchRequest = Schema.Struct({
+  query: Schema.String,
+  maxResults: Schema.optionalWith(Schema.Number, { default: () => 20 }),
+});
+export type NotesSearchRequest = Schema.Schema.Type<typeof SNotesSearchRequest>;
+
+export const SNotesSearchResultEntry = Schema.Struct({
+  title: Schema.String,
+  path: Schema.String,
+  snippet: Schema.String,
+  score: Schema.Number,
+});
+
+export const SNotesSearchResponse = Schema.Struct({
+  results: Schema.Array(SNotesSearchResultEntry),
+});
+export type NotesSearchResponse = Schema.Schema.Type<typeof SNotesSearchResponse>;
+
+export const SNotesResolveWikilinkRequest = Schema.Struct({
+  wikilink: Schema.String,
+  currentFilePath: Schema.optional(Schema.String),
+});
+export type NotesResolveWikilinkRequest = Schema.Schema.Type<typeof SNotesResolveWikilinkRequest>;
+
+export const SNotesResolveWikilinkResponse = Schema.Struct({
+  resolved: Schema.Boolean,
+  path: Schema.String,
+  line: Schema.optional(Schema.Number),
+});
+export type NotesResolveWikilinkResponse = Schema.Schema.Type<typeof SNotesResolveWikilinkResponse>;
+
+export const SNotesListWorkspaceMarkdownRequest = Schema.Struct({
+  query: Schema.optional(Schema.String),
+  maxResults: Schema.optionalWith(Schema.Number, { default: () => 20 }),
+});
+export type NotesListWorkspaceMarkdownRequest = Schema.Schema.Type<typeof SNotesListWorkspaceMarkdownRequest>;
+
+export const SNotesWorkspaceMarkdownEntry = Schema.Struct({
+  title: Schema.String,
+  path: Schema.String,
+  modifiedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
+});
+
+export const SNotesListWorkspaceMarkdownResponse = Schema.Struct({
+  files: Schema.Array(SNotesWorkspaceMarkdownEntry),
+});
+export type NotesListWorkspaceMarkdownResponse = Schema.Schema.Type<typeof SNotesListWorkspaceMarkdownResponse>;
+
+const openExternalUrlPattern = /^(https?:\/\/.+|mailto:[^\s]+)$/i;
+
+export const SOpenExternalRequest = Schema.Struct({
+  url: Schema.String.pipe(Schema.pattern(openExternalUrlPattern)),
+});
+export type OpenExternalRequest = Schema.Schema.Type<typeof SOpenExternalRequest>;
+
+// Semantic Search IPC types
+
+export const SSemanticSearchInitRequest = Schema.Struct({});
+export type SemanticSearchInitRequest = Schema.Schema.Type<typeof SSemanticSearchInitRequest>;
+
+export const SSemanticSearchInitResponse = Schema.Struct({
+  initialized: Schema.Boolean,
+  modelId: Schema.optional(Schema.String),
+});
+export type SemanticSearchInitResponse = Schema.Schema.Type<typeof SSemanticSearchInitResponse>;
+
+export const SSemanticSearchEnableForWorkspaceRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+});
+export type SemanticSearchEnableForWorkspaceRequest = Schema.Schema.Type<typeof SSemanticSearchEnableForWorkspaceRequest>;
+
+export const SSemanticSearchEnableForWorkspaceResponse = Schema.Struct({
+  enabled: Schema.Boolean,
+});
+export type SemanticSearchEnableForWorkspaceResponse = Schema.Schema.Type<typeof SSemanticSearchEnableForWorkspaceResponse>;
+
+export const SSemanticSearchIndexWorkspaceRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+  force: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+});
+export type SemanticSearchIndexWorkspaceRequest = Schema.Schema.Type<typeof SSemanticSearchIndexWorkspaceRequest>;
+
+export const SSemanticSearchIndexWorkspaceResponse = Schema.Struct({
+  indexedChunkCount: Schema.Number,
+  skippedCount: Schema.Number,
+  durationMs: Schema.Number,
+});
+export type SemanticSearchIndexWorkspaceResponse = Schema.Schema.Type<typeof SSemanticSearchIndexWorkspaceResponse>;
+
+export const SSemanticSearchRebuildAllRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+});
+export type SemanticSearchRebuildAllRequest = Schema.Schema.Type<typeof SSemanticSearchRebuildAllRequest>;
+
+export const SSemanticSearchRebuildAllResponse = Schema.Struct({
+  totalChunkCount: Schema.Number,
+  durationMs: Schema.Number,
+});
+export type SemanticSearchRebuildAllResponse = Schema.Schema.Type<typeof SSemanticSearchRebuildAllResponse>;
+
+export const SSemanticSearchSearchRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+  query: Schema.String,
+  maxResults: Schema.optionalWith(Schema.Number, { default: () => 10 }),
+  minScore: Schema.optionalWith(Schema.Number, { default: () => 0.5 }),
+});
+export type SemanticSearchSearchRequest = Schema.Schema.Type<typeof SSemanticSearchSearchRequest>;
+
+export const SSemanticSearchSearchResultEntry = Schema.Struct({
+  score: Schema.Number,
+  title: Schema.String,
+  workspaceRelativePath: Schema.String,
+  snippet: Schema.String,
+});
+
+export const SSemanticSearchSearchResponse = Schema.Struct({
+  results: Schema.Array(SSemanticSearchSearchResultEntry),
+});
+export type SemanticSearchSearchResponse = Schema.Schema.Type<typeof SSemanticSearchSearchResponse>;
+
+export const SSemanticSearchStatusRequest = Schema.Struct({
+  workspaceRoot: Schema.String,
+});
+export type SemanticSearchStatusRequest = Schema.Schema.Type<typeof SSemanticSearchStatusRequest>;
+
+export const SSemanticSearchStatusResponse = Schema.Struct({
+  state: Schema.Literal('uninitialized', 'initializing', 'ready', 'indexing', 'disabled', 'error'),
+  chunkCount: Schema.optionalWith(Schema.Number, { default: () => 0 }),
+  modelId: Schema.optional(Schema.String),
+  lastIndexedAt: Schema.optional(Schema.String),
+  error: Schema.optional(Schema.String),
+});
+export type SemanticSearchStatusResponse = Schema.Schema.Type<typeof SSemanticSearchStatusResponse>;

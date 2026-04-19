@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createCrashReporter, redactPayload, writeCrashReportFile } from './crash.js';
+import { createCrashReporter, createTelemetry, redactPayload, RedactionAwareTelemetry, writeCrashReportFile } from './crash.js';
 
 const tempPaths: string[] = [];
 
@@ -71,5 +71,123 @@ describe('crash helpers', () => {
 
     const files = await fs.readdir(crashDir);
     expect(files).toHaveLength(2);
+  });
+});
+
+describe('ElectronCrashReporter', () => {
+  it('does not write crash report when opted out', async () => {
+    const reporter = createCrashReporter() as import('./crash.js').ElectronCrashReporter;
+    reporter.setOptOut(true);
+
+    const report = await reporter.writeCrashReport('diagnostic', new Error('test error'));
+    expect(report.type).toBe('diagnostic');
+    expect(report.message).toBe('test error');
+    expect(reporter.isOptedOut).toBe(true);
+    expect(reporter.getLastCrashReport()).toEqual(report);
+  });
+
+  it('writes crash report when not opted out and crash directory is set', async () => {
+    const crashDir = await makeTempDir('srgnt-noopt-');
+    const reporter = createCrashReporter();
+    reporter.setCrashDirectory(crashDir);
+    reporter.setOptOut(false);
+
+    await reporter.writeCrashReport('uncaughtException', new Error('crash'));
+    const files = await fs.readdir(crashDir);
+    expect(files).toHaveLength(1);
+  });
+
+  it('returns null getLastCrashReport when no reports exist', () => {
+    const reporter = createCrashReporter();
+    expect(reporter.getLastCrashReport()).toBeNull();
+  });
+
+  it('start and stop are no-ops', () => {
+    const reporter = createCrashReporter();
+    reporter.start();
+    reporter.stop();
+    expect(reporter.getLastCrashReport()).toBeNull();
+  });
+});
+
+describe('RedactionAwareTelemetry', () => {
+  it('does not track events when disabled', () => {
+    const telemetry = new RedactionAwareTelemetry({
+      enabled: false,
+      redactPatterns: [/secret/i],
+      samplingRate: 1.0,
+    });
+    telemetry.trackEvent('test', { foo: 'bar' });
+    expect(telemetry.size).toBe(0);
+    expect(telemetry.getEvents()).toEqual([]);
+  });
+
+  it('drops events below sampling rate', () => {
+    const telemetry = new RedactionAwareTelemetry({
+      enabled: true,
+      redactPatterns: [],
+      samplingRate: 0,
+    });
+    telemetry.trackEvent('test', { foo: 'bar' });
+    expect(telemetry.size).toBe(0);
+  });
+
+  it('tracks events and redacts matching string values', () => {
+    const telemetry = new RedactionAwareTelemetry({
+      enabled: true,
+      redactPatterns: [/password/i],
+      samplingRate: 1.0,
+    });
+    telemetry.trackEvent('login', { user: 'alice', credential: 'my-password-123' });
+    const events = telemetry.getEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0].name).toBe('login');
+    expect(events[0].properties.user).toBe('alice');
+    expect(events[0].properties.credential).toBe('[REDACTED]');
+    expect(events[0].timestamp).toBeInstanceOf(Date);
+  });
+
+  it('redacts nested object values', () => {
+    const telemetry = new RedactionAwareTelemetry({
+      enabled: true,
+      redactPatterns: [/token/i],
+      samplingRate: 1.0,
+    });
+    telemetry.trackEvent('api_call', { config: { session_id: 'abc123tokenxyz' } });
+    const events = telemetry.getEvents();
+    expect(events).toHaveLength(1);
+    expect((events[0].properties.config as Record<string, unknown>).session_id).toBe('[REDACTED]');
+  });
+
+  it('clears events', () => {
+    const telemetry = new RedactionAwareTelemetry({
+      enabled: true,
+      redactPatterns: [],
+      samplingRate: 1.0,
+    });
+    telemetry.trackEvent('a', {});
+    telemetry.trackEvent('b', {});
+    expect(telemetry.size).toBe(2);
+    telemetry.clear();
+    expect(telemetry.size).toBe(0);
+    expect(telemetry.getEvents()).toEqual([]);
+  });
+});
+
+describe('createTelemetry', () => {
+  it('creates telemetry with default policy (disabled)', () => {
+    const telemetry = createTelemetry();
+    telemetry.trackEvent('test', { foo: 'bar' });
+    expect(telemetry.size).toBe(0);
+  });
+
+  it('creates telemetry with custom policy', () => {
+    const telemetry = createTelemetry({
+      enabled: true,
+      redactPatterns: [],
+      samplingRate: 1.0,
+    });
+    telemetry.trackEvent('test', { foo: 'bar' });
+    expect(telemetry.size).toBe(1);
   });
 });

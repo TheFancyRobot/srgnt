@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace packages
+        run: pnpm -r --filter '!@srgnt/desktop' --filter '!@srgnt/example-*' build
+
       - name: Install Linux desktop dependencies
         run: |
           sudo apt-get update
@@ -40,10 +43,17 @@ jobs:
       - name: Typecheck desktop package
         run: pnpm --filter @srgnt/desktop typecheck
 
+      - name: Build desktop package
+        run: pnpm run --filter @srgnt/desktop pack
+
       - name: Run Electron E2E suite
+        env:
+          SRGNT_E2E_DISABLE_SANDBOX: '1'
         run: xvfb-run -a pnpm --filter @srgnt/desktop test:e2e
 
       - name: Run packaged Linux smoke test
+        env:
+          SRGNT_E2E_DISABLE_SANDBOX: '1'
         run: xvfb-run -a pnpm --filter @srgnt/desktop test:e2e:packaged:linux
 
       - name: Upload Playwright artifacts

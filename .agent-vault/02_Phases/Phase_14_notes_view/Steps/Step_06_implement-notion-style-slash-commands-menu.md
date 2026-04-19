@@ -5,14 +5,19 @@ contract_version: 1
 title: Implement markdown slash commands on top of live preview
 step_id: STEP-14-06
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
+status: done
 owner: ''
 created: '2026-03-31'
-updated: '2026-03-31'
+updated: '2026-04-07'
 depends_on:
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04]]'
-related_sessions: []
-related_bugs: []
+related_sessions:
+  - '[[05_Sessions/2026-04-06-202256-implement-markdown-slash-commands-on-top-of-live-preview-vault-resume|SESSION-2026-04-06-202256 vault-resume session for Implement markdown slash commands on top of live preview]]'
+  - '[[05_Sessions/2026-04-06-213600-implement-markdown-slash-commands-on-top-of-live-preview-bugfix-reviewers|SESSION-2026-04-06-213600 bugfix-reviewers session for Implement markdown slash commands on top of live preview]]'
+  - '[[05_Sessions/2026-04-07-225700-implement-markdown-slash-commands-on-top-of-live-preview-reviewer|SESSION-2026-04-07-225700 reviewer session for Implement markdown slash commands on top of live preview]]'
+related_bugs:
+  - '[[03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues|BUG-0010 Slash commands trigger logic and indentation preservation issues]]'
+  - '[[03_Bugs/BUG-0012_markdown-editor-shipped-commonmark-only-parsing-so-gfm-task-lists-tables-strikethrough-and-bare-autolinks-did-not-render|BUG-0012 Markdown editor shipped CommonMark-only parsing so GFM task lists, tables, strikethrough, and bare autolinks did not render]]'
 tags:
   - agent-vault
   - step
@@ -63,10 +68,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: done
 - Current owner: 
-- Last touched: 2026-03-31
-- Next action: Start STEP-14-06.
+- Last touched: 2026-04-07
+- Next action: Completed - slash commands implemented and BUG-0010 fixed.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -136,14 +141,22 @@ This section supersedes the vaguer template text above when they conflict.
 ## Human Notes
 
 - Use this section for judgment calls, cautions, or handoff guidance that should not be overwritten by automation.
+- 2026-04-07 reviewer pass: expanded slash command coverage in `packages/desktop/src/renderer/components/notes/SlashCommandsExtension.ts` to include `/heading4`, `/heading5`, `/heading6`, `/bold`, `/italic`, `/strikethrough`, `/link`, `/image`, `/code-inline`, and `/done`.
+- 2026-04-07 reviewer pass: enabled GFM parsing plus GFM rendering support in `packages/desktop/src/renderer/components/notes/MarkdownEditor.tsx` so the slash commands' emitted task lists, tables, strikethrough, and bare URLs render correctly.
+- 2026-04-07 reviewer pass: added regression coverage in `packages/desktop/src/renderer/components/notes/MarkdownEditor.test.tsx`; `pnpm --filter @srgnt/desktop test` passed with 198/198 tests green.
 
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-04-06 - [[05_Sessions/2026-04-06-202256-implement-markdown-slash-commands-on-top-of-live-preview-vault-resume|SESSION-2026-04-06-202256 vault-resume session for Implement markdown slash commands on top of live preview]] - Session created.
+- 2026-04-06 - [[05_Sessions/2026-04-06-213600-implement-markdown-slash-commands-on-top-of-live-preview-bugfix-reviewers|SESSION-2026-04-06-213600 bugfix-reviewers session for Implement markdown slash commands on top of live preview]] - Session created.
+- 2026-04-07 - [[05_Sessions/2026-04-07-225700-implement-markdown-slash-commands-on-top-of-live-preview-reviewer|SESSION-2026-04-07-225700 reviewer session for Implement markdown slash commands on top of live preview]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Record the final result, the validation performed, and any follow-up required.
 - If the step is blocked, say exactly what is blocking it.
+- Review complete. Slash command coverage now includes the missing inline-formatting and additional heading commands, and the markdown editor now renders the GFM syntax those commands emit.
+- Validation performed: `pnpm --filter @srgnt/desktop test` → 20 files passed, 198 tests passed.
+- Follow-up: callout-specific rendering and image preview remain separate enhancements; the critical GFM rendering gap is closed.

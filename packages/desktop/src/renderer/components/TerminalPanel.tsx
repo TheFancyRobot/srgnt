@@ -256,6 +256,16 @@ function TerminalTabContent({
         sessionIdRef.current = sessionId;
         onConnected(tabId, sessionId);
 
+        const handleKeyDown = (event: KeyboardEvent) => {
+          if (disposed || !sessionIdRef.current) return;
+          if (event.key !== 'Enter' || !event.shiftKey) return;
+
+          event.preventDefault();
+          event.stopPropagation();
+          runSafe(TerminalIpc.write(sessionId, '\r'));
+        };
+        container.addEventListener('keydown', handleKeyDown, true);
+
         // Register onData AFTER session is established so any spurious
         // input from Ghostty WASM during init is ignored. Use captured
         // sessionId so this handler can only write to its own session.
@@ -278,7 +288,12 @@ function TerminalTabContent({
           }
         });
 
-        cleanupRef.current = [cleanupData, cleanupExit, cleanupApprovalEvent];
+        cleanupRef.current = [
+          cleanupData,
+          cleanupExit,
+          cleanupApprovalEvent,
+          () => container.removeEventListener('keydown', handleKeyDown, true),
+        ];
 
         // Fit terminal to container using real font metrics, sync PTY
         requestAnimationFrame(() => {

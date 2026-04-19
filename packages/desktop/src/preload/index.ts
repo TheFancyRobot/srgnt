@@ -21,6 +21,8 @@ const ipcChannels = {
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
   connectorList: 'connector:list',
   connectorStatus: 'connector:status',
+  connectorInstall: 'connector:install',
+  connectorUninstall: 'connector:uninstall',
   connectorConnect: 'connector:connect',
   connectorDisconnect: 'connector:disconnect',
   settingsGet: 'settings:get',
@@ -45,12 +47,35 @@ const ipcChannels = {
   briefingSave: 'briefing:save',
   briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
+  notesListDir: 'notes:list-dir',
+  notesReadFile: 'notes:read-file',
+  notesWriteFile: 'notes:write-file',
+  notesCreateFile: 'notes:create-file',
+  notesCreateFolder: 'notes:create-folder',
+  notesDelete: 'notes:delete',
+  notesRename: 'notes:rename',
+  notesSearch: 'notes:search',
+  notesResolveWikilink: 'notes:resolve-wikilink',
+  notesListWorkspaceMarkdown: 'notes:list-workspace-markdown',
+  shellOpenExternal: 'shell:open-external',
+  // Semantic search (inline - preload cannot import from @srgnt/contracts)
+  semanticSearchInit: 'semantic-search:init',
+  semanticSearchEnableForWorkspace: 'semantic-search:enable-for-workspace',
+  semanticSearchIndexWorkspace: 'semantic-search:index-workspace',
+  semanticSearchRebuildAll: 'semantic-search:rebuild-all',
+  semanticSearchSearch: 'semantic-search:search',
+  semanticSearchStatus: 'semantic-search:status',
 } as const;
 
 export interface DesktopConnectorState {
   id: 'jira' | 'outlook' | 'teams';
   name: string;
-  status: 'disconnected' | 'connected' | 'error' | 'refreshing';
+  description: string;
+  provider: string;
+  version: string;
+  installed: boolean;
+  available: boolean;
+  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
   lastSyncAt?: string;
   lastError?: string;
   entityCounts?: Record<string, number>;
@@ -65,6 +90,8 @@ const api = {
   createDefaultWorkspaceRoot: (): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceCreateDefaultRoot),
 
   listConnectors: (): Promise<{ connectors: DesktopConnectorState[] }> => ipcRenderer.invoke(ipcChannels.connectorList),
+  installConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorInstall, id),
+  uninstallConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorUninstall, id),
   connectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorConnect, id),
   disconnectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorDisconnect, id),
 
@@ -108,6 +135,32 @@ const api = {
 
   writeDiagnosticCrashLog: (): Promise<{ directory: string }> => ipcRenderer.invoke(ipcChannels.crashWriteTestLog),
 
+  // Notes operations
+  notesListDir: (dirPath: string): Promise<{ entries: { name: string; path: string; isDirectory: boolean; modifiedAt: string }[] }> =>
+    ipcRenderer.invoke(ipcChannels.notesListDir, { dirPath }),
+  notesReadFile: (filePath: string): Promise<{ content: string; modifiedAt: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesReadFile, { filePath }),
+  notesWriteFile: (filePath: string, content: string): Promise<{ path: string; modifiedAt: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesWriteFile, { filePath, content }),
+  notesCreateFile: (filePath: string, title: string): Promise<{ path: string; createdAt: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesCreateFile, { filePath, title }),
+  notesCreateFolder: (dirPath: string): Promise<{ path: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesCreateFolder, { dirPath }),
+  notesDelete: (path: string, isDirectory: boolean): Promise<{ deleted: boolean }> =>
+    ipcRenderer.invoke(ipcChannels.notesDelete, { path, isDirectory }),
+  notesRename: (oldPath: string, newName: string): Promise<{ newPath: string }> =>
+    ipcRenderer.invoke(ipcChannels.notesRename, { oldPath, newName }),
+  notesSearch: (query: string, maxResults?: number): Promise<{ results: { title: string; path: string; snippet: string; score: number }[] }> =>
+    ipcRenderer.invoke(ipcChannels.notesSearch, { query, maxResults: maxResults ?? 20 }),
+  notesResolveWikilink: (wikilink: string, currentFilePath?: string): Promise<{ resolved: boolean; path: string; line?: number }> =>
+    ipcRenderer.invoke(ipcChannels.notesResolveWikilink, { wikilink, currentFilePath }),
+  notesListWorkspaceMarkdown: (query?: string, maxResults?: number): Promise<{ files: { title: string; path: string; modifiedAt: string }[] }> =>
+    ipcRenderer.invoke(ipcChannels.notesListWorkspaceMarkdown, { query: query ?? '', maxResults: maxResults ?? 20 }),
+
+  // Shell
+  openExternal: (url: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.shellOpenExternal, { url }),
+
   // Window controls
   windowMinimize: (): Promise<void> => ipcRenderer.invoke('window:minimize'),
   windowMaximize: (): Promise<void> => ipcRenderer.invoke('window:maximize'),
@@ -118,6 +171,51 @@ const api = {
     ipcRenderer.on('window:maximized-changed', handler);
     return () => ipcRenderer.removeListener('window:maximized-changed', handler);
   },
+
+  // Semantic search
+  semanticSearchInit: (): Promise<{ initialized: boolean; modelId?: string }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchInit),
+  semanticSearchEnableForWorkspace: (workspaceRoot: string): Promise<{ enabled: boolean }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchEnableForWorkspace, { workspaceRoot }),
+  semanticSearchIndexWorkspace: (workspaceRoot: string, force?: boolean): Promise<{
+    indexedChunkCount: number;
+    skippedCount: number;
+    durationMs: number;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchIndexWorkspace, { workspaceRoot, force }),
+  semanticSearchRebuildAll: (workspaceRoot: string): Promise<{
+    totalChunkCount: number;
+    durationMs: number;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchRebuildAll, { workspaceRoot }),
+  semanticSearchSearch: (
+    workspaceRoot: string,
+    query: string,
+    maxResults?: number,
+    minScore?: number,
+  ): Promise<{
+    results: Array<{
+      score: number;
+      title: string;
+      workspaceRelativePath: string;
+      snippet: string;
+    }>;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchSearch, {
+      workspaceRoot,
+      query,
+      maxResults,
+      minScore,
+    }),
+  semanticSearchStatus: (workspaceRoot: string): Promise<{
+    state: 'uninitialized' | 'initializing' | 'ready' | 'indexing' | 'disabled' | 'error';
+    indexedFileCount: number;
+    totalChunkCount: number;
+    progressPercent: number;
+    lastIndexedAt: string | null;
+    error: string | null;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.semanticSearchStatus, { workspaceRoot }),
 
   platform: process.platform,
 };

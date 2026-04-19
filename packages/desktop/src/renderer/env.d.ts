@@ -10,9 +10,14 @@ import type {
 } from '@srgnt/contracts';
 
 export interface ConnectorState {
-  id: 'jira' | 'outlook' | 'teams';
+  id: string;
   name: string;
-  status: 'disconnected' | 'connected' | 'error' | 'refreshing';
+  description: string;
+  provider: string;
+  version: string;
+  installed: boolean;
+  available: boolean;
+  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
   lastSyncAt?: string;
   lastError?: string;
   entityCounts?: Record<string, number>;
@@ -27,6 +32,8 @@ export interface SrgntAPI {
   createDefaultWorkspaceRoot(): Promise<string>;
 
   listConnectors(): Promise<{ connectors: ConnectorState[] }>;
+  installConnector(id: string): Promise<ConnectorState>;
+  uninstallConnector(id: string): Promise<ConnectorState>;
   connectConnector(id: string): Promise<ConnectorState>;
   disconnectConnector(id: string): Promise<ConnectorState>;
   getDesktopSettings(): Promise<DesktopSettingsResponse>;
@@ -57,6 +64,55 @@ export interface SrgntAPI {
   saveBriefing(request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }): Promise<{ path: string }>;
   listBriefings(): Promise<{ briefings: { id: string; path: string; generatedAt: string }[] }>;
   writeDiagnosticCrashLog(): Promise<{ directory: string }>;
+
+  // Notes operations
+  notesListDir(dirPath: string): Promise<{ entries: { name: string; path: string; isDirectory: boolean; modifiedAt: string }[] }>;
+  notesReadFile(filePath: string): Promise<{ content: string; modifiedAt: string }>;
+  notesWriteFile(filePath: string, content: string): Promise<{ path: string; modifiedAt: string }>;
+  notesCreateFile(filePath: string, title: string): Promise<{ path: string; createdAt: string }>;
+  notesCreateFolder(dirPath: string): Promise<{ path: string }>;
+  notesDelete(path: string, isDirectory: boolean): Promise<{ deleted: boolean }>;
+  notesRename(oldPath: string, newName: string): Promise<{ newPath: string }>;
+  notesSearch(query: string, maxResults?: number): Promise<{ results: { title: string; path: string; snippet: string; score: number }[] }>;
+  notesResolveWikilink(wikilink: string, currentFilePath?: string): Promise<{ resolved: boolean; path: string; line?: number }>;
+  notesListWorkspaceMarkdown(query?: string, maxResults?: number): Promise<{ files: { title: string; path: string; modifiedAt: string }[] }>;
+
+  // Semantic search
+  semanticSearchInit(): Promise<{ initialized: boolean; modelId?: string }>;
+  semanticSearchEnableForWorkspace(workspaceRoot: string): Promise<{ enabled: boolean }>;
+  semanticSearchIndexWorkspace(workspaceRoot: string, force?: boolean): Promise<{
+    indexedChunkCount: number;
+    skippedCount: number;
+    durationMs: number;
+  }>;
+  semanticSearchRebuildAll(workspaceRoot: string): Promise<{
+    totalChunkCount: number;
+    durationMs: number;
+  }>;
+  semanticSearchSearch(
+    workspaceRoot: string,
+    query: string,
+    maxResults?: number,
+    minScore?: number,
+  ): Promise<{
+    results: Array<{
+      score: number;
+      title: string;
+      workspaceRelativePath: string;
+      snippet: string;
+    }>;
+  }>;
+  semanticSearchStatus(workspaceRoot: string): Promise<{
+    state: 'uninitialized' | 'initializing' | 'ready' | 'indexing' | 'disabled' | 'error';
+    indexedFileCount: number;
+    totalChunkCount: number;
+    progressPercent: number;
+    lastIndexedAt: string | null;
+    error: string | null;
+  }>;
+
+  // Shell
+  openExternal(url: string): Promise<void>;
 
   // Window controls
   windowMinimize(): Promise<void>;

@@ -1,0 +1,27 @@
+{
+  "manifest": {
+    "id": "jira",
+    "name": "Jira",
+    "version": "0.2.0",
+    "description": "Atlassian Jira connector for issue tracking",
+    "provider": "atlassian",
+    "authType": "oauth2",
+    "config": {
+      "authType": "oauth2",
+      "baseUrl": "https://api.atlassian.com",
+      "timeout": 30000,
+      "retryAttempts": 3
+    },
+    "capabilities": [
+      { "capability": "read", "supportedOperations": ["getIssue", "searchIssues", "getProjects"] },
+      { "capability": "write", "supportedOperations": ["transitionIssue", "addComment"] }
+    ],
+    "entityTypes": ["Task", "Person"],
+    "freshnessThresholdMs": 300000,
+    "metadata": {}
+  },
+  "entityCounts": {
+    "task": 6,
+    "project": 2
+  }
+}

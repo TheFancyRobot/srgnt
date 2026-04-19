@@ -1,0 +1,28 @@
+{
+  "manifest": {
+    "id": "calendar-plus",
+    "name": "Calendar Plus",
+    "version": "0.1.0",
+    "description": "Example pluggable calendar connector (dummy extension).",
+    "provider": "local-dev",
+    "authType": "none",
+    "config": {
+      "authType": "none",
+      "timeout": 20000,
+      "retryAttempts": 2
+    },
+    "capabilities": [
+      { "capability": "read", "supportedOperations": ["getEvent", "listEvents"] },
+      { "capability": "write", "supportedOperations": ["createEvent", "updateEvent"] }
+    ],
+    "entityTypes": ["Event", "Person"],
+    "freshnessThresholdMs": 120000,
+    "metadata": {
+      "category": "dummy"
+    }
+  },
+  "entityCounts": {
+    "event": 11,
+    "calendar": 2
+  }
+}

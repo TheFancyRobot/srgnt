@@ -5,13 +5,14 @@ contract_version: 1
 title: Implement main-process notes service and scoped filesystem handlers
 step_id: STEP-14-02
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: planned
+status: completed
 owner: ''
 created: '2026-03-31'
 updated: '2026-03-31'
 depends_on:
   - '[[02_Phases/Phase_14_notes_view/Steps/Step_01_add-ipc-channels-and-main-process-handlers-for-notes-file-operations|STEP-14-01]]'
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-03-31-044642-implement-main-process-notes-service-and-scoped-filesystem-handlers-opencode|SESSION-2026-03-31-044642 OpenCode session for Implement main-process notes service and scoped filesystem handlers]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -164,7 +165,7 @@ This section supersedes the vaguer template text above when they conflict.
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-03-31 - [[05_Sessions/2026-03-31-044642-implement-main-process-notes-service-and-scoped-filesystem-handlers-opencode|SESSION-2026-03-31-044642 OpenCode session for Implement main-process notes service and scoped filesystem handlers]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary

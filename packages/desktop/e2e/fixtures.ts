@@ -10,6 +10,23 @@ interface E2EFixtures {
   userDataDir: string;
 }
 
+function shouldDisableElectronSandbox(): boolean {
+  return process.platform === 'linux' && (process.env.CI === 'true' || process.env.SRGNT_E2E_DISABLE_SANDBOX === '1');
+}
+
+export function getElectronLaunchArgs(baseArgs: string[] = []): string[] {
+  return shouldDisableElectronSandbox() ? [...baseArgs, '--no-sandbox'] : baseArgs;
+}
+
+export function getElectronLaunchEnv(userDataDir: string): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
+    SRGNT_E2E: '1',
+    SRGNT_USER_DATA_PATH: userDataDir,
+  };
+}
+
 export const test = base.extend<E2EFixtures>({
   userDataDir: async ({}, use, testInfo) => {
     const slug = testInfo.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -24,13 +41,8 @@ export const test = base.extend<E2EFixtures>({
 
   electronApp: async ({ userDataDir }, use) => {
     const electronApp = await electron.launch({
-      args: ['.'],
-      env: {
-        ...process.env,
-        ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
-        SRGNT_E2E: '1',
-        SRGNT_USER_DATA_PATH: userDataDir,
-      },
+      args: getElectronLaunchArgs(['.']),
+      env: getElectronLaunchEnv(userDataDir),
     });
 
     try {
@@ -48,6 +60,23 @@ export const test = base.extend<E2EFixtures>({
 });
 
 export { expect };
+
+/**
+ * Disable CSS animations and transitions for deterministic screenshots.
+ * Injects a style rule that forces animation-duration and transition-duration to 0.
+ */
+export async function disableAnimations(window: Page): Promise<void> {
+  await window.addStyleTag({
+    content: `
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    `,
+  });
+}
 
 export async function waitForDesktopReady(window: Page): Promise<void> {
   await window.waitForLoadState('domcontentloaded');

@@ -10,10 +10,14 @@
   },
   "main": "./dist/main/index.js",
   "types": "./dist/main/index.d.ts",
+  "bin": {
+    "srgnt-connectors": "./dist/main/cli/index.js"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "lint": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.preload.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "test": "vitest run",
+    "cli:connectors": "pnpm run build:main && node ./dist/main/cli/index.js",
     "test:e2e": "pnpm run build && playwright test e2e/app.spec.ts e2e/gfm-compliance.spec.ts e2e/ui-coverage-matrix.spec.ts e2e/bug-0013-visual.spec.ts",
     "test:e2e:headed": "pnpm run build && playwright test e2e/app.spec.ts e2e/gfm-compliance.spec.ts e2e/ui-coverage-matrix.spec.ts e2e/bug-0013-visual.spec.ts --headed",
     "test:e2e:packaged:linux": "pnpm run pack && playwright test e2e/packaged.spec.ts",

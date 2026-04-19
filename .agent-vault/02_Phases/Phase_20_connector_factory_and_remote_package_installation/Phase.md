@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Connector Factory and Remote Package Installation
 phase_id: PHASE-20
-status: in_progress
+status: completed
 owner: coordinator
 created: '2026-04-19'
 updated: '2026-04-19'

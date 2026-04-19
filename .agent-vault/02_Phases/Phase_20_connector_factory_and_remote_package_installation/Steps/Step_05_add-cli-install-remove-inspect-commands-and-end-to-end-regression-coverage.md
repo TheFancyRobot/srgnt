@@ -5,13 +5,14 @@ contract_version: 1
 title: Add CLI install remove inspect commands and end-to-end regression coverage
 step_id: STEP-20-05
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-opus
 created: '2026-04-19'
 updated: '2026-04-19'
 depends_on:
   - STEP-20-04
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-04-19-195504-add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage-claude-opus|SESSION-2026-04-19-195504 claude-opus session for Add CLI install remove inspect commands and end-to-end regression coverage]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -167,9 +168,11 @@ tags:
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-04-19 - [[05_Sessions/2026-04-19-195504-add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage-claude-opus|SESSION-2026-04-19-195504 claude-opus session for Add CLI install remove inspect commands and end-to-end regression coverage]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Success means a user can remotely install and manage connector packages from the CLI, and the core safety/compatibility invariants are protected by tests.
+- **Result:** PASS. `srgnt-connectors` CLI (install/remove/list/inspect) shipped, routed through `ConnectorPackageHost` from Step 04, with HTTPS-only fetch, sha256 integrity, fail-closed handshake, and redaction-safe output. 1853/1853 workspace tests, 81/81 Playwright e2e, 2/2 packaged Linux e2e all green.
+- **Incidental regression fixed:** `packages/connectors/package.json` now points `main` + `types` at compiled `dist/`, unblocking Electron main module resolution. Without this fix, every real-Electron e2e silently timed out because Node ESM could not resolve the TypeScript-convention `./sdk/index.js` import against a source path.

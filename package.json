@@ -11,6 +11,7 @@
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @srgnt/desktop test:e2e",
     "test:e2e:packaged:linux": "pnpm --filter @srgnt/desktop test:e2e:packaged:linux",
+    "cli:connectors": "pnpm --filter @srgnt/desktop cli:connectors",
     "build": "pnpm -r build",
     "release:check:repo": "pnpm --filter @srgnt/desktop build:icons && pnpm run --filter @srgnt/desktop pack && pnpm test && pnpm test:e2e && pnpm test:e2e:packaged:linux",
     "release:artifacts:linux": "pnpm --filter @srgnt/desktop dist:linux && pnpm --filter @srgnt/desktop dist:rpm:fedora",

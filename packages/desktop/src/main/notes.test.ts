@@ -876,14 +876,31 @@ describe('notes service - workspace-wide markdown helpers', () => {
     it('filters by query on title or path', async () => {
       const workspaceRoot = await makeTempDir('srgnt-ws-filter-query-');
       const notesDir = getNotesDir(workspaceRoot);
-      await fs.mkdir(notesDir, { recursive: true });
+      await fs.mkdir(path.join(notesDir, 'docs'), { recursive: true });
 
       await fs.writeFile(path.join(notesDir, 'readme.md'), '# Readme');
-      await fs.writeFile(path.join(notesDir, 'changelog.md'), '# Changelog');
+      await fs.writeFile(path.join(notesDir, 'docs/changelog.md'), '# Changelog');
 
-      const results = await listWorkspaceMarkdown(workspaceRoot, 'readme');
+      const results = await listWorkspaceMarkdown(workspaceRoot, 'docs');
       expect(results).toHaveLength(1);
-      expect(results[0].path).toBe('Notes/readme.md');
+      expect(results[0].path).toBe('Notes/docs/changelog.md');
+    });
+
+    it('can still match query from frontmatter title when filename does not match', async () => {
+      const workspaceRoot = await makeTempDir('srgnt-ws-title-query-');
+      const notesDir = getNotesDir(workspaceRoot);
+      await fs.mkdir(notesDir, { recursive: true });
+
+      await fs.writeFile(
+        path.join(notesDir, 'abc123.md'),
+        '---\ntitle: Project Phoenix\n---\n\nBody',
+      );
+      await fs.writeFile(path.join(notesDir, 'unrelated.md'), '# Unrelated');
+
+      const results = await listWorkspaceMarkdown(workspaceRoot, 'phoenix');
+      expect(results).toHaveLength(1);
+      expect(results[0].title).toBe('Project Phoenix');
+      expect(results[0].path).toBe('Notes/abc123.md');
     });
 
     it('sorts by modifiedAt descending (newest first)', async () => {

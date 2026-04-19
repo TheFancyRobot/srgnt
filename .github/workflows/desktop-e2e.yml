@@ -43,6 +43,9 @@ jobs:
       - name: Typecheck desktop package
         run: pnpm --filter @srgnt/desktop typecheck
 
+      - name: Build desktop package
+        run: pnpm --filter @srgnt/desktop pack
+
       - name: Run Electron E2E suite
         env:
           SRGNT_E2E_DISABLE_SANDBOX: '1'

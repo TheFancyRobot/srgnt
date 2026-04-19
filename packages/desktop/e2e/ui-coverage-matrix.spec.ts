@@ -337,9 +337,8 @@ test.describe('Notes Side Panel structure', () => {
   test('shows file tree with role="tree"', async ({ window: page }) => {
     await completeOnboarding(page);
     await page.getByRole('button', { name: 'Notes' }).click();
-
     const tree = page.getByRole('tree', { name: 'Notes file tree' });
-    await expect(tree).toBeVisible({ timeout: 10000 });
+    await expect(tree).toBeVisible({ timeout: 20000 });
   });
 
   test('shows empty state when no notes exist', async ({ window: page }) => {

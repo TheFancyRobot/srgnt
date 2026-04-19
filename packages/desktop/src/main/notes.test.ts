@@ -112,6 +112,16 @@ describe('notes service - path validation and security', () => {
       expect(await validateNotesPath(workspaceRoot, 'link-to-outside')).toBeNull();
     });
 
+    it('rejects a symlinked Notes root', async () => {
+      const workspaceRoot = await makeTempDir('srgnt-notes-symlink-root-');
+      const outsideNotes = path.join(workspaceRoot, 'outside-notes');
+      await fs.mkdir(outsideNotes, { recursive: true });
+      await fs.symlink(outsideNotes, getNotesDir(workspaceRoot));
+
+      expect(await validateNotesPath(workspaceRoot, 'note.md')).toBeNull();
+      await expect(writeNote(workspaceRoot, 'note.md', 'content')).rejects.toThrow('Invalid path');
+    });
+
     it('rejects paths that traverse through a symlinked ancestor directory', async () => {
       const workspaceRoot = await makeTempDir('srgnt-notes-symlink-ancestor-');
       const notesDir = getNotesDir(workspaceRoot);

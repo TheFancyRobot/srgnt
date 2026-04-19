@@ -1,6 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { completeOnboarding, expect, test, waitForDesktopReady } from './fixtures';
+import { expect, test, waitForDesktopReady } from './fixtures';
 
 /**
  * GFM Compliance E2E tests.

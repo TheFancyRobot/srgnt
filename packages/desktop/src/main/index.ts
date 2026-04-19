@@ -81,6 +81,9 @@ import {
   writeBootstrapState,
   writeDesktopSettings,
 } from './settings.js';
+import { ConnectorPackageHost, nullSpawn } from './connectors/index.js';
+
+const HOST_SDK_VERSION = '1.0.0';
 
 interface ConnectorState {
   id: ConnectorId;
@@ -166,6 +169,30 @@ const approvalService = createApprovalService();
 const pendingLaunches = new Map<string, { resolve: (approved: boolean) => void }>();
 const crashReporter = createCrashReporter();
 crashReporter.start();
+
+// Connector package host: owns installed-package registry + isolated loader
+// boundary. Runs third-party packages through `nullSpawn` until Step 05 wires
+// CLI install commands and the worker script is bundled. Built-in connectors
+// are registered through `@srgnt/connectors` and do not use this runtime.
+const connectorPackageHost = new ConnectorPackageHost({
+  spawnRuntime: nullSpawn,
+  hostSdkVersion: HOST_SDK_VERSION,
+  persistRegistry: async (snapshot) => {
+    desktopSettings = mergeDesktopSettings({
+      ...desktopSettings,
+      connectors: {
+        ...desktopSettings.connectors,
+        installedPackages: snapshot,
+      },
+    });
+    if (workspaceRoot) {
+      await writeDesktopSettings(workspaceRoot, desktopSettings);
+    }
+  },
+  onRuntimeCrash: (packageId, reason) => {
+    console.warn('[main] connector package crash', { packageId, reason });
+  },
+});
 const semanticSearchHost = createSemanticSearchHost();
 let semanticSearchEnabled = false;
 let semanticSearchWatcher: WorkspaceWatcher | null = null;
@@ -485,6 +512,7 @@ async function initializeDesktopState(): Promise<void> {
   const bootstrapState = await readBootstrapState(userDataPath);
   if (!bootstrapState.workspaceRoot) {
     syncConnectorStateFromSettings(defaultDesktopSettings);
+    await syncConnectorPackageHostFromSettings(defaultDesktopSettings);
     return;
   }
 
@@ -519,6 +547,7 @@ async function setWorkspaceRootInternal(root: string): Promise<string> {
 
   crashReporter.setWorkspaceRoot(resolvedRoot);
   syncConnectorStateFromSettings(desktopSettings);
+  await syncConnectorPackageHostFromSettings(desktopSettings);
   registerNotesHandlers(workspaceRoot);
 
   // Initialize semantic search for the new workspace
@@ -537,6 +566,7 @@ async function persistDesktopSettings(nextSettings: DesktopSettings): Promise<vo
     await writeDesktopSettings(workspaceRoot, desktopSettings);
   }
   syncConnectorStateFromSettings(desktopSettings);
+  await syncConnectorPackageHostFromSettings(desktopSettings);
 }
 
 function connectorDefinition(id: string): ConnectorDefinition | undefined {
@@ -602,6 +632,19 @@ function syncConnectorStateFromSettings(settings: DesktopSettings): void {
   for (const [id, state] of nextState.entries()) {
     connectorState.set(id, state);
   }
+}
+
+async function syncConnectorPackageHostFromSettings(settings: DesktopSettings): Promise<void> {
+  const durablePackages = settings.connectors?.installedPackages?.packages ?? [];
+  // Clear any previously seeded packages so workspace switches do not carry
+  // stale runtime state from an earlier workspace.
+  for (const existing of connectorPackageHost.listPackages()) {
+    await connectorPackageHost.uninstall(existing.packageId);
+  }
+  for (const pkg of durablePackages) {
+    await connectorPackageHost.registerInstalledPackage(pkg);
+  }
+  await connectorPackageHost.applyRestartRecovery();
 }
 
 function createAvailableConnectorState(id: string, definition?: ConnectorDefinition): ConnectorState {

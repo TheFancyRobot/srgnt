@@ -5,14 +5,14 @@ contract_version: 1
 title: Implement a managed connector package registry and safe loader boundary in desktop main
 step_id: STEP-20-04
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-opus
 created: '2026-04-19'
 updated: '2026-04-19'
 depends_on:
   - STEP-20-02
   - STEP-20-03
-related_sessions: []
+related_sessions: '[[05_Sessions/2026-04-19-193808-implement-a-managed-connector-package-registry-and-safe-loader-boundary-in-desktop-main-claude-opus|SESSION-2026-04-19-193808 claude-opus session for Implement a managed connector package registry and safe loader boundary in desktop main]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -166,9 +166,17 @@ tags:
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-04-19 - [[05_Sessions/2026-04-19-193808-implement-a-managed-connector-package-registry-and-safe-loader-boundary-in-desktop-main-claude-opus|SESSION-2026-04-19-193808 claude-opus session for Implement a managed connector package registry and safe loader boundary in desktop main]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Success means the desktop host can manage installed connector packages safely and produce connector instances without collapsing trust boundaries.
+Completed 2026-04-19 through the claude-opus session.
+
+- Introduced `packages/desktop/src/main/connectors/` module with `ManagedPackageRegistry`, `SafePackageLoader`, `ConnectorPackageHost`, and `createWorkerSpawn`/`nullSpawn` runtime factories.
+- Added `packages/contracts/src/connectors/loader-handshake.ts` defining the fail-closed host<->runtime handshake contract (protocol version 1) with structured success/failure payloads.
+- Wired `main/index.ts` to seed the host from persisted settings, apply restart recovery, and flush registry mutations through `writeDesktopSettings`. Renderer/preload continue to receive only high-level typed state from the `ConnectorListResponse` shape; the new host's `describePackage` family is ready for the Step 05 IPC handlers without leaking sourceUrl/installedAt/minHostVersion.
+- 38 new tests covering registry CRUD, loader fail-closed paths (spawn failure, handshake timeout, malformed payload, ID mismatch, SDK mismatch, capability denial, errored-package refusal), host orchestration (activate, load, connect, crash, uninstall, restart recovery), and settings persistence round-trip.
+- Validation: contracts 295/295, connectors 84/84, desktop 892/892, desktop typecheck clean.
+- Follow-ups for Step 05: bundle a real `connector-runtime-worker.js` entrypoint, wire CLI commands to the new host APIs, and harmonize `sourceUrl` vs `packageUrl` naming.

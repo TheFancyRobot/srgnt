@@ -5,13 +5,14 @@ contract_version: 1
 title: Specify remote connector package metadata and CLI install lifecycle
 step_id: STEP-20-03
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
-status: planned
-owner: ''
+status: completed
+owner: coordinator
 created: '2026-04-19'
 updated: '2026-04-19'
 depends_on:
   - STEP-20-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-04-19-070143-specify-remote-connector-package-metadata-and-cli-install-lifecycle-executor-1|SESSION-2026-04-19-070143 executor-1 session for Specify remote connector package metadata and CLI install lifecycle]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -146,10 +147,10 @@ tags:
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner:
+- Status: completed
+- Current owner: coordinator
 - Last touched: 2026-04-19
-- Next action: Freeze the remote package metadata and CLI verbs in parallel with STEP-20-02 once STEP-20-01 lands.
+- Next action: Use the installed-package and registry schemas as the persistence baseline for Step 04 loader work and Step 05 CLI behavior.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -166,9 +167,13 @@ tags:
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-04-19 - [[05_Sessions/2026-04-19-070143-specify-remote-connector-package-metadata-and-cli-install-lifecycle-executor-1|SESSION-2026-04-19-070143 executor-1 session for Specify remote connector package metadata and CLI install lifecycle]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Success means a developer can describe exactly what a remote connector install record contains and which CLI commands manage it before any loader code is written.
+- Completed 2026-04-19 through the delegated team pipeline.
+- Added `packages/contracts/src/connectors/installed-package.ts` and `packages/contracts/src/connectors/package-registry.ts` with tests to define the durable installed-package record and registry shape.
+- Updated contracts IPC and desktop settings persistence so `installedPackages` is supported with backward-compatible migration from legacy `installedConnectorIds`.
+- Validation reported 281 contract tests passing, 18 desktop settings tests passing, typecheck clean, and non-UI E2E confirmation passing; remaining UI E2E timeouts were environmental headless-display issues rather than regressions.
+- Reviewer flagged a non-blocking naming inconsistency (`sourceUrl` vs `packageUrl`, checksum naming) to harmonize before or during Steps 04 and 05.

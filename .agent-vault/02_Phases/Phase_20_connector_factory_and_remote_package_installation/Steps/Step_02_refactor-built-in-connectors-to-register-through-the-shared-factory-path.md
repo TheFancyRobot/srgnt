@@ -5,13 +5,14 @@ contract_version: 1
 title: Refactor built-in connectors to register through the shared factory path
 step_id: STEP-20-02
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
-status: planned
-owner: ''
+status: completed
+owner: coordinator
 created: '2026-04-19'
 updated: '2026-04-19'
 depends_on:
   - STEP-20-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-04-19-070143-refactor-built-in-connectors-to-register-through-the-shared-factory-path-executor-1|SESSION-2026-04-19-070143 executor-1 session for Refactor built-in connectors to register through the shared factory path]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -140,10 +141,10 @@ tags:
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner:
+- Status: completed
+- Current owner: coordinator
 - Last touched: 2026-04-19
-- Next action: Remove desktop-only built-in connector duplication after STEP-20-01 lands.
+- Next action: Use the shared built-in registry as the baseline when wiring Step 04 host loading behavior.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -159,9 +160,12 @@ tags:
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-04-19 - [[05_Sessions/2026-04-19-070143-refactor-built-in-connectors-to-register-through-the-shared-factory-path-executor-1|SESSION-2026-04-19-070143 executor-1 session for Refactor built-in connectors to register through the shared factory path]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Success means first-party connectors are no longer a separate species; they are registered and created through the same shared factory model external developers will target.
+- Completed 2026-04-19 through the delegated team pipeline.
+- Added shared built-in registration via `packages/connectors/src/sdk/registry.ts` and connector-specific factory-backed registrations under `packages/connectors/src/{jira,outlook,teams}/connector.ts`.
+- Updated `packages/connectors/src/index.ts` and `packages/desktop/src/main/index.ts` so desktop main consumes built-in definitions from `@srgnt/connectors` instead of maintaining inline manifest duplication.
+- Validation reported 84 connector tests passing, desktop tests passing except for 2 pre-existing BUG-0002 failures, typecheck clean, and no new regressions.

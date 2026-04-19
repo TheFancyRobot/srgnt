@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Connector Factory and Remote Package Installation
 phase_id: PHASE-20
-status: planned
+status: in_progress
 owner: coordinator
 created: '2026-04-19'
 updated: '2026-04-19'
@@ -70,10 +70,10 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 
 ## Acceptance Criteria
 
-- [ ] A public connector factory contract exists in shared code and is documented clearly enough for third-party developers to target it.
-- [ ] Built-in connectors register through the same factory path as external packages instead of using a desktop-only special path.
-- [ ] Remote connector package metadata includes enough information for compatibility and integrity checks before activation.
-- [ ] A CLI-only install/remove/list/inspect lifecycle exists for explicit package URLs/references without requiring a new UI.
+- [x] A public connector factory contract exists in shared code and is documented clearly enough for third-party developers to target it.
+- [x] Built-in connectors register through the same factory path as external packages instead of using a desktop-only special path.
+- [x] Remote connector package metadata includes enough information for compatibility and integrity checks before activation.
+- [x] A CLI-only install/remove/list/inspect lifecycle exists for explicit package URLs/references without requiring a new UI.
 - [ ] Third-party connector packages run in an isolated worker/subprocess boundary rather than inside Electron main.
 - [ ] Desktop main owns a managed connector package registry and exposes only safe high-level state to preload/renderer.
 - [ ] Automated validation covers manifest/package mismatch, integrity failure, compatibility failure, install cleanup, load failure, restart recovery, and install/load/connect state transitions.
@@ -99,7 +99,7 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_19_implement_connector_pluggability/Phase|PHASE-19 Implement Connector Pluggability]]
-- Current phase status: planned
+- Current phase status: in_progress
 - Next phase: not planned yet.
 <!-- AGENT-END:phase-linear-context -->
 
@@ -127,9 +127,9 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_01_define-the-public-connector-factory-contract-and-package-runtime-shape|STEP-20-01 Define the public connector factory contract and package runtime shape]] -- freeze the SDK, host context, lifecycle, and package entrypoint before implementation drifts.
-- [ ] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_02_refactor-built-in-connectors-to-register-through-the-shared-factory-path|STEP-20-02 Refactor built-in connectors to register through the shared factory path]] -- prove the contract with first-party connectors and remove desktop-only duplication.
-- [ ] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_03_specify-remote-connector-package-metadata-and-cli-install-lifecycle|STEP-20-03 Specify remote connector package metadata and CLI install lifecycle]] -- define explicit-URL package records, integrity checks, and management semantics.
+- [x] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_01_define-the-public-connector-factory-contract-and-package-runtime-shape|STEP-20-01 Define the public connector factory contract and package runtime shape]] -- freeze the SDK, host context, lifecycle, and package entrypoint before implementation drifts.
+- [x] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_02_refactor-built-in-connectors-to-register-through-the-shared-factory-path|STEP-20-02 Refactor built-in connectors to register through the shared factory path]] -- prove the contract with first-party connectors and remove desktop-only duplication.
+- [x] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_03_specify-remote-connector-package-metadata-and-cli-install-lifecycle|STEP-20-03 Specify remote connector package metadata and CLI install lifecycle]] -- define explicit-URL package records, integrity checks, and management semantics.
 - [ ] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_04_implement-a-managed-connector-package-registry-and-safe-loader-boundary-in-desktop-main|STEP-20-04 Implement a managed connector package registry and safe loader boundary in desktop main]] -- add the host-side runtime and isolated loading path.
 - [ ] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_05_add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage|STEP-20-05 Add CLI install remove inspect commands and end-to-end regression coverage]] -- ship the CLI workflow and lock in the safety invariants with tests.
 <!-- AGENT-END:phase-steps -->
@@ -146,6 +146,7 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
   - remote **third-party** connector packages should run in a worker/subprocess isolation boundary;
   - CLI v1 install should default to an explicit package URL/reference only, not catalog-first discovery.
 - Parallel work map: Step 01 must run first; Step 02 and Step 03 can overlap once the core factory contract is stable; Step 04 depends on Steps 02 and 03; Step 05 runs last.
+- Implementation progress as of 2026-04-19: Steps 01, 02, and 03 are complete. Step 04 is the next execution target. Reviewer noted a non-blocking naming inconsistency (`sourceUrl` vs `packageUrl`, checksum field naming) that should be harmonized during Step 04 or before Step 05.
 - Validation map for implementers:
   - Step 01: `pnpm --filter @srgnt/connectors test`, `pnpm --filter @srgnt/contracts test`, plus both package typechecks.
   - Step 02: `pnpm --filter @srgnt/connectors test`, `pnpm --filter @srgnt/desktop test`, `pnpm --filter @srgnt/desktop test:e2e`.

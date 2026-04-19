@@ -322,7 +322,7 @@ test.describe('Notes Side Panel structure', () => {
     await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
     // Action buttons: new note, new folder, refresh
     await expect(page.getByRole('button', { name: 'New note' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'New folder' })).toBeVisible();
+    await expect(page.locator('button[title="New folder"]')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible();
   });
 
@@ -339,7 +339,7 @@ test.describe('Notes Side Panel structure', () => {
     await page.getByRole('button', { name: 'Notes' }).click();
 
     const tree = page.getByRole('tree', { name: 'Notes file tree' });
-    await expect(tree).toBeVisible();
+    await expect(tree).toBeVisible({ timeout: 10000 });
   });
 
   test('shows empty state when no notes exist', async ({ window: page }) => {

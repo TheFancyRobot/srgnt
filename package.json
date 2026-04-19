@@ -12,7 +12,7 @@
     "test:e2e": "pnpm --filter @srgnt/desktop test:e2e",
     "test:e2e:packaged:linux": "pnpm --filter @srgnt/desktop test:e2e:packaged:linux",
     "build": "pnpm -r build",
-    "release:check:repo": "pnpm --filter @srgnt/desktop build:icons && pnpm test && pnpm test:e2e && pnpm test:e2e:packaged:linux",
+    "release:check:repo": "pnpm --filter @srgnt/desktop build:icons && pnpm --filter @srgnt/desktop pack && pnpm test && pnpm test:e2e && pnpm test:e2e:packaged:linux",
     "release:artifacts:linux": "pnpm --filter @srgnt/desktop dist:linux && pnpm --filter @srgnt/desktop dist:rpm:fedora",
     "release:rc:linux": "pnpm run release:check:repo && pnpm run release:artifacts:linux"
   },

@@ -11,7 +11,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { waitForDesktopReady } from './fixtures';
+import { getElectronLaunchArgs, getElectronLaunchEnv, waitForDesktopReady } from './fixtures';
 
 test.skip(process.platform !== 'linux', 'Packaged build validation is Linux-only.');
 
@@ -21,12 +21,8 @@ test('semantic search works in packaged Linux build', async () => {
 
   const electronApp = await electron.launch({
     executablePath,
-    env: {
-      ...process.env,
-      ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
-      SRGNT_E2E: '1',
-      SRGNT_USER_DATA_PATH: userDataDir,
-    },
+    args: getElectronLaunchArgs(),
+    env: getElectronLaunchEnv(userDataDir),
   });
 
   try {
@@ -120,12 +116,8 @@ test('worker thread starts correctly in packaged build', async () => {
 
   const electronApp = await electron.launch({
     executablePath,
-    env: {
-      ...process.env,
-      ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
-      SRGNT_E2E: '1',
-      SRGNT_USER_DATA_PATH: userDataDir,
-    },
+    args: getElectronLaunchArgs(),
+    env: getElectronLaunchEnv(userDataDir),
   });
 
   try {
@@ -186,12 +178,8 @@ test('model path resolves correctly in packaged build', async () => {
 
   const electronApp = await electron.launch({
     executablePath,
-    env: {
-      ...process.env,
-      ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
-      SRGNT_E2E: '1',
-      SRGNT_USER_DATA_PATH: userDataDir,
-    },
+    args: getElectronLaunchArgs(),
+    env: getElectronLaunchEnv(userDataDir),
   });
 
 

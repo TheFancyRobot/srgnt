@@ -2,7 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { completeOnboarding, waitForDesktopReady } from './fixtures';
+import { completeOnboarding, getElectronLaunchArgs, getElectronLaunchEnv, waitForDesktopReady } from './fixtures';
 
 test.skip(process.platform !== 'linux', 'Packaged smoke test is currently Linux-only.');
 
@@ -12,12 +12,8 @@ test('launches the packaged Linux build and shows first-run onboarding', async (
 
   const electronApp = await electron.launch({
     executablePath,
-    env: {
-      ...process.env,
-      ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
-      SRGNT_E2E: '1',
-      SRGNT_USER_DATA_PATH: userDataDir,
-    },
+    args: getElectronLaunchArgs(),
+    env: getElectronLaunchEnv(userDataDir),
   });
 
   try {
@@ -71,12 +67,8 @@ test('BUG-0014: rapid arrow key navigation through large document does not stack
 
   const electronApp = await electron.launch({
     executablePath,
-    env: {
-      ...process.env,
-      ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
-      SRGNT_E2E: '1',
-      SRGNT_USER_DATA_PATH: userDataDir,
-    },
+    args: getElectronLaunchArgs(),
+    env: getElectronLaunchEnv(userDataDir),
   });
 
   try {

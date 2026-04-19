@@ -44,9 +44,13 @@ jobs:
         run: pnpm --filter @srgnt/desktop typecheck
 
       - name: Run Electron E2E suite
+        env:
+          SRGNT_E2E_DISABLE_SANDBOX: '1'
         run: xvfb-run -a pnpm --filter @srgnt/desktop test:e2e
 
       - name: Run packaged Linux smoke test
+        env:
+          SRGNT_E2E_DISABLE_SANDBOX: '1'
         run: xvfb-run -a pnpm --filter @srgnt/desktop test:e2e:packaged:linux
 
       - name: Upload Playwright artifacts

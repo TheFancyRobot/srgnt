@@ -8,6 +8,7 @@ import { _electron as electron } from '@playwright/test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { getElectronLaunchArgs, getElectronLaunchEnv } from './fixtures';
 
 async function validate() {
   const userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'srgnt-visual-validation-'));
@@ -18,12 +19,8 @@ async function validate() {
   
   const electronApp = await electron.launch({
     executablePath,
-    env: {
-      ...process.env,
-      ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
-      SRGNT_E2E: '1',
-      SRGNT_USER_DATA_PATH: userDataDir,
-    },
+    args: getElectronLaunchArgs(),
+    env: getElectronLaunchEnv(userDataDir),
   });
 
   try {

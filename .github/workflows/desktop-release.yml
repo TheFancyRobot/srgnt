@@ -41,6 +41,8 @@ jobs:
           sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1 libxss1 libxtst6 imagemagick
 
       - name: Run repo-side Linux release candidate gate
+        env:
+          SRGNT_E2E_DISABLE_SANDBOX: '1'
         run: xvfb-run -a pnpm run release:check:repo
 
   build:

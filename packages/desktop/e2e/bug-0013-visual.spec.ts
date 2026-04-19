@@ -2,7 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { completeOnboarding, waitForDesktopReady } from './fixtures';
+import { completeOnboarding, getElectronLaunchArgs, getElectronLaunchEnv, waitForDesktopReady } from './fixtures';
 
 test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo) => {
   test.setTimeout(60_000);
@@ -11,12 +11,8 @@ test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo
 
   const electronApp = await electron.launch({
     executablePath,
-    env: {
-      ...process.env,
-      ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
-      SRGNT_E2E: '1',
-      SRGNT_USER_DATA_PATH: userDataDir,
-    },
+    args: getElectronLaunchArgs(),
+    env: getElectronLaunchEnv(userDataDir),
   });
 
   try {

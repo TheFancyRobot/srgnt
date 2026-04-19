@@ -582,14 +582,16 @@ export async function listWorkspaceMarkdown(
   // Bounded frontmatter read: only read first N bytes to find title
   const FRONTMATTER_READ_LIMIT = 500;
 
-  const results: WorkspaceMarkdownEntry[] = [];
   const processedDirs = new Set<string>();
 
   // Early query filter: check filename (cheap) before reading frontmatter (expensive)
   const hasQuery = !!query;
   const lowerQuery = hasQuery ? query!.toLowerCase() : '';
 
-  async function walkDirectory(dirPath: string): Promise<void> {
+  // Phase 1: Walk Notes/ and collect candidate markdown paths.
+  const pendingFiles: { entryPath: string; entryName: string }[] = [];
+
+  async function collectFilePaths(dirPath: string): Promise<void> {
     const normalizedDir = path.normalize(dirPath);
     if (processedDirs.has(normalizedDir)) return;
     processedDirs.add(normalizedDir);
@@ -608,61 +610,10 @@ export async function listWorkspaceMarkdown(
 
       const entryPath = path.join(normalizedDir, entry.name);
 
-      try {
-        const stat = await fs.lstat(entryPath);
-        if (stat.isSymbolicLink()) continue;
-
-        if (entry.isDirectory()) {
-          await walkDirectory(entryPath);
-        } else if (entry.name.endsWith('.md')) {
-          // Stat-first filter: check size and mtime before content reads
-          if (stat.size > MAX_FILE_SIZE_BYTES) continue;
-
-          let title = entry.name.replace(/\.md$/, '');
-          let modifiedAt = stat.mtime.toISOString();
-
-          // Try frontmatter title — bounded read to avoid large file scans
-          try {
-            const fd = await fs.open(entryPath, 'r');
-            try {
-              const buffer = Buffer.alloc(FRONTMATTER_READ_LIMIT);
-              const { bytesRead } = await fd.read(buffer, 0, FRONTMATTER_READ_LIMIT, 0);
-              const content = buffer.subarray(0, bytesRead).toString('utf-8');
-              const frontmatterMatch = content.match(/^---\s*\ntitle:\s*(.+?)\s*$/m);
-              if (frontmatterMatch) {
-                let extracted = frontmatterMatch[1].trim();
-                if (extracted.startsWith('"') && extracted.endsWith('"') && extracted.length >= 2) {
-                  extracted = extracted
-                    .slice(1, -1)
-                    .replace(/\\"/g, '"')
-                    .replace(/\\\\/g, '\\');
-                }
-                title = extracted || title;
-              }
-            } finally {
-              await fd.close();
-            }
-          } catch {
-            // Fall back to filename
-          }
-
-          // Early query filter on title before pushing to results
-          if (hasQuery) {
-            const titleLower = title.toLowerCase();
-            const pathLower = entry.name.toLowerCase();
-            if (!titleLower.includes(lowerQuery) && !pathLower.includes(lowerQuery)) {
-              continue;
-            }
-          }
-
-          const relativePath = path.relative(workspacePath, entryPath).replace(/\\/g, '/');
-          results.push({ title, path: relativePath, modifiedAt });
-
-          // Early exit if we already have enough results (for query-filtered case)
-          if (results.length >= effectiveMaxResults * 2) return;
-        }
-      } catch {
-        continue;
+      if (entry.isDirectory()) {
+        await collectFilePaths(entryPath);
+      } else if (entry.name.endsWith('.md')) {
+        pendingFiles.push({ entryPath, entryName: entry.name });
       }
     }
   }
@@ -674,7 +625,80 @@ export async function listWorkspaceMarkdown(
     return [];
   }
 
-  await walkDirectory(notesDir);
+  await collectFilePaths(notesDir);
+
+  // Phase 2: Process files with bounded concurrency.
+  // This preserves the parallel stat/frontmatter optimization without opening
+  // an unbounded number of file descriptors for large Notes trees.
+  const FILE_PROCESS_CONCURRENCY = 32;
+
+  async function processMarkdownFile(
+    file: { entryPath: string; entryName: string }
+  ): Promise<{ title: string; path: string; modifiedAt: string } | null> {
+    try {
+      const stat = await fs.lstat(file.entryPath);
+      if (stat.isSymbolicLink()) return null;
+      if (stat.size > MAX_FILE_SIZE_BYTES) return null;
+
+      let title = file.entryName.replace(/\.md$/, '');
+      const modifiedAt = stat.mtime.toISOString();
+
+      // Bounded frontmatter read
+      try {
+        const fd = await fs.open(file.entryPath, 'r');
+        try {
+          const buffer = Buffer.alloc(FRONTMATTER_READ_LIMIT);
+          const { bytesRead } = await fd.read(buffer, 0, FRONTMATTER_READ_LIMIT, 0);
+          const content = buffer.subarray(0, bytesRead).toString('utf-8');
+          const frontmatterMatch = content.match(/^---\s*\ntitle:\s*(.+?)\s*$/m);
+          if (frontmatterMatch) {
+            let extracted = frontmatterMatch[1].trim();
+            if (extracted.startsWith('"') && extracted.endsWith('"') && extracted.length >= 2) {
+              extracted = extracted
+                .slice(1, -1)
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\');
+            }
+            title = extracted || title;
+          }
+        } finally {
+          await fd.close();
+        }
+      } catch {
+        // Fall back to filename
+      }
+
+      // Early query filter on title before returning
+      if (hasQuery) {
+        const titleLower = title.toLowerCase();
+        const pathLower = file.entryName.toLowerCase();
+        if (!titleLower.includes(lowerQuery) && !pathLower.includes(lowerQuery)) {
+          return null;
+        }
+      }
+
+      const relativePath = path.relative(workspacePath, file.entryPath).replace(/\\/g, '/');
+      return { title, path: relativePath, modifiedAt };
+    } catch {
+      return null;
+    }
+  }
+
+  const processedFiles: Array<{ title: string; path: string; modifiedAt: string } | null> = [];
+  for (let i = 0; i < pendingFiles.length; i += FILE_PROCESS_CONCURRENCY) {
+    const batch = pendingFiles.slice(i, i + FILE_PROCESS_CONCURRENCY);
+    processedFiles.push(...await Promise.all(batch.map(processMarkdownFile)));
+  }
+
+  // Filter out nulls and apply result limit
+  const results: WorkspaceMarkdownEntry[] = [];
+  for (const processed of processedFiles) {
+    if (processed) {
+      results.push(processed);
+      // Early exit if we have enough results
+      if (results.length >= effectiveMaxResults * 2) break;
+    }
+  }
 
   // Sort by modifiedAt (newest first) and limit results
   results.sort(

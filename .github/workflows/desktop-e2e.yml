@@ -44,7 +44,7 @@ jobs:
         run: pnpm --filter @srgnt/desktop typecheck
 
       - name: Build desktop package
-        run: cd packages/desktop && pnpm pack
+        run: cd packages/desktop && pnpm run pack
 
       - name: Run Electron E2E suite
         env:

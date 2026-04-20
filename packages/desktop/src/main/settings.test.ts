@@ -246,7 +246,7 @@ describe('desktop settings helpers', () => {
   });
 
   it('uses a stable default workspace root under the home directory', () => {
-    expect(resolveDefaultWorkspaceRoot('/home/tester')).toBe('/home/tester/srgnt-workspace');
+    expect(resolveDefaultWorkspaceRoot('/home/tester')).toBe(path.join('/home/tester', 'srgnt-workspace'));
   });
 });
 

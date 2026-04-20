@@ -7,9 +7,10 @@ import { ipcChannels } from '@srgnt/contracts';
 
 const { readFileSync } = await import('node:fs');
 const { resolve } = await import('node:path');
-const preloadSource = readFileSync(resolve(__dirname, '../../preload/index.ts'), 'utf-8');
-const envSource = readFileSync(resolve(__dirname, '../../renderer/env.d.ts'), 'utf-8');
-const mainSource = readFileSync(resolve(__dirname, '../index.ts'), 'utf-8');
+const normalizeEol = (raw: string): string => raw.replace(/\r\n/g, '\n');
+const preloadSource = normalizeEol(readFileSync(resolve(__dirname, '../../preload/index.ts'), 'utf-8'));
+const envSource = normalizeEol(readFileSync(resolve(__dirname, '../../renderer/env.d.ts'), 'utf-8'));
+const mainSource = normalizeEol(readFileSync(resolve(__dirname, '../index.ts'), 'utf-8'));
 
 describe('Semantic Search IPC handlers', () => {
   // -------------------------------------------------------------------------

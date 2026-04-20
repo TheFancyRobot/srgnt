@@ -488,6 +488,7 @@ describe('NotesView', () => {
       expect(screen.queryByText(/This file was modified externally/)).not.toBeInTheDocument();
       expect(window.srgnt.notesWriteFile).toHaveBeenCalled();
     });
+    expect(screen.getByRole('heading', { level: 1, name: 'Inbox.md' })).toBeInTheDocument();
   });
 
   it('clears selection when Discard button clicked on file-deleted banner', async () => {
@@ -639,6 +640,7 @@ describe('NotesView', () => {
     await waitFor(() => {
       expect(window.srgnt.notesReadFile).toHaveBeenCalledWith('OtherNote.md');
     });
+    expect(await screen.findByRole('heading', { level: 1, name: 'OtherNote.md' })).toBeInTheDocument();
   });
 
   it('handles wikilink click for unresolved path inside Notes/', async () => {
@@ -682,6 +684,7 @@ describe('NotesView', () => {
 
     expect(window.srgnt.notesResolveWikilink).toHaveBeenCalledWith('[[NewNote]]', 'Inbox.md');
     expect(window.srgnt.notesCreateFile).toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { level: 1, name: 'NewNote.md' })).toBeInTheDocument();
   });
 
   it('handles wikilink click for unresolved path with pipe syntax', async () => {
@@ -725,6 +728,7 @@ describe('NotesView', () => {
 
     expect(window.srgnt.notesResolveWikilink).toHaveBeenCalledWith('[[Display Title|link target]]', 'Inbox.md');
     expect(window.srgnt.notesCreateFile).toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Display Title.md' })).toBeInTheDocument();
   });
 
   it('ignores wikilink click for path outside Notes/', async () => {
@@ -762,7 +766,9 @@ describe('NotesView', () => {
       await Promise.resolve();
     });
 
+    // mock-call-only: out-of-scope wikilink is a silent no-op (console.warn + no file creation) with no user-visible DOM change; selection stays on Inbox.md.
     expect(warnSpy).toHaveBeenCalledWith('Cannot create file outside Notes/: Outside/SomeNote.md');
+    // mock-call-only: negative assertion that createFile did not fire; no DOM effect is expected since the click is intentionally a no-op.
     expect(window.srgnt.notesCreateFile).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
@@ -1186,7 +1192,9 @@ describe('NotesView', () => {
       expect(screen.getByText(/Select a note from the Explorer panel/)).toBeInTheDocument();
     });
 
+    // mock-call-only: negative assertion that no note is created when content is empty; the user-visible effect (empty-state message) is already asserted in the waitFor above.
     expect(window.srgnt.notesCreateFile).not.toHaveBeenCalled();
+    // mock-call-only: negative assertion that no write occurs when there is nothing to save; the user-visible effect (empty-state message) is already asserted in the waitFor above.
     expect(window.srgnt.notesWriteFile).not.toHaveBeenCalled();
   });
 
@@ -1257,6 +1265,7 @@ describe('NotesView', () => {
     expect(screen.queryByText(/This file was deleted/i)).not.toBeInTheDocument();
     expect(window.srgnt.notesCreateFile).toHaveBeenCalled();
     expect(window.srgnt.notesWriteFile).toHaveBeenCalled();
+    expect(screen.getByRole('heading', { level: 1, name: 'Inbox.md' })).toBeInTheDocument();
   }, 8000);
 
   it('debounces rapid content changes into a single save from the latest edit', async () => {

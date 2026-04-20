@@ -7,7 +7,7 @@ phase_id: PHASE-19
 status: shipped
 owner: coordinator
 created: '2026-04-16'
-updated: '2026-04-17'
+updated: '2026-04-19'
 depends_on:
   - '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|PHASE-18 Real Semantic Search Runtime Integration]]'
 related_architecture:
@@ -96,7 +96,7 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|PHASE-18 Real Semantic Search Runtime Integration]]
 - Current phase status: done
-- Next phase: not planned yet.
+- Next phase: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20 Connector Factory and Remote Package Installation]]
 - Active milestone: all STEP-19 goals are now implemented and covered by regression tests.
 <!-- AGENT-END:phase-linear-context -->
 

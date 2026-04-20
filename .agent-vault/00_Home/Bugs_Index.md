@@ -27,10 +27,10 @@ Use this note as the manual table of contents for bug records in \`03_Bugs/\`.
 ## Status Buckets
 
 <!-- AGENT-START:bugs-index -->
-_Last rebuilt: 2026-04-16._
+_Last rebuilt: 2026-04-19._
 
-- Notes indexed: 16
-- Status summary: closed (11), fixed (3), fixed-verified (2)
+- Notes indexed: 17
+- Status summary: closed (11), fixed (4), fixed-verified (2)
 
 | Id | Title | Status | Severity | Reported | Fixed | Linear |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -46,6 +46,7 @@ _Last rebuilt: 2026-04-16._
 | BUG-0002 | [Today View launch flow fails in live desktop app](../03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app.md) | closed | sev-3 | 2026-03-28 | 2026-04-01 | - |
 | BUG-0001 | [RESEARCH: Query Engine Memory Scaling for Thousands of Documents](../03_Bugs/BUG-0001_research-query-engine-memory-scaling-for-thousands-of-documents.md) | closed | sev-3 | 2026-03-22 | 2026-04-02 | - |
 | BUG-0010 | [Slash commands trigger logic and indentation preservation issues](../03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues.md) | fixed | sev-1 | 2026-04-06 | 2026-04-06 | - |
+| BUG-0016 | [migrateConnectorSettings passes unknown IDs through migration filter](../03_Bugs/BUG-0016_migrateconnectorsettings-passes-unknown-ids-through-migration-filter.md) | fixed | sev-3 | 2026-04-17 | - | - |
 | BUG-0013 | [Heading whitespace visual issue - requires verification](../03_Bugs/BUG-0013_heading-whitespace-visual-issue-requires-verification.md) | fixed-verified | sev-3 | 2026-04-12 | 2026-04-13 | - |
 | BUG-0014 | [Arrow key navigation stack overflow - requires verification](../03_Bugs/BUG-0014_arrow-key-navigation-stack-overflow-requires-verification.md) | fixed-verified | sev-3 | 2026-04-12 | 2026-04-13 | - |
 | BUG-0012 | [Markdown editor shipped CommonMark-only parsing so GFM task lists, tables, strikethrough, and bare autolinks did not render](../03_Bugs/BUG-0012_markdown-editor-shipped-commonmark-only-parsing-so-gfm-task-lists-tables-strikethrough-and-bare-autolinks-did-not-render.md) | fixed | sev-3 | 2026-04-07 | 2026-04-07 | - |

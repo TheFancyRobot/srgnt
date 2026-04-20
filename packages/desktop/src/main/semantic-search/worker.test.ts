@@ -8,6 +8,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Effect, Layer, Context } from 'effect';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 // Create mock tags using Context.Tag
 const createMockTag = (key: string) => Context.Tag(key);
@@ -146,15 +149,31 @@ describe('semantic-search worker', () => {
     await messageHandler(msg);
   }
 
-  const config = {
-    workspaceRoot: '/workspace',
-    indexRoot: '/workspace/.srgnt-semantic-search',
-    modelAssetPath: '/models',
-    chunkSize: 1000,
-    overlap: 200,
-    batchSize: 32,
-    exclusions: ['.agent-vault'],
+  let tmpRoot: string;
+  let config: {
+    workspaceRoot: string;
+    indexRoot: string;
+    modelAssetPath: string;
+    chunkSize: number;
+    overlap: number;
+    batchSize: number;
+    exclusions: string[];
   };
+  beforeEach(() => {
+    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'srgnt-worker-test-'));
+    config = {
+      workspaceRoot: tmpRoot,
+      indexRoot: path.join(tmpRoot, '.srgnt-semantic-search'),
+      modelAssetPath: path.join(tmpRoot, 'nonexistent-models'),
+      chunkSize: 1000,
+      overlap: 200,
+      batchSize: 32,
+      exclusions: ['.agent-vault'],
+    };
+  });
+  afterEach(() => {
+    if (tmpRoot) fs.rmSync(tmpRoot, { recursive: true, force: true });
+  });
   it('tears down and rejects later work until reinitialized', async () => {
     await send({ type: 'init', id: 'init-1', config });
     postMessage.mockClear();
@@ -182,6 +201,102 @@ describe('semantic-search worker', () => {
       type: 'error',
       id: 'bad-1',
       error: 'Unknown command: mystery',
+    });
+  });
+
+  it('init responds with success when runtime loads', async () => {
+    await send({ type: 'init', id: 'init-1', config });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'result',
+      id: 'init-1',
+      data: { success: true },
+    });
+  });
+
+  it('index before init returns "Service not initialized"', async () => {
+    await send({ type: 'index', id: 'idx-1', workspaceRoot: '/workspace' });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'error',
+      id: 'idx-1',
+      error: 'Service not initialized',
+    });
+  });
+
+  it('index after init returns chunk counts from the service', async () => {
+    await send({ type: 'init', id: 'init-1', config });
+    postMessage.mockClear();
+
+    await send({ type: 'index', id: 'idx-1', workspaceRoot: '/workspace' });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'result',
+      id: 'idx-1',
+      data: expect.objectContaining({
+        indexedChunkCount: 0,
+        skippedCount: 0,
+      }),
+    });
+  });
+
+  it('rebuild before init returns "Service not initialized"', async () => {
+    await send({ type: 'rebuild', id: 'rb-1', workspaceRoot: '/workspace' });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'error',
+      id: 'rb-1',
+      error: 'Service not initialized',
+    });
+  });
+
+  it('rebuild after init returns totalChunkCount', async () => {
+    await send({ type: 'init', id: 'init-1', config });
+    postMessage.mockClear();
+
+    await send({ type: 'rebuild', id: 'rb-1', workspaceRoot: '/workspace' });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'result',
+      id: 'rb-1',
+      data: expect.objectContaining({ totalChunkCount: 0 }),
+    });
+  });
+
+  it('search before init returns "Service not initialized"', async () => {
+    await send({ type: 'search', id: 's-1', query: 'q' });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'error',
+      id: 's-1',
+      error: 'Service not initialized',
+    });
+  });
+
+  it('search after init returns an empty result array from the stubbed service', async () => {
+    await send({ type: 'init', id: 'init-1', config });
+    postMessage.mockClear();
+
+    await send({ type: 'search', id: 's-1', query: 'q' });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'result',
+      id: 's-1',
+      data: [],
+    });
+  });
+
+  it('removeFile before init returns "Service not initialized"', async () => {
+    await send({ type: 'removeFile', id: 'rm-1', relativePath: 'a.md' });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'error',
+      id: 'rm-1',
+      error: 'Service not initialized',
+    });
+  });
+
+  it('removeFile after init responds with success', async () => {
+    await send({ type: 'init', id: 'init-1', config });
+    postMessage.mockClear();
+
+    await send({ type: 'removeFile', id: 'rm-1', relativePath: 'a.md' });
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'result',
+      id: 'rm-1',
+      data: { success: true },
     });
   });
 });

@@ -42,8 +42,8 @@ afterEach(async () => {
 describe('notes service - path helpers', () => {
   describe('getNotesDir', () => {
     it('returns the Notes directory path under workspace root', () => {
-      expect(getNotesDir('/home/user/workspace')).toBe('/home/user/workspace/Notes');
-      expect(getNotesDir('/tmp/test-workspace')).toBe('/tmp/test-workspace/Notes');
+      expect(getNotesDir('/home/user/workspace')).toBe(path.join('/home/user/workspace', 'Notes'));
+      expect(getNotesDir('/tmp/test-workspace')).toBe(path.join('/tmp/test-workspace', 'Notes'));
     });
   });
 

@@ -404,8 +404,8 @@ describe('runInspect', () => {
       },
       { packageId: 'missing' },
     );
-    expect(result.kind).toBe('remove-error');
-    if (result.kind !== 'remove-error') return;
+    expect(result.kind).toBe('inspect-error');
+    if (result.kind !== 'inspect-error') return;
     expect(result.code).toBe('PACKAGE_NOT_FOUND');
   });
 });

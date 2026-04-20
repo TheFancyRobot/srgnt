@@ -81,13 +81,20 @@ export interface InspectResult {
   lastError?: string;
 }
 
+export interface InspectErrorResult {
+  kind: 'inspect-error';
+  code: string;
+  message: string;
+}
+
 export type CliResult =
   | InstallSuccessResult
   | InstallErrorResult
   | RemoveSuccessResult
   | RemoveErrorResult
   | ListResult
-  | InspectResult;
+  | InspectResult
+  | InspectErrorResult;
 
 export function renderJson(result: CliResult): string {
   return JSON.stringify(result, null, 2);
@@ -114,6 +121,9 @@ export function renderText(result: CliResult): string {
     }
     case 'remove-error': {
       return `remove failed: ${result.code}\n  ${redactForCli(result.message)}`;
+    }
+    case 'inspect-error': {
+      return `inspect failed: ${result.code}\n  ${redactForCli(result.message)}`;
     }
     case 'list': {
       if (result.packages.length === 0) {

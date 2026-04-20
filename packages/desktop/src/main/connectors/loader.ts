@@ -153,8 +153,13 @@ export class SafePackageLoader {
       throw new LoaderRejectedError('ENTRYPOINT_SHAPE_INVALID', 'Runtime returned a malformed handshake response');
     }
 
-    this.assertIdentityMatches(target, response);
-    this.assertCapabilitiesAreSubset(target, response);
+    try {
+      this.assertIdentityMatches(target, response);
+      this.assertCapabilitiesAreSubset(target, response);
+    } catch (error) {
+      await safeTerminate(runtime);
+      throw error;
+    }
 
     return { package: target.package, runtime, handshake: response };
   }

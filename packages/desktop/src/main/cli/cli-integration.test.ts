@@ -210,6 +210,9 @@ describe('runCli end-to-end', () => {
       stderr: io.stderr,
     });
     expect(code).toBe(1);
+    const payload = JSON.parse(io.stderrText());
+    expect(payload.kind).toBe('inspect-error');
+    expect(payload.code).toBe('PACKAGE_NOT_FOUND');
   });
 
   it('exit code 66 when workspace path does not exist', async () => {

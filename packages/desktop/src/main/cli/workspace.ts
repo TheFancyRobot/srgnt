@@ -32,7 +32,7 @@ export async function resolveCliWorkspaceRoot(options: {
   const homeDir = options.homeDir ?? os.homedir();
 
   let candidate: string | undefined;
-  let source: 'flag' | 'env' | 'default' = 'default';
+  let source: 'flag' | 'env' | 'default';
 
   if (options.explicit && options.explicit.trim() !== '') {
     candidate = path.resolve(options.explicit.trim());

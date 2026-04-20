@@ -224,7 +224,11 @@ export async function runCli(options: RunOptions = {}): Promise<number> {
   }
 
   const rendered = parsed.format === 'json' ? renderJson(result) : renderText(result);
-  if (result.kind === 'install-error' || result.kind === 'remove-error') {
+  if (
+    result.kind === 'install-error' ||
+    result.kind === 'remove-error' ||
+    result.kind === 'inspect-error'
+  ) {
     stderr(rendered);
     return 1;
   }

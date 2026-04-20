@@ -128,9 +128,9 @@ describe('SafePackageLoader', () => {
     expect(terminate).toHaveBeenCalled();
   });
 
-  it('rejects when connectorId mismatches', async () => {
+  it('rejects when connectorId mismatches and terminates the runtime', async () => {
     const response = validResponse({ connectorId: 'outlook' });
-    const { runtime } = stubRuntime({ kind: 'ok', payload: response });
+    const { runtime, terminate } = stubRuntime({ kind: 'ok', payload: response });
     const spawn: SpawnRuntime = vi.fn().mockResolvedValue(runtime);
     const loader = new SafePackageLoader({ spawn });
     await expect(
@@ -140,11 +140,12 @@ describe('SafePackageLoader', () => {
         grantedCapabilities: ['http.fetch', 'logger'],
       }),
     ).rejects.toMatchObject({ code: 'CONNECTOR_ID_MISMATCH' });
+    expect(terminate).toHaveBeenCalled();
   });
 
-  it('rejects when packageId mismatches', async () => {
+  it('rejects when packageId mismatches and terminates the runtime', async () => {
     const response = validResponse({ packageId: 'jira-connector@2.0.0' });
-    const { runtime } = stubRuntime({ kind: 'ok', payload: response });
+    const { runtime, terminate } = stubRuntime({ kind: 'ok', payload: response });
     const spawn: SpawnRuntime = vi.fn().mockResolvedValue(runtime);
     const loader = new SafePackageLoader({ spawn });
     await expect(
@@ -154,11 +155,12 @@ describe('SafePackageLoader', () => {
         grantedCapabilities: ['http.fetch', 'logger'],
       }),
     ).rejects.toMatchObject({ code: 'PACKAGE_ID_MISMATCH' });
+    expect(terminate).toHaveBeenCalled();
   });
 
-  it('rejects when runtime requires a newer host SDK than available', async () => {
+  it('rejects when runtime requires a newer host SDK and terminates the runtime', async () => {
     const response = validResponse({ minHostVersion: '2.0.0' });
-    const { runtime } = stubRuntime({ kind: 'ok', payload: response });
+    const { runtime, terminate } = stubRuntime({ kind: 'ok', payload: response });
     const spawn: SpawnRuntime = vi.fn().mockResolvedValue(runtime);
     const loader = new SafePackageLoader({ spawn });
     await expect(
@@ -168,11 +170,12 @@ describe('SafePackageLoader', () => {
         grantedCapabilities: ['http.fetch', 'logger'],
       }),
     ).rejects.toMatchObject({ code: 'SDK_UNSUPPORTED' });
+    expect(terminate).toHaveBeenCalled();
   });
 
-  it('rejects when runtime claims a capability that was not granted', async () => {
+  it('rejects ungranted capabilities and terminates the runtime', async () => {
     const response = validResponse({ activeCapabilities: ['http.fetch', 'workspace.root'] });
-    const { runtime } = stubRuntime({ kind: 'ok', payload: response });
+    const { runtime, terminate } = stubRuntime({ kind: 'ok', payload: response });
     const spawn: SpawnRuntime = vi.fn().mockResolvedValue(runtime);
     const loader = new SafePackageLoader({ spawn });
     await expect(
@@ -182,6 +185,7 @@ describe('SafePackageLoader', () => {
         grantedCapabilities: ['http.fetch'],
       }),
     ).rejects.toMatchObject({ code: 'CAPABILITY_DENIED' });
+    expect(terminate).toHaveBeenCalled();
   });
 
   it('times out a hung handshake and terminates the runtime', async () => {

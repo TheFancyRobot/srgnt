@@ -12,6 +12,7 @@ import {
 import { CliError } from './workspace.js';
 import {
   hostOnly,
+  type InspectErrorResult,
   type InspectResult,
   type InstallErrorResult,
   type InstallSuccessResult,
@@ -175,14 +176,14 @@ export async function runList(deps: CommandDeps): Promise<ListResult> {
   };
 }
 
-export async function runInspect(deps: CommandDeps, args: InspectArgs): Promise<InspectResult | RemoveErrorResult> {
+export async function runInspect(deps: CommandDeps, args: InspectArgs): Promise<InspectResult | InspectErrorResult> {
   const settings = await deps.loadSettings();
   const packages = settings.connectors.installedPackages.packages;
   const record = packages.find((pkg) => pkg.packageId === args.packageId || pkg.connectorId === args.packageId);
 
   if (!record) {
     return {
-      kind: 'remove-error',
+      kind: 'inspect-error',
       code: 'PACKAGE_NOT_FOUND',
       message: `No installed package matches id ${args.packageId}`,
     };

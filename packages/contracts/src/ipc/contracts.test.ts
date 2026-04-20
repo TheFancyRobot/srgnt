@@ -149,6 +149,7 @@ describe('Desktop Settings Migration & Schema', () => {
 
     expect(parsed.connectors).toEqual({
       installedConnectorIds: ['jira'],
+      installedPackages: { packages: [] },
     });
   });
 

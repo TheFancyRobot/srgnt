@@ -34,6 +34,7 @@ const defaultSettings: DesktopSettings = {
   crashReportsEnabled: false,
   connectors: {
     installedConnectorIds: [] as readonly string[],
+    installedPackages: { packages: [] },
   },
   debugMode: false,
   maxConcurrentRuns: '3',

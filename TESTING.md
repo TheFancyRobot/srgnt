@@ -27,6 +27,20 @@ pnpm run release:rc:linux
 pnpm --filter @srgnt/desktop dev
 ```
 
+## Connector Package CLI
+
+Manage third-party connector packages with the `srgnt-connectors` CLI:
+
+```bash
+pnpm run cli:connectors -- help
+pnpm run cli:connectors -- install https://example.com/pkg.json --connector-id demo --json
+pnpm run cli:connectors -- list --workspace "$SRGNT_WORKSPACE"
+pnpm run cli:connectors -- inspect demo --json
+pnpm run cli:connectors -- remove demo@1.0.0
+```
+
+The CLI only writes durable package records into `.command-center/config/desktop-settings.json`. The Electron desktop boots the isolated worker runtime on next launch. Only `https://` URLs (plus `http://localhost` dev registries) are accepted; the CLI fails closed on checksum, connector-id, or manifest validation errors and returns a non-zero exit status with a structured JSON error body when `--json` is passed.
+
 The Electron app now supports:
 
 - first-run onboarding that creates a local workspace

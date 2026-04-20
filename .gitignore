@@ -22,3 +22,4 @@ packages/desktop/build/icons/
 .planning/
 docs/BRAND_GUIDE.md
 packages/desktop/.tmp/
+.claude/

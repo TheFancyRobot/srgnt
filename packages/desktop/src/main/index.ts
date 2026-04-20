@@ -50,6 +50,9 @@ import {
   type TerminalLaunchWithContextRequest,
   type UpdateCheckResponse,
 } from '@srgnt/contracts';
+import {
+  BUILTIN_CONNECTOR_MANIFESTS,
+} from '@srgnt/connectors';
 import { CanonicalStore, createRunLogService, createApprovalService, redactEnv, truncateOutput, DEFAULT_REDACTION_POLICY } from '@srgnt/runtime';
 import { taskFixtures, eventFixtures, messageFixtures } from '@srgnt/contracts';
 import { createPtySessionManager } from './pty/session-manager.js';
@@ -78,6 +81,9 @@ import {
   writeBootstrapState,
   writeDesktopSettings,
 } from './settings.js';
+import { ConnectorPackageHost, nullSpawn } from './connectors/index.js';
+
+const HOST_SDK_VERSION = '1.0.0';
 
 interface ConnectorState {
   id: ConnectorId;
@@ -117,114 +123,9 @@ const DEV_CONNECTOR_REGISTRY_ROOT = path.resolve(__dirname, '../dev-connectors')
 const DEV_CONNECTOR_REGISTRY_HOST = '127.0.0.1';
 const DEV_CONNECTOR_REGISTRY_URL = `${`http://${DEV_CONNECTOR_REGISTRY_HOST}`}:${DEV_CONNECTOR_REGISTRY_PORT}`;
 
-const builtinConnectorDefinitions: Record<string, Omit<ConnectorDefinition, 'packageUrl'>> = {
-  jira: {
-    manifest: {
-      id: 'jira',
-      name: 'Jira',
-      version: '0.1.0',
-      description: 'Atlassian Jira connector for issue tracking',
-      provider: 'atlassian',
-      authType: 'oauth2',
-      config: {
-        authType: 'oauth2',
-        timeout: 30000,
-        retryAttempts: 3,
-      },
-      capabilities: [
-        {
-          capability: 'read',
-          supportedOperations: ['getIssue', 'searchIssues', 'getProjects'],
-          entityMappings: [{ canonicalType: 'Task', providerType: 'Issue' }, { canonicalType: 'Person', providerType: 'User' }],
-        },
-        {
-          capability: 'write',
-          supportedOperations: ['transitionIssue', 'addComment'],
-          entityMappings: [{ canonicalType: 'Task', providerType: 'Issue' }],
-        },
-      ],
-      entityTypes: ['Task', 'Person'],
-      freshnessThresholdMs: 300000,
-      metadata: {},
-    },
-  },
-  outlook: {
-    manifest: {
-      id: 'outlook',
-      name: 'Outlook Calendar',
-      version: '0.1.0',
-      description: 'Microsoft Outlook Calendar connector for events and contacts',
-      provider: 'microsoft',
-      authType: 'oauth2',
-      config: {
-        authType: 'oauth2',
-        timeout: 30000,
-        retryAttempts: 3,
-      },
-      capabilities: [
-        {
-          capability: 'read',
-          supportedOperations: ['getEvent', 'listEvents', 'getContacts'],
-          entityMappings: [
-            { canonicalType: 'Event', providerType: 'CalendarEvent' },
-            { canonicalType: 'Person', providerType: 'Contact' },
-          ],
-        },
-        {
-          capability: 'write',
-          supportedOperations: ['createEvent', 'updateEvent', 'respondToEvent'],
-          entityMappings: [{ canonicalType: 'Event', providerType: 'CalendarEvent' }],
-        },
-      ],
-      entityTypes: ['Event', 'Person'],
-      freshnessThresholdMs: 300000,
-      metadata: {},
-    },
-    entityCounts: {
-      event: 5,
-      person: 3,
-    },
-  },
-  teams: {
-    manifest: {
-      id: 'teams',
-      name: 'Microsoft Teams',
-      version: '0.1.0',
-      description: 'Microsoft Teams connector for messages and team members',
-      provider: 'microsoft',
-      authType: 'oauth2',
-      config: {
-        authType: 'oauth2',
-        timeout: 30000,
-        retryAttempts: 3,
-      },
-      capabilities: [
-        {
-          capability: 'read',
-          supportedOperations: ['getMessage', 'listMessages', 'getMembers'],
-          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }, { canonicalType: 'Person', providerType: 'TeamMember' }],
-        },
-        {
-          capability: 'write',
-          supportedOperations: ['sendMessage', 'replyToMessage'],
-          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }],
-        },
-        {
-          capability: 'subscribe',
-          supportedOperations: ['onNewMessage'],
-          entityMappings: [{ canonicalType: 'Message', providerType: 'ChatMessage' }],
-        },
-      ],
-      entityTypes: ['Message', 'Person'],
-      freshnessThresholdMs: 300000,
-      metadata: {},
-    },
-    entityCounts: {
-      message: 3,
-      mention: 2,
-    },
-  },
-};
+const builtinConnectorDefinitions: Record<string, Omit<ConnectorDefinition, 'packageUrl'>> = Object.fromEntries(
+  BUILTIN_CONNECTOR_MANIFESTS.map((manifest: ConnectorManifest) => [manifest.id, { manifest }])
+);
 
 let connectorDefinitions: Record<string, ConnectorDefinition> = Object.entries(builtinConnectorDefinitions).reduce((next, [id, def]) => {
   next[id] = {
@@ -268,6 +169,30 @@ const approvalService = createApprovalService();
 const pendingLaunches = new Map<string, { resolve: (approved: boolean) => void }>();
 const crashReporter = createCrashReporter();
 crashReporter.start();
+
+// Connector package host: owns installed-package registry + isolated loader
+// boundary. Runs third-party packages through `nullSpawn` until Step 05 wires
+// CLI install commands and the worker script is bundled. Built-in connectors
+// are registered through `@srgnt/connectors` and do not use this runtime.
+const connectorPackageHost = new ConnectorPackageHost({
+  spawnRuntime: nullSpawn,
+  hostSdkVersion: HOST_SDK_VERSION,
+  persistRegistry: async (snapshot) => {
+    desktopSettings = mergeDesktopSettings({
+      ...desktopSettings,
+      connectors: {
+        ...desktopSettings.connectors,
+        installedPackages: snapshot,
+      },
+    });
+    if (workspaceRoot) {
+      await writeDesktopSettings(workspaceRoot, desktopSettings);
+    }
+  },
+  onRuntimeCrash: (packageId, reason) => {
+    console.warn('[main] connector package crash', { packageId, reason });
+  },
+});
 const semanticSearchHost = createSemanticSearchHost();
 let semanticSearchEnabled = false;
 let semanticSearchWatcher: WorkspaceWatcher | null = null;
@@ -587,6 +512,7 @@ async function initializeDesktopState(): Promise<void> {
   const bootstrapState = await readBootstrapState(userDataPath);
   if (!bootstrapState.workspaceRoot) {
     syncConnectorStateFromSettings(defaultDesktopSettings);
+    await syncConnectorPackageHostFromSettings(defaultDesktopSettings);
     return;
   }
 
@@ -621,6 +547,7 @@ async function setWorkspaceRootInternal(root: string): Promise<string> {
 
   crashReporter.setWorkspaceRoot(resolvedRoot);
   syncConnectorStateFromSettings(desktopSettings);
+  await syncConnectorPackageHostFromSettings(desktopSettings);
   registerNotesHandlers(workspaceRoot);
 
   // Initialize semantic search for the new workspace
@@ -639,6 +566,7 @@ async function persistDesktopSettings(nextSettings: DesktopSettings): Promise<vo
     await writeDesktopSettings(workspaceRoot, desktopSettings);
   }
   syncConnectorStateFromSettings(desktopSettings);
+  await syncConnectorPackageHostFromSettings(desktopSettings);
 }
 
 function connectorDefinition(id: string): ConnectorDefinition | undefined {
@@ -704,6 +632,19 @@ function syncConnectorStateFromSettings(settings: DesktopSettings): void {
   for (const [id, state] of nextState.entries()) {
     connectorState.set(id, state);
   }
+}
+
+async function syncConnectorPackageHostFromSettings(settings: DesktopSettings): Promise<void> {
+  const durablePackages = settings.connectors?.installedPackages?.packages ?? [];
+  // Clear any previously seeded packages so workspace switches do not carry
+  // stale runtime state from an earlier workspace.
+  for (const existing of connectorPackageHost.listPackages()) {
+    await connectorPackageHost.uninstall(existing.packageId);
+  }
+  for (const pkg of durablePackages) {
+    await connectorPackageHost.registerInstalledPackage(pkg);
+  }
+  await connectorPackageHost.applyRestartRecovery();
 }
 
 function createAvailableConnectorState(id: string, definition?: ConnectorDefinition): ConnectorState {

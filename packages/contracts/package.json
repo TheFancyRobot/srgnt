@@ -4,14 +4,14 @@
   "private": true,
   "description": "Shared contracts and entity schemas for srgnt",
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "default": "./dist/index.js"
     },
     "./entities": {
-      "types": "./dist/entities/index.d.ts",
+      "types": "./src/entities/index.ts",
       "default": "./dist/entities/index.js"
     }
   },

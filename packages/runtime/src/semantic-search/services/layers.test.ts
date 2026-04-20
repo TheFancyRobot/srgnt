@@ -725,15 +725,31 @@ describe('IndexStateStoreLayer', () => {
 });
 
 // --- Mock vectra module ---
+// Mirrors the full public surface of `vectra@0.9.0` LocalIndex so tests fail
+// loudly with a meaningful assertion if production adds a new call path,
+// instead of silently throwing a `TypeError: fn is not a function`.
 const mockLocalIndexInstance = {
-  isIndexCreated: vi.fn(),
-  createIndex: vi.fn(),
+  // Getters on the real class. Kept as plain strings here because the mock is
+  // never type-checked against `LocalIndex<T>`; the goal is behavioural parity.
+  folderPath: '/mock/folder',
+  indexName: 'index',
+  // Mutation / lifecycle
   beginUpdate: vi.fn(),
+  cancelUpdate: vi.fn(),
+  createIndex: vi.fn(),
+  deleteIndex: vi.fn(),
   endUpdate: vi.fn(),
-  insertItem: vi.fn(),
-  queryItems: vi.fn(),
-  listItemsByMetadata: vi.fn(),
+  isIndexCreated: vi.fn(),
+  // Item CRUD
   deleteItem: vi.fn(),
+  getItem: vi.fn(),
+  insertItem: vi.fn(),
+  upsertItem: vi.fn(),
+  // Read-only queries
+  getIndexStats: vi.fn(),
+  listItems: vi.fn(),
+  listItemsByMetadata: vi.fn(),
+  queryItems: vi.fn(),
 };
 
 vi.mock('vectra', () => {
@@ -750,12 +766,18 @@ describe('VectraStoreLayer', () => {
     vi.clearAllMocks();
     mockLocalIndexInstance.isIndexCreated.mockResolvedValue(false);
     mockLocalIndexInstance.createIndex.mockResolvedValue(undefined);
+    mockLocalIndexInstance.deleteIndex.mockResolvedValue(undefined);
     mockLocalIndexInstance.beginUpdate.mockResolvedValue(undefined);
     mockLocalIndexInstance.endUpdate.mockResolvedValue(undefined);
+    mockLocalIndexInstance.cancelUpdate.mockReturnValue(undefined);
     mockLocalIndexInstance.insertItem.mockResolvedValue(undefined);
-    mockLocalIndexInstance.queryItems.mockResolvedValue([]);
-    mockLocalIndexInstance.listItemsByMetadata.mockResolvedValue([]);
+    mockLocalIndexInstance.upsertItem.mockResolvedValue(undefined);
     mockLocalIndexInstance.deleteItem.mockResolvedValue(undefined);
+    mockLocalIndexInstance.getItem.mockResolvedValue(undefined);
+    mockLocalIndexInstance.queryItems.mockResolvedValue([]);
+    mockLocalIndexInstance.listItems.mockResolvedValue([]);
+    mockLocalIndexInstance.listItemsByMetadata.mockResolvedValue([]);
+    mockLocalIndexInstance.getIndexStats.mockResolvedValue({ version: 1, metadata_config: {}, items: 0 });
   });
 
   afterEach(async () => {
@@ -1018,6 +1040,35 @@ describe('VectraStoreLayer', () => {
   });
 });
 
+describe('mockLocalIndexInstance drift guard', () => {
+  // Ensures the Vectra mock stays in sync with the real LocalIndex surface so
+  // production calling a new method does not silently throw TypeError in tests.
+  it('covers every public LocalIndex method exposed by vectra', async () => {
+    const real = await vi.importActual<typeof import('vectra')>('vectra');
+    const proto = real.LocalIndex.prototype as Record<string, unknown>;
+    // Members TypeScript marks protected/private but that still live on the
+    // prototype. Our production code cannot call these, so the mock does not
+    // need to shadow them.
+    const nonPublic = new Set(['loadIndexData', 'addItemToUpdate']);
+    const publicMethods = Object.getOwnPropertyNames(proto).filter((name) => {
+      if (name === 'constructor') return false;
+      if (name.startsWith('_')) return false;
+      if (nonPublic.has(name)) return false;
+      const descriptor = Object.getOwnPropertyDescriptor(proto, name);
+      // Skip getters — the mock holds plain fields for those.
+      if (descriptor?.get) return false;
+      return typeof proto[name] === 'function';
+    });
+
+    for (const method of publicMethods) {
+      expect(
+        (mockLocalIndexInstance as Record<string, unknown>)[method],
+        `mockLocalIndexInstance is missing method "${method}" — update the mock so tests can observe calls to it`,
+      ).toBeDefined();
+    }
+  });
+});
+
 // --- WorkspaceIndexerLayer tests ---
 // The real WorkspaceIndexerLayer requires 5 service dependencies.
 // We build a test layer with all mocks.
@@ -1125,7 +1176,7 @@ describe('WorkspaceIndexerLayer', () => {
     expect(result.chunksCreated).toBe(1);
   });
 
-  it('removeFile removes from VectraStore and IndexStateStore', async () => {
+  it('removeFile fails with IndexCorruptionError on an empty Vectra store', async () => {
     testTmpDir = mkdtempSync(path.join(os.tmpdir(), 'ws-idx-test-'));
     const workspaceDir = path.join(testTmpDir, 'workspace');
     mkdirSync(workspaceDir, { recursive: true });
@@ -1168,9 +1219,10 @@ describe('WorkspaceIndexerLayer', () => {
       fullLayer,
     );
 
-    // removeFile on a non-existent file in an empty index should succeed
-    // (it's a no-op) or may fail with IndexCorruptionError on empty Vectra
-    expect(['Left', 'Right']).toContain(result._tag);
+    expect(result._tag).toBe('Left');
+    if (result._tag === 'Left') {
+      expect(result.left).toBeInstanceOf(IndexCorruptionError);
+    }
   });
 
   it('reindexFile fails for non-existent file', async () => {

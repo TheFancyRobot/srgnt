@@ -28,11 +28,11 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-04-19._
-- Session in progress: [[05_Sessions/2026-04-16-043916-replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer-team-lead|SESSION-2026-04-16-043916 team-lead session for Replace desktop worker stub with real runtime semantic-search Effect layer]] - owner: team-lead - phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]] - updated: 2026-04-16
-- Current step: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation|STEP-18-05 Add a minimal semantic-search UI slice for end-to-end query and result validation]] - status: done_limited - phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]] - owner: executor-1
+_Last refreshed: 2026-04-21._
+- Session in progress: [[05_Sessions/2026-04-21-014952-run-real-machine-release-validation-team-lead|SESSION-2026-04-21-014952 team-lead session for Run real machine release validation]] - owner: team-lead - phase: [[02_Phases/Phase_11_real_machine_validation/Phase|Phase 11 real machine validation]] - updated: 2026-04-21
+- Current step: [[02_Phases/Phase_11_real_machine_validation/Steps/Step_01_run-real-machine-release-validation|STEP-11-01 Run real machine release validation]] - status: planned - phase: [[02_Phases/Phase_11_real_machine_validation/Phase|Phase 11 real machine validation]]
 - Active phase: [[02_Phases/Phase_19_implement_connector_pluggability/Phase|PHASE-19 Implement Connector Pluggability]] - status: shipped - owner: coordinator - updated: 2026-04-19
-- Also active: 45 more additional sessions, 32 more additional steps, 1 open critical bug.
+- Also active: 46 more additional sessions, 32 more additional steps, 1 open critical bug.
 <!-- AGENT-END:current-focus -->
 - Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
 - Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]

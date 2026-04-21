@@ -22,7 +22,7 @@ tags:
 
 ## Purpose
 
-- Outcome: add the non-secret Jira settings contract and UI surface while routing the Jira API token through OS keychain / main-process secret storage.
+- Outcome: add the non-secret Jira settings contract and UI surface while routing the Jira API token through a privileged credential adapter owned by Electron main.
 - Parent phase: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Phase|Phase 21 jira connector package extraction and markdown sync]].
 
 ## Why This Step Exists
@@ -39,9 +39,28 @@ tags:
 
 - `packages/contracts/src/ipc/contracts.ts`
 - `packages/desktop/src/main/settings.ts`
+- `packages/desktop/src/main/index.ts`
+- `packages/desktop/src/preload/index.ts`
+- `packages/desktop/src/renderer/env.d.ts`
 - `packages/desktop/src/renderer/main.tsx`
 - `packages/desktop/src/renderer/components/Settings.tsx`
-- privileged desktop-main secret storage or new helper module added for Jira credentials
+- new privileged desktop-main credential helper module for Jira credentials
+
+## Concrete Starting Points
+
+- Extend the durable non-secret settings schema in:
+  - `packages/contracts/src/ipc/contracts.ts`
+  - `packages/desktop/src/main/settings.ts`
+- Add privileged token actions in Electron main/preload types:
+  - `packages/desktop/src/main/index.ts`
+  - `packages/desktop/src/preload/index.ts`
+  - `packages/desktop/src/renderer/env.d.ts`
+- Add settings UI affordances in:
+  - `packages/desktop/src/renderer/main.tsx`
+  - `packages/desktop/src/renderer/components/Settings.tsx`
+- Add a new Jira credential adapter in desktop main, with this planning assumption:
+  - preferred backend: true OS keychain
+  - fallback backend: encrypted local storage when OS keychain is unavailable
 
 ## Required Reading
 
@@ -57,10 +76,11 @@ tags:
 
 1. Extend desktop settings so Jira has a durable non-secret configuration model.
 2. Prefer a connector-config structure keyed by connector ID over a Jira-only dead end, but keep the first implementation concrete and shippable.
-3. Include at minimum: Jira base URL/site, account email/label, project keys or JQL scope, and extraction toggles/groups.
-4. Add a settings UX for entering/updating Jira config and a separate token submission/reconnect action.
-5. Store the Jira API token only through a privileged OS-keychain path; do not persist it into `desktop-settings.json`, renderer state snapshots, or markdown.
-6. Add tests that prove token non-persistence and safe migration/default behavior.
+3. Include at minimum: Jira site URL, account email or label, scope mode, project keys and/or JQL, and extraction toggles/groups.
+4. Add a settings UX for entering and updating non-secret Jira config plus a separate token submit or reconnect flow.
+5. Implement a main-process credential adapter with this approved planning direction: **OS keychain preferred, encrypted local fallback allowed when the keychain is unavailable**.
+6. Keep the raw token out of `desktop-settings.json`, renderer snapshots, markdown, package manifests, and package install metadata.
+7. Add tests that prove token non-persistence and safe migration or default behavior.
 
 ## Agent-Managed Snapshot
 
@@ -73,24 +93,84 @@ tags:
 
 ## Implementation Notes
 
-- Recommended default settings fields:
+### Recommended settings shape
+
+- Model Jira under connector-scoped settings, not top-level one-off fields.
+- Minimum non-secret fields:
   - `siteUrl`
-  - `accountEmail`
+  - `accountEmail` or `accountLabel`
   - `scopeMode` (`projects` or `jql`)
   - `projectKeys` and/or `jql`
   - extraction toggles for comments, links/subtasks, sprints, worklog summaries, attachment metadata, changelog summaries
-- Integrity risks:
-  - token leakage into saved JSON;
-  - renderer owning long-lived secret state;
-  - Jira-only schema shape that cannot accommodate future connector package settings.
-- Validation target:
-  - contracts/settings tests;
-  - renderer settings UI tests if available;
-  - explicit assertion that saved settings files omit the Jira token.
+- Token handling should use separate commands such as set/update/clear/status rather than treating the token as part of `settingsSave`.
+
+### Credential backend assumption
+
+- The refined plan assumes a **credential adapter** rather than hard-coding a single library at note time.
+- Adapter priority:
+  1. OS keychain backend when available
+  2. encrypted local fallback under Electron main when keychain access is unavailable
+- If the implementation cannot provide a trustworthy encrypted fallback on a target platform, fail closed and surface that limitation instead of silently storing plaintext.
+
+### Validation commands
+
+- `pnpm --filter @srgnt/contracts test`
+- `pnpm --filter @srgnt/contracts typecheck`
+- `pnpm --filter @srgnt/desktop test`
+- `pnpm --filter @srgnt/desktop typecheck`
+- Optional narrow target if test names are added: run settings-related and preload-related tests first before full desktop suite.
+
+### Manual checks
+
+- Save Jira non-secret config, then inspect `.command-center/config/desktop-settings.json` and confirm no token material exists.
+- Restart the app and confirm non-secret settings persist while token presence is only represented as a safe boolean/status, not raw secret text.
+- Verify reconnect/clear-token flow works without hand-editing JSON.
+
+### Edge cases and failure modes
+
+- Existing settings migration drops unknown connector config or rewrites it incorrectly.
+- Renderer keeps token state around after submission.
+- Credential backend unavailable on a platform and implementation falls back to insecure plaintext.
+- Scope mode permits invalid combinations such as both empty `projectKeys` and empty `jql`.
+
+### Security considerations
+
+- This is the most security-sensitive step in the phase.
+- The renderer may submit a token but must not retain or rehydrate it.
+- Logs, errors, crash reports, and persisted settings must all avoid token leakage.
+- Any “credential status” surface sent back to renderer must be boolean/summary only.
+
+### Performance considerations
+
+- Not throughput-sensitive, but settings reads and credential lookups must remain fast enough for app startup and connect actions.
+- Avoid repeated blocking credential lookups on every render.
+
+### Acceptance criteria mapping
+
+- Phase criterion “Desktop settings support Jira non-secret configuration” is primarily satisfied here.
+- Phase criterion “Jira API token handling uses OS keychain / main-process secret storage only” is defined here and partially implemented here.
+- Later steps consume this contract; they should not redesign it.
+
+### Junior-developer readiness checklist
+
+- Exact outcome and success condition: pass.
+- Why the step matters: pass.
+- Prerequisites and dependencies: pass.
+- Concrete starting files/packages/tests: pass.
+- Required reading completeness: pass.
+- Constraints and non-goals: pass.
+- Validation commands and manual checks: pass.
+- Edge cases and recovery expectations: pass.
+- Security considerations: pass.
+- Performance considerations: pass.
+- Integration touchpoints and downstream effects: pass.
+- Blockers or unresolved decisions: resolved enough for execution via adapter assumption.
+- Junior readiness verdict: **pass**.
 
 ## Human Notes
 
 - Treat this as a contract-freezing step. Step 03 should consume the agreed settings model, not redesign it mid-implementation.
+- If the credential adapter reveals a true cross-platform blocker, record it explicitly and do not silently downgrade the security boundary.
 
 ## Session History
 

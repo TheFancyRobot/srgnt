@@ -21,7 +21,7 @@ tags:
 
 ## Purpose
 
-- Outcome: move Jira out of `packages/connectors/src/jira/` into a dedicated workspace package such as `packages/connector-jira/` that exports a Phase 20-compatible connector package shape.
+- Outcome: move Jira out of `packages/connectors/src/jira/` into a dedicated workspace package, recommended as `packages/connector-jira/`, that exports a Phase 20-compatible connector package shape.
 - Parent phase: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Phase|Phase 21 jira connector package extraction and markdown sync]].
 
 ## Why This Step Exists
@@ -40,8 +40,26 @@ tags:
 - `packages/connectors/src/jira/`
 - `packages/connectors/src/index.ts`
 - `packages/connectors/src/sdk/`
+- `packages/connectors/src/sdk/registry.test.ts`
 - `examples/connectors/jira/`
-- `package.json`, workspace filters, tsconfig references, and package manifests
+- `package.json`, `pnpm-workspace.yaml`, workspace `package.json` manifests, and tsconfig references
+
+## Concrete Starting Points
+
+- Create a new workspace package:
+  - `packages/connector-jira/package.json`
+  - `packages/connector-jira/tsconfig.json`
+  - `packages/connector-jira/src/index.ts`
+- Move or split current Jira baseline code from:
+  - `packages/connectors/src/jira/index.ts`
+  - `packages/connectors/src/jira/connector.ts`
+  - `packages/connectors/src/jira/*.test.ts`
+- Remove built-in exports and registration from:
+  - `packages/connectors/src/index.ts`
+  - any built-in registry tests that currently assert Jira is bundled by `@srgnt/connectors`
+- Repoint example usage from:
+  - `examples/connectors/jira/src/index.ts`
+  - `examples/connectors/jira/src/index.test.ts`
 
 ## Required Reading
 
@@ -56,11 +74,13 @@ tags:
 ## Execution Prompt
 
 1. Create a dedicated Jira workspace package that exports `{ manifest, runtime, factory }` for the shared package runtime.
-2. Move the existing Jira fixture, mapping, and manifest logic into that package as the migration baseline.
-3. Remove Jira registration and re-exports from `@srgnt/connectors` so Jira is no longer a built-in connector there.
-4. Keep the connector ID stable as `jira`; do not invent a new install-facing identifier.
-5. Update examples/tests/import paths so the extracted package becomes the new single source of truth.
-6. Document any migration consequences for Step 05 (desktop integration) rather than silently patching around them.
+2. Use package name `@srgnt/connector-jira` unless codebase constraints force a different workspace name; if they do, document the reason in this step note.
+3. Move the existing Jira fixture, mapping, tests, and manifest logic into that package as the extraction baseline.
+4. Remove Jira registration and re-exports from `@srgnt/connectors` so Jira is no longer a built-in connector there.
+5. Keep the connector ID stable as `jira`; do not invent a new install-facing identifier.
+6. Update examples/tests/import paths so the extracted package becomes the new single source of truth.
+7. Leave Outlook and Teams untouched in `@srgnt/connectors`; this step is about isolating Jira only.
+8. Document any migration consequences for Step 05 (desktop integration) rather than silently patching around them.
 
 ## Agent-Managed Snapshot
 
@@ -73,18 +93,62 @@ tags:
 
 ## Implementation Notes
 
-- Exact expected output:
-  - `packages/connector-jira/` exists as a workspace package.
-  - Jira no longer appears in `packages/connectors/src/index.ts` built-in exports or built-in registration.
-  - the new package exposes a package-shaped entrypoint compatible with Phase 20.
-- Integrity risks:
-  - dual registration of `jira` from both built-in and package paths;
-  - example package drift;
-  - broken imports in tests and desktop manifests.
-- Validation target:
-  - targeted package tests for the new Jira package;
-  - `pnpm --filter @srgnt/connectors test` and typecheck after Jira removal;
-  - example package tests/typecheck if still retained.
+### Concrete file and package expectations
+
+- `pnpm-workspace.yaml` already includes `packages/*`, so a new `packages/connector-jira/` package should be picked up automatically.
+- The new package should mirror the minimal structure already expected by the Phase 20 package runtime:
+  - manifest export
+  - runtime metadata export
+  - factory export
+- The extracted package should initially preserve the current fixture-backed behavior so Step 03 can add live API behavior without mixing concerns.
+- The old built-in Jira path should either be deleted or reduced to zero Jira exports; do not leave a shadow registration path behind.
+
+### Validation commands
+
+- `pnpm --filter @srgnt/connector-jira typecheck`
+- `pnpm --filter @srgnt/connector-jira test`
+- `pnpm --filter @srgnt/connectors typecheck`
+- `pnpm --filter @srgnt/connectors test`
+- `pnpm --filter @srgnt/example-connectors-jira test`
+- If desktop imports break after removal: `pnpm --filter @srgnt/desktop typecheck`
+
+### Edge cases and failure modes
+
+- Dual registration: Jira accidentally remains in the built-in registry and the external package.
+- Example drift: `examples/connectors/jira` still imports from `@srgnt/connectors` instead of the new package.
+- Package-shape drift: the new package exports fixtures and manifest but not the required `{ manifest, runtime, factory }` entrypoint.
+- Test drift: registry tests still assert `jira` is bundled alongside Outlook and Teams.
+
+### Security considerations
+
+- No new secrets should be introduced in this step.
+- Preserve the Phase 20 package boundary and do not reintroduce a privileged built-in-only Jira load path.
+
+### Performance considerations
+
+- Not performance-sensitive yet beyond keeping the extraction as a structural move.
+- Do not pull live network or markdown-write behavior into this step.
+
+### Acceptance criteria mapping
+
+- Phase criterion “Jira no longer ships as a built-in implementation” is primarily satisfied here.
+- This step does **not** satisfy settings, auth, live API, markdown persistence, or desktop integration criteria.
+
+### Junior-developer readiness checklist
+
+- Exact outcome and success condition: pass.
+- Why the step matters: pass.
+- Prerequisites and dependencies: pass.
+- Concrete starting files/packages/tests: pass.
+- Required reading completeness: pass.
+- Constraints and non-goals: pass.
+- Validation commands and acceptance mapping: pass.
+- Edge cases and recovery expectations: pass.
+- Security considerations: pass.
+- Performance considerations: pass.
+- Integration touchpoints and downstream effects: pass.
+- Blockers or unresolved decisions: none blocking.
+- Junior readiness verdict: **pass**.
 
 ## Human Notes
 

@@ -39,6 +39,16 @@ tags:
 - `packages/connector-jira/` markdown writer/output contracts
 - `packages/contracts/src/workspace/layout.ts`
 - any desktop or host capability code needed to write under the workspace root safely
+- notes or file-service helpers already used by desktop main for workspace markdown
+
+## Concrete Starting Points
+
+- Use the workspace layout contract from `packages/contracts/src/workspace/layout.ts` to anchor the top-level directory name.
+- Add package modules such as:
+  - `src/markdown/renderIssue.ts`
+  - `src/markdown/pathing.ts`
+  - `src/markdown/archive.ts`
+- Decide file paths using the existing workspace root directories, which already include `Systems` with a capital `S`.
 
 ## Required Reading
 
@@ -49,12 +59,13 @@ tags:
 
 ## Execution Prompt
 
-1. Define the Jira markdown path convention, recommended as `Systems/Jira/<project-key>/<issue-key>.md`.
+1. Define the Jira markdown path convention as `Systems/Jira/<project-key>/<issue-key>.md` unless an implementation constraint requires a documented adjustment.
 2. Write one deterministic markdown file per issue with stable frontmatter carrying provider IDs, issue key, project key, source URL, sync timestamps, status, priority, labels, and stale/archive state.
 3. Render the selected rich metadata into human-readable markdown sections without destroying raw traceability.
 4. Make updates idempotent so repeated syncs rewrite the same file instead of creating duplicates.
 5. When an issue disappears from the active sync result, mark its file stale/archived rather than deleting it.
 6. Record any connector-owned bookkeeping needed to tell “out of scope” from “never seen.”
+7. Keep connector-generated files clearly separate from human-authored notes.
 
 ## Agent-Managed Snapshot
 
@@ -67,21 +78,87 @@ tags:
 
 ## Implementation Notes
 
-- Recommended markdown sections:
+### Markdown structure expectations
+
+- Recommended frontmatter keys:
+  - `provider: jira`
+  - `provider_id`
+  - `issue_key`
+  - `project_key`
+  - `source_url`
+  - `synced_at`
+  - `issue_updated_at`
+  - `status`
+  - `priority`
+  - `labels`
+  - `is_archived`
+  - `archived_reason`
+- Recommended sections:
   - summary / description
   - metadata snapshot
   - comments
   - issue links / subtasks
   - sprint/worklog/changelog summaries
-- Integrity risks:
-  - unstable filenames;
-  - lossy rewrites that drop previously synced data;
-  - accidental deletion when scope changes;
-  - mixing connector-owned generated content with hand-authored notes.
-- Validation target:
-  - golden-file or snapshot tests for markdown output;
-  - tests for idempotent rewrites;
-  - tests for stale/archive marking when issues leave scope.
+  - raw provider metadata summary or references where needed
+
+### File identity rules
+
+- File identity should be based on stable Jira issue key, not summary text.
+- Repeated syncs must overwrite the same path.
+- If a project key changes or an issue is moved, record explicit migration behavior rather than letting duplicate files accumulate silently.
+
+### Validation commands
+
+- `pnpm --filter @srgnt/connector-jira typecheck`
+- `pnpm --filter @srgnt/connector-jira test`
+- If shared workspace helpers are touched: `pnpm --filter @srgnt/contracts test`
+- If desktop write helpers are touched: `pnpm --filter @srgnt/desktop test`
+
+### Manual checks
+
+- Run sync twice and confirm the same issue path is rewritten, not duplicated.
+- Remove an issue from mocked sync scope and confirm the file becomes stale or archived instead of deleted.
+- Inspect sample markdown for readability and traceability.
+
+### Edge cases and failure modes
+
+- Unstable filenames caused by summary-based slugging.
+- Lossy rewrites that drop previously synced metadata.
+- Accidental deletion when scope changes or Jira permissions narrow.
+- Generated files landing outside the expected workspace subtree.
+- Mixing connector-owned generated content with hand-authored notes in the same file.
+
+### Security considerations
+
+- Never write Jira API tokens or other secret material into markdown.
+- Keep only safe provider metadata needed for traceability.
+- Be careful with comments or changelog bodies if they may contain sensitive user content; preserve the agreed product behavior but avoid expanding scope into extra hidden copies.
+
+### Performance considerations
+
+- Keep markdown rendering deterministic and linear in the size of fetched issue data.
+- Avoid repeatedly scanning the whole workspace when a connector-owned subtree index or bookkeeping file is enough.
+
+### Acceptance criteria mapping
+
+- Phase criterion “Synced Jira data lands as one stable markdown file per issue ... with stale/archive marking” is primarily satisfied here.
+- This step depends on Step 03 producing a structured sync payload rich enough to render without re-fetching.
+
+### Junior-developer readiness checklist
+
+- Exact outcome and success condition: pass.
+- Why the step matters: pass.
+- Prerequisites and dependencies: pass.
+- Concrete starting files/packages/tests: pass.
+- Required reading completeness: pass.
+- Constraints and non-goals: pass.
+- Validation commands and manual checks: pass.
+- Edge cases and recovery expectations: pass.
+- Security considerations: pass.
+- Performance considerations: pass.
+- Integration touchpoints and downstream effects: pass.
+- Blockers or unresolved decisions: none blocking.
+- Junior readiness verdict: **pass**.
 
 ## Human Notes
 

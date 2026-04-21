@@ -84,11 +84,65 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 
 - Keep the user-visible connector ID as `jira`.
 - Use API token authentication first; do not expand this phase into Atlassian OAuth unless a blocker proves token auth insufficient.
-- Store the API token only in OS keychain / secure storage behind Electron main.
+- Store the API token behind Electron main using a credential adapter with **OS keychain preferred** and **encrypted local fallback only when the keychain is unavailable and the fallback remains non-plaintext**.
 - Default extraction scope is **issues-first rich metadata**: issue fields, comments, labels, links, subtasks, sprint data, worklog summaries, attachment metadata, and changelog summaries when available.
 - Store one markdown file per issue under a connector-owned subtree such as `Systems/Jira/<project-key>/<issue-key>.md`.
 - If an issue disappears from scope, mark the file stale/archived rather than deleting it automatically.
 - Do not build dashboards or visualization-specific projections in this phase.
+
+## Phase-Wide Code Map and Execution Surface
+
+- Package extraction surface:
+  - `packages/connectors/src/jira/`
+  - `packages/connectors/src/index.ts`
+  - `examples/connectors/jira/`
+- Settings and credential surface:
+  - `packages/contracts/src/ipc/contracts.ts`
+  - `packages/desktop/src/main/settings.ts`
+  - `packages/desktop/src/main/index.ts`
+  - `packages/desktop/src/preload/index.ts`
+  - `packages/desktop/src/renderer/env.d.ts`
+  - `packages/desktop/src/renderer/main.tsx`
+  - `packages/desktop/src/renderer/components/Settings.tsx`
+- Package host and connector lifecycle surface:
+  - `packages/desktop/src/main/connectors/host.ts`
+  - `packages/desktop/src/main/cli/commands.ts`
+  - `packages/desktop/dev-connectors/catalog.json`
+  - `packages/desktop/dev-connectors/packages/jira.json`
+- Workspace markdown persistence surface:
+  - `packages/contracts/src/workspace/layout.ts`
+  - package-owned markdown rendering and write modules under `packages/connector-jira/`
+
+## Phase-Wide Validation Baseline
+
+- Narrowest useful checks during execution:
+  - `pnpm --filter @srgnt/connector-jira typecheck`
+  - `pnpm --filter @srgnt/connector-jira test`
+  - `pnpm --filter @srgnt/desktop typecheck`
+  - `pnpm --filter @srgnt/desktop test`
+  - `pnpm --filter @srgnt/contracts typecheck`
+  - `pnpm --filter @srgnt/contracts test`
+- Broader credibility check before phase completion:
+  - `pnpm test`
+  - run targeted desktop e2e or package-host flow checks if the final Jira path is exercised there
+
+## Phase-Wide Readiness Checklist
+
+Use this checklist for every Step 21 note:
+
+- [x] exact outcome and success condition are explicit
+- [x] why the step matters to the phase is explicit
+- [x] prerequisites, setup state, and dependencies are explicit
+- [x] concrete starting files, directories, packages, commands, and tests are named
+- [x] required reading is populated
+- [x] implementation constraints and non-goals are explicit
+- [x] validation commands, manual checks, and acceptance mapping are explicit
+- [x] edge cases, failure modes, and recovery expectations are explicit
+- [x] security considerations are explicit or marked not applicable
+- [x] performance considerations are explicit or marked not applicable
+- [x] integration touchpoints and downstream effects are explicit
+- [x] blockers, unresolved decisions, and handoff expectations are explicit
+- [x] each step has been refined to junior-developer readiness
 
 ## Linear Context
 

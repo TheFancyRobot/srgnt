@@ -37,7 +37,7 @@ tags:
 - Phase 20 established a package-shaped connector runtime and a safe host/loader boundary for external connectors.
 - The current Jira implementation in `packages/connectors/src/jira/` is still a built-in fixture-backed connector that proves contracts but does not perform live API sync or markdown persistence.
 - Phase 21 turns Jira into the first real connector package that exercises the shared package runtime while keeping the user-facing connector ID stable as `jira`.
-- The first live auth mode is **Jira API token**, not OAuth. Users configure non-secret Jira settings in the desktop settings screen, while the API token is stored in OS keychain storage behind the Electron main-process boundary.
+- The first live auth mode is **Jira API token**, not OAuth. Users configure non-secret Jira settings in the desktop settings screen, while the API token is stored behind a main-process credential adapter with **OS keychain preferred** and an **encrypted local fallback only when keychain access is unavailable**.
 - Synced Jira content is written as **one markdown file per issue** under a connector-owned subtree such as `Systems/Jira/<project-key>/<issue-key>.md`. Files that disappear from the sync scope are not deleted automatically; they are marked stale/archived.
 
 ## Key Components
@@ -46,7 +46,7 @@ tags:
 - `packages/connector-jira/` workspace package - owns the Jira manifest, runtime metadata, factory export, API client, mapping logic, and markdown writer.
 - Shared connector factory contract - package must export `{ manifest, runtime, factory }` compatible with the Phase 20 host/loader path.
 - Jira settings model - non-secret per-user config such as site URL, account email, project/JQL scope, and extraction toggles surfaced in Settings.
-- Main-process secret boundary - stores and retrieves the Jira API token via OS keychain integration; the renderer never gets the raw token.
+- Main-process secret boundary - stores and retrieves the Jira API token via a credential adapter that prefers OS keychain integration and only falls back to encrypted local storage when necessary; the renderer never gets the raw token.
 - Jira API sync engine - fetches issue-first rich metadata with pagination and bounded extraction groups.
 - Markdown persistence layer - writes stable per-issue markdown files with frontmatter for provider IDs, sync timestamps, status, and stale/archive state.
 - Desktop package host integration - installs, activates, and surfaces safe high-level state for the externalized Jira connector package.
@@ -69,7 +69,7 @@ tags:
 
 - Keep the connector ID stable as `jira`; migration must not invent a second user-visible Jira identifier.
 - Use the shared package runtime from Phase 20 instead of reintroducing a built-in-only desktop path.
-- Store Jira API tokens only in OS keychain / secure local storage mediated by Electron main; never in workspace markdown, renderer state, or `desktop-settings.json`.
+- Store Jira API tokens only behind Electron main in a credential adapter that prefers OS keychain and only uses encrypted local fallback when needed; never in workspace markdown, renderer state, or `desktop-settings.json`.
 - Make extraction **issue-first rich metadata** by default: issue fields plus comments, issue links, subtasks, sprint data, worklog summaries, attachment metadata, and changelog summaries when available.
 - Do not download or persist attachment binaries in Phase 21.
 - Persist one markdown file per issue under a connector-owned subtree with stable filenames and idempotent rewrites.

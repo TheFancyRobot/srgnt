@@ -40,6 +40,14 @@ tags:
 - desktop settings/connectors tests
 - CLI/package-host tests
 - package README or operator documentation paths
+- `README.md` and `TESTING.md` if phase-level docs need cross-links
+
+## Concrete Starting Points
+
+- Package tests in `packages/connector-jira/`
+- Desktop tests under `packages/desktop/src/main/` and `packages/desktop/src/renderer/components/`
+- CLI/package-host tests under `packages/desktop/src/main/cli/` and `packages/desktop/src/main/connectors/`
+- Operator docs in the Jira package README or a dedicated connector-ops document linked from root docs
 
 ## Required Reading
 
@@ -52,9 +60,10 @@ tags:
 
 1. Add regression tests covering package extraction, settings persistence, token non-persistence, live-sync mapping, markdown output, and stale/archive behavior.
 2. Run the narrowest useful tests first, then the broader suite needed to make the phase credible.
-3. Update operator docs with setup steps, required Jira inputs, sync behavior, file locations, and archive/stale semantics.
-4. Record any deliberately deferred work (for example Atlassian OAuth or dashboards) explicitly instead of letting it hide inside TODOs.
-5. Do not mark the phase ready unless the docs and tests reflect the final connector shape.
+3. Update operator docs with setup steps, required Jira inputs, sync behavior, file locations, archive/stale semantics, and token rotation guidance.
+4. Document the credential adapter behavior honestly: OS keychain preferred, encrypted fallback only where supported by the implementation.
+5. Record any deliberately deferred work, for example Atlassian OAuth or dashboards, explicitly instead of letting it hide inside TODOs.
+6. Do not mark the phase ready unless the docs and tests reflect the final connector shape.
 
 ## Agent-Managed Snapshot
 
@@ -67,19 +76,71 @@ tags:
 
 ## Implementation Notes
 
-- Minimum validation map:
-  - extracted Jira package tests/typecheck;
-  - desktop settings tests for Jira config + secret non-persistence;
-  - package-host / integration tests for install-load-connect state;
-  - markdown persistence tests including stale/archive cases.
-- Likely broader validation before shipping:
-  - `pnpm test`
-  - relevant desktop e2e/package-host checks if the Jira package path is exercised there.
-- Documentation should answer:
-  - where Jira markdown lands;
-  - what fields are configurable;
-  - what “archived/stale” means;
-  - how to reconnect or rotate the API token.
+### Minimum validation map
+
+- extracted Jira package tests and typecheck
+- desktop settings tests for Jira config and secret non-persistence
+- package-host / integration tests for install-load-connect state
+- markdown persistence tests including stale/archive cases
+- renderer tests for any Jira-specific settings surface added in Step 02
+
+### Broader validation expected before handoff
+
+- `pnpm --filter @srgnt/connector-jira test`
+- `pnpm --filter @srgnt/connector-jira typecheck`
+- `pnpm --filter @srgnt/desktop test`
+- `pnpm --filter @srgnt/desktop typecheck`
+- `pnpm --filter @srgnt/contracts test`
+- `pnpm test` before phase completion unless a still-open blocker makes full-suite execution impossible
+
+### Documentation must answer
+
+- how to install and connect Jira
+- what non-secret fields are configurable
+- how token entry and rotation work
+- where Jira markdown lands
+- what “archived/stale” means
+- which Jira metadata groups are included by default
+- what is explicitly deferred to later phases
+
+### Edge cases and failure modes
+
+- tests cover happy path but miss no-token and invalid-config flows
+- docs describe a keychain-only story while code actually uses an adapter with fallback
+- package integration works in unit tests but not through desktop install/connect flows
+- stale/archive semantics are implemented but undocumented, causing operator confusion
+
+### Security considerations
+
+- Regression coverage must assert non-persistence of token material, not just absence in nominal UI.
+- Documentation must avoid encouraging manual secret edits in JSON files.
+- Error and inspect outputs must stay redacted.
+
+### Performance considerations
+
+- Include at least one regression check that sync scope and markdown generation stay bounded for moderate fixture sizes.
+- Avoid requiring full e2e for every small iteration, but make sure final phase handoff includes enough breadth to be trustworthy.
+
+### Acceptance criteria mapping
+
+- This step closes the remaining phase criterion for automated validation and operator documentation.
+- It also verifies the earlier criteria remain true under regression coverage.
+
+### Junior-developer readiness checklist
+
+- Exact outcome and success condition: pass.
+- Why the step matters: pass.
+- Prerequisites and dependencies: pass.
+- Concrete starting files/packages/tests: pass.
+- Required reading completeness: pass.
+- Constraints and non-goals: pass.
+- Validation commands and manual checks: pass.
+- Edge cases and recovery expectations: pass.
+- Security considerations: pass.
+- Performance considerations: pass.
+- Integration touchpoints and downstream effects: pass.
+- Blockers or unresolved decisions: none blocking.
+- Junior readiness verdict: **pass**.
 
 ## Human Notes
 

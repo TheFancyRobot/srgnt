@@ -30,9 +30,9 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 <!-- AGENT-START:current-focus -->
 _Last refreshed: 2026-04-21._
 - Session in progress: [[05_Sessions/2026-04-21-014952-run-real-machine-release-validation-team-lead|SESSION-2026-04-21-014952 team-lead session for Run real machine release validation]] - owner: team-lead - phase: [[02_Phases/Phase_11_real_machine_validation/Phase|Phase 11 real machine validation]] - updated: 2026-04-21
-- Current step: [[02_Phases/Phase_11_real_machine_validation/Steps/Step_01_run-real-machine-release-validation|STEP-11-01 Run real machine release validation]] - status: planned - phase: [[02_Phases/Phase_11_real_machine_validation/Phase|Phase 11 real machine validation]]
-- Active phase: [[02_Phases/Phase_19_implement_connector_pluggability/Phase|PHASE-19 Implement Connector Pluggability]] - status: shipped - owner: coordinator - updated: 2026-04-19
-- Also active: 46 more additional sessions, 32 more additional steps, 1 open critical bug.
+- Current step: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_01_extract-jira-from-srgnt-connectors-into-its-own-workspace-package|STEP-21-01 Extract Jira from @srgnt/connectors into its own workspace package]] - status: planned - phase: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Phase|Phase 21 jira connector package extraction and markdown sync]]
+- Active phase: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Phase|PHASE-21 Jira Connector Package Extraction and Markdown Sync]] - status: planned - updated: 2026-04-21
+- Also active: 46 more additional sessions, 38 more additional steps, 1 open critical bug.
 <!-- AGENT-END:current-focus -->
 - Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
 - Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]

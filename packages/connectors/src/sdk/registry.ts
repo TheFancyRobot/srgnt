@@ -19,6 +19,17 @@ export interface HostCapabilities {
   workspace: {
     root: string;
   };
+  credentials?: {
+    getToken: (connectorId: string) => Promise<string | undefined>;
+  };
+  /** File system operations via the privileged host boundary. Connectors use this instead of direct filesystem access. */
+  files?: {
+    writeFile(path: string, content: string): Promise<void>;
+    readFile(path: string): Promise<string>;
+    mkdir(path: string): Promise<void>;
+    delete(path: string): Promise<void>;
+    exists(path: string): Promise<boolean>;
+  };
 }
 
 export interface HostContext {

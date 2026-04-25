@@ -55,7 +55,12 @@ const DEFAULT_CAPABILITIES: readonly ConnectorPackageCapability[] = [
   'logger',
   'crypto.randomUUID',
   'workspace.root',
+  'credentials.getToken', // token retrieval via privileged host boundary (DEC-0017)
+  'files', // filesystem adapter for markdown persistence (Phase 21)
 ];
+
+// Re-exported for use in tests
+export { DEFAULT_CAPABILITIES };
 
 export class ConnectorPackageHost {
   private readonly registry: ManagedPackageRegistry;

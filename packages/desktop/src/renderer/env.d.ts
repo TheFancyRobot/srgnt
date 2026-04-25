@@ -122,6 +122,13 @@ export interface SrgntAPI {
   onWindowMaximizedChange(callback: (isMaximized: boolean) => void): () => void;
 
   platform: string;
+
+  // Jira connector settings and credentials (DEC-0017)
+  getJiraSettings(): Promise<{ settings: unknown } | null>;
+  saveJiraSettings(settings: unknown): Promise<{ settings: unknown }>;
+  setJiraToken(token: string): Promise<void>;
+  getJiraTokenStatus(): Promise<{ connectorId: string; exists: boolean; backend: string }>;
+  deleteJiraToken(): Promise<void>;
 }
 
 declare global {

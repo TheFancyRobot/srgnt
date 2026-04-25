@@ -1,5 +1,4 @@
-import type { Task, Person } from '@srgnt/contracts';
-import type { ConnectorManifest } from '@srgnt/contracts';
+import type { Task, Person, ConnectorManifest } from '@srgnt/contracts';
 
 export interface JiraIssue {
   id: string;
@@ -60,7 +59,7 @@ export const jiraFixtures: JiraFixture = {
   ],
 };
 
-function mapJiraIssueToTask(issue: JiraIssue): Task {
+export function mapJiraIssueToTask(issue: JiraIssue): Task {
   const statusMap: Record<string, Task['status']> = {
     'To Do': 'open',
     'In Progress': 'in_progress',
@@ -95,7 +94,7 @@ function mapJiraIssueToTask(issue: JiraIssue): Task {
   };
 }
 
-function mapJiraPersonToPerson(jiraPerson: { accountId: string; displayName: string; emailAddress: string }): Person {
+export function mapJiraPersonToPerson(jiraPerson: { accountId: string; displayName: string; emailAddress: string }): Person {
   return {
     envelope: {
       id: `jira-person-${jiraPerson.accountId}`,
@@ -147,5 +146,3 @@ export const jiraConnectorManifest: ConnectorManifest = {
   freshnessThresholdMs: 300000,
   metadata: {},
 };
-
-export { mapJiraIssueToTask, mapJiraPersonToPerson };

@@ -2,8 +2,8 @@
   "manifest": {
     "id": "jira",
     "name": "Jira",
-    "version": "0.2.0",
-    "description": "Atlassian Jira connector for issue tracking",
+    "version": "0.1.0",
+    "description": "Atlassian Jira connector — standalone package (Phase 21)",
     "provider": "atlassian",
     "authType": "oauth2",
     "config": {
@@ -18,10 +18,12 @@
     ],
     "entityTypes": ["Task", "Person"],
     "freshnessThresholdMs": 300000,
-    "metadata": {}
+    "metadata": {
+      "phase21Package": true,
+      "standalonePackage": true,
+      "usesKeychain": true,
+      "markdownPersistence": true
+    }
   },
-  "entityCounts": {
-    "task": 6,
-    "project": 2
-  }
+  "packagePath": "../connector-jira/dist/index.js"
 }

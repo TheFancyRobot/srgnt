@@ -7,6 +7,8 @@ export const SConnectorPackageCapability = Schema.Literal(
   'logger',
   'crypto.randomUUID',
   'workspace.root',
+  'credentials.getToken', // token retrieval via privileged host boundary (DEC-0017)
+  'files', // filesystem adapter for markdown persistence (Phase 21)
 );
 
 // Package runtime metadata — NOT the connector identity manifest

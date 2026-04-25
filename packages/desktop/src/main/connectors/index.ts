@@ -20,4 +20,4 @@ export {
   type ConnectorPackageHostOptions,
   type HighLevelPackageState,
 } from './host.js';
-export { createWorkerSpawn, nullSpawn, type CreateWorkerSpawnOptions } from './worker-runtime.js';
+export { createWorkerSpawn, nullSpawn, type CreateWorkerSpawnOptions, type WorkerSpawnContext } from './worker-runtime.js';

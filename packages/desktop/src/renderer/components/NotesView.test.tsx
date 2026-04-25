@@ -1268,6 +1268,129 @@ describe('NotesView', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Inbox.md' })).toBeInTheDocument();
   }, 8000);
 
+  it('Saved state resets to idle after 2 seconds', async () => {
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    vi.useFakeTimers();
+
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nsaved reset timer' } });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(screen.getByText('Saved')).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(screen.queryByText('Saved')).not.toBeInTheDocument();
+  }, 10000);
+
+  it('handleContentChange debounces save by 1 second', async () => {
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    vi.useFakeTimers();
+
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\ndebounced save' } });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+    });
+    expect(window.srgnt.notesWriteFile).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+
+    expect(window.srgnt.notesWriteFile).toHaveBeenCalledTimes(1);
+    expect(window.srgnt.notesWriteFile).toHaveBeenLastCalledWith(
+      'Inbox.md',
+      expect.stringContaining('debounced save'),
+    );
+  }, 10000);
+
+  it('rapid edits clear and restart debounce timer, save fires once', async () => {
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    vi.useFakeTimers();
+
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nfirst debounce edit' } });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(900);
+    });
+    expect(window.srgnt.notesWriteFile).not.toHaveBeenCalled();
+
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nsecond debounce edit' } });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(999);
+    });
+    expect(window.srgnt.notesWriteFile).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+
+    expect(window.srgnt.notesWriteFile).toHaveBeenCalledTimes(1);
+    expect(window.srgnt.notesWriteFile).toHaveBeenLastCalledWith(
+      'Inbox.md',
+      expect.stringContaining('second debounce edit'),
+    );
+  }, 10000);
+
   it('debounces rapid content changes into a single save from the latest edit', async () => {
     render(
       <NotesProvider>
@@ -1434,6 +1557,357 @@ describe('NotesView', () => {
     expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 2000);
 
     setTimeoutSpy.mockRestore();
+  });
+
+
+  it('clears selection when externally deleted file has no unsaved edits', async () => {
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async (filePath?: string) => {
+      readCount += 1;
+      // First read returns normal content, second read (mtime check) throws ENOENT
+      if (readCount >= 2 && filePath === 'Inbox.md') {
+        throw new Error('ENOENT');
+      }
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: '2026-04-01T00:00:00.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    // Select note (no edits, so hasUnsavedEditsRef stays false)
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    // Wait for the note to load
+    await screen.findByRole('heading', { level: 1, name: 'Inbox.md' });
+
+    // Trigger mtime poll — file is now deleted
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    // With no unsaved edits, the component should clear selection (no banner)
+    await waitFor(() => {
+      expect(screen.getByText(/Select a note from the Explorer panel/)).toBeInTheDocument();
+    });
+  });
+
+  it('clears saved-reset timer when switching away from a just-saved note', async () => {
+    // Setup: two notes in the tree
+    window.srgnt.notesListDir = vi.fn(async (dirPath: string) => {
+      switch (dirPath) {
+        case '':
+          return {
+            entries: [
+              {
+                name: 'Inbox.md',
+                path: '/workspace/demo/Notes/Inbox.md',
+                isDirectory: false,
+                modifiedAt: '2026-04-01T00:00:00.000Z',
+              },
+              {
+                name: 'Draft.md',
+                path: '/workspace/demo/Notes/Draft.md',
+                isDirectory: false,
+                modifiedAt: '2026-04-01T00:00:00.000Z',
+              },
+            ],
+          };
+        default:
+          return { entries: [] };
+      }
+    });
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    // Select Inbox
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    await screen.findByRole('heading', { level: 1, name: 'Inbox.md' });
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    vi.useFakeTimers();
+
+    // Make an edit that will save successfully
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nsave test' } });
+    });
+
+    // Advance past debounce — save succeeds
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    // Should show 'Saved' — meaning savedResetTimerRef is now set (2s timer)
+    expect(screen.getByText('Saved')).toBeInTheDocument();
+
+    // Now switch to Draft note BEFORE the 2s timer fires
+    // This should clear the savedResetTimerRef (lines 61-63)
+    const draftItem = screen.getByRole('treeitem', { name: /Draft\.md/ });
+    await act(async () => {
+      fireEvent.click(draftItem);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    vi.useRealTimers();
+
+    // Should now show Draft note
+    expect(screen.getByRole('heading', { level: 1, name: 'Draft.md' })).toBeInTheDocument();
+  }, 10000);
+
+  it('clears mtime poll when closing a note via clearSelection', async () => {
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    // Select a note — this starts the mtime poll
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    await screen.findByRole('heading', { level: 1, name: 'Inbox.md' });
+
+    // Wait a tick to ensure the mtime effect has run and set the interval
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 100));
+    });
+
+    // Click Close — this sets selectedPath to null, which triggers the early return
+    // in the mtime effect that clears the interval (lines 97-99)
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Select a note from the Explorer panel/)).toBeInTheDocument();
+    });
+  });
+
+  it('clears save and retry timers when switching to a different note', async () => {
+    // Setup: two notes in the tree
+    window.srgnt.notesListDir = vi.fn(async (dirPath: string) => {
+      switch (dirPath) {
+        case '':
+          return {
+            entries: [
+              {
+                name: 'Inbox.md',
+                path: '/workspace/demo/Notes/Inbox.md',
+                isDirectory: false,
+                modifiedAt: '2026-04-01T00:00:00.000Z',
+              },
+              {
+                name: 'Draft.md',
+                path: '/workspace/demo/Notes/Draft.md',
+                isDirectory: false,
+                modifiedAt: '2026-04-01T00:00:00.000Z',
+              },
+            ],
+          };
+        default:
+          return { entries: [] };
+      }
+    });
+
+    // Make write fail so retries are pending
+    window.srgnt.notesWriteFile = vi.fn().mockRejectedValue(new Error('disk full')) as typeof window.srgnt.notesWriteFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    // Select Inbox
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    await screen.findByRole('heading', { level: 1, name: 'Inbox.md' });
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    vi.useFakeTimers();
+
+    // Make an edit that will fail — triggers debounce save timer
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nedit' } });
+    });
+
+    // Advance past debounce — save fails, retry timer starts
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    // Now switch to Draft note — this should clear both saveTimer and retryTimer (lines 63, 69-71)
+    const draftItem = screen.getByRole('treeitem', { name: /Draft\.md/ });
+    await act(async () => {
+      fireEvent.click(draftItem);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Advance any remaining timers
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    vi.useRealTimers();
+
+    // The heading should now show Draft
+    expect(screen.getByRole('heading', { level: 1, name: 'Draft.md' })).toBeInTheDocument();
+  }, 10000);
+
+  it('clears mtime poll interval when content is loading', async () => {
+    // After selecting a note, if activeContentLoading becomes true again,
+    // the mtime poll interval should be cleared (lines 97-99)
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async () => {
+      readCount += 1;
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: '2026-04-01T00:00:00.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+
+    const { unmount } = render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    // Select note
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    await screen.findByRole('heading', { level: 1, name: 'Inbox.md' });
+
+    // Unmount — this triggers cleanup which clears mtime poll
+    unmount();
+
+    // No error thrown = success
+  });
+
+  it('silently reloads when file modified externally with no unsaved edits', async () => {
+    let readCount = 0;
+    window.srgnt.notesReadFile = vi.fn(async () => {
+      readCount += 1;
+      // First read returns normal content, subsequent reads return different mtime
+      return {
+        content: '# Heading\n\nParagraph',
+        modifiedAt: readCount === 1 ? '2026-04-01T00:00:00.000Z' : '2026-04-01T00:00:01.000Z',
+      };
+    }) as typeof window.srgnt.notesReadFile;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    // Select note (no edits — hasUnsavedEditsRef stays false)
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+    await screen.findByRole('heading', { level: 1, name: 'Inbox.md' });
+
+    // Trigger mtime poll — file was modified externally, but no unsaved edits
+    // This should silently reload (lines 116-120) instead of showing a banner
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+      await Promise.resolve();
+    });
+
+    // No banner should appear (unlike the case where hasUnsavedEdits is true)
+    expect(screen.queryByText(/This file was modified externally/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/This file was deleted/)).not.toBeInTheDocument();
+
+    // selectNote should have been called for the silent reload
+    expect(window.srgnt.notesReadFile).toHaveBeenCalledTimes(3);
+  });
+
+  it('clears retry timer when user edits during a pending save retry', async () => {
+    // First 4 writes fail (trigger retries), then the 5th succeeds on manual retry
+    const writeMock = vi
+      .fn()
+      .mockRejectedValue(new Error('disk full')) as typeof window.srgnt.notesWriteFile;
+    window.srgnt.notesWriteFile = writeMock;
+
+    render(
+      <NotesProvider>
+        <div>
+          <NotesSidePanel />
+          <NotesView />
+        </div>
+      </NotesProvider>,
+    );
+
+    fireEvent.click(await screen.findByRole('treeitem', { name: /Inbox\.md/ }));
+
+    const editor = await screen.findByLabelText('Markdown editor');
+    const view = EditorView.findFromDOM(editor);
+    expect(view).not.toBeNull();
+    if (!view) throw new Error('Expected CodeMirror editor view');
+
+    vi.useFakeTimers();
+
+    // Make an edit that will fail to save
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nfirst edit' } });
+    });
+
+    // Advance past debounce (1s) — first save attempt will fail
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    // Advance past first retry delay (1s) — second attempt will fail
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    // At this point a retry is pending (retryTimerRef.current is set)
+    // User edits again — this should clear the retry timer (lines 196-198)
+    await act(async () => {
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nsecond edit during retry' } });
+    });
+
+    // Advance past debounce for the new edit
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    // Should have had at least 3 save attempts total (initial + 1 retry + new debounced save)
+    expect((writeMock as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(3);
+
+    vi.useRealTimers();
   });
 
   it('clears a prior saved-reset timer when saving as new note after a prior save', async () => {

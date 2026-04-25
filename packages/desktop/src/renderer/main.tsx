@@ -4,6 +4,7 @@ import type { DesktopSettings, LaunchContext, UpdateCheckResponse } from '@srgnt
 import { AppLayout } from './components/Navigation.js';
 import { SettingsPanel } from './components/Settings.js';
 import type { SettingsSection } from './components/Settings.js';
+import { JiraConnectorSettingsPanel } from './components/JiraConnectorSettings.js';
 import { ConnectorStatusPanel } from './components/ConnectorStatus.js';
 import type { ConnectorInfo } from './components/ConnectorStatus.js';
 import { TodayView } from './components/TodayView.js';
@@ -95,6 +96,10 @@ function AppContent({
   const [updateStatus, setUpdateStatus] = React.useState<UpdateCheckResponse>(initialUpdateStatus);
   const [statusMessage, setStatusMessage] = React.useState('');
   const [simulateRenderCrash, setSimulateRenderCrash] = React.useState(false);
+  // Jira connector state (loaded lazily — not part of DesktopSettings)
+  const [jiraSettings, setJiraSettings] = React.useState<Record<string, unknown> | null>(null);
+  const [jiraTokenStatus, setJiraTokenStatus] = React.useState<{ exists: boolean; backend: string } | null>(null);
+  const [jiraTokenDraft, setJiraTokenDraft] = React.useState('');
   const settingsRef = React.useRef(initialSettings);
 
   const syncSettings = React.useCallback(
@@ -129,6 +134,23 @@ function AppContent({
         setWorkspaceRootDraft(loadedWorkspaceRoot);
         setShowOnboarding(!loadedWorkspaceRoot);
         setConnectors(connectorResponse.connectors);
+
+        // Load Jira settings and token status (non-blocking)
+        try {
+          const [jiraSettingsResponse, jiraStatus] = await Promise.all([
+            window.srgnt.getJiraSettings(),
+            window.srgnt.getJiraTokenStatus(),
+          ]);
+          if (!cancelled) {
+            setJiraSettings((jiraSettingsResponse as { settings: Record<string, unknown> | null })?.settings ?? null);
+            setJiraTokenStatus(jiraStatus as { exists: boolean; backend: string });
+          }
+        } catch {
+          if (!cancelled) {
+            setJiraSettings(null);
+            setJiraTokenStatus(null);
+          }
+        }
       } catch (error) {
         console.error('[renderer] failed to load desktop state', error);
       } finally {
@@ -292,6 +314,47 @@ function AppContent({
   const handleWriteDiagnosticCrashLog = React.useCallback(async () => {
     const result = await window.srgnt.writeDiagnosticCrashLog();
     setStatusMessage(`Wrote a redacted diagnostic crash log to ${result.directory}.`);
+  }, []);
+
+  // Jira connector handlers
+  const handleJiraSettingsChange = React.useCallback((next: Record<string, unknown>) => {
+    setJiraSettings(next);
+  }, []);
+
+  const handleJiraTokenDraftChange = React.useCallback((token: string) => {
+    setJiraTokenDraft(token);
+  }, []);
+
+  const handleSetJiraToken = React.useCallback(async () => {
+    if (!jiraTokenDraft.trim()) return;
+    try {
+      await window.srgnt.setJiraToken(jiraTokenDraft.trim());
+      setJiraTokenDraft('');
+      const status = await window.srgnt.getJiraTokenStatus();
+      setJiraTokenStatus(status as { exists: boolean; backend: string });
+      setStatusMessage('Jira API token saved securely.');
+    } catch (err) {
+      setStatusMessage(`Failed to save Jira token: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [jiraTokenDraft]);
+
+  const handleDeleteJiraToken = React.useCallback(async () => {
+    try {
+      await window.srgnt.deleteJiraToken();
+      setJiraTokenStatus({ exists: false, backend: jiraTokenStatus?.backend ?? 'unknown' });
+      setStatusMessage('Jira API token removed.');
+    } catch (err) {
+      setStatusMessage(`Failed to delete Jira token: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [jiraTokenStatus?.backend]);
+
+  const handleSaveJiraSettings = React.useCallback(async (settings: Record<string, unknown>) => {
+    try {
+      await window.srgnt.saveJiraSettings(settings);
+      setStatusMessage('Jira settings saved.');
+    } catch (err) {
+      setStatusMessage(`Failed to save Jira settings: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }, []);
 
   const handleOnboardingComplete = React.useCallback(async () => {
@@ -509,6 +572,16 @@ function AppContent({
             <SettingsPanel sections={settingsSections} theme={settings.theme} onThemeChange={(theme) => {
               void patchSettings({ theme });
             }} />
+            <JiraConnectorSettingsPanel
+              settings={jiraSettings}
+              tokenStatus={jiraTokenStatus}
+              tokenDraft={jiraTokenDraft}
+              onSettingsChange={handleJiraSettingsChange}
+              onTokenChange={handleJiraTokenDraftChange}
+              onTokenSubmit={handleSetJiraToken}
+              onTokenDelete={handleDeleteJiraToken}
+              onSaveSettings={handleSaveJiraSettings}
+            />
             <SettingsUtilityPanel
               statusMessage={statusMessage}
               updateStatus={updateStatus}

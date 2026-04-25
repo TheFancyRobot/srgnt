@@ -4,10 +4,10 @@ template_version: 2
 contract_version: 1
 title: Jira Connector Package Extraction and Markdown Sync
 phase_id: PHASE-21
-status: planned
+status: completed
 owner: ''
 created: '2026-04-21'
-updated: '2026-04-21'
+updated: '2026-04-24'
 depends_on:
   - '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20 Connector Factory and Remote Package Installation]]'
 related_architecture:
@@ -18,7 +18,11 @@ related_architecture:
 related_decisions:
   - '[[04_Decisions/DEC-0016_isolate-third-party-connector-packages-outside-electron-main-process|DEC-0016 Isolate third-party connector packages outside Electron main process]]'
   - '[[04_Decisions/DEC-0017_keep-jira-api-tokens-in-the-os-keychain-behind-the-main-process-settings-boundary|DEC-0017 Keep Jira API tokens in the OS keychain behind the main-process settings boundary]]'
-related_bugs: []
+  - '[[04_Decisions/DEC-0018_separate-the-jira-api-client-into-a-reusable-workspace-package|DEC-0018 Separate the Jira API client into a reusable workspace package]]'
+  - '[[04_Decisions/DEC-0018_separate-the-jira-api-client-into-a-reusable-workspace-package|DEC-0018 Separate the Jira API client into a reusable workspace package]]'
+related_bugs:
+  - '[[03_Bugs/BUG-0017_jira-token-save-fails-when-electron-safestorage-encryption-is-unavailable|BUG-0017 Jira token save fails when Electron safeStorage encryption is unavailable]]'
+  - '[[03_Bugs/BUG-0018_jira-connector-does-not-appear-in-the-connector-list|BUG-0018 Jira connector does not appear in the connector list]]'
 tags:
   - agent-vault
   - phase
@@ -44,6 +48,7 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 - Extract Jira into its own workspace package and keep the connector ID stable as `jira`.
 - Add a Jira settings model for non-secret config in Settings and secret token storage in the OS keychain/main-process boundary.
 - Implement issue-first rich Jira API extraction with user-configurable scope and field groups.
+- Split the Jira provider-facing API client into its own reusable workspace package so future Jira-facing connectors/packages reuse one client instead of reimplementing transport/auth/pagination logic.
 - Persist one markdown file per issue under a connector-owned subtree with stable filenames and stale/archive handling.
 - Integrate the external Jira package with desktop install/connect/sync flows and add targeted regression coverage.
 
@@ -66,16 +71,18 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 - [ ] Jira no longer ships as a built-in implementation inside `@srgnt/connectors`; it exists as its own workspace package targeting the shared Phase 20 factory/runtime.
 - [ ] Desktop settings support Jira non-secret configuration (site URL, account label/email, project/JQL scope, extraction toggles) without persisting the API token in workspace-visible config.
 - [ ] Jira API token handling uses OS keychain / main-process secret storage only.
-- [ ] The Jira package fetches issue-first rich metadata from the live Jira API with bounded pagination and configurable extraction groups.
+- [ ] A reusable Jira API client workspace package owns auth, request construction, pagination, and normalized Jira API error handling.
+- [ ] The Jira connector package consumes that shared client to fetch issue-first rich metadata from the live Jira API with bounded pagination and configurable extraction groups.
 - [ ] Synced Jira data lands as one stable markdown file per issue under a connector-owned subtree, with frontmatter/source metadata and stale/archive marking for issues that leave scope.
 - [ ] Desktop install/connect/sync flows work with the externalized Jira package without regressing the package host safety invariants.
 - [ ] Automated validation covers package extraction, settings persistence, secret non-persistence, API fetch mapping, markdown writes, and stale/archive behavior.
+- [ ] Manual end-to-end verification against a real Jira tenant with real credentials confirms install, connect, sync, markdown persistence, and stale/archive behavior actually work outside the test harness.
 
 ## Phase-Wide Workflow Map
 
 - **Step 01** extracts Jira into its own workspace package and removes the built-in `@srgnt/connectors` copy.
 - **Step 02** defines the Jira settings schema and secure token boundary so live sync has a safe configuration contract.
-- **Step 03** implements the live Jira API client and configurable issue extraction behavior.
+- **Step 03** introduces a reusable Jira API client package and uses it to implement configurable issue extraction behavior in the Jira connector.
 - **Step 04** persists synced issues as stable markdown files with archive/stale semantics.
 - **Step 05** wires the external package into desktop install/connect/sync behavior.
 - **Step 06** adds regression coverage and operator-facing documentation.
@@ -85,6 +92,7 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 - Keep the user-visible connector ID as `jira`.
 - Use API token authentication first; do not expand this phase into Atlassian OAuth unless a blocker proves token auth insufficient.
 - Store the API token behind Electron main using a credential adapter with **OS keychain preferred** and **encrypted local fallback only when the keychain is unavailable and the fallback remains non-plaintext**.
+- Per [[04_Decisions/DEC-0018_separate-the-jira-api-client-into-a-reusable-workspace-package|DEC-0018]], Jira provider transport/auth/pagination code belongs in a reusable workspace package rather than remaining private to `@srgnt/connector-jira`.
 - Default extraction scope is **issues-first rich metadata**: issue fields, comments, labels, links, subtasks, sprint data, worklog summaries, attachment metadata, and changelog summaries when available.
 - Store one markdown file per issue under a connector-owned subtree such as `Systems/Jira/<project-key>/<issue-key>.md`.
 - If an issue disappears from scope, mark the file stale/archived rather than deleting it automatically.
@@ -148,8 +156,8 @@ Use this checklist for every Step 21 note:
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20 Connector Factory and Remote Package Installation]]
-- Current phase status: planned
-- Next phase: not planned yet.
+- Current phase status: in_review
+- Next phase: [[02_Phases/Phase_22_extract_reusable_jira_api_client_package/Phase|PHASE-22 Extract reusable Jira API client package]]
 <!-- AGENT-END:phase-linear-context -->
 
 ## Related Architecture
@@ -166,12 +174,15 @@ Use this checklist for every Step 21 note:
 <!-- AGENT-START:phase-related-decisions -->
 - [[04_Decisions/DEC-0016_isolate-third-party-connector-packages-outside-electron-main-process|DEC-0016 Isolate third-party connector packages outside Electron main process]]
 - [[04_Decisions/DEC-0017_keep-jira-api-tokens-in-the-os-keychain-behind-the-main-process-settings-boundary|DEC-0017 Keep Jira API tokens in the OS keychain behind the main-process settings boundary]]
+- [[04_Decisions/DEC-0018_separate-the-jira-api-client-into-a-reusable-workspace-package|DEC-0018 Separate the Jira API client into a reusable workspace package]]
+- [[04_Decisions/DEC-0018_separate-the-jira-api-client-into-a-reusable-workspace-package|DEC-0018 Separate the Jira API client into a reusable workspace package]]
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs
 
 <!-- AGENT-START:phase-related-bugs -->
-- None yet.
+- [[03_Bugs/BUG-0017_jira-token-save-fails-when-electron-safestorage-encryption-is-unavailable|BUG-0017 Jira token save fails when Electron safeStorage encryption is unavailable]]
+- [[03_Bugs/BUG-0018_jira-connector-does-not-appear-in-the-connector-list|BUG-0018 Jira connector does not appear in the connector list]]
 <!-- AGENT-END:phase-related-bugs -->
 
 ## Steps
@@ -187,6 +198,7 @@ Use this checklist for every Step 21 note:
 
 ## Notes
 
+- Phase implementation shipped and automated tests passed, but the phase is not considered complete until manual live verification against a real Jira configuration is finished.
 - Evidence behind this phase shape:
   - `packages/connectors/src/jira/*` is still built-in and fixture-based.
   - `packages/connectors/src/sdk/*` and the desktop package host from Phase 20 are now ready for package-shaped connectors.
@@ -197,6 +209,7 @@ Use this checklist for every Step 21 note:
   - default extraction scope: **issues-first rich metadata**;
   - markdown persistence: **one file per issue under a connector-owned subtree**;
   - disappeared/out-of-scope issues: **mark stale/archive, do not delete automatically**;
-  - secret handling: **store Jira API token in OS keychain behind Electron main**.
+  - secret handling: **store Jira API token in OS keychain behind Electron main**;
+  - provider client boundary: **separate the Jira API client into a reusable workspace package so future Jira-facing packages reuse one client**.
 - Recommended schema direction for Step 02: use a connector-config model keyed by connector ID so Jira solves the immediate need without making future connector settings impossible to generalize.
 - Parallel work map: Step 01 must run first; Step 02 can begin as soon as package boundaries are known; Step 03 depends on Steps 01 and 02; Step 04 depends on Step 03; Step 05 depends on Steps 01-04; Step 06 runs last.

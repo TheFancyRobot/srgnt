@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { InstalledConnectorPackage, LoaderHandshakeResponse } from '@srgnt/contracts';
-import { ConnectorPackageHost, sanitizeErrorMessage } from './host.js';
+import { ConnectorPackageHost, sanitizeErrorMessage, DEFAULT_CAPABILITIES } from './host.js';
 import type { LoaderHandshakeMessage, SpawnRuntime } from './loader.js';
 
 function samplePackage(overrides: Partial<InstalledConnectorPackage> = {}): InstalledConnectorPackage {
@@ -129,6 +129,15 @@ describe('ConnectorPackageHost lifecycle', () => {
     await host.activateAndLoad('jira-connector@1.0.0');
     const state = await host.markConnected('jira-connector@1.0.0');
     expect(state.lifecycleState).toBe('connected');
+  });
+
+  it('DEFAULT_CAPABILITIES includes credentials.getToken and files', () => {
+    // The host uses DEFAULT_CAPABILITIES as grantedCapabilities unless overridden.
+    // Verify the defaults include all Phase 21 required capabilities.
+    expect(DEFAULT_CAPABILITIES).toContain('credentials.getToken');
+    expect(DEFAULT_CAPABILITIES).toContain('files');
+    expect(DEFAULT_CAPABILITIES).toContain('http.fetch');
+    expect(DEFAULT_CAPABILITIES).toContain('workspace.root');
   });
 
   it('markConnected refuses if the package is not loaded', async () => {

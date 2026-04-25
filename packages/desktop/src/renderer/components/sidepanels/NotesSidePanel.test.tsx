@@ -103,6 +103,8 @@ describe('NotesSidePanel', () => {
       }),
       notesDelete: vi.fn().mockResolvedValue({ deleted: true }),
       notesWriteFile: vi.fn(),
+      semanticSearchStatus: vi.fn(async () => ({ state: 'ready', error: null })),
+      semanticSearchSearch: vi.fn(async () => ({ results: [] })),
     } as unknown as typeof window.srgnt;
   });
 
@@ -486,6 +488,256 @@ describe('NotesSidePanel', () => {
 
       // Tree should be visible again
       expect(screen.getByRole('tree', { name: 'Notes file tree' })).toBeInTheDocument();
+    });
+  });
+
+  describe('Semantic Search', () => {
+    it('switches to semantic search mode and updates placeholder', async () => {
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Default mode is notes
+      expect(screen.getByPlaceholderText('Search notes...')).toBeInTheDocument();
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      expect(screen.getByPlaceholderText('Search semantically...')).toBeInTheDocument();
+    });
+
+    it('shows disabled message when semantic search is not enabled for workspace', async () => {
+      (window.srgnt.semanticSearchStatus as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'disabled', error: null });
+
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'test');
+
+      // Wait for debounce + async status check
+      await waitForDebounce(400);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enable semantic search for this workspace first.')).toBeInTheDocument();
+      });
+    });
+
+    it('shows indexing message when semantic search is still indexing', async () => {
+      (window.srgnt.semanticSearchStatus as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'indexing', error: null });
+
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'test');
+
+      // Wait for debounce + async status check
+      await waitForDebounce(400);
+
+      await waitFor(() => {
+        expect(screen.getByText('Indexing workspace...')).toBeInTheDocument();
+      });
+    });
+
+    it('shows search error from semantic search status', async () => {
+      (window.srgnt.semanticSearchStatus as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'error', error: 'Index corrupted' });
+
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'test');
+
+      // Wait for debounce + async status check
+      await waitForDebounce(400);
+
+      await waitFor(() => {
+        expect(screen.getByText('Index corrupted')).toBeInTheDocument();
+      });
+    });
+
+    it('renders semantic search results', async () => {
+      (window.srgnt.semanticSearchSearch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        results: [
+          { title: 'Semantic Result', workspaceRelativePath: 'Notes/Semantic.md', snippet: 'A **semantic** match', score: 0.95 },
+        ],
+      });
+
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'semantic');
+
+      // Wait for debounce + search
+      await waitForDebounce(400);
+
+      await waitFor(() => {
+        expect(screen.getByText('Semantic Result')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Notes/Semantic.md')).toBeInTheDocument();
+      expect(screen.getByText('semantic')).toContainHTML('mark');
+    });
+
+    it('shows no results message when semantic search returns empty', async () => {
+      (window.srgnt.semanticSearchSearch as ReturnType<typeof vi.fn>).mockResolvedValue({ results: [] });
+
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'nothing');
+
+      // Wait for debounce + search
+      await waitForDebounce(400);
+
+      await waitFor(() => {
+        expect(screen.getByText((content) => {
+          return content.includes('No results for') && content.includes('nothing');
+        })).toBeInTheDocument();
+      });
+    });
+
+    it('handles semantic search API error gracefully', async () => {
+      (window.srgnt.semanticSearchSearch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Search service unavailable'));
+
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'test');
+
+      // Wait for debounce + search
+      await waitForDebounce(400);
+
+      await waitFor(() => {
+        expect(screen.getByText('Search service unavailable')).toBeInTheDocument();
+      });
+    });
+
+    it('clears semantic search state when switching back to notes mode', async () => {
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'test');
+
+      // Wait for debounce
+      await waitForDebounce(400);
+
+      // Switch back to notes mode
+      await clickAndFlush(screen.getByTestId('notes-search-mode'));
+
+      // Search input should be cleared and placeholder updated
+      expect(screen.getByPlaceholderText('Search notes...')).toBeInTheDocument();
+      expect((screen.getByPlaceholderText('Search notes...') as HTMLInputElement).value).toBe('');
+
+      // Tree should be visible again
+      expect(screen.getByRole('tree', { name: 'Notes file tree' })).toBeInTheDocument();
+    });
+
+    it('clicking semantic search result calls selectNote with notes-relative path', async () => {
+      (window.srgnt.semanticSearchSearch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        results: [
+          { title: 'Found Note', workspaceRelativePath: 'Notes/Found.md', snippet: 'found content', score: 0.9 },
+        ],
+      });
+
+      render(
+        <NotesProvider>
+          <div>
+            <NotesSidePanel />
+            <NotesView />
+          </div>
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'found');
+
+      // Wait for debounce + search
+      await waitForDebounce(400);
+
+      await waitFor(() => {
+        expect(screen.getByText('Found Note')).toBeInTheDocument();
+      });
+
+      await clickAndFlush(screen.getByText('Found Note'));
+
+      await waitFor(() => {
+        expect(window.srgnt.notesReadFile).toHaveBeenCalledWith('Found.md');
+      });
+    });
+
+    it('shows uninitialized message when semantic search status is uninitialized', async () => {
+      (window.srgnt.semanticSearchStatus as ReturnType<typeof vi.fn>).mockResolvedValue({ state: 'uninitialized', error: null });
+
+      render(
+        <NotesProvider>
+          <NotesSidePanel />
+        </NotesProvider>,
+      );
+
+      // Switch to semantic mode
+      await clickAndFlush(screen.getByTestId('semantic-search-mode'));
+
+      const searchInput = screen.getByPlaceholderText('Search semantically...');
+      await changeAndFlush(searchInput, 'test');
+
+      // Wait for debounce + async status check
+      await waitForDebounce(400);
+
+      await waitFor(() => {
+        expect(screen.getByText('Enable semantic search for this workspace first.')).toBeInTheDocument();
+      });
     });
   });
 });

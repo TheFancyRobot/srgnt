@@ -22,6 +22,12 @@ export const ipcChannels = {
   connectorPackageInspect: 'connector:package:inspect',
   connectorPackageList: 'connector:package:list',
   connectorPackageUninstall: 'connector:package:uninstall',
+  // Jira-specific connector channels
+  connectorSettingsGet: 'connector:settings:get',
+  connectorSettingsSave: 'connector:settings:save',
+  connectorCredentialSet: 'connector:credential:set',
+  connectorCredentialStatus: 'connector:credential:status',
+  connectorCredentialDelete: 'connector:credential:delete',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
   skillList: 'skill:list',
@@ -608,3 +614,39 @@ export const SSemanticSearchStatusResponse = Schema.Struct({
   error: Schema.optional(Schema.String),
 });
 export type SemanticSearchStatusResponse = Schema.Schema.Type<typeof SSemanticSearchStatusResponse>;
+
+// Jira connector settings IPC types
+
+// connector:settings:get — returns JiraConnectorSettings | null (never includes secret)
+// connector:settings:get — returns JiraConnectorSettings | null (never includes secret)
+export const SJiraConnectorSettingsGetResponse = Schema.Struct({
+  settings: Schema.Union(Schema.Null, Schema.Unknown), // validated as JiraConnectorSettings at runtime
+});
+export type JiraConnectorSettingsGetResponse = Schema.Schema.Type<typeof SJiraConnectorSettingsGetResponse>;
+
+// connector:settings:save — accepts JiraConnectorSettings (no secret field)
+export const SJiraConnectorSettingsSaveRequest = Schema.Struct({
+  settings: Schema.Unknown, // validated as JiraConnectorSettings at runtime to avoid circular import
+});
+export type JiraConnectorSettingsSaveRequest = Schema.Schema.Type<typeof SJiraConnectorSettingsSaveRequest>;
+
+// connector:credential:set — stores token in keychain (token NOT in request shape in logs)
+export const SJiraCredentialSetRequest = Schema.Struct({
+  connectorId: Schema.Literal('jira'),
+  token: Schema.String,
+});
+export type JiraCredentialSetRequest = Schema.Schema.Type<typeof SJiraCredentialSetRequest>;
+
+// connector:credential:status — returns { exists: boolean } — NEVER returns raw token
+export const SJiraCredentialStatusResponse = Schema.Struct({
+  connectorId: Schema.Literal('jira'),
+  exists: Schema.Boolean,
+  backend: Schema.Literal('keychain', 'encrypted-local', 'unavailable'),
+});
+export type JiraCredentialStatusResponse = Schema.Schema.Type<typeof SJiraCredentialStatusResponse>;
+
+// connector:credential:delete — removes token from keychain
+export const SJiraCredentialDeleteRequest = Schema.Struct({
+  connectorId: Schema.Literal('jira'),
+});
+export type JiraCredentialDeleteRequest = Schema.Schema.Type<typeof SJiraCredentialDeleteRequest>;

@@ -7,23 +7,16 @@ import type {
 import type { LoaderRuntime, LoaderHandshakeMessage, SpawnRuntime } from './loader.js';
 
 /**
- * Production `SpawnRuntime` that hosts a third-party connector package in a
- * `node:worker_threads` Worker. DEC-0016 requires that third-party code never
- * run in the Electron main process. Workers satisfy that requirement while
- * keeping the implementation tree-shakable and easy to mock in tests.
- *
- * This module intentionally does not resolve or load the package artifact
- * itself — that is delegated to the worker entrypoint script shipped with the
- * desktop build (`connector-runtime-worker.js`). The worker script:
- *   - imports the installed package entrypoint from the filesystem,
- *   - awaits the host's handshake request over `parentPort`,
- *   - validates its own identity against the request,
- *   - emits either a `LoaderHandshakeResponse` or `LoaderHandshakeFailure`.
- *
- * Until Step 05 wires CLI install fully, the worker script file path may not
- * exist in every build; callers can fall back to a test-only spawn or use the
- * null spawn until the worker script ships.
+ * Token and workspace context needed by the worker runtime to inject into
+ * the HostContext. Retrieved by the main process at spawn time (DEC-0017:
+ * token lives in OS keychain, only the main process can fetch it).
  */
+export interface WorkerSpawnContext {
+  /** Jira API token from OS keychain (undefined if not yet configured) */
+  token?: string;
+  /** Workspace root path for markdown file persistence */
+  workspaceRoot: string;
+}
 
 export interface CreateWorkerSpawnOptions {
   /**
@@ -36,6 +29,12 @@ export interface CreateWorkerSpawnOptions {
    * to point at fixture packages.
    */
   resolvePackageEntry?: (pkg: InstalledConnectorPackage) => string;
+  /**
+   * Called at spawn time to get the token + workspace context. Main process
+   * fetches the Jira token from OS keychain here (DEC-0017 boundary).
+   * Credentials must NEVER be stored in the package record or serialized.
+   */
+  getSpawnContext?: (pkg: InstalledConnectorPackage) => Promise<WorkerSpawnContext>;
 }
 
 export function createWorkerSpawn(options: CreateWorkerSpawnOptions = {}): SpawnRuntime {
@@ -45,11 +44,18 @@ export function createWorkerSpawn(options: CreateWorkerSpawnOptions = {}): Spawn
   return async function workerSpawn(pkg: InstalledConnectorPackage): Promise<LoaderRuntime> {
     const packageEntry = options.resolvePackageEntry?.(pkg);
 
+    // Resolve token + workspace at spawn time (DEC-0017: fetch from keychain here)
+    const spawnContext = options.getSpawnContext
+      ? await options.getSpawnContext(pkg)
+      : { workspaceRoot: process.cwd() };
+
     const worker = new Worker(workerEntryPath, {
       workerData: {
         packageId: pkg.packageId,
         connectorId: pkg.connectorId,
         packageEntry,
+        token: spawnContext.token,
+        workspaceRoot: spawnContext.workspaceRoot,
       },
       // Keep the worker sandboxed: no stdin sharing, no env leakage.
       env: {},

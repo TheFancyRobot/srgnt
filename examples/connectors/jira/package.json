@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@srgnt/contracts": "workspace:*",
-    "@srgnt/connectors": "workspace:*"
+    "@srgnt/connector-jira": "workspace:*"
   },
   "devDependencies": {
     "@srgnt/tsconfig": "workspace:*",

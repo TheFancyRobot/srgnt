@@ -4,11 +4,12 @@ export interface Setting {
   id: string;
   label: string;
   description?: string;
-  type: 'string' | 'boolean' | 'select' | 'path';
+  type: 'string' | 'boolean' | 'select' | 'path' | 'password';
   value: unknown;
   options?: { label: string; value: string }[];
   onChange?: (value: unknown) => void;
   onBrowse?: () => void | Promise<void>;
+  onSubmit?: () => void | Promise<void>; // for password fields — called after submit then input is cleared
 }
 
 export interface SettingsSection {
@@ -140,6 +141,30 @@ function SettingInput({ setting }: { setting: Setting }): React.ReactElement {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
             </svg>
             Browse
+          </button>
+        </div>
+      );
+    case 'password':
+      return (
+        <div className="flex gap-2">
+          <input
+            type="password"
+            id={inputId}
+            value={setting.value as string}
+            onChange={(e) => setting.onChange?.(e.target.value)}
+            onBlur={() => setting.onSubmit?.()}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setting.onSubmit?.(); } }}
+            placeholder="Paste token and tab out to save"
+            className="input w-64 text-sm"
+            autoComplete="off"
+          />
+          <button
+            type="button"
+            className="btn btn-secondary text-xs px-3"
+            onClick={() => setting.onSubmit?.()}
+            disabled={!(setting.value as string)?.trim()}
+          >
+            Save Token
           </button>
         </div>
       );

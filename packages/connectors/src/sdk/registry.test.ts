@@ -9,7 +9,6 @@ import type { ConnectorManifest } from "@srgnt/contracts";
 import type { Connector } from "./connector.js";
 
 // Import connector modules to trigger registration side effects
-import "../jira/connector.js";
 import "../outlook/connector.js";
 import "../teams/connector.js";
 
@@ -81,17 +80,13 @@ describe("BuiltInConnectorRegistry", () => {
     expect(BuiltInConnectorRegistry.has("non-existent")).toBe(false);
   });
 
-  it("built-in connectors jira, outlook, teams are registered", () => {
-    expect(BuiltInConnectorRegistry.has("jira")).toBe(true);
+  it("built-in connectors outlook and teams are registered", () => {
+    expect(BuiltInConnectorRegistry.has("jira")).toBe(false);
     expect(BuiltInConnectorRegistry.has("outlook")).toBe(true);
     expect(BuiltInConnectorRegistry.has("teams")).toBe(true);
   });
 
   it("built-in connectors have factory functions", () => {
-    const jira = BuiltInConnectorRegistry.get("jira");
-    expect(jira?.factory).toBeDefined();
-    expect(typeof jira?.factory).toBe("function");
-
     const outlook = BuiltInConnectorRegistry.get("outlook");
     expect(outlook?.factory).toBeDefined();
     expect(typeof outlook?.factory).toBe("function");
@@ -102,9 +97,6 @@ describe("BuiltInConnectorRegistry", () => {
   });
 
   it("built-in connectors have installed lifecycle state", () => {
-    const jira = BuiltInConnectorRegistry.get("jira");
-    expect(jira?.lifecycleState).toBe("installed");
-
     const outlook = BuiltInConnectorRegistry.get("outlook");
     expect(outlook?.lifecycleState).toBe("installed");
 
@@ -114,7 +106,7 @@ describe("BuiltInConnectorRegistry", () => {
 
   it("exports built-in manifests from the shared registry source of truth", () => {
     const exportedIds = BUILTIN_CONNECTOR_MANIFESTS.map((manifest) => manifest.id).sort();
-    expect(exportedIds).toEqual(["jira", "outlook", "teams"]);
+    expect(exportedIds).toEqual(["outlook", "teams"]);
 
     for (const connectorId of exportedIds) {
       expect(BuiltInConnectorRegistry.has(connectorId)).toBe(true);

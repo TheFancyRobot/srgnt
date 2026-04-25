@@ -29,6 +29,12 @@ const ipcChannels = {
   connectorPackageInspect: 'connector:package:inspect',
   connectorPackageList: 'connector:package:list',
   connectorPackageUninstall: 'connector:package:uninstall',
+  // Jira-specific connector channels
+  connectorSettingsGet: 'connector:settings:get',
+  connectorSettingsSave: 'connector:settings:save',
+  connectorCredentialSet: 'connector:credential:set',
+  connectorCredentialStatus: 'connector:credential:status',
+  connectorCredentialDelete: 'connector:credential:delete',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
   skillList: 'skill:list',
@@ -220,6 +226,20 @@ const api = {
     error: string | null;
   }> =>
     ipcRenderer.invoke(ipcChannels.semanticSearchStatus, { workspaceRoot }),
+
+  // Jira connector settings — returns null if not configured yet
+  getJiraSettings: (): Promise<{ settings: unknown } | null> =>
+    ipcRenderer.invoke(ipcChannels.connectorSettingsGet),
+  saveJiraSettings: (settings: unknown): Promise<{ settings: unknown }> =>
+    ipcRenderer.invoke(ipcChannels.connectorSettingsSave, { settings }),
+
+  // Jira credential — token NEVER exposed to renderer; status only
+  setJiraToken: (token: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.connectorCredentialSet, { connectorId: 'jira', token }),
+  getJiraTokenStatus: (): Promise<{ connectorId: string; exists: boolean; backend: string }> =>
+    ipcRenderer.invoke(ipcChannels.connectorCredentialStatus, { connectorId: 'jira' }),
+  deleteJiraToken: (): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.connectorCredentialDelete, { connectorId: 'jira' }),
 
   platform: process.platform,
 };

@@ -5,7 +5,8 @@ import {
   mapJiraIssueToTask,
   mapJiraPersonToPerson,
   jiraConnectorManifest,
-} from './index.js';
+} from './data.js';
+import jiraConnectorPackage, { factory, manifest, runtime } from './index.js';
 
 describe('jiraFixtures', () => {
   it('has issues', () => {
@@ -78,5 +79,16 @@ describe('jiraConnectorManifest', () => {
   it('has correct entity types', () => {
     expect(jiraConnectorManifest.entityTypes).toContain('Task');
     expect(jiraConnectorManifest.entityTypes).toContain('Person');
+  });
+});
+
+describe('jiraConnectorPackage export shape', () => {
+  it('exports manifest, runtime, and factory through both named and default exports', () => {
+    expect(manifest).toBe(jiraConnectorManifest);
+    expect(runtime.entrypoint).toBe('createJiraConnector');
+    expect(factory).toBeDefined();
+    expect(jiraConnectorPackage.manifest).toBe(jiraConnectorManifest);
+    expect(jiraConnectorPackage.runtime).toBe(runtime);
+    expect(jiraConnectorPackage.factory).toBe(factory);
   });
 });

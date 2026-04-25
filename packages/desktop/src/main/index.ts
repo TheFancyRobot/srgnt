@@ -81,7 +81,21 @@ import {
   writeBootstrapState,
   writeDesktopSettings,
 } from './settings.js';
-import { ConnectorPackageHost, nullSpawn } from './connectors/index.js';
+import { ConnectorPackageHost, createWorkerSpawn } from './connectors/index.js';
+import {
+  chooseConnectorDefinitions,
+  parseConnectorCatalogPayload,
+  type ConnectorDefinition,
+} from './connectors/catalog.js';
+import {
+  createCredentialAdapter,
+  getCredentialBackendStatus,
+  redactCredentialError,
+} from './credentials.js';
+import {
+  readJiraSettings,
+  writeJiraSettings,
+} from './jira-settings-store.js';
 
 const HOST_SDK_VERSION = '1.0.0';
 
@@ -97,23 +111,6 @@ interface ConnectorState {
   lastSyncAt?: string;
   lastError?: string;
   entityCounts?: Record<string, number>;
-}
-
-interface ConnectorDefinition {
-  manifest: ConnectorManifest;
-  packageUrl?: string;
-  entityCounts?: Record<string, number>;
-}
-
-interface RegistryConnectorResponse {
-  manifest: ConnectorManifest;
-  packagePath?: string;
-  packageUrl?: string;
-  entityCounts?: Record<string, number>;
-}
-
-interface RegistryCatalogResponse {
-  connectors: RegistryConnectorResponse[];
 }
 
 const DEV_CONNECTOR_REGISTRY_PORT = Number(process.env.SRGNT_CONNECTOR_REGISTRY_PORT ?? 4311);
@@ -174,8 +171,27 @@ crashReporter.start();
 // boundary. Runs third-party packages through `nullSpawn` until Step 05 wires
 // CLI install commands and the worker script is bundled. Built-in connectors
 // are registered through `@srgnt/connectors` and do not use this runtime.
+// Jira token is fetched from OS keychain at worker spawn time (DEC-0017) and
+// passed into the worker — never stored in the package registry record.
+// createCredentialAdapter() returns a delegating adapter that routes to the
+// current credential backend even after runtime fallback; do not cache a
+// concrete backend adapter in desktop main.
+async function getCredentialAdapter() {
+  return createCredentialAdapter();
+}
+
+const jiraWorkerSpawn = createWorkerSpawn({
+  getSpawnContext: async (pkg) => {
+    const adapter = await getCredentialAdapter();
+    return {
+      token: pkg.connectorId === 'jira' ? await adapter.getSecret('jira') : undefined,
+      workspaceRoot: workspaceRoot || '',
+    };
+  },
+});
+
 const connectorPackageHost = new ConnectorPackageHost({
-  spawnRuntime: nullSpawn,
+  spawnRuntime: jiraWorkerSpawn,
   hostSdkVersion: HOST_SDK_VERSION,
   persistRegistry: async (snapshot) => {
     desktopSettings = mergeDesktopSettings({
@@ -239,11 +255,15 @@ function sanitizeStorageStem(value: string, fallback: string): string {
 }
 
 async function getConnectorRegistrySourcePath(): Promise<string | null> {
+  const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
   const candidates = [
     process.env.SRGNT_CONNECTOR_REGISTRY_ROOT,
-    DEV_CONNECTOR_REGISTRY_ROOT,
     process.env.SRGNT_DEV_CONNECTORS_PATH,
+    DEV_CONNECTOR_REGISTRY_ROOT,
+    path.resolve(process.cwd(), 'dev-connectors'),
     path.resolve(process.cwd(), 'packages/desktop/dev-connectors'),
+    path.resolve(app.getAppPath(), 'dev-connectors'),
+    resourcesPath ? path.resolve(resourcesPath, 'dev-connectors') : undefined,
   ];
 
   for (const candidate of candidates) {
@@ -351,28 +371,19 @@ async function fetchConnectorCatalogFromRemote(url: string): Promise<Record<stri
     throw new Error(`Failed to fetch connector catalog from ${url}`);
   }
 
-  const rawPayload = await response.json();
-  const parsedPayload = rawPayload as RegistryCatalogResponse;
+  return parseConnectorCatalogPayload(await response.json(), {
+    baseUrl: connectorRegistryBaseUrl ?? DEV_CONNECTOR_REGISTRY_URL,
+  });
+}
 
-  const entries = Array.isArray(parsedPayload?.connectors) ? parsedPayload.connectors : [];
-  const nextDefinitions: Record<string, ConnectorDefinition> = {};
-
-  for (const entry of entries) {
-    if (!entry || typeof entry !== 'object') {
-      continue;
-    }
-
-    const manifest = parseSync(SConnectorManifest, entry.manifest);
-    const packageUrl = entry.packageUrl ?? (entry.packagePath ? `${connectorRegistryBaseUrl ?? DEV_CONNECTOR_REGISTRY_URL}${entry.packagePath}` : undefined);
-
-    nextDefinitions[manifest.id] = {
-      manifest,
-      packageUrl,
-      entityCounts: entry.entityCounts,
-    };
+async function loadConnectorCatalogFromDisk(): Promise<Record<string, ConnectorDefinition>> {
+  const sourcePath = await getConnectorRegistrySourcePath();
+  if (!sourcePath) {
+    return {};
   }
 
-  return nextDefinitions;
+  const raw = await fs.readFile(path.join(sourcePath, 'catalog.json'), 'utf8');
+  return parseConnectorCatalogPayload(JSON.parse(raw), { sourcePath });
 }
 
 function buildConnectorCatalogSource(): string | null {
@@ -383,46 +394,45 @@ function buildConnectorCatalogSource(): string | null {
   return isDev ? `${connectorRegistryBaseUrl ?? DEV_CONNECTOR_REGISTRY_URL}${DEFAULT_CONNECTOR_CATALOG_PATH}` : null;
 }
 
+function buildBuiltinConnectorDefinitions(): Record<string, ConnectorDefinition> {
+  return {
+    ...Object.fromEntries(
+      Object.entries(builtinConnectorDefinitions).map(([id, definition]) => [
+        id,
+        {
+          manifest: definition.manifest,
+          entityCounts: definition.entityCounts,
+          packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
+        },
+      ]),
+    ),
+  };
+}
+
 async function refreshConnectorDefinitions(): Promise<void> {
   await startDevConnectorRegistryServer();
 
   const registryUrl = buildConnectorCatalogSource();
-  if (!registryUrl) {
-    connectorDefinitions = {
-      ...Object.fromEntries(
-        Object.entries(builtinConnectorDefinitions).map(([id, definition]) => [
-          id,
-          {
-            manifest: definition.manifest,
-            entityCounts: definition.entityCounts,
-            packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
-          },
-        ]),
-      ),
-    };
-    return;
+  connectorDefinitions = await chooseConnectorDefinitions({
+    loadDisk: loadConnectorCatalogFromDisk,
+    fetchRemote: registryUrl ? () => fetchConnectorCatalogFromRemote(registryUrl) : undefined,
+    buildBuiltins: buildBuiltinConnectorDefinitions,
+    warn: (message, error) => console.warn(message, error),
+  });
+}
+
+async function readConnectorPackagePayload(packageUrl: string): Promise<unknown> {
+  const parsedUrl = new URL(packageUrl);
+  if (parsedUrl.protocol === 'file:') {
+    return JSON.parse(await fs.readFile(parsedUrl, 'utf8'));
   }
 
-  try {
-    connectorDefinitions = await fetchConnectorCatalogFromRemote(registryUrl);
-    if (Object.keys(connectorDefinitions).length === 0) {
-      throw new Error('Empty catalog payload.');
-    }
-  } catch (error) {
-    console.warn('[main] connector catalog fetch failed, using built-in catalog', error);
-    connectorDefinitions = {
-      ...Object.fromEntries(
-        Object.entries(builtinConnectorDefinitions).map(([id, definition]) => [
-          id,
-          {
-            manifest: definition.manifest,
-            entityCounts: definition.entityCounts,
-            packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
-          },
-        ]),
-      ),
-    };
+  const response = await fetch(packageUrl);
+  if (!response.ok) {
+    throw new Error(`Connector package download failed: ${packageUrl}`);
   }
+
+  return response.json();
 }
 
 async function fetchAndValidateConnectorPackage(connectorId: string, definition: ConnectorDefinition): Promise<void> {
@@ -430,12 +440,7 @@ async function fetchAndValidateConnectorPackage(connectorId: string, definition:
     return;
   }
 
-  const response = await fetch(definition.packageUrl);
-  if (!response.ok) {
-    throw new Error(`Connector package download failed: ${definition.packageUrl}`);
-  }
-
-  const rawPayload = (await response.json()) as { manifest?: unknown };
+  const rawPayload = (await readConnectorPackagePayload(definition.packageUrl)) as { manifest?: unknown };
   const packageManifest = parseSync(SConnectorManifest, rawPayload.manifest ?? rawPayload);
 
   if (packageManifest.id !== connectorId) {
@@ -796,6 +801,22 @@ ipcMain.handle(ipcChannels.connectorInstall, async (_event, id: string) => {
     },
   });
 
+  // Register Jira package through ConnectorPackageHost so it can be activated.
+  if (connectorId === 'jira') {
+    await connectorPackageHost.registerInstalledPackage({
+      packageId: 'jira@0.1.0',
+      connectorId: 'jira',
+      packageVersion: '0.1.0',
+      sdkVersion: '1.0.0',
+      minHostVersion: '1.0.0',
+      sourceUrl: 'file://../connector-jira/dist/index.js',
+      installedAt: new Date().toISOString(),
+      verificationStatus: 'verified',
+      lifecycleState: 'installed',
+      executionModel: 'worker',
+    });
+  }
+
   return createInstalledConnectorState(connectorId, definition, 'disconnected');
 });
 
@@ -832,6 +853,13 @@ ipcMain.handle(ipcChannels.connectorConnect, async (_event, id: string) => {
     throw new Error(`Connector package metadata for ${connectorId} is unavailable`);
   }
 
+  // Activate and load the package through ConnectorPackageHost for Jira.
+  // This triggers the worker runtime, factory call, and handshake.
+  if (connectorId === 'jira') {
+    await connectorPackageHost.activateAndLoad('jira@0.1.0');
+    await connectorPackageHost.markConnected('jira@0.1.0');
+  }
+
   connectorState.set(
     connectorId,
     createInstalledConnectorState(connectorId, definition, 'connected'),
@@ -851,6 +879,49 @@ ipcMain.handle(ipcChannels.connectorDisconnect, async (_event, id: string) => {
   connectorState.set(connectorId, nextState);
 
   return connectorState.get(connectorId);
+});
+
+// Jira connector settings — non-secret config stored separately from desktop-settings.json
+ipcMain.handle(ipcChannels.connectorSettingsGet, async () => {
+  const jiraSettings = await readJiraSettings(workspaceRoot);
+  return { settings: jiraSettings };
+});
+
+ipcMain.handle(ipcChannels.connectorSettingsSave, async (_event, raw: { settings: unknown }) => {
+  // Validate at runtime using the schema import
+  const { SJiraConnectorSettings } = await import('@srgnt/contracts');
+  const parsedSettings = parseSync(SJiraConnectorSettings, raw.settings);
+  await writeJiraSettings(workspaceRoot, parsedSettings);
+  return { settings: parsedSettings };
+});
+
+// Jira credential — token stored in keychain, never in settings files
+ipcMain.handle(ipcChannels.connectorCredentialSet, async (_event, raw: { connectorId: string; token: string }) => {
+  const adapter = await createCredentialAdapter();
+  try {
+    await adapter.setSecret(raw.connectorId, raw.token);
+  } catch (err) {
+    const msg = redactCredentialError(
+      err instanceof Error ? err.message : String(err),
+      raw.token,
+    );
+    throw new Error(`[credentials] Failed to store token: ${msg}`);
+  }
+});
+
+ipcMain.handle(ipcChannels.connectorCredentialStatus, async (_event, raw: { connectorId: string }) => {
+  const adapter = await createCredentialAdapter();
+  const exists = await adapter.hasSecret(raw.connectorId);
+  return {
+    connectorId: raw.connectorId,
+    exists,
+    backend: getCredentialBackendStatus(),
+  };
+});
+
+ipcMain.handle(ipcChannels.connectorCredentialDelete, async (_event, raw: { connectorId: string }) => {
+  const adapter = await createCredentialAdapter();
+  await adapter.deleteSecret(raw.connectorId);
 });
 
 ipcMain.handle(ipcChannels.settingsGet, () => ({

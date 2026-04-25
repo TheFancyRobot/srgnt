@@ -1,8 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  chooseConnectorDefinitions,
+  parseConnectorCatalogPayload,
+  type ConnectorDefinition,
+} from './connectors/catalog.js';
 
 const srcDir = path.resolve(__dirname, '..');
+const packageJsonPath = path.resolve(srcDir, '../package.json');
 
 describe('connector IPC channels are in sync', () => {
   const mainSource = fs.readFileSync(path.join(srcDir, 'main/index.ts'), 'utf8');
@@ -77,6 +84,91 @@ describe('connector IPC channels are in sync', () => {
     it('ConnectorState has available field', () => {
       expect(envSource).toContain('available: boolean');
     });
+  });
+});
+
+describe('connector catalog discovery includes extracted Jira package', () => {
+  const mainSource = fs.readFileSync(path.join(srcDir, 'main/index.ts'), 'utf8');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
+    build?: { files?: string[]; extraResources?: Array<{ from?: string; to?: string }> };
+  };
+
+  function manifest(id: string, name = id) {
+    return {
+      id,
+      name,
+      version: '0.1.0',
+      description: `${name} connector`,
+      provider: 'test',
+      authType: 'none',
+      config: { authType: 'none', timeout: 30000, retryAttempts: 3 },
+      capabilities: [{ capability: 'read', supportedOperations: ['list'] }],
+      entityTypes: ['Task'],
+      freshnessThresholdMs: 300000,
+      metadata: {},
+    };
+  }
+
+  function definition(id: string): ConnectorDefinition {
+    return {
+      manifest: manifest(id),
+      packageUrl: `https://example.test/${id}.json`,
+    } as ConnectorDefinition;
+  }
+
+  it('checks package-local dev-connectors when pnpm launches Electron from packages/desktop', () => {
+    expect(mainSource).toContain("path.resolve(process.cwd(), 'dev-connectors')");
+  });
+
+  it('uses local disk catalog first and skips remote fetch when disk catalog is present', async () => {
+    const diskDefinitions = { jira: definition('jira') };
+    const loadDisk = vi.fn().mockResolvedValue(diskDefinitions);
+    const fetchRemote = vi.fn().mockResolvedValue({ stale: definition('stale') });
+    const buildBuiltins = vi.fn().mockReturnValue({ outlook: definition('outlook') });
+
+    const result = await chooseConnectorDefinitions({ loadDisk, fetchRemote, buildBuiltins });
+
+    expect(result).toBe(diskDefinitions);
+    expect(fetchRemote).not.toHaveBeenCalled();
+    expect(buildBuiltins).not.toHaveBeenCalled();
+  });
+
+  it('falls back to remote only when no local disk catalog exists', async () => {
+    const remoteDefinitions = { jira: definition('jira') };
+    const loadDisk = vi.fn().mockResolvedValue({});
+    const fetchRemote = vi.fn().mockResolvedValue(remoteDefinitions);
+    const buildBuiltins = vi.fn().mockReturnValue({ outlook: definition('outlook') });
+
+    const result = await chooseConnectorDefinitions({ loadDisk, fetchRemote, buildBuiltins });
+
+    expect(result).toBe(remoteDefinitions);
+    expect(fetchRemote).toHaveBeenCalledTimes(1);
+    expect(buildBuiltins).not.toHaveBeenCalled();
+  });
+
+  it('resolves disk catalog packagePath entries to file URLs instead of localhost URLs', () => {
+    const sourcePath = path.resolve('/tmp/srgnt-catalog/dev-connectors');
+    const parsed = parseConnectorCatalogPayload({
+      connectors: [
+        {
+          manifest: manifest('jira', 'Jira'),
+          packagePath: '/connectors/packages/jira.json',
+        },
+      ],
+    }, { sourcePath });
+
+    expect(parsed.jira?.packageUrl).toMatch(/^file:\/\//);
+    expect(parsed.jira?.packageUrl).not.toContain('127.0.0.1');
+    expect(fileURLToPath(parsed.jira!.packageUrl!)).toBe(path.join(sourcePath, 'packages', 'jira.json'));
+  });
+
+  it('packages the connector catalog for release builds', () => {
+    expect(packageJson.build?.files).toContain('dev-connectors/**/*');
+    expect(packageJson.build?.extraResources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ from: 'dev-connectors', to: 'dev-connectors' }),
+      ]),
+    );
   });
 });
 

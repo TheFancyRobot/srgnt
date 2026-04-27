@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_05_flagship_workflow/Phase|Phase 05 flagship workflow]]'
+context:
+  context_id: 'SESSION-2026-03-27-002722'
+  status: completed
+  updated_at: '2026-03-27T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_05_flagship_workflow/Phase|Phase 05 flagship workflow]].'
+    target: '[[02_Phases/Phase_05_flagship_workflow/Phase|Phase 05 flagship workflow]]'
+  resume_target:
+    type: phase
+    target: '[[02_Phases/Phase_05_flagship_workflow/Phase|Phase 05 flagship workflow]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_step: '[[02_Phases/Phase_05_flagship_workflow/Steps/Step_04_compose-end-to-end-command-center-workflow|STEP-05-04]]'
 related_bugs: []
 related_decisions: []
@@ -81,6 +94,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 - Record important facts learned during the session.
 - Promote durable information into architecture, bug, or decision notes when appropriate.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_05_flagship_workflow/Phase|Phase 05 flagship workflow]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

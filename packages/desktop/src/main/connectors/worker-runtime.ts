@@ -9,10 +9,10 @@ import type { LoaderRuntime, LoaderHandshakeMessage, SpawnRuntime } from './load
 /**
  * Token and workspace context needed by the worker runtime to inject into
  * the HostContext. Retrieved by the main process at spawn time (DEC-0017:
- * token lives in OS keychain, only the main process can fetch it).
+ * token lives in the main-process credential adapter, only the main process can fetch it).
  */
 export interface WorkerSpawnContext {
-  /** Jira API token from OS keychain (undefined if not yet configured) */
+  /** Jira API token from the main-process credential adapter (undefined if not yet configured) */
   token?: string;
   /** Workspace root path for markdown file persistence */
   workspaceRoot: string;
@@ -31,7 +31,7 @@ export interface CreateWorkerSpawnOptions {
   resolvePackageEntry?: (pkg: InstalledConnectorPackage) => string;
   /**
    * Called at spawn time to get the token + workspace context. Main process
-   * fetches the Jira token from OS keychain here (DEC-0017 boundary).
+   * fetches the Jira token from the credential adapter here (DEC-0017 boundary).
    * Credentials must NEVER be stored in the package record or serialized.
    */
   getSpawnContext?: (pkg: InstalledConnectorPackage) => Promise<WorkerSpawnContext>;
@@ -44,7 +44,7 @@ export function createWorkerSpawn(options: CreateWorkerSpawnOptions = {}): Spawn
   return async function workerSpawn(pkg: InstalledConnectorPackage): Promise<LoaderRuntime> {
     const packageEntry = options.resolvePackageEntry?.(pkg);
 
-    // Resolve token + workspace at spawn time (DEC-0017: fetch from keychain here)
+    // Resolve token + workspace at spawn time (DEC-0017: fetch from credential adapter here)
     const spawnContext = options.getSpawnContext
       ? await options.getSpawnContext(pkg)
       : { workspaceRoot: process.cwd() };

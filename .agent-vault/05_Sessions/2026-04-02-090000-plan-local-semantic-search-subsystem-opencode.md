@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
+context:
+  context_id: 'SESSION-2026-04-02-090000'
+  status: completed
+  updated_at: '2026-04-02T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]].'
+    target: '[[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs:
   - '[[03_Bugs/BUG-0001_research-query-engine-memory-scaling-for-thousands-of-documents|BUG-0001 Query engine memory scaling for thousands of documents]]'
 related_decisions:
@@ -44,6 +57,12 @@ tags:
 - This is a new initiative, not a duplicate of existing notes-search work, but it must share the same workspace markdown corpus policy.
 - The highest-risk choices are model bundling, worker lifecycle, and stale-data cleanup rather than retrieval API shape.
 - Vectra is workable for a bounded local corpus but reinforces the need for explicit exclusion rules and rebuild-aware manifests.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

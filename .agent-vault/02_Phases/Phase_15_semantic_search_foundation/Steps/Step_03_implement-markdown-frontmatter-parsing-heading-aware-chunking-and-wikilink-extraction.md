@@ -21,37 +21,23 @@ tags:
 
 # Step 03 - Implement markdown frontmatter parsing, heading-aware chunking, and wikilink extraction
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: runtime can convert one supported markdown file into deterministic chunk records ready for embedding and incremental reindexing.
-
-## Why This Step Exists
-
-- Chunk shape is the semantic index contract. If title derivation, heading paths, or overlap rules drift later, vector persistence and rebuild behavior become brittle.
-
-## Prerequisites
-
-- STEP-15-01 and STEP-15-02 complete.
-
-## Relevant Code Paths
-
-- `packages/runtime/src/semantic-search/` (new)
-- `packages/runtime/src/query/`
-- `packages/runtime/src/workspace/`
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - [[06_Shared_Knowledge/srgnt_framework_query_and_index_architecture|Workspace Query and Index Architecture]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Parse YAML frontmatter when present and derive `title` from frontmatter `title` before falling back to the filename.
-2. Split markdown by headings first and derive a stable `headingPath` for each chunk.
-3. Split oversized sections again using configurable chunk size and overlap.
-4. Extract wikilinks from chunk text and include them in metadata.
-5. Compute deterministic content hashes and chunk ids from normalized metadata so stale-vector deletion is reliable.
-6. Add tests for frontmatter title handling, heading-aware splitting, overlap behavior, and wikilink extraction.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_03_implement-markdown-frontmatter-parsing-heading-aware-chunking-and-wikilink-extraction/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_03_implement-markdown-frontmatter-parsing-heading-aware-chunking-and-wikilink-extraction/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_03_implement-markdown-frontmatter-parsing-heading-aware-chunking-and-wikilink-extraction/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_03_implement-markdown-frontmatter-parsing-heading-aware-chunking-and-wikilink-extraction/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -61,11 +47,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Implement deterministic markdown-to-chunk transformation with focused tests.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Preserve source `mtimeMs` separately from the content hash so unchanged timestamp-only files and hash-only changes can both be reasoned about explicitly.
-- Do not log full chunk bodies by default.
 
 ## Human Notes
 
@@ -77,6 +58,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means one markdown file can be transformed into the required chunk metadata deterministically and testably.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

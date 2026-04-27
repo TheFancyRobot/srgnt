@@ -4,6 +4,7 @@ import {
   SJiraConnectorSettings,
   SJiraScopeMode,
   SJiraExtractionToggles,
+  SJiraCredentialStoragePreference,
   type JiraConnectorSettings,
 } from "./jira-settings.js";
 
@@ -171,5 +172,59 @@ describe("SJiraConnectorSettings", () => {
       scopeMode: "jql" as const,
     });
     expect(result.jql).toBeUndefined();
+  });
+});
+
+describe("SJiraCredentialStoragePreference", () => {
+  it('parses "keychain"', () => {
+    expect(parseSync(SJiraCredentialStoragePreference, 'keychain')).toBe('keychain');
+  });
+
+  it('parses "encrypted-local"', () => {
+    expect(parseSync(SJiraCredentialStoragePreference, 'encrypted-local')).toBe('encrypted-local');
+  });
+
+  it('rejects invalid preference value', () => {
+    expect(() => parseSync(SJiraCredentialStoragePreference, 'plaintext')).toThrow();
+    expect(() => parseSync(SJiraCredentialStoragePreference, '')).toThrow();
+    expect(() => parseSync(SJiraCredentialStoragePreference, 'keychain ')).toThrow();
+  });
+});
+
+describe("SJiraConnectorSettings credentialStoragePreference", () => {
+  const minimalValid: JiraConnectorSettings = {
+    connectorId: "jira",
+    siteUrl: "https://company.atlassian.net",
+    accountEmail: "user@company.com",
+  };
+
+  it('defaults credentialStoragePreference to keychain', () => {
+    const result = parseSync(SJiraConnectorSettings, minimalValid);
+    expect(result.credentialStoragePreference).toBe('keychain');
+  });
+
+  it('parses explicit credentialStoragePreference: keychain', () => {
+    const result = parseSync(SJiraConnectorSettings, {
+      ...minimalValid,
+      credentialStoragePreference: 'keychain',
+    });
+    expect(result.credentialStoragePreference).toBe('keychain');
+  });
+
+  it('parses explicit credentialStoragePreference: encrypted-local', () => {
+    const result = parseSync(SJiraConnectorSettings, {
+      ...minimalValid,
+      credentialStoragePreference: 'encrypted-local',
+    });
+    expect(result.credentialStoragePreference).toBe('encrypted-local');
+  });
+
+  it('rejects invalid credentialStoragePreference value', () => {
+    expect(() =>
+      parseSync(SJiraConnectorSettings, {
+        ...minimalValid,
+        credentialStoragePreference: 'plaintext',
+      }),
+    ).toThrow();
   });
 });

@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_04_first_integrations/Phase|Phase 04 first integrations]]'
+context:
+  context_id: 'SESSION-2026-03-22-170211'
+  status: completed
+  updated_at: '2026-03-22T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_04_first_integrations/Steps/Step_02_implement-jira-connector-fixtures-and-canonical-mapping|STEP-04-02 Implement Jira Connector Fixtures And Canonical Mapping]].'
+    target: '[[02_Phases/Phase_04_first_integrations/Steps/Step_02_implement-jira-connector-fixtures-and-canonical-mapping|STEP-04-02 Implement Jira Connector Fixtures And Canonical Mapping]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_04_first_integrations/Steps/Step_02_implement-jira-connector-fixtures-and-canonical-mapping|STEP-04-02 Implement Jira Connector Fixtures And Canonical Mapping]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-22'
@@ -42,6 +55,12 @@ tags:
 - Jira connector package at `packages/connectors/jira/` with auth adapter, sync implementation, and canonical task mapper.
 - Canonical mapping preserves only wedge-consumed fields in typed entity; raw metadata blob preserves the rest.
 - Fixture-based tests cover sync, mapping correctness, freshness, and unsupported-field handling.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_04_first_integrations/Steps/Step_02_implement-jira-connector-fixtures-and-canonical-mapping|STEP-04-02 Implement Jira Connector Fixtures And Canonical Mapping]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

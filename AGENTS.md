@@ -32,6 +32,9 @@ The following tools are available when the `agent-vault` MCP server is running:
 ### Workflow
 
 - **Before work**: Read Active Context, identify the relevant step, create a session note.
+- **Delegation policy**: The team lead is an orchestrator, not an executor. For any non-trivial task, delegate first to the coordinator, who then routes to the appropriate teammate, instead of doing direct codebase work locally.
+- **Routing order**: lead → coordinator for substantive work; coordinator → researcher for discovery/resume, planner for implementation plans, executor-1/executor-2 for coding, reviewer for approval, tester for full-suite validation including e2e.
+- **Gate**: tester runs only after reviewer approval.
 - **During work**: Append to session logs, create bug/decision notes as needed, keep links current.
 - **After work**: Update step snapshots, refresh indexes, leave the vault coherent.
 
@@ -40,6 +43,7 @@ The following tools are available when the `agent-vault` MCP server is running:
 - Use bounded mutations only (frontmatter updates, section appends, generated block replacements).
 - Do not rewrite entire notes or delete human-authored content.
 - Do not load the entire vault into context — use `vault_traverse` for targeted graph loading.
+- Keep active context below 20% utilization by tagging and squashing aggressively.
 - See `.agent-vault/AGENTS.md` for the full operating contract.
 
 <!-- agent-vault:end -->

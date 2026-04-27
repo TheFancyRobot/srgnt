@@ -9,6 +9,19 @@ status: completed
 owner: executor-1
 branch: phase-20-connector-factory-remote-package-installation
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
+context:
+  context_id: 'SESSION-2026-04-19-070143'
+  status: completed
+  updated_at: '2026-04-19T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_02_refactor-built-in-connectors-to-register-through-the-shared-factory-path|STEP-20-02 Refactor built-in connectors to register through the shared factory path]].'
+    target: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_02_refactor-built-in-connectors-to-register-through-the-shared-factory-path|STEP-20-02 Refactor built-in connectors to register through the shared factory path]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_02_refactor-built-in-connectors-to-register-through-the-shared-factory-path|STEP-20-02 Refactor built-in connectors to register through the shared factory path]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions:
   - '[[04_Decisions/DEC-0016_isolate-third-party-connector-packages-outside-electron-main-process|DEC-0016 Isolate third-party connector packages outside Electron main process]]'
@@ -47,6 +60,12 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 - Desktop main had been duplicating built-in connector definitions inline, which kept first-party connectors on a privileged path.
 - Shared registration is now sourced from `packages/connectors`, making built-ins prove the same factory contract external packages will target.
 - The blocking desktop validation issue came from STEP-20-03 persistence-shape drift, not from the built-in registry refactor itself.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_02_refactor-built-in-connectors-to-register-through-the-shared-factory-path|STEP-20-02 Refactor built-in connectors to register through the shared factory path]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

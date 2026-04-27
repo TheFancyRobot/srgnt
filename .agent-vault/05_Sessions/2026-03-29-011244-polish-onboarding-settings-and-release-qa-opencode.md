@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_08_product_hardening/Phase|Phase 08 product hardening]]'
+context:
+  context_id: 'SESSION-2026-03-29-011244'
+  status: completed
+  updated_at: '2026-03-29T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]].'
+    target: '[[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions:
   - '[[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Packaging, updates, and release channels for desktop v1]]'
@@ -77,6 +90,12 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 - The safest near-term publication posture is still manual GitHub Release publication after CI artifact upload; cross-platform signing and installer validation are not routine enough yet for unattended publishing.
 - Repo-side release readiness is now reproducible from the workspace root through `pnpm run release:check:repo`, `pnpm run release:artifacts:linux`, and `pnpm run release:rc:linux`, which separates the codebase gate from the remaining external platform sign-off.
 - The one-hour packaged Linux soak completed cleanly with RSS stabilizing around 257-258 MB after the initial launch, which clears the remaining repo-side performance-baseline gap for this step.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

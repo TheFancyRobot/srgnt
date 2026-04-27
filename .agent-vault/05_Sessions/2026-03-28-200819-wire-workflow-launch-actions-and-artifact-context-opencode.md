@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
+context:
+  context_id: 'SESSION-2026-03-28-200819'
+  status: completed
+  updated_at: '2026-03-28T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]].'
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs:
   - '[[03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app|BUG-0002 Today View launch flow fails in live desktop app]]'
 related_decisions: []
@@ -51,6 +64,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Live smoke still exposes a separate runtime defect: the Today View launch path does not transition into a working terminal session, and the standalone Terminal route shows `Disconnected`.
 - Captured the live defect in [[03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app|BUG-0002 Today View launch flow fails in live desktop app]].
 - Historical note: this failed smoke result was later resolved in [[05_Sessions/2026-03-28-202447-wire-workflow-launch-actions-and-artifact-context-opencode|SESSION-2026-03-28-202447 opencode session for Wire Workflow Launch Actions And Artifact Context]].
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

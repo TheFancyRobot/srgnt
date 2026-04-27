@@ -9,6 +9,19 @@ status: in-progress
 owner: executor-1
 branch: ''
 phase: '[[02_Phases/Phase_16_runtime_semantic_search_engine/Phase|Phase 16 runtime semantic search engine]]'
+context:
+  context_id: 'SESSION-2026-04-14-212015'
+  status: active
+  updated_at: '2026-04-14T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types|STEP-16-01 Add Effect service tags, layers, and semantic search domain types]].'
+    target: '[[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types|STEP-16-01 Add Effect service tags, layers, and semantic search domain types]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types|STEP-16-01 Add Effect service tags, layers, and semantic search domain types]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs: []
 related_decisions: []
 created: '2026-04-14'
@@ -43,6 +56,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 - Record important facts learned during the session.
 - Promote durable information into architecture, bug, or decision notes when appropriate.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types|STEP-16-01 Add Effect service tags, layers, and semantic search domain types]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

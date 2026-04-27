@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
+context:
+  context_id: 'SESSION-2026-03-30-203238'
+  status: completed
+  updated_at: '2026-03-30T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_07_optimize-renderer-bundle-splitting-and-lazy-load-terminal-surface|STEP-13-07 Optimize renderer bundle splitting and lazy-load terminal surface]].'
+    target: '[[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_07_optimize-renderer-bundle-splitting-and-lazy-load-terminal-surface|STEP-13-07 Optimize renderer bundle splitting and lazy-load terminal surface]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_07_optimize-renderer-bundle-splitting-and-lazy-load-terminal-surface|STEP-13-07 Optimize renderer bundle splitting and lazy-load terminal surface]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-30'
@@ -52,6 +65,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - The route-level lazy boundary alone removed terminal code from the startup bundle, cutting the main renderer chunk by roughly 79%.
 - `ghostty-web` is still inherently large, but moving it behind a dedicated runtime chunk keeps the cost isolated to terminal usage instead of every renderer launch.
 - The final build output is `index` at `219.41 kB`, `TerminalPanel` at `192.63 kB`, and `terminal-runtime` at `640.09 kB`, with no Vite large-chunk warning after the chunk limit was tuned to the isolated runtime.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_07_optimize-renderer-bundle-splitting-and-lazy-load-terminal-surface|STEP-13-07 Optimize renderer bundle splitting and lazy-load terminal surface]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

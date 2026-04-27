@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: 'fix/bug-0004-notes-tree-add-item-input-has-white-on-white-text-'
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
+context:
+  context_id: 'SESSION-2026-04-01-210911'
+  status: completed
+  updated_at: '2026-04-01T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]].'
+    target: '[[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs:
   - '[[03_Bugs/BUG-0004_notes-tree-add-item-input-has-white-on-white-text-a11y-aaa-fail|BUG-0004 Notes tree add-item input has white-on-white text (a11y AAA fail)]]'
 related_decisions: []
@@ -48,6 +61,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 - Record important facts learned during the session.
 - Promote durable information into architecture, bug, or decision notes when appropriate.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

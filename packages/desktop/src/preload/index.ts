@@ -236,7 +236,7 @@ const api = {
   // Jira credential — token NEVER exposed to renderer; status only
   setJiraToken: (token: string): Promise<void> =>
     ipcRenderer.invoke(ipcChannels.connectorCredentialSet, { connectorId: 'jira', token }),
-  getJiraTokenStatus: (): Promise<{ connectorId: string; exists: boolean; backend: string }> =>
+  getJiraTokenStatus: (): Promise<{ connectorId: string; exists: boolean; backend: 'keychain' | 'encrypted-local' | 'unavailable'; preferredBackend: 'keychain' | 'encrypted-local'; keychainAvailable: boolean; encryptedLocalAvailable: boolean }> =>
     ipcRenderer.invoke(ipcChannels.connectorCredentialStatus, { connectorId: 'jira' }),
   deleteJiraToken: (): Promise<void> =>
     ipcRenderer.invoke(ipcChannels.connectorCredentialDelete, { connectorId: 'jira' }),

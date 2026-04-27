@@ -9,6 +9,19 @@ status: complete
 owner: team-lead
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
+context:
+  context_id: 'SESSION-2026-04-12-072442'
+  status: active
+  updated_at: '2026-04-12T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]].'
+    target: '[[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs: []
 related_decisions: []
 created: '2026-04-12'
@@ -66,6 +79,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - TodaySidePanel.tsx shows 80.65% but this is a v8 instrumentation artifact with React/jsdom — all code paths exercised in isolation.
 - Coordinator required 3 spawns due to stalls/context loss. Lesson: respawn with full git-verified state, not memory-based handoff.
 - Coordinator spawned a redundant subagent that duplicated executor-1's work and broke 10 tests. Reverted with `git checkout HEAD --`. Lesson: always check `git diff` before dispatching.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

@@ -9,6 +9,19 @@ status: completed
 owner: claude-opus
 branch: phase-20-connector-factory-remote-package-installation
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
+context:
+  context_id: 'SESSION-2026-04-19-195504'
+  status: completed
+  updated_at: '2026-04-19T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_05_add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage|STEP-20-05 Add CLI install remove inspect commands and end-to-end regression coverage]].'
+    target: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_05_add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage|STEP-20-05 Add CLI install remove inspect commands and end-to-end regression coverage]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_05_add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage|STEP-20-05 Add CLI install remove inspect commands and end-to-end regression coverage]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-04-19'
@@ -74,6 +87,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Workspace packages consumed at runtime by the Electron main process MUST expose compiled output via `main: "./dist/index.js"`, not the raw TypeScript source. When source files use the TS convention of `.js` extensions for unbuilt `.ts` siblings, Node ESM cannot resolve them at runtime. `@srgnt/contracts` and `@srgnt/runtime` already follow this convention; `@srgnt/connectors` was the outlier that broke e2e.
 - Unit tests did not catch this because vitest resolves TypeScript sources directly; the failure mode only manifests in actual Electron module loading.
 - Consider adding an e2e smoke of the built main entry (module-load only, not Playwright-driven) so future workspace-dependency drift fails fast in CI.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_05_add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage|STEP-20-05 Add CLI install remove inspect commands and end-to-end regression coverage]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

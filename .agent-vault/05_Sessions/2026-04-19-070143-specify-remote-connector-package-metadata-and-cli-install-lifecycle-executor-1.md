@@ -9,6 +9,19 @@ status: completed
 owner: executor-1
 branch: phase-20-connector-factory-remote-package-installation
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
+context:
+  context_id: 'SESSION-2026-04-19-070144'
+  status: completed
+  updated_at: '2026-04-19T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_03_specify-remote-connector-package-metadata-and-cli-install-lifecycle|STEP-20-03 Specify remote connector package metadata and CLI install lifecycle]].'
+    target: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_03_specify-remote-connector-package-metadata-and-cli-install-lifecycle|STEP-20-03 Specify remote connector package metadata and CLI install lifecycle]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_03_specify-remote-connector-package-metadata-and-cli-install-lifecycle|STEP-20-03 Specify remote connector package metadata and CLI install lifecycle]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions:
   - '[[04_Decisions/DEC-0016_isolate-third-party-connector-packages-outside-electron-main-process|DEC-0016 Isolate third-party connector packages outside Electron main process]]'
@@ -47,6 +60,12 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 - The previous `installedConnectorIds` persistence model was insufficient to express package provenance, compatibility, verification status, and lifecycle.
 - The new registry shape keeps install metadata durable while leaving runtime connected/auth state separate.
 - Reviewer identified a non-blocking naming inconsistency (`sourceUrl` vs `packageUrl`, checksum naming) that should be harmonized before later steps expand loader and CLI behavior.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_03_specify-remote-connector-package-metadata-and-cli-install-lifecycle|STEP-20-03 Specify remote connector package metadata and CLI install lifecycle]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

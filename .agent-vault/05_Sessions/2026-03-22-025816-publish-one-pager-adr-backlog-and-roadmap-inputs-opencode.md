@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_00_product_framing_lock/Phase|Phase 00 product framing lock]]'
+context:
+  context_id: 'SESSION-2026-03-22-025816'
+  status: completed
+  updated_at: '2026-03-22T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs|STEP-00-03 Publish One Pager ADR Backlog And Roadmap Inputs]].'
+    target: '[[02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs|STEP-00-03 Publish One Pager ADR Backlog And Roadmap Inputs]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs|STEP-00-03 Publish One Pager ADR Backlog And Roadmap Inputs]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-22'
@@ -52,6 +65,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - The only obvious STEP-00-03 gap was the missing one-pager, but the pass also exposed two hidden dependencies: `terminology_rules.md` and `v1_wedge_definition.md` did not exist even though earlier step refinements expected them.
 - Downstream notes still had small framing drift around Teams and the Dataview decision gate; tightening those references was necessary to make the one-pager actually reusable.
 - No new ADR was needed; the work was publication and consistency cleanup around already-accepted framing decisions.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs|STEP-00-03 Publish One Pager ADR Backlog And Roadmap Inputs]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

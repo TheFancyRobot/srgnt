@@ -19,7 +19,7 @@ No environment variables, child process, or main-process APIs are available to t
 
 ## Security Model
 
-**Token never leaves the privileged host boundary.** The Jira API token is stored via the host's credential adapter, which currently uses Electron's `safeStorage` API for OS-level encryption (macOS Keychain / Windows Credential Manager when available; encrypted-local storage otherwise). The connector worker receives the token only at spawn time via a memory-only channel — it is never written to disk, stored in settings files, or included in logs.
+**Token never leaves the privileged host boundary.** The Jira API token is stored via the host's credential adapter, which prefers the OS keychain (macOS Keychain / Windows Credential Manager / libsecret on Linux) when available. If the OS keychain is unavailable, SRGNT falls back to encrypted in-app storage — the token is always encrypted and never stored as plaintext. Users can choose their storage preference in Settings. The connector worker receives the token only at spawn time via a memory-only channel — it is never written to disk, stored in workspace files or settings JSON, or included in logs.
 
 See [DEC-0017](../../04_Decisions/DEC-0017_keep-jira-api-tokens-in-the-os-keychain-behind-the-main-process-settings-boundary.md) for the full design.
 
@@ -142,7 +142,7 @@ The following are **intentionally not implemented** in this phase and represent 
 - [ ] **Multiple Jira sites**: Only one Jira site per srgnt installation is supported.
 - [ ] **Custom field type rendering**: Custom field values are included as-is in provider metadata; typed rendering (date pickers, select menus, etc.) is not implemented.
 - [ ] **Shared rate limit budget across restarts**: The shared `HttpClient` retries on 429 and network errors with exponential backoff per request, but does not track a shared rate limit budget across connector restarts or correlate with Jira's per-tenant rate limits.
-- [ ] **Dedicated OS keychain adapter**: Currently uses Electron `safeStorage` (which falls back to encrypted-local when OS keychain is unavailable). A first-class OS keychain adapter with explicit availability detection and user migration path is not yet implemented.
+- [ ] **Dedicated OS keychain adapter**: ✅ Implemented in BUG-0019. The credential adapter now supports explicit OS keychain preference with graceful fallback to encrypted in-app storage. Users can choose their storage preference in Settings, and tokens can be migrated between backends.
 
 ## Architecture
 

@@ -20,35 +20,23 @@ tags:
 
 # Step 05 - Implement semantic retrieval, feature enable flow, and runtime integration tests
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: runtime exposes the finished semantic retrieval API and the engine-level feature enable behavior expected by desktop integration.
-
-## Why This Step Exists
-
-- This is the runtime milestone that Phase 17 can safely host. Without it, desktop would need to invent behavior that belongs in shared runtime code.
-
-## Prerequisites
-
-- STEP-16-04 complete.
-
-## Relevant Code Paths
-
-- runtime semantic-search modules and tests
-- `packages/runtime/src/index.ts`
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - [[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015 Semantic search runtime and hosting model]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Implement `search(query)` with bounded result counts, stable ranking behavior, and safe result payload shaping.
-2. Implement runtime-level feature enable/disable behavior where natural, including initial full-workspace indexing when the feature is first enabled.
-3. Ensure disable stops active runtime participation without destructive automatic index deletion.
-4. Add runtime integration tests using mocked embeddings or vector storage where practical and at least one realistic end-to-end runtime path.
-5. Export the finished runtime service cleanly for desktop integration.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_05_implement-semantic-retrieval-feature-enable-flow-and-runtime-integration-tests/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_05_implement-semantic-retrieval-feature-enable-flow-and-runtime-integration-tests/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_05_implement-semantic-retrieval-feature-enable-flow-and-runtime-integration-tests/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_05_implement-semantic-retrieval-feature-enable-flow-and-runtime-integration-tests/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -58,10 +46,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Finish the runtime public API and integration tests.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Search result shaping should give desktop enough metadata for a future titlebar search bar without leaking internal store details.
 
 ## Human Notes
 
@@ -73,6 +57,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means desktop can consume a stable runtime semantic-search service without reimplementing engine behavior.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

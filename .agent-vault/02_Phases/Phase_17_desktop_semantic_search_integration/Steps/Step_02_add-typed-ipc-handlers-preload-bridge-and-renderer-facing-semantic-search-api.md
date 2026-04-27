@@ -21,38 +21,23 @@ tags:
 
 # Step 02 - Add typed IPC handlers, preload bridge, and renderer-facing semantic search API
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: the renderer can call the semantic-search subsystem safely through typed IPC and the sandboxed preload bridge.
-
-## Why This Step Exists
-
-- This is the user-facing access seam for future UI work, and it must stay narrow enough to preserve the Electron security posture.
-
-## Prerequisites
-
-- STEP-17-01 and STEP-15-01 complete.
-
-## Relevant Code Paths
-
-- `packages/contracts/src/ipc/contracts.ts`
-- `packages/desktop/src/main/index.ts`
-- `packages/desktop/src/preload/index.ts`
-- `packages/desktop/src/preload/preload-ipc-sync.test.ts`
-- `packages/desktop/src/renderer/env.d.ts`
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - existing preload regression tests guarding BUG-0002 patterns
 
-## Execution Prompt
+## Companion Notes
 
-1. Add typed main-process handlers for the semantic-search API and route them through the desktop host.
-2. Mirror the channels safely in the sandboxed preload without importing runtime values.
-3. Expose only the narrow renderer API needed by future UI consumers.
-4. Add preload self-containment and contract-sync tests for the new channels.
-5. Add a minimal renderer-facing type shape in `env.d.ts` without inventing a full UI.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_02_add-typed-ipc-handlers-preload-bridge-and-renderer-facing-semantic-search-api/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_02_add-typed-ipc-handlers-preload-bridge-and-renderer-facing-semantic-search-api/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_02_add-typed-ipc-handlers-preload-bridge-and-renderer-facing-semantic-search-api/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_02_add-typed-ipc-handlers-preload-bridge-and-renderer-facing-semantic-search-api/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -62,10 +47,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Add the safe IPC and preload bridge for semantic search.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Reuse the repo’s existing preload discipline: no runtime imports, inlined channels, and tests guarding drift.
 
 ## Human Notes
 
@@ -77,14 +58,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means the renderer has a safe, typed semantic-search bridge and nothing more.
-e.
-STEP-17-02 COMPLETE — validated 2026-04-16.
-
-6 IPC handlers registered, preload bridge with inline channels, renderer type declarations.
-- 24 new IPC handler tests (769 desktop total), 466 runtime tests
-- preload-ipc-sync.test.ts drift guard passes
-- No new typecheck regressions
-Post-ship reviewer fix: semanticSearchInit now uses parseSync for consistency. Tests expanded 24→32. Final count: 777 desktop tests.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

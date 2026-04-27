@@ -24,55 +24,47 @@ reviewer_notes: 'SCOPE ADJUSTED: Vitest/Effect Context.Tag identity incompatibil
 
 # Step 03 - Add real corpus indexing and retrieval integration tests against temporary markdown workspaces
 
-## Agent-Managed Snapshot
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
 
-- **Status**: done_limited
-- **Current owner**: executor-1
-- **Last touched**: 2026-04-16
-- **Next action**: None — scope-adjusted closure. Integration tests for real Worker threads blocked by Vitest/Effect Context.Tag identity incompatibility. Equivalent coverage provided by runtime tests + E2E tests + host tests.
+## Purpose
 
-## Outcome Summary
-
-### Actual Outcome (2026-04-16)
-
-**What was done:**
-- 5 skipped worker tests removed from `worker.test.ts` (lines 151-226) — these tests were testing Worker message protocol with mocks that could not be resolved due to Vitest/Effect Context.Tag identity issue.
-
-**Why integration tests couldn't be added at Worker level:**
-- Vitest's module mocking breaks Effect's Context.Tag identity when modules are mocked
-- Attempted `host.integration.test.ts` with corrected Worker path — same Effect layer composition failure
-- True Worker-level integration testing requires E2E or a separate test harness
-
-**Compensating coverage (accepted by reviewer and coordinator):**
-- Runtime tests (`packages/runtime/src/semantic-search/`) — 466 tests with real Effect layer, fixtures, indexing/retrieval
-- E2E tests (`packages/desktop/e2e/semantic-search-*.spec.ts`) — full Electron stack with real Worker
-- Host tests (`packages/desktop/src/main/semantic-search/host.test.ts`) — 75 tests for host lifecycle
-
-**Validation:** 75 desktop semantic-search tests pass | 0 failed
-
----
-
-## Original Step Documentation (Historical)
-
-This step originally targeted adding real corpus indexing and retrieval integration tests against temporary markdown workspaces. Due to the Vitest/Effect tooling incompatibility, the step is being closed with documented limitation rather than literal completion.
-
-### Purpose
 - Outcome: Add real corpus indexing and retrieval integration tests against temporary markdown workspaces.
 - Parent phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]].
 
-### Why This Step Exists
-- Real user value starts when actual markdown files can be indexed and queried, not when a stub says "success."
-- This step adds deterministic proof that semantic search returns expected documents and chunks from realistic workspace fixtures.
+## Required Reading
 
-### Prerequisites
-- STEP-18-01 and STEP-18-02 complete.
-- Temporary workspace fixture helpers available or created as part of this step.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]
+- [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces/Execution_Brief|Execution Brief]]
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces/Validation_Plan|Validation Plan]]
 
-### Relevant Code Paths
-- desktop semantic-search integration/E2E tests under `packages/desktop/`
-- runtime semantic-search tests under `packages/runtime/src/semantic-search/`
-- temporary workspace fixture helpers used by notes/search tests
+## Companion Notes
 
-### Session History
-- 2026-04-16 - [[05_Sessions/2026-04-16-184848|SESSION-2026-04-16-184848]] - executor-1 session created
-- 2026-04-16 - [[05_Sessions/2026-04-16-185016|SESSION-2026-04-16-185016]] - executor-1 session created
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
+
+## Agent-Managed Snapshot
+
+<!-- AGENT-START:step-agent-managed-snapshot -->
+- Status: planned
+- Current owner: 
+- Last touched: 2026-04-23
+- Next action: Read [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces/Validation_Plan|Validation Plan]].
+<!-- AGENT-END:step-agent-managed-snapshot -->
+
+## Human Notes
+
+- Put judgment calls or cautions here.
+
+## Session History
+
+<!-- AGENT-START:step-session-history -->
+- No sessions yet.
+<!-- AGENT-END:step-session-history -->
+
+## Related Notes
+
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

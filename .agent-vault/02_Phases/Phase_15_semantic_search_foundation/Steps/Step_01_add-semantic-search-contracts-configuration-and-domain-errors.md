@@ -22,26 +22,11 @@ tags:
 
 # Step 01 - Add semantic search contracts, configuration, and domain errors
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: define the typed contract surface for semantic search before implementation spreads across runtime, contracts, and desktop.
-
-## Why This Step Exists
-
-- This step freezes the names, payloads, errors, and service boundaries that later steps must share.
-- It prevents runtime and desktop from inventing competing models for status, search results, rebuild triggers, and feature enable behavior.
-
-## Prerequisites
-
-- Read the parent phase, [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]], and [[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015]].
-
-## Relevant Code Paths
-
-- `packages/contracts/src/ipc/contracts.ts`
-- `packages/contracts/src/workspace/layout.ts`
-- `packages/runtime/src/index.ts`
-- `packages/desktop/src/preload/index.ts`
-- `packages/desktop/src/renderer/env.d.ts`
 
 ## Required Reading
 
@@ -50,13 +35,12 @@ tags:
 - [[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Notes workspace boundary and cross-workspace navigation rules]]
 - [[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015 Semantic search runtime and hosting model]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Add runtime-owned semantic-search domain types covering chunk metadata, search results, index status, feature state, manifest versions, and typed domain errors.
-2. Add `AppConfig` and semantic-search config schema entries for workspace root, index root, model asset path, chunk size, overlap, batch size, and corpus exclusions.
-3. Add typed IPC contracts only for the desktop-facing operations the renderer should call later: `init`, `enableForWorkspace`, `indexWorkspace`, `rebuildAll`, `search`, and status reporting.
-4. Keep the contract high-level. Do not expose raw file paths, Vectra primitives, or model-execution internals to the renderer.
-5. Add focused schema and type tests so the rest of the initiative can depend on these contracts safely.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -66,11 +50,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Freeze the semantic search domain and IPC contract surface.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Keep result metadata aligned with the required chunk fields: `id`, `filePath`, `fileName`, `title`, `headingPath`, `chunkIndex`, `chunkText`, `wikilinks`, `mtimeMs`, `contentHash`, and `modelId`.
-- Error types should distinguish configuration failure, model asset failure, index corruption, crawl-policy violation, and unsupported-file conditions.
 
 ## Human Notes
 
@@ -83,6 +62,7 @@ tags:
 - 2026-04-12 - [[05_Sessions/2026-04-12-021506-add-semantic-search-contracts-configuration-and-domain-errors-executor-1|SESSION-2026-04-12-021506 executor-1 session for Add semantic search contracts, configuration, and domain errors]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion for this step means runtime, contracts, and desktop all share one typed semantic-search contract surface with targeted tests.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

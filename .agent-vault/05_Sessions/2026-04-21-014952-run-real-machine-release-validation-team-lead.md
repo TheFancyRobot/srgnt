@@ -17,16 +17,16 @@ tags:
   - agent-vault
   - session
 context:
-  context_id: SESSION-2026-04-21-014952
+  context_id: 'SESSION-2026-04-21-014952'
   status: active
   updated_at: '2026-04-21T01:49:52.076Z'
   current_focus:
-    summary: Advance [[02_Phases/Phase_11_real_machine_validation/Steps/Step_01_run-real-machine-release-validation|STEP-11-01 Run real machine release validation]].
+    summary: 'Advance [[02_Phases/Phase_11_real_machine_validation/Steps/Step_01_run-real-machine-release-validation|STEP-11-01 Run real machine release validation]].'
     target: '[[02_Phases/Phase_11_real_machine_validation/Steps/Step_01_run-real-machine-release-validation|STEP-11-01 Run real machine release validation]]'
   resume_target:
     type: step
     target: '[[02_Phases/Phase_11_real_machine_validation/Steps/Step_01_run-real-machine-release-validation|STEP-11-01 Run real machine release validation]]'
-    section: Context Handoff
+    section: 'Context Handoff'
   last_action:
     type: saved
 ---

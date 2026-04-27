@@ -9,6 +9,19 @@ status: in-progress
 owner: ""
 branch: ""
 phase: "[[02_Phases/<phase path>/Phase|<phase name>]]"
+context:
+  context_id: "SESSION-YYYY-MM-DD-01"
+  status: active
+  updated_at: "YYYY-MM-DDTHH:MM:SS.000Z"
+  current_focus:
+    summary: "Advance [[02_Phases/<phase path>/Steps/<step note>|<step name>]]."
+    target: "[[02_Phases/<phase path>/Steps/<step note>|<step name>]]"
+  resume_target:
+    type: step
+    target: "[[02_Phases/<phase path>/Steps/<step note>|<step name>]]"
+    section: "Context Handoff"
+  last_action:
+    type: saved
 related_bugs: []
 related_decisions: []
 created: "YYYY-MM-DD"
@@ -20,17 +33,15 @@ tags:
 
 # Session Template
 
-Use one note per meaningful work session in \`05_Sessions/\`. This note records chronology, validation, and handoff state for a slice of work. The reader should be able to understand what was attempted, what changed, and what the next agent should do, but durable conclusions should still be promoted into phase, architecture, bug, or decision notes. Every session should stay anchored to its primary step; use [[07_Templates/Step_Template|Step Template]] as the companion contract.
+Use one note per meaningful work session. Record chronology, validation, and handoff state, but promote durable conclusions into phase, architecture, bug, or decision notes. See [[07_Templates/Note_Contracts|Note Contracts]].
 
 ## Objective
 
 - State the intended outcome for this session.
-- Tie it to a phase, bug, decision, or release concern.
 
 ## Planned Scope
 
 - List the specific tasks intended for this session.
-- Note explicit out-of-scope items if they could distract execution.
 
 ## Execution Log
 
@@ -42,7 +53,10 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Findings
 
 - Record important facts learned during the session.
-- Promote durable information into architecture, bug, or decision notes when appropriate.
+
+## Context Handoff
+
+- Use this as the canonical prose section for prepared context and resume notes.
 
 ## Changed Paths
 
@@ -78,4 +92,4 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 ## Completion Summary
 
-- State what finished, what remains, and whether the session ended in a clean handoff state.
+- State what finished, what remains, and whether handoff is clean.

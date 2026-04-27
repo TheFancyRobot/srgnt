@@ -21,35 +21,23 @@ tags:
 
 # Step 02 - Implement local EmbeddingService with bundled multilingual model loading and batching
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: runtime can embed single queries and indexing batches locally through one reusable process-local model instance.
-
-## Why This Step Exists
-
-- Embedding is the core quality and performance boundary. It must hide model details while honoring the offline guarantee.
-
-## Prerequisites
-
-- STEP-16-01 and STEP-15-04 complete.
-
-## Relevant Code Paths
-
-- `packages/runtime/src/semantic-search/`
-- bundled model config and asset paths from Phase 15
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - [[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015 Semantic search runtime and hosting model]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Implement `EmbeddingService` behind the local-only runtime boundary.
-2. Load the model once per process and reuse it across query and indexing calls.
-3. Add batched embedding for indexing and single-query embedding for search.
-4. Emit lightweight structured logs for model initialization and batch execution without logging chunk bodies.
-5. Add tests around initialization, local-only failure modes, and batch behavior with mocked or fixture-friendly boundaries where needed.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_02_implement-local-embeddingservice-with-bundled-multilingual-model-loading-and-batching/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_02_implement-local-embeddingservice-with-bundled-multilingual-model-loading-and-batching/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_02_implement-local-embeddingservice-with-bundled-multilingual-model-loading-and-batching/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_02_implement-local-embeddingservice-with-bundled-multilingual-model-loading-and-batching/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -59,10 +47,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Implement the local embedding boundary with process-level reuse.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Model id and embedding dimension belong in the service output and manifest boundary so Vectra data can be validated later.
 
 ## Human Notes
 
@@ -74,6 +58,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means the runtime can produce local embeddings without any remote dependency or per-call model reload.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

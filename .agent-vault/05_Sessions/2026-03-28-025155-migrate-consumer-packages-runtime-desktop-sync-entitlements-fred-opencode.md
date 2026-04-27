@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_06_replace_zod_with_effect_schema/Phase|Phase 06 replace zod with effect schema]]'
+context:
+  context_id: 'SESSION-2026-03-28-025155'
+  status: completed
+  updated_at: '2026-03-28T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[05_Sessions/2026-03-28-021556-migrate-consumer-packages-runtime-desktop-sync-entitlements-fred-opencode|SESSION-2026-03-28-021556]].'
+    target: '[[05_Sessions/2026-03-28-021556-migrate-consumer-packages-runtime-desktop-sync-entitlements-fred-opencode|SESSION-2026-03-28-021556]]'
+  resume_target:
+    type: session
+    target: '[[05_Sessions/2026-03-28-021556-migrate-consumer-packages-runtime-desktop-sync-entitlements-fred-opencode|SESSION-2026-03-28-021556]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions:
   - '[[04_Decisions/DEC-0013_preserve-contracts-z-star-compatibility-wrappers-after-removing-zod|DEC-0013 Preserve contracts z-star compatibility wrappers after removing zod]]'
@@ -69,6 +82,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - After STEP-06-05, source-level Zod usage is zero everywhere, no workspace package manifest depends directly on `zod` anymore, and there are no remaining `z*` schema export names in source.
 - DEC-0013 captures the final cleanup boundary: standardize on `S*` schemas plus shared parse helpers instead of keeping legacy wrappers around.
 - Existing workspace package aliases such as `@srgnt/contracts` remain the stable cross-package import surface; intra-package contracts imports stayed relative because no internal TS path alias is configured in this repo.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[05_Sessions/2026-03-28-021556-migrate-consumer-packages-runtime-desktop-sync-entitlements-fred-opencode|SESSION-2026-03-28-021556]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

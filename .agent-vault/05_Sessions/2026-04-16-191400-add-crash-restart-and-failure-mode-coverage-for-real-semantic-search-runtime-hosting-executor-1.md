@@ -9,6 +9,19 @@ status: in-progress
 owner: executor-1
 branch: ''
 phase: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]'
+context:
+  context_id: 'SESSION-2026-04-16-191400'
+  status: active
+  updated_at: '2026-04-16T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting|STEP-18-04 Add crash restart and failure-mode coverage for real semantic-search runtime hosting]].'
+    target: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting|STEP-18-04 Add crash restart and failure-mode coverage for real semantic-search runtime hosting]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting|STEP-18-04 Add crash restart and failure-mode coverage for real semantic-search runtime hosting]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs: []
 related_decisions: []
 created: '2026-04-16'
@@ -43,6 +56,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 - Record important facts learned during the session.
 - Promote durable information into architecture, bug, or decision notes when appropriate.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting|STEP-18-04 Add crash restart and failure-mode coverage for real semantic-search runtime hosting]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_04_first_integrations/Phase|Phase 04 first integrations]]'
+context:
+  context_id: 'SESSION-2026-03-22-170211'
+  status: completed
+  updated_at: '2026-03-22T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_04_first_integrations/Steps/Step_05_add-connector-status-and-freshness-ui|STEP-04-05 Add Connector Status And Freshness UI]].'
+    target: '[[02_Phases/Phase_04_first_integrations/Steps/Step_05_add-connector-status-and-freshness-ui|STEP-04-05 Add Connector Status And Freshness UI]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_04_first_integrations/Steps/Step_05_add-connector-status-and-freshness-ui|STEP-04-05 Add Connector Status And Freshness UI]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-22'
@@ -42,6 +55,12 @@ tags:
 - Connector management UI surface in `packages/desktop/renderer/` showing all installed connectors with auth state, freshness status, last sync timestamp, and error summary.
 - Normalized `ConnectorStatus` Zod schema in SDK consumed by UI without connector-specific view logic.
 - IPC channels for read-only connector status queries from renderer.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_04_first_integrations/Steps/Step_05_add-connector-status-and-freshness-ui|STEP-04-05 Add Connector Status And Freshness UI]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

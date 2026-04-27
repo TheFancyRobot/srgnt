@@ -5,20 +5,24 @@ contract_version: 1
 title: Active Context
 status: active
 created: YYYY-MM-DD
-updated: '2026-04-19'
+updated: '2026-04-25'
 tags:
   - agent-vault
   - home
   - context
-last_updated: '2026-04-19'
-tests: 1684/1684 passing, 0 failures (vault note had 641 - corrected by tester)
-coverage: 95.11% (statements + lines)
+last_updated: '2026-04-26'
+tests: 2098 passing, 0 failures
+coverage: ~96%+ stmt, ~85%+ branch (desktop renderer)
 target: 95%+ coverage — ACHIEVED
-blockers: none
+blockers: Manual E2E with real Jira credentials (external)
 in_flight: none
-phase: Phase_19_SHIPPED_all_suites_green
+phase: Phase_21 complete — no in-flight work
 done: Titlebar 100%, pty-service 99.36%, crash.ts 96.41%, ConnectorStatus ~97%, SlashCommands 95.09%, notes.ts IPC ~95%, NotesView 93.15%, TerminalPanel 92.45%, Onboarding 96.08%, TodaySidePanel 100% (isolation)
-remaining: notes.ts 87.06%, SlashCommandsExtension.ts 91.69%, NotesView.tsx 93.15%, SidePanel.tsx 92.75%
+remaining: NotesView.tsx 4.63% gap (save-state timer tests), SidePanel.tsx 3.63% gap — both acceptable debt
+coverage_gap_status: 'researcher-approved debt: worker.ts 59.48%, cli/index.ts 73.49%, catalog.ts 76.61% - all acceptable technical debt'
+bug_0019_direction: Settings control (not modal/throw) - graceful fallback + storage preference in Settings + disabled option with message when keychain unavailable
+completed: BUG-0019 Settings control - COMPLETE ✅ 1026 tests, typecheck/lint clean
+external_blocker: Manual E2E with real Jira credentials
 ---
 
 # Active Context
@@ -28,11 +32,11 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-04-21._
-- Session in progress: [[05_Sessions/2026-04-21-014952-run-real-machine-release-validation-team-lead|SESSION-2026-04-21-014952 team-lead session for Run real machine release validation]] - owner: team-lead - phase: [[02_Phases/Phase_11_real_machine_validation/Phase|Phase 11 real machine validation]] - updated: 2026-04-21
-- Current step: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_01_extract-jira-from-srgnt-connectors-into-its-own-workspace-package|STEP-21-01 Extract Jira from @srgnt/connectors into its own workspace package]] - status: planned - phase: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Phase|Phase 21 jira connector package extraction and markdown sync]]
-- Active phase: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Phase|PHASE-21 Jira Connector Package Extraction and Markdown Sync]] - status: planned - updated: 2026-04-21
-- Also active: 46 more additional sessions, 38 more additional steps, 1 open critical bug.
+_Last refreshed: 2026-04-27._
+- Session in progress: [[05_Sessions/2026-04-26-215159-implement-live-jira-api-sync-with-configurable-issue-extraction-team-lead|SESSION-2026-04-26-215159 team-lead session for Implement live Jira API sync with configurable issue extraction]] - owner: team-lead - phase: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Phase|Phase 21 jira connector package extraction and markdown sync]] - updated: 2026-04-26
+- Current step: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_07_add-os-aware-more-info-help-for-unavailable-encrypted-jira-token-storage|STEP-21-07 Add OS-aware More Info help for unavailable encrypted Jira token storage]] - status: planned - phase: [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Phase|Phase 21 jira connector package extraction and markdown sync]]
+- Active phase: [[02_Phases/Phase_19_implement_connector_pluggability/Phase|PHASE-19 Implement Connector Pluggability]] - status: shipped - owner: coordinator - updated: 2026-04-19
+- Also active: 56 more additional sessions, 33 more additional steps, 2 open critical bugs.
 <!-- AGENT-END:current-focus -->
 - Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
 - Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]
@@ -82,14 +86,29 @@ _Last refreshed: 2026-04-21._
 
 <!-- AGENT-START:critical-bugs -->
 - [[03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues|BUG-0010 Slash commands trigger logic and indentation preservation issues]] - status: fixed - severity: sev-1 - reported: 2026-04-06
+- [[03_Bugs/BUG-0020_jira-token-save-fails-with-real-safestorage-encryption-error|BUG-0020 Jira token save fails with real safeStorage encryption error]] - status: superseded - severity: sev-2 - reported: 2026-04-26
 <!-- AGENT-END:critical-bugs -->
 
 ## Resume Point
 
 [[SRGNT|Resume Point — Phase 02 Onward]] captures the immediate next steps for each phase.
+### Status Update — 2026-04-25
+- PHASE-21: `completed` ✅ — all automated work done, manual E2E gate passed to user
+- PHASE-22: `completed` ✅
+- Coverage gaps closed: NotesView branch 76.63% → 81.65%, NotesSidePanel stmt 72.26% → 81.08%
+- 2098 tests passing, 0 failures, typecheck clean
+- Remaining gaps: worker.ts (59.48%), cli/index.ts (73.49%), catalog.ts (76.61%) — all backend/CLI
+- Next: PHASE-11 (Real Machine Validation) requires physical machines; PHASE-10 user_blocked
 
 ## Next Actions
 
-- **Resume point**: [[05_Sessions/2026-03-29-134622-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-134622]] - STEP-07-03 manual E2E validation ongoing
-- Manual E2E validation steps (described in session follow-up work)
-- Keep phase and home notes honest whenever implementation status changes.
+- **Coverage gap analysis**: Investigate uncovered code in notes.ts, SlashCommandsExtension.ts, NotesView.tsx, SidePanel.tsx — in progress
+- **PHASE-21 manual E2E verification**: Awaiting real Jira credentials to complete phase sign-off
+- **STEP-07-03 manual E2E validation**: Resume when available
+### Status Update — 2026-04-24
+- PHASE-21: All 6 steps complete, `in_review`, awaiting manual E2E verification with real Jira credentials
+- PHASE-22: COMPLETED ✅ — `@srgnt/jira-client` package already existed
+- BUG-0017: ✅ FIXED — keytar fallback chain for safeStorage unavailability
+- BUG-0018: ✅ FIXED — catalog discovery and source priority fixed
+- Test suite: 1745+ passing tests
+- Sleep handoff from 2026-04-23: RESOLVED — all items above addressed

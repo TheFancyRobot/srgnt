@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_06_replace_zod_with_effect_schema/Phase|Phase 06 replace zod with effect schema]]'
+context:
+  context_id: 'SESSION-2026-03-28-014423'
+  status: completed
+  updated_at: '2026-03-28T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_06_replace_zod_with_effect_schema/Steps/Step_03_migrate-contracts-package-schemas-to-effect-schema|STEP-06-03 Migrate contracts package schemas to Effect Schema]].'
+    target: '[[02_Phases/Phase_06_replace_zod_with_effect_schema/Steps/Step_03_migrate-contracts-package-schemas-to-effect-schema|STEP-06-03 Migrate contracts package schemas to Effect Schema]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_06_replace_zod_with_effect_schema/Steps/Step_03_migrate-contracts-package-schemas-to-effect-schema|STEP-06-03 Migrate contracts package schemas to Effect Schema]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-28'
@@ -52,6 +65,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Schemas with .default() in Zod have non-defaulting Effect Schema equivalents — defaults will be handled at the consumer level in STEP-06-04.
 - z.function() in connector entity mapping has no Effect Schema equivalent — function references are excluded from SConnectorEntityMapping.
 - connector manifest description .max(500) and id .min(1).max(64) approximated via pattern regex in Effect Schema.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_06_replace_zod_with_effect_schema/Steps/Step_03_migrate-contracts-package-schemas-to-effect-schema|STEP-06-03 Migrate contracts package schemas to Effect Schema]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

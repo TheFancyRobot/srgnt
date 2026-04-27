@@ -3,7 +3,7 @@
  *
  * Uses live Jira API sync via the shared sync module when settings + token are available.
  * Falls back to fixture-based sync for testing when no settings are configured.
- * Token is retrieved through the privileged host boundary (DEC-0017: OS keychain / main-process).
+ * Token is retrieved through the privileged host boundary (DEC-0017: main-process credential adapter).
  * Writes markdown files to a connector-owned workspace subtree after live sync.
  */
 import { BaseConnector, type HostContext, type SyncResult } from '@srgnt/connectors';
@@ -108,7 +108,7 @@ export class JiraConnectorImpl extends BaseConnector {
 
   /**
    * Retrieves the Jira API token via the privileged host capability.
-   * DEC-0017: token is stored in OS keychain behind Electron main-process,
+   * DEC-0017: token is stored behind the Electron main-process credential adapter,
    * never in renderer state, workspace markdown, or desktop-settings.json.
    * Returns undefined when host integration is not yet wired.
    */

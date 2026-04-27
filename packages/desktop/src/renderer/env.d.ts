@@ -127,7 +127,7 @@ export interface SrgntAPI {
   getJiraSettings(): Promise<{ settings: unknown } | null>;
   saveJiraSettings(settings: unknown): Promise<{ settings: unknown }>;
   setJiraToken(token: string): Promise<void>;
-  getJiraTokenStatus(): Promise<{ connectorId: string; exists: boolean; backend: string }>;
+  getJiraTokenStatus(): Promise<{ connectorId: string; exists: boolean; backend: 'keychain' | 'encrypted-local' | 'unavailable'; preferredBackend: 'keychain' | 'encrypted-local'; keychainAvailable: boolean; encryptedLocalAvailable: boolean }>;
   deleteJiraToken(): Promise<void>;
 }
 

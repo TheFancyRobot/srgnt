@@ -9,6 +9,19 @@ status: in-progress
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
+context:
+  context_id: 'SESSION-2026-03-30-161918'
+  status: active
+  updated_at: '2026-03-30T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_03_refactor-applayout-to-three-panel-shell|STEP-13-03 Refactor AppLayout to three-panel shell]].'
+    target: '[[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_03_refactor-applayout-to-three-panel-shell|STEP-13-03 Refactor AppLayout to three-panel shell]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_03_refactor-applayout-to-three-panel-shell|STEP-13-03 Refactor AppLayout to three-panel shell]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs: []
 related_decisions: []
 created: '2026-03-30'
@@ -48,6 +61,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - E2E tests used old `aria-current` and button label patterns that don't exist in ActivityBar (which uses `aria-pressed`).
 - The online status dot was missing from ActivityBar bottom — added.
 - No test files needed LayoutProvider wrapping since they test individual view components in isolation (not AppLayout).
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_03_refactor-applayout-to-three-panel-shell|STEP-13-03 Refactor AppLayout to three-panel shell]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

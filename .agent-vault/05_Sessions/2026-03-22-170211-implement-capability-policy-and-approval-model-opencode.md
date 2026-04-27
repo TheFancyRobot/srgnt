@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_03_runtime_foundation/Phase|Phase 03 runtime foundation]]'
+context:
+  context_id: 'SESSION-2026-03-22-170211'
+  status: completed
+  updated_at: '2026-03-22T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_03_runtime_foundation/Steps/Step_02_implement-capability-policy-and-approval-model|STEP-03-02 Implement Capability Policy And Approval Model]].'
+    target: '[[02_Phases/Phase_03_runtime_foundation/Steps/Step_02_implement-capability-policy-and-approval-model|STEP-03-02 Implement Capability Policy And Approval Model]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_03_runtime_foundation/Steps/Step_02_implement-capability-policy-and-approval-model|STEP-03-02 Implement Capability Policy And Approval Model]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-22'
@@ -43,6 +56,12 @@ tags:
 - Approval model implemented in `packages/runtime/src/policy/approval.ts`.
 - Policy is manifest-driven and generic per DEC-0002 and DEC-0003 constraints.
 - Approvals stored as workspace state files, not ephemeral in-memory state.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_03_runtime_foundation/Steps/Step_02_implement-capability-policy-and-approval-model|STEP-03-02 Implement Capability Policy And Approval Model]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

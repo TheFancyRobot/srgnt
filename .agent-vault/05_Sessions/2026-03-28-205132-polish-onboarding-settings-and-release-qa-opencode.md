@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_08_product_hardening/Phase|Phase 08 product hardening]]'
+context:
+  context_id: 'SESSION-2026-03-28-205132'
+  status: completed
+  updated_at: '2026-03-28T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]].'
+    target: '[[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-28'
@@ -51,6 +64,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Electron's official docs fit this repo best via the Playwright-based Electron runner: launch the app as Electron, inspect the main process with `electronApp.evaluate(...)`, and drive the first `BrowserWindow`.
 - The built renderer could not load under `file://` until Vite emitted relative asset URLs; the previous absolute `/assets/...` paths left the window mounted with an empty `#root`.
 - Reliable E2E coverage here needs isolated `userData` directories so onboarding state, workspace path defaults, and persisted artifacts do not leak between tests.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_08_product_hardening/Steps/Step_03_polish-onboarding-settings-and-release-qa|STEP-08-03 Polish Onboarding Settings And Release QA]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

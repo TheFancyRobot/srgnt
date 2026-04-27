@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: 'feat/phase-13-three-panel-shell'
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
+context:
+  context_id: 'SESSION-2026-03-30-222302'
+  status: completed
+  updated_at: '2026-03-30T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]].'
+    target: '[[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-30'
@@ -49,6 +62,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 - Persisting `isSidebarCollapsed` directly was incorrect because panels without side content force a temporary collapsed UI state that should not overwrite the user's saved preference.
 - The resize separator needed unmount cleanup because `SidePanel` can disappear mid-drag when the active panel changes to a full-bleed or sidepanel-less view.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

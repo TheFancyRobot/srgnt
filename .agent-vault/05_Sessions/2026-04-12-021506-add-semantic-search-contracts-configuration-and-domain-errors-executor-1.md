@@ -9,6 +9,19 @@ status: in-progress
 owner: executor-1
 branch: ''
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
+context:
+  context_id: 'SESSION-2026-04-12-021506'
+  status: active
+  updated_at: '2026-04-12T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]].'
+    target: '[[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs: []
 related_decisions: []
 created: '2026-04-12'
@@ -43,6 +56,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 - Record important facts learned during the session.
 - Promote durable information into architecture, bug, or decision notes when appropriate.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_01_add-semantic-search-contracts-configuration-and-domain-errors|STEP-15-01 Add semantic search contracts, configuration, and domain errors]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

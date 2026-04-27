@@ -23,35 +23,23 @@ tags:
 
 # Step 04 - Implement workspace indexing orchestration and stale-data cleanup
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: runtime can crawl the corpus, skip unchanged files, reindex changed files, remove deleted files, and rebuild the whole index when needed.
-
-## Why This Step Exists
-
-- This is the step where semantic search becomes operational instead of just a collection of components.
-
-## Prerequisites
-
-- Steps 15-02, 15-03, 16-02, and 16-03 complete.
-
-## Relevant Code Paths
-
-- runtime semantic-search modules under `packages/runtime/src/semantic-search/`
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - [[06_Shared_Knowledge/srgnt_framework_query_and_index_architecture|Workspace Query and Index Architecture]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Implement `init`, `indexWorkspace`, `reindexFile`, `removeFile`, and `rebuildAll` in the runtime orchestration service.
-2. Use both `mtimeMs` and content hash to skip unchanged files safely.
-3. Delete stale vectors before writing new vectors for changed files.
-4. Remove vectors and manifest entries for deleted files.
-5. Add structured logs for workspace indexing start/end, file reindexing, and deletion cleanup.
-6. Add deterministic tests for skip logic, changed-file behavior, and deleted-file cleanup.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_04_implement-workspace-indexing-orchestration-and-stale-data-cleanup/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_04_implement-workspace-indexing-orchestration-and-stale-data-cleanup/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_04_implement-workspace-indexing-orchestration-and-stale-data-cleanup/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_04_implement-workspace-indexing-orchestration-and-stale-data-cleanup/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -61,10 +49,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Implement the runtime indexing orchestration path end to end.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- This step should stay runtime-only. Desktop watchers and lifecycle belong in Phase 17.
 
 ## Human Notes
 
@@ -76,6 +60,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means runtime can maintain a local semantic index incrementally and recover safely from file churn.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

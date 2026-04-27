@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
+context:
+  context_id: 'SESSION-2026-03-29-155208'
+  status: completed
+  updated_at: '2026-03-29T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]].'
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-29'
@@ -60,6 +73,12 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 - Run log redaction handles sensitive env vars (KEY, TOKEN, SECRET patterns) and truncates output at configurable limit.
 - `closeTab` state management was fragile — nested `setTabs` inside `setActiveTabId` created a race. Single-updater pattern is safer.
 - Effect-TS is already a dependency (`effect ^3.21.0`, `@effect/schema ^0.75.5`) but was not used in the renderer. The `TerminalIpc` service establishes the pattern for wrapping `window.srgnt` calls.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

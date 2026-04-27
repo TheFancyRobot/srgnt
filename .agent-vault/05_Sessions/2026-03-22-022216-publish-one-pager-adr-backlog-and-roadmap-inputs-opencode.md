@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_00_product_framing_lock/Phase|Phase 00 product framing lock]]'
+context:
+  context_id: 'SESSION-2026-03-22-022216'
+  status: completed
+  updated_at: '2026-03-22T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs|STEP-00-03 Publish One Pager ADR Backlog And Roadmap Inputs]].'
+    target: '[[02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs|STEP-00-03 Publish One Pager ADR Backlog And Roadmap Inputs]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs|STEP-00-03 Publish One Pager ADR Backlog And Roadmap Inputs]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-22'
@@ -51,6 +64,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Shared architecture notes were too repo-only to support junior execution across later product phases; they now include the planned desktop/runtime/connector/package topology and trust-boundary guidance.
 - Several accepted decision notes still said `Current status: proposed`; those status mismatches are now fixed so downstream notes can trust them.
 - The Dataview direction now has one consistent rule: DEC-0007 is the default direction, and STEP-03-04 is the explicit feasibility-confirmation gate that may supersede it if needed.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs|STEP-00-03 Publish One Pager ADR Backlog And Roadmap Inputs]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

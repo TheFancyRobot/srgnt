@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_01_foundation_contracts/Phase|Phase 01 foundation contracts]]'
+context:
+  context_id: 'SESSION-2026-03-21-044133'
+  status: completed
+  updated_at: '2026-03-21T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_01_foundation_contracts/Steps/Step_01_freeze-repo-layout-and-contract-locations|STEP-01-01 Freeze Repo Layout And Contract Locations]].'
+    target: '[[02_Phases/Phase_01_foundation_contracts/Steps/Step_01_freeze-repo-layout-and-contract-locations|STEP-01-01 Freeze Repo Layout And Contract Locations]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_01_foundation_contracts/Steps/Step_01_freeze-repo-layout-and-contract-locations|STEP-01-01 Freeze Repo Layout And Contract Locations]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions:
   - '[[04_Decisions/DEC-0001_use-desktop-first-product-boundary-for-phase-01|DEC-0001 Desktop-first product boundary]]'
@@ -48,6 +61,12 @@ Planning session that converted the product foundation document into a concrete 
 - The repo is still vault-only; no product package layout exists yet.
 - The biggest planning ambiguity in `srgnt_framework.md` was product boundary; it is now resolved by DEC-0001 in favor of the desktop-first architecture.
 - Phase 01 can stay bounded if it freezes contracts and examples without starting Electron, connector, or sync implementation.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_01_foundation_contracts/Steps/Step_01_freeze-repo-layout-and-contract-locations|STEP-01-01 Freeze Repo Layout And Contract Locations]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

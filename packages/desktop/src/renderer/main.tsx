@@ -98,7 +98,16 @@ function AppContent({
   const [simulateRenderCrash, setSimulateRenderCrash] = React.useState(false);
   // Jira connector state (loaded lazily — not part of DesktopSettings)
   const [jiraSettings, setJiraSettings] = React.useState<Record<string, unknown> | null>(null);
-  const [jiraTokenStatus, setJiraTokenStatus] = React.useState<{ exists: boolean; backend: string } | null>(null);
+  type JiraCredentialBackend = 'keychain' | 'encrypted-local' | 'unavailable';
+  type JiraCredentialStoragePreference = 'keychain' | 'encrypted-local';
+  type JiraTokenStatus = {
+    exists: boolean;
+    backend: JiraCredentialBackend;
+    preferredBackend: JiraCredentialStoragePreference;
+    keychainAvailable: boolean;
+    encryptedLocalAvailable: boolean;
+  };
+  const [jiraTokenStatus, setJiraTokenStatus] = React.useState<JiraTokenStatus | null>(null);
   const [jiraTokenDraft, setJiraTokenDraft] = React.useState('');
   const settingsRef = React.useRef(initialSettings);
 
@@ -143,7 +152,7 @@ function AppContent({
           ]);
           if (!cancelled) {
             setJiraSettings((jiraSettingsResponse as { settings: Record<string, unknown> | null })?.settings ?? null);
-            setJiraTokenStatus(jiraStatus as { exists: boolean; backend: string });
+            setJiraTokenStatus(jiraStatus as JiraTokenStatus);
           }
         } catch {
           if (!cancelled) {
@@ -331,7 +340,7 @@ function AppContent({
       await window.srgnt.setJiraToken(jiraTokenDraft.trim());
       setJiraTokenDraft('');
       const status = await window.srgnt.getJiraTokenStatus();
-      setJiraTokenStatus(status as { exists: boolean; backend: string });
+      setJiraTokenStatus(status as JiraTokenStatus);
       setStatusMessage('Jira API token saved securely.');
     } catch (err) {
       setStatusMessage(`Failed to save Jira token: ${err instanceof Error ? err.message : String(err)}`);
@@ -341,16 +350,20 @@ function AppContent({
   const handleDeleteJiraToken = React.useCallback(async () => {
     try {
       await window.srgnt.deleteJiraToken();
-      setJiraTokenStatus({ exists: false, backend: jiraTokenStatus?.backend ?? 'unknown' });
+      const status = await window.srgnt.getJiraTokenStatus();
+      setJiraTokenStatus(status as JiraTokenStatus);
       setStatusMessage('Jira API token removed.');
     } catch (err) {
       setStatusMessage(`Failed to delete Jira token: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, [jiraTokenStatus?.backend]);
+  }, []);
 
   const handleSaveJiraSettings = React.useCallback(async (settings: Record<string, unknown>) => {
     try {
-      await window.srgnt.saveJiraSettings(settings);
+      const result = await window.srgnt.saveJiraSettings(settings);
+      setJiraSettings((result as { settings: Record<string, unknown> }).settings ?? settings);
+      const status = await window.srgnt.getJiraTokenStatus();
+      setJiraTokenStatus(status as JiraTokenStatus);
       setStatusMessage('Jira settings saved.');
     } catch (err) {
       setStatusMessage(`Failed to save Jira settings: ${err instanceof Error ? err.message : String(err)}`);

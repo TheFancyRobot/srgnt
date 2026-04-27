@@ -27,10 +27,10 @@ Use this note as the manual table of contents for bug records in \`03_Bugs/\`.
 ## Status Buckets
 
 <!-- AGENT-START:bugs-index -->
-_Last rebuilt: 2026-04-21._
+_Last rebuilt: 2026-04-27._
 
-- Notes indexed: 17
-- Status summary: closed (11), fixed (4), fixed-verified (2)
+- Notes indexed: 22
+- Status summary: closed (11), fixed (8), fixed-verified (2), superseded (1)
 
 | Id | Title | Status | Severity | Reported | Fixed | Linear |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -46,6 +46,11 @@ _Last rebuilt: 2026-04-21._
 | BUG-0002 | [Today View launch flow fails in live desktop app](../03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app.md) | closed | sev-3 | 2026-03-28 | 2026-04-01 | - |
 | BUG-0001 | [RESEARCH: Query Engine Memory Scaling for Thousands of Documents](../03_Bugs/BUG-0001_research-query-engine-memory-scaling-for-thousands-of-documents.md) | closed | sev-3 | 2026-03-22 | 2026-04-02 | - |
 | BUG-0010 | [Slash commands trigger logic and indentation preservation issues](../03_Bugs/BUG-0010_slash-commands-trigger-logic-and-indentation-preservation-issues.md) | fixed | sev-1 | 2026-04-06 | 2026-04-06 | - |
+| BUG-0020 | [Jira token save fails with real safeStorage encryption error](../03_Bugs/BUG-0020_jira-token-save-fails-with-real-safestorage-encryption-error.md) | superseded | sev-2 | 2026-04-26 | - | - |
+| BUG-0019 | [Failed to save Jira token when no non-plaintext credential backend is available](../03_Bugs/BUG-0019_failed-to-save-jira-token-when-no-non-plaintext-credential-backend-is-available.md) | fixed | sev-3 | 2026-04-26 | 2026-04-26 | - |
+| BUG-0020 | [safeStorage encryption unavailable causes token save to fail on Linux without keytar](../03_Bugs/BUG-0020_safestorage-encryption-unavailable-causes-token-save-to-fail-on-linux-without-keytar.md) | fixed | sev-3 | 2026-04-26 | 2026-04-26 | - |
+| BUG-0017 | [Jira token save fails when Electron safeStorage encryption is unavailable](../03_Bugs/BUG-0017_jira-token-save-fails-when-electron-safestorage-encryption-is-unavailable.md) | fixed | sev-3 | 2026-04-24 | 2026-04-24 | - |
+| BUG-0018 | [Jira connector does not appear in the connector list](../03_Bugs/BUG-0018_jira-connector-does-not-appear-in-the-connector-list.md) | fixed | sev-3 | 2026-04-24 | 2026-04-24 | - |
 | BUG-0016 | [migrateConnectorSettings passes unknown IDs through migration filter](../03_Bugs/BUG-0016_migrateconnectorsettings-passes-unknown-ids-through-migration-filter.md) | fixed | sev-3 | 2026-04-17 | - | - |
 | BUG-0013 | [Heading whitespace visual issue - requires verification](../03_Bugs/BUG-0013_heading-whitespace-visual-issue-requires-verification.md) | fixed-verified | sev-3 | 2026-04-12 | 2026-04-13 | - |
 | BUG-0014 | [Arrow key navigation stack overflow - requires verification](../03_Bugs/BUG-0014_arrow-key-navigation-stack-overflow-requires-verification.md) | fixed-verified | sev-3 | 2026-04-12 | 2026-04-13 | - |

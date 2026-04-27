@@ -20,35 +20,23 @@ tags:
 
 # Step 04 - Add desktop integration tests and packaged offline validation
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: prove the finished subsystem works through the real desktop boundary and packaged offline builds.
-
-## Why This Step Exists
-
-- This initiative is not done until the packaged app can perform local semantic search with the bundled model and safe Electron boundary intact.
-
-## Prerequisites
-
-- STEP-17-03 complete.
-
-## Relevant Code Paths
-
-- desktop integration tests and E2E tests
-- packaged build scripts under `packages/desktop/`
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - existing preload and desktop E2E testing patterns in `packages/desktop/`
 
-## Execution Prompt
+## Companion Notes
 
-1. Add desktop integration or E2E tests covering preload access, search execution, result delivery, and workspace switching.
-2. Add offline validation proving the bundled model loads and semantic indexing/search work with network unavailable.
-3. Add packaged-build validation so the model path and worker host behave in real release artifacts.
-4. Add failure-path tests for corrupt index state, missing bundled assets, and stale workspace cleanup where practical.
-5. Record any residual performance or packaging risk explicitly instead of leaving it implicit.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_04_add-desktop-integration-tests-and-packaged-offline-validation/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_04_add-desktop-integration-tests-and-packaged-offline-validation/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_04_add-desktop-integration-tests-and-packaged-offline-validation/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_04_add-desktop-integration-tests-and-packaged-offline-validation/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -58,10 +46,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Prove the subsystem works in real desktop and packaged paths.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- This step is the final gate for the user’s offline-first and Electron-safe requirements.
 
 ## Human Notes
 
@@ -73,6 +57,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means the semantic-search subsystem is validated in the same boundary it will ship with.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

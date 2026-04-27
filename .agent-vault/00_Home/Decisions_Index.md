@@ -31,13 +31,14 @@ Use this note as the directory for decision records in \`04_Decisions/\`.
 ## Decision Log
 
 <!-- AGENT-START:decisions-index -->
-_Last rebuilt: 2026-04-21._
+_Last rebuilt: 2026-04-27._
 
-- Notes indexed: 19
-- Status summary: accepted (16), proposed (3)
+- Notes indexed: 20
+- Status summary: accepted (17), proposed (3)
 
 | Id | Title | Status | Decided | Updated | Linear |
 | --- | --- | --- | --- | --- | --- |
+| DEC-0018 | [Separate the Jira API client into a reusable workspace package](../04_Decisions/DEC-0018_separate-the-jira-api-client-into-a-reusable-workspace-package.md) | accepted | 2026-04-23 | 2026-04-23 | - |
 | DEC-0017 | [Keep Jira API tokens in the OS keychain behind the main-process settings boundary](../04_Decisions/DEC-0017_keep-jira-api-tokens-in-the-os-keychain-behind-the-main-process-settings-boundary.md) | accepted | 2026-04-21 | 2026-04-21 | - |
 | DEC-0016 | [Isolate third-party connector packages outside Electron main process](../04_Decisions/DEC-0016_isolate-third-party-connector-packages-outside-electron-main-process.md) | accepted | 2026-04-19 | 2026-04-19 | - |
 | DEC-0015 | [Use runtime-owned local semantic search with worker-hosted bundled model and workspace-root derived index](../04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index.md) | accepted | 2026-04-02 | 2026-04-02 | - |

@@ -20,35 +20,23 @@ tags:
 
 # Step 01 - Implement desktop semantic search host and worker lifecycle
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: Electron main can start, stop, and swap a dedicated semantic-search worker cleanly per workspace.
-
-## Why This Step Exists
-
-- The worker boundary is the main safeguard against UI freezes and cross-workspace leakage.
-
-## Prerequisites
-
-- Phase 16 complete.
-
-## Relevant Code Paths
-
-- `packages/desktop/src/main/index.ts`
-- `packages/desktop/src/main/` new semantic-search host modules
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - [[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015 Semantic search runtime and hosting model]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Add a main-process semantic-search host that owns worker startup, shutdown, initialization, and error handling.
-2. Ensure workspace root changes tear down the old worker and clear in-flight work safely.
-3. Pass runtime config, model path, and index root into the worker explicitly.
-4. Add structured logs around worker startup, shutdown, and workspace changes.
-5. Add focused tests for lifecycle and workspace-switch isolation.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_01_implement-desktop-semantic-search-host-and-worker-lifecycle/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_01_implement-desktop-semantic-search-host-and-worker-lifecycle/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_01_implement-desktop-semantic-search-host-and-worker-lifecycle/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_01_implement-desktop-semantic-search-host-and-worker-lifecycle/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -58,10 +46,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Establish the desktop host and worker lifecycle boundary.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Keep the host thin. Runtime logic belongs in the worker via `@srgnt/runtime`, not reimplemented in desktop main.
 
 ## Human Notes
 
@@ -73,13 +57,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means desktop can host semantic search without running heavy work in the renderer or Electron UI thread.
-STEP-17-01 COMPLETE — validated 2026-04-16.
-
-Created SemanticSearchHost class, worker thread, and lifecycle tests:
-- host.ts (93.45% coverage), worker.ts (97.02% coverage), index.ts (100%)
-- 22+ tests (745 desktop total), 95.17% semantic-search coverage
-- Workspace switch teardown wired in main/index.ts
-- No new typecheck regressions, no runtime test regressions (466/466)
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

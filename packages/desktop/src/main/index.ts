@@ -89,8 +89,12 @@ import {
 } from './connectors/catalog.js';
 import {
   createCredentialAdapter,
-  getCredentialBackendStatus,
-  redactCredentialError,
+  getCredentialBackendAvailability,
+  getCredentialFullStatus,
+  migrateConnectorSecret,
+  sanitizeCredentialError,
+  type CredentialBackend,
+  type CredentialStoragePreference,
 } from './credentials.js';
 import {
   readJiraSettings,
@@ -171,13 +175,42 @@ crashReporter.start();
 // boundary. Runs third-party packages through `nullSpawn` until Step 05 wires
 // CLI install commands and the worker script is bundled. Built-in connectors
 // are registered through `@srgnt/connectors` and do not use this runtime.
-// Jira token is fetched from OS keychain at worker spawn time (DEC-0017) and
+// Jira token is fetched from main-process credential adapter (DEC-0017) and
 // passed into the worker — never stored in the package registry record.
-// createCredentialAdapter() returns a delegating adapter that routes to the
-// current credential backend even after runtime fallback; do not cache a
-// concrete backend adapter in desktop main.
-async function getCredentialAdapter() {
-  return createCredentialAdapter();
+// BUG-0019: createCredentialAdapter() respects user's storage preference,
+// with graceful fallback to encrypted in-app storage when OS keychain unavailable.
+
+/**
+ * Get the user's credential storage preference from Jira settings.
+ * Defaults to 'keychain' if not configured.
+ */
+async function getJiraCredentialStoragePreference(): Promise<CredentialStoragePreference> {
+  const settings = await readJiraSettings(workspaceRoot);
+  return settings?.credentialStoragePreference ?? 'keychain';
+}
+
+/**
+ * Normalize a requested storage preference based on backend availability.
+ * - If requested is 'keychain' and keychain unavailable, return 'encrypted-local' (if available).
+ * - If requested is 'encrypted-local', return 'encrypted-local'.
+ * - If both backends unavailable, return the requested preference (backend will be 'unavailable').
+ */
+async function normalizeJiraCredentialStoragePreference(
+  requested: CredentialStoragePreference,
+): Promise<CredentialStoragePreference> {
+  const availability = await getCredentialBackendAvailability();
+  
+  if (requested === 'keychain' && !availability.keychain && availability.encryptedLocal) {
+    return 'encrypted-local';
+  }
+  
+  // If encrypted-local also unavailable, return requested — backend will be 'unavailable'
+  return requested;
+}
+
+async function getCredentialAdapter(): Promise<ReturnType<typeof createCredentialAdapter>> {
+  const preference = await getJiraCredentialStoragePreference();
+  return createCredentialAdapter(preference);
 }
 
 const jiraWorkerSpawn = createWorkerSpawn({
@@ -891,37 +924,75 @@ ipcMain.handle(ipcChannels.connectorSettingsSave, async (_event, raw: { settings
   // Validate at runtime using the schema import
   const { SJiraConnectorSettings } = await import('@srgnt/contracts');
   const parsedSettings = parseSync(SJiraConnectorSettings, raw.settings);
-  await writeJiraSettings(workspaceRoot, parsedSettings);
-  return { settings: parsedSettings };
+
+  // BUG-0019: Normalize credential storage preference and handle migration
+  const previousSettings = await readJiraSettings(workspaceRoot);
+  const previousPreference: CredentialStoragePreference = previousSettings?.credentialStoragePreference ?? 'keychain';
+  const requestedPreference: CredentialStoragePreference = parsedSettings.credentialStoragePreference ?? 'keychain';
+  const normalizedPreference = await normalizeJiraCredentialStoragePreference(requestedPreference);
+
+  // Persist the user's REQUESTED preference, not the normalized one.
+  // This preserves the user's intent so that if OS keychain later becomes
+  // available, the app can automatically resume using it.
+  const settingsToPersist = {
+    ...parsedSettings,
+    credentialStoragePreference: requestedPreference,
+  };
+
+  // Migrate secret using the normalized (effective) preference
+  if (previousPreference !== normalizedPreference) {
+    try {
+      await migrateConnectorSecret('jira', previousPreference, normalizedPreference);
+    } catch (err) {
+      console.warn('[main] credential migration failed, continuing with settings save:', err);
+    }
+  }
+
+  await writeJiraSettings(workspaceRoot, settingsToPersist);
+  return { settings: settingsToPersist };
 });
 
-// Jira credential — token stored in keychain, never in settings files
+// Jira credential — token stored in credential backend, never in settings files
 ipcMain.handle(ipcChannels.connectorCredentialSet, async (_event, raw: { connectorId: string; token: string }) => {
-  const adapter = await createCredentialAdapter();
+  const preference = await getJiraCredentialStoragePreference();
+  const adapter = await createCredentialAdapter(preference);
   try {
     await adapter.setSecret(raw.connectorId, raw.token);
   } catch (err) {
-    const msg = redactCredentialError(
-      err instanceof Error ? err.message : String(err),
-      raw.token,
-    );
-    throw new Error(`[credentials] Failed to store token: ${msg}`);
+    throw new Error(sanitizeCredentialError(err, raw.token));
   }
 });
 
 ipcMain.handle(ipcChannels.connectorCredentialStatus, async (_event, raw: { connectorId: string }) => {
-  const adapter = await createCredentialAdapter();
+  const preference = await getJiraCredentialStoragePreference();
+  const adapter = await createCredentialAdapter(preference);
   const exists = await adapter.hasSecret(raw.connectorId);
+  const fullStatus = await getCredentialFullStatus(preference);
   return {
     connectorId: raw.connectorId,
     exists,
-    backend: getCredentialBackendStatus(),
+    backend: fullStatus.backend as CredentialBackend,
+    preferredBackend: fullStatus.preferredBackend,
+    keychainAvailable: fullStatus.keychainAvailable,
+    encryptedLocalAvailable: fullStatus.encryptedLocalAvailable,
   };
 });
 
 ipcMain.handle(ipcChannels.connectorCredentialDelete, async (_event, raw: { connectorId: string }) => {
-  const adapter = await createCredentialAdapter();
-  await adapter.deleteSecret(raw.connectorId);
+  // BUG-0019: Delete from BOTH keychain AND encrypted-local to avoid stale
+  // tokens after preference switches (safer for "Remove Token").
+  try {
+    const keychainAdapter = await createCredentialAdapter('keychain');
+    await keychainAdapter.deleteSecret(raw.connectorId);
+  } catch {
+    // Ignore — may not exist in keychain
+  }
+  try {
+    const localAdapter = await createCredentialAdapter('encrypted-local');
+    await localAdapter.deleteSecret(raw.connectorId);
+  } catch {
+    // Ignore — may not exist in encrypted-local
+  }
 });
 
 ipcMain.handle(ipcChannels.settingsGet, () => ({

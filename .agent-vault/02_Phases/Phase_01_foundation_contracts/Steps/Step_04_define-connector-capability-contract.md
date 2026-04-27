@@ -20,29 +20,12 @@ tags:
 
 # Step 04 - Define Connector Capability Contract
 
-Define the connector manifest and capability contract, plus one sample connector package that proves the model is usable.
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
 
 ## Purpose
 
 - Specify how connectors declare capabilities, auth shape, sync modes, produced entities, and provider metadata retention.
 - Produce a sample connector manifest that the daily-briefing wedge could consume later.
-
-## Why This Step Exists
-
-- Connectors need stable capability and mapping contracts so skills depend on behavior, not vendor names.
-- This step prevents the skill runtime from inheriting ad hoc provider-specific APIs and makes permission boundaries inspectable.
-
-## Prerequisites
-
-- Complete [[02_Phases/Phase_01_foundation_contracts/Steps/Step_02_define-canonical-entity-contracts|STEP-01-02 Define Canonical Entity Contracts]].
-- Read [[06_Shared_Knowledge/srgnt_framework|srgnt Product and Architecture Foundation]], especially ADR-004 and the connector sections.
-- Read [[04_Decisions/DEC-0001_use-desktop-first-product-boundary-for-phase-01|DEC-0001 Desktop-first product boundary]].
-
-## Relevant Code Paths
-
-- The shared contracts package or directory frozen in Step 01.
-- The example connector location frozen in Step 01, expected to contain a Jira-oriented sample connector.
-- `.agent-vault/06_Shared_Knowledge/srgnt_framework.md`
 
 ## Required Reading
 
@@ -52,15 +35,12 @@ Define the connector manifest and capability contract, plus one sample connector
 - [[06_Shared_Knowledge/srgnt_framework|srgnt Product and Architecture Foundation]]
 - [[04_Decisions/DEC-0001_use-desktop-first-product-boundary-for-phase-01|DEC-0001 Desktop-first product boundary]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Define the connector manifest fields, capability taxonomy, and mapping responsibilities in the shared contract location chosen earlier in the phase.
-2. Distinguish read capabilities from write or side-effect capabilities so later approval and trust UX can be explicit.
-3. Keep connectors responsible for provider auth, sync strategy, and canonicalization; do not let skills absorb those responsibilities.
-4. Create or update one sample connector manifest, preferably aligned with the daily-briefing wedge, that shows produced entities, sync modes, and auth shape without requiring live implementation.
-5. Preserve a path for raw provider metadata retention and capability-based dependency resolution.
-6. Validate by checking the sample connector can satisfy the planned skill capabilities without skills naming a vendor directly.
-7. Update notes with the final capability naming rules, the sample connector path, and any unresolved auth or sync-policy question.
+- [[02_Phases/Phase_01_foundation_contracts/Steps/Step_04_define-connector-capability-contract/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_01_foundation_contracts/Steps/Step_04_define-connector-capability-contract/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_01_foundation_contracts/Steps/Step_04_define-connector-capability-contract/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_01_foundation_contracts/Steps/Step_04_define-connector-capability-contract/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -70,40 +50,6 @@ Define the connector manifest and capability contract, plus one sample connector
 - Last touched: 2026-03-22
 - Next action: No follow-up required; keep this step as the historical baseline.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- The framework doc already proposes capability strings such as `tasks.read`, `events.read`, and `mail.send`.
-- The worked example should demonstrate capability-based portability, not direct coupling to `jira`, `outlook`, or `teams` inside skill contracts.
-### Refinement (readiness checklist pass)
-
-**Exact outcome**: Zod schemas in `packages/contracts/src/connectors/` for:
-1. `ConnectorManifest` — name, version, provider, authType, capabilities[], producedEntities[], syncModes[], configSchema
-2. `ConnectorCapability` — capability string + read/write flag + entity types produced
-3. `AuthType` — enum: `oauth2` | `api-key` | `token` | `none`
-4. `SyncMode` — enum: `full` | `incremental` | `webhook`
-
-Plus a worked example at `examples/connectors/jira/`:
-- `connector.yaml` — manifest declaring Jira capabilities (tasks.read, tasks.write, projects.read)
-- `fixtures/` — sample Jira API responses and their canonical entity mappings
-- `README.md` — explains the mapping and how to validate
-
-**Key decisions to apply**:
-- DEC-0002: All schemas are Zod.
-- DEC-0003: The v1 connectors are Jira, Outlook Calendar, and Microsoft Teams. The Jira sample connector is the worked example here. Teams connector details flow from the same contract.
-- DEC-0007: Connectors write canonical entity data as markdown files with YAML frontmatter. The connector contract must specify the output file format.
-
-**Constraints**:
-- Capability strings are behavior-based and namespaced: `{entity-type}.{verb}` (e.g., `tasks.read`, `events.read`, `messages.read`).
-- Read and write capabilities are always separate declarations.
-- Connector manifests must declare which canonical entity types they produce.
-
-**Validation**:
-- The `jira/connector.yaml` parses through `ConnectorManifest.parse()`.
-- The Jira connector's declared capabilities satisfy the daily-briefing skill's `requiredCapabilities`.
-- Fixture data maps from Jira API response to canonical `Task` entity without errors.
-
-**Junior-readiness verdict**: PASS. Connector schema fields explicit, capability taxonomy defined, sample connector named.
 
 ## Human Notes
 
@@ -116,7 +62,7 @@ Plus a worked example at `examples/connectors/jira/`:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Completion means the repo has a connector contract plus a sample connector manifest that can satisfy planned skill capabilities without vendor lock-in.
-- Validation target: the sample connector maps cleanly to canonical entities and exposes capabilities that a skill can declare and resolve.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

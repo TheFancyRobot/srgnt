@@ -23,6 +23,11 @@ export const SJiraExtractionToggles = Schema.Struct({
 });
 export type JiraExtractionToggles = Schema.Schema.Type<typeof SJiraExtractionToggles>;
 
+// BUG-0019: User preference for credential storage backend.
+// This field is non-secret — it never contains token material.
+export const SJiraCredentialStoragePreference = Schema.Literal('keychain', 'encrypted-local');
+export type JiraCredentialStoragePreference = Schema.Schema.Type<typeof SJiraCredentialStoragePreference>;
+
 export const SJiraConnectorSettings = Schema.Struct({
   connectorId: Schema.Literal("jira"), // fixed per phase contract
   siteUrl: UrlString, // e.g. https://company.atlassian.net
@@ -31,5 +36,6 @@ export const SJiraConnectorSettings = Schema.Struct({
   projectKeys: Schema.optionalWith(Schema.Array(Schema.String), { default: () => [] as readonly string[] }),
   jql: Schema.optional(Schema.String),
   extractionToggles: Schema.optional(SJiraExtractionToggles),
+  credentialStoragePreference: Schema.optionalWith(SJiraCredentialStoragePreference, { default: () => 'keychain' as const }),
 });
 export type JiraConnectorSettings = Schema.Schema.Type<typeof SJiraConnectorSettings>;

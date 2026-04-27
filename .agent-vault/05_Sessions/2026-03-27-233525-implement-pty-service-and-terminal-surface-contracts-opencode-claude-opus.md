@@ -9,6 +9,19 @@ status: completed
 owner: opencode-claude-opus
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
+context:
+  context_id: 'SESSION-2026-03-27-233525'
+  status: completed
+  updated_at: '2026-03-27T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_01_implement-pty-service-and-terminal-surface-contracts|STEP-07-01 Implement PTY Service And Terminal Surface Contracts]].'
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_01_implement-pty-service-and-terminal-surface-contracts|STEP-07-01 Implement PTY Service And Terminal Surface Contracts]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_01_implement-pty-service-and-terminal-surface-contracts|STEP-07-01 Implement PTY Service And Terminal Surface Contracts]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-27'
@@ -49,6 +62,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Verified full workspace test suite: 29 files, 411 tests, all passing
 - Verified full workspace build: `pnpm build` succeeds across all packages
 - STEP-07-01 is functionally complete
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_01_implement-pty-service-and-terminal-surface-contracts|STEP-07-01 Implement PTY Service And Terminal Surface Contracts]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

@@ -1,0 +1,8 @@
+# Validation Plan
+
+
+
+## Related Notes
+
+- Step: [[02_Phases/Phase_04_first_integrations/Steps/Step_05_add-connector-status-and-freshness-ui|STEP-04-05 Add Connector Status And Freshness UI]]
+- Phase: [[02_Phases/Phase_04_first_integrations/Phase|Phase 04 first integrations]]

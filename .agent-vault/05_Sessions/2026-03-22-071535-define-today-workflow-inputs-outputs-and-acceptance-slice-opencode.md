@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_05_flagship_workflow/Phase|Phase 05 flagship workflow]]'
+context:
+  context_id: 'SESSION-2026-03-22-071535'
+  status: completed
+  updated_at: '2026-03-22T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_05_flagship_workflow/Steps/Step_01_define-today-workflow-inputs-outputs-and-acceptance-slice|STEP-05-01]].'
+    target: '[[02_Phases/Phase_05_flagship_workflow/Steps/Step_01_define-today-workflow-inputs-outputs-and-acceptance-slice|STEP-05-01]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_05_flagship_workflow/Steps/Step_01_define-today-workflow-inputs-outputs-and-acceptance-slice|STEP-05-01]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-22'
@@ -68,6 +81,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - LSP JSX errors in `.tsx` files are pre-existing: LSP uses base tsconfig, not `tsconfig.renderer.json` which has `jsx: react-jsx`. These are NOT real build errors.
 - Electron app architecture: strict security with `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. Preload bridge exposes `window.srgnt` API.
 - All Phase 05 work uses rule-based aggregation from fixture data -- no AI/LLM/Fred dependency, per the Phase 05 constraint.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_05_flagship_workflow/Steps/Step_01_define-today-workflow-inputs-outputs-and-acceptance-slice|STEP-05-01]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

@@ -21,36 +21,23 @@ tags:
 
 # Step 01 - Add Effect service tags, layers, and semantic search domain types
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: create the runtime module skeleton and Effect-first service boundaries that later implementation will fill.
-
-## Why This Step Exists
-
-- This step prevents the engine from starting as ad hoc classes and promises that later need to be retrofitted into Effect services.
-
-## Prerequisites
-
-- Phase 15 complete.
-
-## Relevant Code Paths
-
-- `packages/runtime/src/index.ts`
-- `packages/runtime/src/semantic-search/` (new)
-- existing runtime package structure under `packages/runtime/src/`
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - [[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015 Semantic search runtime and hosting model]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Add runtime module structure and exports for semantic search.
-2. Define Effect tags and Layer constructors for each required service.
-3. Add domain types and tagged errors that later steps can reuse without renaming churn.
-4. Keep module boundaries small and explicit.
-5. Add minimal tests proving service construction and error typing compile and run correctly.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -60,10 +47,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Establish the runtime module and service skeleton.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Mirror the repo’s existing small-module package structure instead of placing everything in one monolithic file.
 
 ## Human Notes
 
@@ -75,6 +58,7 @@ tags:
 - 2026-04-14 - [[05_Sessions/2026-04-14-212015-add-effect-service-tags-layers-and-semantic-search-domain-types-executor-1|SESSION-2026-04-14-212015 executor-1 session for Add Effect service tags, layers, and semantic search domain types]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means the runtime semantic-search package shape is stable and Effect-first.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

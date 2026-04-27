@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
+context:
+  context_id: 'SESSION-2026-03-28-202447'
+  status: completed
+  updated_at: '2026-03-28T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]].'
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs:
   - '[[03_Bugs/BUG-0002_today-view-launch-flow-fails-in-live-desktop-app|BUG-0002 Today View launch flow fails in live desktop app]]'
 related_decisions: []
@@ -49,6 +62,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - The earlier live-smoke failure was real, but the root cause was the sandboxed preload bridge failing to load, not the Today View handler or PTY service.
 - `window.srgnt` is available in the actual app page once the preload stays self-contained.
 - The implemented Phase 07 path now works end-to-end in the live Electron app for the Today View launch flow.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

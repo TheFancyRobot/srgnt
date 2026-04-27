@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
+context:
+  context_id: 'SESSION-2026-03-29-053301'
+  status: completed
+  updated_at: '2026-03-29T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]].'
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-29'
@@ -54,6 +67,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - toMarkdown() exists on RunLogService but is NOT called anywhere yet - needs to be wired for persistence
 - Intent field on LaunchContext determines if approval required: 'artifactAffecting' = needs approval, 'readOnly' = no approval
 <!-- AGENT-END:session-findings -->
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

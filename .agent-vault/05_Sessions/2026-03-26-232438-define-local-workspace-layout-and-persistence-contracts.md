@@ -9,6 +9,19 @@ status: completed
 owner: opencode
 branch: ''
 phase: '[[02_Phases/Phase_02_desktop_foundation/Phase|Phase 02 desktop foundation]]'
+context:
+  context_id: 'SESSION-2026-03-26-232438'
+  status: completed
+  updated_at: '2026-03-26T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_02_desktop_foundation/Steps/Step_03_define-local-workspace-layout-and-persistence-contracts|STEP-02-03 Define Local Workspace Layout And Persistence Contracts]].'
+    target: '[[02_Phases/Phase_02_desktop_foundation/Steps/Step_03_define-local-workspace-layout-and-persistence-contracts|STEP-02-03 Define Local Workspace Layout And Persistence Contracts]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_02_desktop_foundation/Steps/Step_03_define-local-workspace-layout-and-persistence-contracts|STEP-02-03 Define Local Workspace Layout And Persistence Contracts]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-26'
@@ -76,6 +89,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Phase 02 was left in inconsistent state: implementation complete but vault not updated.
 - Phase 03 has similar inconsistencies: steps 04-05 show `completed` in frontmatter but Phase notes say "Steps 04-05 remain open".
 - Query engine exists at `packages/runtime/src/query/engine.ts` with tests.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_02_desktop_foundation/Steps/Step_03_define-local-workspace-layout-and-persistence-contracts|STEP-02-03 Define Local Workspace Layout And Persistence Contracts]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

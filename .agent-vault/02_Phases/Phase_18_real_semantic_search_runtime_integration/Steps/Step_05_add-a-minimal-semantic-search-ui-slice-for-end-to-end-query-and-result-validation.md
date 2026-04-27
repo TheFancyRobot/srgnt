@@ -23,49 +23,47 @@ reviewer_notes: 'SCOPE ADJUSTED: Minimal semantic-search UI shipped in NotesSide
 
 # Step 05 - Add a minimal semantic-search UI slice for end-to-end query and result validation
 
-## Agent-Managed Snapshot
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
 
-- **Status**: done_limited
-- **Current owner**: executor-1
-- **Last touched**: 2026-04-16
-- **Next action**: None — scope-adjusted closure. Minimal semantic-search UI shipped. E2E tests blocked by pre-existing Effect DI wiring issue.
+## Purpose
 
-## Outcome Summary
-
-### Actual Outcome (2026-04-16)
-
-**What was done**:
-- Added semantic search toggle to `NotesSidePanel.tsx` — toggle between "Full-Text" and "Semantic" search modes
-- Implemented `runSemanticSearch()` that calls `window.srgnt.semanticSearchSearch()` with debouncing
-- Added state handling for semantic search: loading, error, results, disabled, indexing states
-- Renamed toggle buttons to avoid conflicts ("Notes" → "Full-Text")
-- Added E2E tests in `semantic-search-query-flow.e2e.spec.ts`
-
-**What was blocked**:
-- E2E tests fail due to pre-existing `srgnt/AppConfig` Effect DI wiring issue in E2E environment
-- This is the same Effect DI issue that has blocked multiple steps in Phase 18
-- The original `semantic-search-e2e.spec.ts` has the same failure pattern
-
-**Compensating coverage**:
-- UI toggle implementation is correct and verified
-- Semantic mode tests are properly structured but can't run in current E2E environment
-- Unit tests pass (785 desktop tests)
-
-**Validation**: 785 passed, 7 failed (pre-existing NotesSidePanel.test.tsx act issue)
-
----
-
-## Original Step Documentation (Historical)
-
-This step originally targeted adding a minimal semantic-search UI slice to prove end-to-end query → result → open-note. Due to the E2E infrastructure issue, the step is being closed with documented limitation.
-
-### Purpose
 - Outcome: Add a minimal semantic-search UI slice for end-to-end query and result validation.
 - Parent phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]].
 
-### Why This Step Exists
-- The project needs one honest user-facing proof that a query can travel from UI → preload → main → worker → runtime engine and back to a visible result.
-- This step intentionally keeps the UI tiny so the milestone proves end-to-end truth without turning into a full product-design project.
+## Required Reading
 
-### Session History
-- 2026-04-16 - [[05_Sessions/2026-04-16-192904|SESSION-2026-04-16-192904]] - executor-1 session created
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]
+- [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation/Execution_Brief|Execution Brief]]
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation/Validation_Plan|Validation Plan]]
+
+## Companion Notes
+
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
+
+## Agent-Managed Snapshot
+
+<!-- AGENT-START:step-agent-managed-snapshot -->
+- Status: planned
+- Current owner: 
+- Last touched: 2026-04-23
+- Next action: Read [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation/Validation_Plan|Validation Plan]].
+<!-- AGENT-END:step-agent-managed-snapshot -->
+
+## Human Notes
+
+- Put judgment calls or cautions here.
+
+## Session History
+
+<!-- AGENT-START:step-session-history -->
+- No sessions yet.
+<!-- AGENT-END:step-session-history -->
+
+## Related Notes
+
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

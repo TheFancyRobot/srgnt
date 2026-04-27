@@ -9,6 +9,19 @@ status: in-progress
 owner: team-lead
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
+context:
+  context_id: 'SESSION-2026-04-13-042410'
+  status: active
+  updated_at: '2026-04-13T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[05_Sessions/2026-04-12-072442-whole-workspace-markdown-search-with-bounded-indexing-team-lead|SESSION-2026-04-12-072442]].'
+    target: '[[05_Sessions/2026-04-12-072442-whole-workspace-markdown-search-with-bounded-indexing-team-lead|SESSION-2026-04-12-072442]]'
+  resume_target:
+    type: session
+    target: '[[05_Sessions/2026-04-12-072442-whole-workspace-markdown-search-with-bounded-indexing-team-lead|SESSION-2026-04-12-072442]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs:
   - '[[03_Bugs/BUG-0015_desktop-dev-startup-is-blocked-by-typescript-errors-in-main-process-test-files|BUG-0015 Desktop dev startup is blocked by TypeScript errors in main-process test files]]'
 related_decisions: []
@@ -54,6 +67,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - `packages/desktop/e2e/fixtures.ts` already provides the right foundation for expansion: isolated temp user-data directories, `_electron.launch(...)`, and reusable onboarding/bootstrap helpers.
 - `packages/desktop/package.json` currently under-runs the available suite because `test:e2e` only targets `e2e/app.spec.ts`; the GFM compliance suite and packaged Linux smoke spec are outside the default E2E command.
 - The suite currently uses DOM/style assertions and artifact screenshots, but not baseline screenshot assertions via `toHaveScreenshot`, so dedicated visual regression coverage still remains to be designed.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[05_Sessions/2026-04-12-072442-whole-workspace-markdown-search-with-bounded-indexing-team-lead|SESSION-2026-04-12-072442]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

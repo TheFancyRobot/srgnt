@@ -9,6 +9,19 @@ status: active
 owner: coordinator
 branch: ''
 phase: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]'
+context:
+  context_id: 'SESSION-2026-04-16-175646'
+  status: active
+  updated_at: '2026-04-16T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]].'
+    target: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs: []
 related_decisions: []
 created: '2026-04-16'
@@ -46,6 +59,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Issue 1 (Init error handling bug): ✅ FIXED by executor-1 - `initialized = true` now set AFTER successful await
 - Issue 2 (5 failing worker tests): 🔄 executor-1 investigating - tests mock createRequire.resolve but worker uses import() which bypasses mock; secondary Effect layer composition issue discovered (AppConfigTag visibility to WorkspaceIndexerLayer inner gen)
 - 2026-04-16-1820 - Decision: Accept 76/81 for STEP-18-01. 5 worker tests failing due to Effect layer mock incompatibility (ESM dynamic import mocking doesn't work with Layer.mergeAll + Effect.gen). Core functionality IS correctly implemented. Executor-1 will mark tests as skipped with documentation note and report done.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

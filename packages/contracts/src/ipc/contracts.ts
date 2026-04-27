@@ -630,22 +630,25 @@ export const SJiraConnectorSettingsSaveRequest = Schema.Struct({
 });
 export type JiraConnectorSettingsSaveRequest = Schema.Schema.Type<typeof SJiraConnectorSettingsSaveRequest>;
 
-// connector:credential:set — stores token in keychain (token NOT in request shape in logs)
+// connector:credential:set — stores token behind the main-process credential adapter (token NOT in request shape in logs)
 export const SJiraCredentialSetRequest = Schema.Struct({
   connectorId: Schema.Literal('jira'),
   token: Schema.String,
 });
 export type JiraCredentialSetRequest = Schema.Schema.Type<typeof SJiraCredentialSetRequest>;
 
-// connector:credential:status — returns { exists: boolean } — NEVER returns raw token
+// connector:credential:status — returns backend availability + effective status — NEVER returns raw token
 export const SJiraCredentialStatusResponse = Schema.Struct({
   connectorId: Schema.Literal('jira'),
   exists: Schema.Boolean,
   backend: Schema.Literal('keychain', 'encrypted-local', 'unavailable'),
+  preferredBackend: Schema.Literal('keychain', 'encrypted-local'),
+  keychainAvailable: Schema.Boolean,
+  encryptedLocalAvailable: Schema.Boolean,
 });
 export type JiraCredentialStatusResponse = Schema.Schema.Type<typeof SJiraCredentialStatusResponse>;
 
-// connector:credential:delete — removes token from keychain
+// connector:credential:delete — removes token from credential backend
 export const SJiraCredentialDeleteRequest = Schema.Struct({
   connectorId: Schema.Literal('jira'),
 });

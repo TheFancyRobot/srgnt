@@ -9,6 +9,19 @@ status: completed
 owner: OpenCode
 branch: 'feat/phase-13-three-panel-shell'
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
+context:
+  context_id: 'SESSION-2026-03-30-225848'
+  status: completed
+  updated_at: '2026-03-30T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]].'
+    target: '[[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-30'
@@ -53,6 +66,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - The last unresolved `LayoutContext` review item was separate from the earlier persistence bug: it required suppressing redundant writes, not just persisting the right preference value.
 - Running the two Electron E2E suites in parallel is unsafe for this branch because both tests create the same default workspace root under the real home directory.
 - The renderer had a second settings race: `patchSettings` read from `settingsRef.current`, but `saveSettings` did not update that ref until persistence returned, so quick successive settings edits could clobber each other.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

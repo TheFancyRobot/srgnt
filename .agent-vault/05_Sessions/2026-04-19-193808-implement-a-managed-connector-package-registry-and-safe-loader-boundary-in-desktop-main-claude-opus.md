@@ -9,6 +9,19 @@ status: completed
 owner: claude-opus
 branch: ''
 phase: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|Phase 20 connector factory and remote package installation]]'
+context:
+  context_id: 'SESSION-2026-04-19-193808'
+  status: completed
+  updated_at: '2026-04-19T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_04_implement-a-managed-connector-package-registry-and-safe-loader-boundary-in-desktop-main|STEP-20-04 Implement a managed connector package registry and safe loader boundary in desktop main]].'
+    target: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_04_implement-a-managed-connector-package-registry-and-safe-loader-boundary-in-desktop-main|STEP-20-04 Implement a managed connector package registry and safe loader boundary in desktop main]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_04_implement-a-managed-connector-package-registry-and-safe-loader-boundary-in-desktop-main|STEP-20-04 Implement a managed connector package registry and safe loader boundary in desktop main]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: '[[04_Decisions/DEC-0016_isolate-third-party-connector-packages-outside-electron-main-process|DEC-0016 Isolate third-party connector packages outside Electron main process]]|[[04_Decisions/DEC-0010_use-shared-microsoft-auth-boundary-with-main-process-secret-storage|DEC-0010 Shared Microsoft auth boundary with main-process secret storage]]'
 created: '2026-04-19'
@@ -55,6 +68,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - `packages/contracts/src/connectors/installed-package.ts` uses `packageUrl` while `package-registry.ts` uses `sourceUrl`. Phase notes flag this as non-blocking harmonization work; no harmonization done in Step 04 to avoid disturbing just-shipped Step 03 tests. Recommend the harmonization land early in Step 05 so CLI commands reference a single canonical field name.
 - The `ConnectorPackageHost.internalRegistry()` / `internalLoadedHandle()` escape hatches exist for integration glue + future Step 05 CLI wiring; they should remain test-only surfaces until Step 05 adds its IPC handlers.
 - Built-in connectors (jira/outlook/teams) from Phase 20 Step 02 continue to register through the shared `BuiltInConnectorRegistry` in `@srgnt/connectors` and do NOT pass through the new `ConnectorPackageHost`. This is intentional per DEC-0016 — the isolated boundary is the third-party default; first-party in-main execution is preserved during migration.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_04_implement-a-managed-connector-package-registry-and-safe-loader-boundary-in-desktop-main|STEP-20-04 Implement a managed connector package registry and safe loader boundary in desktop main]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

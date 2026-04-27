@@ -110,9 +110,6 @@
       "createDesktopShortcut": true
     }
   },
-  "optionalDependencies": {
-    "keytar": "^5.6.0"
-  },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.1",
     "@codemirror/commands": "^6.10.3",
@@ -129,6 +126,7 @@
     "codemirror-live-markdown": "0.5.1-alpha.1",
     "effect": "^3.21.0",
     "electron-updater": "^6.3.9",
+    "keytar": "^5.6.0",
     "@huggingface/transformers": "^3.4.1",
     "fast-check": "^4.6.0",
     "ghostty-web": "^0.4.0",

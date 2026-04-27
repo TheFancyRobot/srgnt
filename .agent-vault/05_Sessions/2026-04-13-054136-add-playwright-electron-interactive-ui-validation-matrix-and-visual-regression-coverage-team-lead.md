@@ -9,6 +9,19 @@ status: in-progress
 owner: team-lead
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
+context:
+  context_id: 'SESSION-2026-04-13-054136'
+  status: active
+  updated_at: '2026-04-13T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]].'
+    target: '[[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs: []
 related_decisions: []
 created: '2026-04-13'
@@ -73,6 +86,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Record important facts learned during the session.
 - Promote durable information into architecture, bug, or decision notes when appropriate.
 - **Chunk 1 (E2E script fix)**: COMPLETE ✅ — `packages/desktop/package.json` updated: `test:e2e` now runs `e2e/app.spec.ts e2e/gfm-compliance.spec.ts` (was only `e2e/app.spec.ts`). Design decision: `packaged.spec.ts` intentionally excluded — it requires `pnpm run pack` and already has dedicated `test:e2e:packaged:linux` script. Validated: `playwright test --list` confirms 44 tests across 3 spec files. Routed to reviewer.
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

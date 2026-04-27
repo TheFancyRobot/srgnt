@@ -21,35 +21,23 @@ tags:
 
 # Step 03 - Wire workspace enable-disable behavior, reindex triggers, and status reporting
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: desktop integrates the runtime engine into actual workspace behavior, including first-enable indexing and ongoing incremental updates.
-
-## Why This Step Exists
-
-- The feature goal is not just query execution. Users must be able to enable it for a workspace and get a complete initial index plus ongoing updates safely.
-
-## Prerequisites
-
-- STEP-17-01 and STEP-17-02 complete.
-
-## Relevant Code Paths
-
-- desktop main semantic-search host modules
-- workspace lifecycle and settings wiring in `packages/desktop/src/main/index.ts`
 
 ## Required Reading
 
 - [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
 - [[04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index|DEC-0015 Semantic search runtime and hosting model]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Wire feature enable/disable behavior to workspace-scoped state in a way that fits existing desktop architecture cleanly.
-2. Ensure the first enable for a workspace triggers full initial indexing of supported markdown files.
-3. Add file-watch or equivalent reindex triggers outside the renderer and exclude `.agent-vault`, hidden paths, symlinks, and the semantic index directory.
-4. Expose status/progress data sufficient for future UI integration without overexposing internals.
-5. Add tests for first-enable indexing, disable behavior, reindex triggers, and workspace switch safety.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_03_wire-workspace-enable-disable-behavior-reindex-triggers-and-status-reporting/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_03_wire-workspace-enable-disable-behavior-reindex-triggers-and-status-reporting/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_03_wire-workspace-enable-disable-behavior-reindex-triggers-and-status-reporting/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_03_wire-workspace-enable-disable-behavior-reindex-triggers-and-status-reporting/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -59,10 +47,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Wire semantic search into workspace lifecycle and incremental triggers.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Disable should stop active indexing/search participation but should not automatically destroy the derived index unless a later product decision says so.
 
 ## Human Notes
 
@@ -74,13 +58,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means semantic search behaves like a real workspace feature instead of an isolated API.
-STEP-17-03 COMPLETE — validated 2026-04-16.
-
-Workspace enable/disable, file watcher, status reporting implemented.
-- 14 new tests (791 desktop total), 80 semantic-search tests
-- 96.55% semantic-search coverage
-- Exclusions: .agent-vault, .git, hidden files, backups, index directory
-- Debouncing, rename handling, extended status tracking
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

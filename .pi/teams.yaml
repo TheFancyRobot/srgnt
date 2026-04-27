@@ -1,8 +1,10 @@
-# SRGNT development team: coordinator/researcher/executor/tester (minimax/MiniMax-M2.7), reviewer (openai-codex/gpt-5.4). Active context management with 50% max utilization. Loop: researcher → executor → reviewer → tester until 100% pass.
+# SRGNT development team: delegate-first, team-first execution. The lead routes substantive work to the coordinator first; the coordinator owns routing across researcher → planner → executor(s) → reviewer → tester. Planner uses openai-codex/gpt-5.5 to turn research into junior-ready implementation plans with exhaustive explicit instructions and no gaps. Executors use zai-org/GLM-5.1-TEE, do not spawn sub-agents, and can run parallel chunks assigned by the coordinator. Reviewer approval is required before tester runs the full validation suite, including e2e. Active context management must stay below 20% utilization. Loop: researcher → planner → executor(s) → reviewer → tester until 100% pass.
 srgnt-team:
   - coordinator
   - researcher
+  - planner
   - executor-1
+  - executor-2
   - reviewer
   - tester
 

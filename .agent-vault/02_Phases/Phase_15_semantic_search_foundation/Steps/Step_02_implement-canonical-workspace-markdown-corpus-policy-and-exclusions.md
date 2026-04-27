@@ -21,24 +21,11 @@ tags:
 
 # Step 02 - Implement canonical workspace markdown corpus policy and exclusions
 
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
+
 ## Purpose
 
 - Outcome: one reusable runtime service determines which workspace markdown files semantic search may crawl, index, watch, and return.
-
-## Why This Step Exists
-
-- Search, reindexing, deletion cleanup, and file watching must share identical scope rules or the subsystem will leak content or return inconsistent results.
-
-## Prerequisites
-
-- STEP-15-01 complete.
-
-## Relevant Code Paths
-
-- `packages/runtime/src/workspace/`
-- `packages/runtime/src/semantic-search/` (new)
-- `packages/desktop/src/main/notes.ts`
-- `packages/contracts/src/workspace/layout.ts`
 
 ## Required Reading
 
@@ -46,14 +33,12 @@ tags:
 - [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]]
 - [[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Notes workspace boundary and cross-workspace navigation rules]]
 
-## Execution Prompt
+## Companion Notes
 
-1. Implement a canonical workspace-markdown corpus policy in runtime, not desktop.
-2. Support `.md` and `.markdown` files only.
-3. Exclude `.agent-vault/` and its contents completely.
-4. Also exclude `.command-center/`, hidden directories, symlinks, escaped paths, the semantic index directory, and obviously non-user markdown artifacts.
-5. Add deterministic tests for recursion, exclusion, path normalization, and symlink rejection.
-6. Document any policy decision that differs from current Phase 14 rules before proceeding.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_implement-canonical-workspace-markdown-corpus-policy-and-exclusions/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_implement-canonical-workspace-markdown-corpus-policy-and-exclusions/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_implement-canonical-workspace-markdown-corpus-policy-and-exclusions/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_implement-canonical-workspace-markdown-corpus-policy-and-exclusions/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -63,11 +48,6 @@ tags:
 - Last touched: 2026-04-02
 - Next action: Implement one corpus policy shared by crawl, search, and watchers.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- This service should return workspace-relative or canonical absolute paths consistently so later manifests and search results do not drift.
-- Treat the semantic index directory itself as excluded from day one to avoid self-indexing loops.
 
 ## Human Notes
 
@@ -79,6 +59,7 @@ tags:
 - No sessions yet.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Not started yet. Completion means semantic search, reindexing, and future watchers all depend on one tested corpus-policy service.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

@@ -22,43 +22,47 @@ reviewer_notes: 'SCOPE ADJUSTED: Gap tests (model asset error, workspace switch 
 
 # Step 04 - Add crash restart and failure-mode coverage for real semantic-search runtime hosting
 
-## Agent-Managed Snapshot
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
 
-- **Status**: done_limited
-- **Current owner**: executor-1
-- **Last touched**: 2026-04-16
-- **Next action**: None — scope-adjusted closure. Gap tests blocked by Vitest/Effect mock complexity. Existing coverage is comprehensive.
+## Purpose
 
-## Outcome Summary
-
-### Actual Outcome (2026-04-16)
-
-**What was done**: Attempted to add gap tests for model asset errors and workspace switch during in-flight indexing. Both gap tests required mocking worker error events in ways that don't fit the existing mock pattern. The gap tests were reverted.
-
-**Why gap tests couldn't be added**: Worker error simulation in Vitest unit tests requires deeper mock infrastructure investment.
-
-**Compensating coverage**:
-- `host.test.ts` (75 tests) — lifecycle, error state, crash handling
-- `worker.test.ts` (2 tests) — worker protocol
-- `ipc-handlers.test.ts` (32 tests) — IPC handlers
-- `semantic-search-failure.e2e.spec.ts` — worker crash, corrupt index, workspace switch, offline
-- `semantic-search-offline.e2e.spec.ts` — bundled model assets, offline operation
-
-**Validation**: 75/75 desktop semantic-search tests pass
-
----
-
-## Original Step Documentation (Historical)
-
-This step originally targeted adding crash restart and failure-mode coverage for real semantic-search runtime hosting. Due to the Vitest/Effect tooling incompatibility, the step is being closed with documented limitation rather than literal completion.
-
-### Purpose
 - Outcome: Add crash restart and failure-mode coverage for real semantic-search runtime hosting.
 - Parent phase: [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]].
 
-### Why This Step Exists
-- Real runtime hosting adds failure modes that a stub never exercised: missing model assets, manifest mismatches, worker crashes, and workspace switches during indexing.
-- This step makes sure semantic search fails safely without breaking editing or desktop stability.
+## Required Reading
 
-### Session History
-- 2026-04-16 - [[05_Sessions/2026-04-16-191400|SESSION-2026-04-16-191400]] - executor-1 session created
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]
+- [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]]
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting/Execution_Brief|Execution Brief]]
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting/Validation_Plan|Validation Plan]]
+
+## Companion Notes
+
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
+
+## Agent-Managed Snapshot
+
+<!-- AGENT-START:step-agent-managed-snapshot -->
+- Status: planned
+- Current owner: 
+- Last touched: 2026-04-23
+- Next action: Read [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting/Validation_Plan|Validation Plan]].
+<!-- AGENT-END:step-agent-managed-snapshot -->
+
+## Human Notes
+
+- Put judgment calls or cautions here.
+
+## Session History
+
+<!-- AGENT-START:step-session-history -->
+- No sessions yet.
+<!-- AGENT-END:step-session-history -->
+
+## Related Notes
+
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

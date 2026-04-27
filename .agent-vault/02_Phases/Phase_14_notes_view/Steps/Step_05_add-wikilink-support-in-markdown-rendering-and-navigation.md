@@ -16,37 +16,21 @@ related_sessions:
   - '[[05_Sessions/2026-04-05-044402-add-workspace-wide-wikilink-resolution-navigation-and-note-creation|SESSION-2026-04-05-044402 Session for Add workspace-wide wikilink resolution, navigation, and note creation]]'
 related_bugs:
   - '[[03_Bugs/BUG-0007_source-button-on-note-editor-does-not-implement-live-preview-toggle-correctly|BUG-0007 Source button on note editor does not implement live-preview toggle correctly]]'
-related_decisions:
-  - '[[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]]'
 tags:
   - agent-vault
   - step
+related_decisions:
+  - '[[04_Decisions/DEC-0014_define-notes-workspace-boundary-and-cross-workspace-navigation-rules|DEC-0014 Define notes workspace boundary and cross-workspace navigation rules]]'
 ---
 
 # Step 05 - Add workspace-wide wikilink resolution, navigation, and note creation
 
-Use this note for one executable step inside a phase. This note is the source of truth for the next concrete unit of work. The goal is to make execution small, teachable, and safe for a junior developer or an automation agent to pick up without guessing. Keep the parent phase relationship explicit and link the architecture notes a reader must inspect first; use [[07_Templates/Phase_Template|Phase Template]] and [[07_Templates/Architecture_Template|Architecture Template]] as the contract references.
+Use this note as a thin index for one executable step. Keep detail in companion notes so execution can load only the smallest note needed.
 
 ## Purpose
 
 - Outcome: Add wikilink support in markdown rendering and navigation.
 - Parent phase: [[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]].
-
-## Why This Step Exists
-
-- Obsidian-style wikilinks are a core requirement: `[[Note Name]]` and `[[Note Name|Display Text]]`
-- Clicking a wikilink should navigate to that note (open in editor or create if doesn't exist)
-- Must also work in edit mode for autocomplete
-
-## Prerequisites
-
-- STEP-14-04 must be complete (editor exists with markdown rendering)
-- Understand wikilink syntax from Obsidian docs
-
-## Relevant Code Paths
-
-- `packages/desktop/src/renderer/components/NotesView.tsx` - Where rendering happens
-- Markdown rendering library configuration
 
 ## Required Reading
 
@@ -54,19 +38,12 @@ Use this note for one executable step inside a phase. This note is the source of
 - Obsidian wikilink syntax: `[[Note Name]]` or `[[Note Name|Alias]]`
 - Consider: custom remark/rehype plugin or regex replacement for rendering
 
-## Execution Prompt
+## Companion Notes
 
-1. Add wikilink parsing to markdown rendering:
-   - Convert `[[Note Name]]` to clickable links in preview mode
-   - Handle `[[Note Name|Alias]]` for custom display text
-2. Implement click handler: when wikilink clicked, find file in workspace and open it
-3. If linked note doesn't exist, offer to create it
-4. In edit mode: add autocomplete popup when typing `[[` to suggest existing notes
-5. Support linking to notes outside notes/ folder (e.g., `Daily/2024-01-15.md`)
-
-## Validation Commands
-
-- Manual: Create note A, create note B with `[[Note A]]`, click link - should open Note A
+- [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation/Execution_Brief|Execution Brief]] - Why the step exists, prerequisites, likely code paths, and the smallest execution checklist.
+- [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation/Validation_Plan|Validation Plan]] - Acceptance checks, commands, edge cases, and regression expectations.
+- [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation/Implementation_Notes|Implementation Notes]] - Durable findings discovered while the step is being executed.
+- [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation/Outcome|Outcome]] - Final result, validation evidence, and explicit follow-up.
 
 ## Agent-Managed Snapshot
 
@@ -76,75 +53,6 @@ Use this note for one executable step inside a phase. This note is the source of
 - Last touched: 2026-03-31
 - Next action: Start STEP-14-05.
 <!-- AGENT-END:step-agent-managed-snapshot -->
-
-## Implementation Notes
-
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
-### Refinement (readiness checklist pass)
-
-This section supersedes the vaguer template text above when they conflict.
-
-**Exact outcome and success condition**
-- Outcome: wikilinks render and resolve across user-facing workspace markdown files, clicking an existing link opens that file, typing `[[` offers workspace suggestions, and missing-link creation is limited to `Notes/`.
-- Success condition: a junior engineer can prove that existing links outside `Notes/` open correctly while missing links outside `Notes/` remain non-destructive.
-
-**Why this step matters to the phase**
-- The user explicitly wants whole-workspace navigation, not a notes-only island.
-- This step is where the `Notes/` write boundary and whole-workspace read boundary meet in one user-facing behavior.
-
-**Prerequisites, setup state, and dependencies**
-- Step 04 must already provide the live-preview editor foundation.
-- Reuse the Step 02 path policy rather than inventing a new resolver in the renderer.
-
-**Concrete starting files, directories, packages, commands, and tests**
-- `packages/desktop/src/main/notes.ts` or a companion workspace-markdown resolver module
-- `packages/desktop/src/main/index.ts`
-- `packages/desktop/src/preload/index.ts`
-- `packages/desktop/src/renderer/env.d.ts`
-- `packages/desktop/src/renderer/components/NotesView.tsx`
-- `packages/desktop/src/renderer/components/notes/TiptapEditor.tsx` — add custom wikilink node/mark
-- `packages/desktop/src/renderer/components/notes/wikilink-extension.ts` — Tiptap extension for `[[...]]` syntax
-- `packages/desktop/src/renderer/components/notes/markdown-serializer.ts` — extend to handle wikilink serialization/parsing
-- Commands: `pnpm run test`, `pnpm run typecheck`
-
-**Required reading completeness**
-- Read DEC-0014 plus the Step 02 service and Step 04 editor notes before implementing wikilinks.
-
-**Implementation constraints and non-goals**
-- Existing files may open anywhere under the user-facing workspace markdown tree.
-- Auto-create is allowed only when the normalized target resolves under `${workspaceRoot}/Notes/`.
-- Exclude `.command-center/`, hidden directories, symlinks, and non-markdown files from resolution/autocomplete.
-- Do not add backlinks, graph view, or unbounded path interpolation from note text.
-
-**Validation commands, manual checks, and acceptance criteria mapping**
-- Renderer tests and/or integration tests for `[[Note]]`, `[[Folder/Note]]`, and `[[Note|Alias]]` rendering.
-- Manual: create note A, link to note B in `Notes/`, open it, then link to an existing markdown file under `Daily/` or `Meetings/` and confirm it opens.
-- Manual: verify a missing link outside `Notes/` does not create a file.
-- This step supports the phase acceptance item for workspace-wide wikilink navigation with controlled creation rules.
-
-**Edge cases, failure modes, and recovery expectations**
-- Duplicate basenames across the workspace must resolve predictably; use workspace-relative targets rather than basename-only guesses when ambiguous.
-- Autocomplete should show enough path context to disambiguate duplicates.
-- Broken links should render as broken/non-resolved state without mutating disk until the user confirms a create-in-Notes action.
-
-**Security considerations**
-- Do not let note text become a raw file-open primitive. All resolution must go through the trusted main-process resolver and path policy.
-
-**Performance considerations**
-- Build or reuse a cached workspace markdown index for suggestions and resolution rather than walking the entire workspace on every `[[` keystroke.
-- The autocomplete list (Tiptap Suggestion or custom dropdown) should be populated from a main-process IPC call that returns cached results, not from a renderer-side filesystem walk.
-
-**Integration touchpoints and downstream effects**
-- Shares the same workspace markdown inclusion rules as Step 07 search.
-- Extends the live-preview editor from Step 04 and feeds into the hardening work in Step 08.
-
-**Blockers, unresolved decisions, and handoff expectations**
-- No blockers remain.
-- Handoff to Step 07 should include the shared workspace markdown index/resolver so search reuses the same scope rules.
-
-**Junior-developer readiness verdict**
-- PASS
 
 ## Human Notes
 
@@ -157,13 +65,7 @@ This section supersedes the vaguer template text above when they conflict.
 - 2026-04-05 - [[05_Sessions/2026-04-05-044402-add-workspace-wide-wikilink-resolution-navigation-and-note-creation|SESSION-2026-04-05-044402 Session for Add workspace-wide wikilink resolution, navigation, and note creation]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
-## Outcome Summary
+## Related Notes
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
-## Outcome Summary
-
-- Implemented workspace-wide wikilink resolution, navigation, and `[[` autocomplete in the CodeMirror editor.
-- Wikilinks render as clickable links; clicking opens existing files anywhere in workspace or creates new notes under `Notes/` per DEC-0014.
-- Autocomplete suggests workspace markdown files when typing `[[`.
-- Validation: `pnpm --filter @srgnt/desktop typecheck` and `pnpm --filter @srgnt/desktop test` passed on 2026-04-05.
+- [[07_Templates/Note_Contracts|Note Contracts]]
+- [[07_Templates/Phase_Template|Phase Template]]

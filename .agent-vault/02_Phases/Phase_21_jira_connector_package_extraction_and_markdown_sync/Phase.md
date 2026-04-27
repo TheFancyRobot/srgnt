@@ -5,9 +5,9 @@ contract_version: 1
 title: Jira Connector Package Extraction and Markdown Sync
 phase_id: PHASE-21
 status: completed
-owner: ''
+owner: coordinator
 created: '2026-04-21'
-updated: '2026-04-24'
+updated: '2026-04-26'
 depends_on:
   - '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20 Connector Factory and Remote Package Installation]]'
 related_architecture:
@@ -23,6 +23,8 @@ related_decisions:
 related_bugs:
   - '[[03_Bugs/BUG-0017_jira-token-save-fails-when-electron-safestorage-encryption-is-unavailable|BUG-0017 Jira token save fails when Electron safeStorage encryption is unavailable]]'
   - '[[03_Bugs/BUG-0018_jira-connector-does-not-appear-in-the-connector-list|BUG-0018 Jira connector does not appear in the connector list]]'
+  - '[[03_Bugs/BUG-0019_failed-to-save-jira-token-when-no-non-plaintext-credential-backend-is-available|BUG-0019 Failed to save Jira token when no non-plaintext credential backend is available]]'
+  - '[[03_Bugs/BUG-0020_safestorage-encryption-unavailable-causes-token-save-to-fail-on-linux-without-keytar|BUG-0020 safeStorage encryption unavailable causes token save to fail on Linux without keytar]]'
 tags:
   - agent-vault
   - phase
@@ -86,6 +88,7 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 - **Step 04** persists synced issues as stable markdown files with archive/stale semantics.
 - **Step 05** wires the external package into desktop install/connect/sync behavior.
 - **Step 06** adds regression coverage and operator-facing documentation.
+- **Step 07** adds OS-aware recovery guidance for encrypted-storage-unavailable Jira token states.
 
 ## Shared Constraints and Invariants
 
@@ -106,12 +109,17 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
   - `examples/connectors/jira/`
 - Settings and credential surface:
   - `packages/contracts/src/ipc/contracts.ts`
+  - `packages/contracts/src/connectors/jira-settings.ts`
   - `packages/desktop/src/main/settings.ts`
+  - `packages/desktop/src/main/jira-settings-store.ts`
   - `packages/desktop/src/main/index.ts`
+  - `packages/desktop/src/main/credentials.ts`
   - `packages/desktop/src/preload/index.ts`
   - `packages/desktop/src/renderer/env.d.ts`
   - `packages/desktop/src/renderer/main.tsx`
   - `packages/desktop/src/renderer/components/Settings.tsx`
+  - `packages/desktop/src/renderer/components/JiraConnectorSettings.tsx`
+  - `packages/desktop/src/renderer/components/JiraConnectorSettings.test.tsx`
 - Package host and connector lifecycle surface:
   - `packages/desktop/src/main/connectors/host.ts`
   - `packages/desktop/src/main/cli/commands.ts`
@@ -156,7 +164,7 @@ Use this checklist for every Step 21 note:
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20 Connector Factory and Remote Package Installation]]
-- Current phase status: in_review
+- Current phase status: completed (automated work; manual E2E with real Jira credentials is external gate)
 - Next phase: [[02_Phases/Phase_22_extract_reusable_jira_api_client_package/Phase|PHASE-22 Extract reusable Jira API client package]]
 <!-- AGENT-END:phase-linear-context -->
 
@@ -183,17 +191,20 @@ Use this checklist for every Step 21 note:
 <!-- AGENT-START:phase-related-bugs -->
 - [[03_Bugs/BUG-0017_jira-token-save-fails-when-electron-safestorage-encryption-is-unavailable|BUG-0017 Jira token save fails when Electron safeStorage encryption is unavailable]]
 - [[03_Bugs/BUG-0018_jira-connector-does-not-appear-in-the-connector-list|BUG-0018 Jira connector does not appear in the connector list]]
+- [[03_Bugs/BUG-0019_failed-to-save-jira-token-when-no-non-plaintext-credential-backend-is-available|BUG-0019 Failed to save Jira token when no non-plaintext credential backend is available]]
+- [[03_Bugs/BUG-0020_safestorage-encryption-unavailable-causes-token-save-to-fail-on-linux-without-keytar|BUG-0020 safeStorage encryption unavailable causes token save to fail on Linux without keytar]]
 <!-- AGENT-END:phase-related-bugs -->
 
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_01_extract-jira-from-srgnt-connectors-into-its-own-workspace-package|STEP-21-01 Extract Jira from @srgnt/connectors into its own workspace package]] -- establish the new package boundary and remove the built-in Jira copy first.
-- [ ] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_02_define-jira-settings-schema-and-os-keychain-secret-boundary|STEP-21-02 Define Jira settings schema and OS-keychain secret boundary]] -- lock the non-secret config model and the secure token boundary before live API work.
-- [ ] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_03_implement-live-jira-api-sync-with-configurable-issue-extraction|STEP-21-03 Implement live Jira API sync with configurable issue extraction]] -- fetch real Jira issues through the package runtime using the agreed settings contract.
-- [ ] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_04_persist-jira-issues-as-markdown-under-a-connector-owned-workspace-subtree|STEP-21-04 Persist Jira issues as markdown under a connector-owned workspace subtree]] -- land durable local markdown artifacts and archive/stale behavior.
-- [ ] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_05_wire-the-external-jira-package-into-desktop-install-connect-and-sync-flows|STEP-21-05 Wire the external Jira package into desktop install connect and sync flows]] -- connect package lifecycle behavior to desktop state and UX.
-- [ ] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_06_lock-the-jira-package-down-with-regression-coverage-and-operator-docs|STEP-21-06 Lock the Jira package down with regression coverage and operator docs]] -- prove the end-to-end behavior and document operator expectations.
+- [x] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_01_extract-jira-from-srgnt-connectors-into-its-own-workspace-package|STEP-21-01 Extract Jira from @srgnt/connectors into its own workspace package]] -- establish the new package boundary and remove the built-in Jira copy first.
+- [x] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_02_define-jira-settings-schema-and-os-keychain-secret-boundary|STEP-21-02 Define Jira settings schema and OS-keychain secret boundary]] -- lock the non-secret config model and the secure token boundary before live API work.
+- [x] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_03_implement-live-jira-api-sync-with-configurable-issue-extraction|STEP-21-03 Implement live Jira API sync with configurable issue extraction]] -- fetch real Jira issues through the package runtime using the agreed settings contract.
+- [x] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_04_persist-jira-issues-as-markdown-under-a-connector-owned-workspace-subtree|STEP-21-04 Persist Jira issues as markdown under a connector-owned workspace subtree]] -- land durable local markdown artifacts and archive/stale behavior.
+- [x] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_05_wire-the-external-jira-package-into-desktop-install-connect-and-sync-flows|STEP-21-05 Wire the external Jira package into desktop install connect and sync flows]] -- connect package lifecycle behavior to desktop state and UX.
+- [x] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_06_lock-the-jira-package-down-with-regression-coverage-and-operator-docs|STEP-21-06 Lock the Jira package down with regression coverage and operator docs]] -- prove the end-to-end behavior and document operator expectations.
+- [ ] [[02_Phases/Phase_21_jira_connector_package_extraction_and_markdown_sync/Steps/Step_07_add-os-aware-more-info-help-for-unavailable-encrypted-jira-token-storage|STEP-21-07 Add OS-aware More Info help for unavailable encrypted Jira token storage]] -- explain unavailable encrypted storage clearly and guide users to platform-specific remediation steps.
 <!-- AGENT-END:phase-steps -->
 
 ## Notes
@@ -212,4 +223,6 @@ Use this checklist for every Step 21 note:
   - secret handling: **store Jira API token in OS keychain behind Electron main**;
   - provider client boundary: **separate the Jira API client into a reusable workspace package so future Jira-facing packages reuse one client**.
 - Recommended schema direction for Step 02: use a connector-config model keyed by connector ID so Jira solves the immediate need without making future connector settings impossible to generalize.
-- Parallel work map: Step 01 must run first; Step 02 can begin as soon as package boundaries are known; Step 03 depends on Steps 01 and 02; Step 04 depends on Step 03; Step 05 depends on Steps 01-04; Step 06 runs last.
+- BUG-0019 and BUG-0020 changed the token-storage UX after the original phase shipped: the current baseline includes a Token Storage selector, keychain preference with encrypted-local fallback, and an explicit `backend === 'unavailable'` renderer state. Any Step 07 work must treat those semantics as the starting point, not as open design questions.
+- Parallel work map: Step 01 must run first; Step 02 can begin as soon as package boundaries are known; Step 03 depends on Steps 01 and 02; Step 04 depends on Step 03; Step 05 depends on Steps 01-04; Step 06 runs last; Step 07 is a post-fix UX follow-up on the shipped token-storage flow and should not reopen backend-storage semantics unless new evidence forces it.
+- Refinement snapshot on 2026-04-26: Step frontmatter indicates Steps 01-06 are complete/completed; the only remaining incomplete step is STEP-21-07.

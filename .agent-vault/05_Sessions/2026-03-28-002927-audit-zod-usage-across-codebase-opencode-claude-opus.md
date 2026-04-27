@@ -9,6 +9,19 @@ status: completed
 owner: opencode-claude-opus
 branch: ''
 phase: '[[02_Phases/Phase_06_replace_zod_with_effect_schema/Phase|Phase 06 replace zod with effect schema]]'
+context:
+  context_id: 'SESSION-2026-03-28-002927'
+  status: completed
+  updated_at: '2026-03-28T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_06_replace_zod_with_effect_schema/Steps/Step_01_audit-zod-usage-across-codebase|STEP-06-01 Audit Zod usage across codebase]].'
+    target: '[[02_Phases/Phase_06_replace_zod_with_effect_schema/Steps/Step_01_audit-zod-usage-across-codebase|STEP-06-01 Audit Zod usage across codebase]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_06_replace_zod_with_effect_schema/Steps/Step_01_audit-zod-usage-across-codebase|STEP-06-01 Audit Zod usage across codebase]]'
+    section: 'Context Handoff'
+  last_action:
+    type: completed
 related_bugs: []
 related_decisions: []
 created: '2026-03-28'
@@ -57,6 +70,12 @@ Cross-cutting vault maintenance session to complete the phase renumbering (inser
 - All vault fixups were confined to generated blocks and frontmatter — no human-authored content was modified.
 - The Phase 07 `depends_on` correctly stays as PHASE-05 (not PHASE-06), since terminal integration doesn't logically depend on the Zod→Effect migration. The insertion is about execution ordering preference, not hard dependency.
 - DEC-0006 filename still says "phase-08-and-phase-09" but content was correctly renumbered to PHASE-09/PHASE-10 by the prior sed pass. The filename is cosmetically misleading but not worth renaming (decision note filenames are stable identifiers).
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_06_replace_zod_with_effect_schema/Steps/Step_01_audit-zod-usage-across-codebase|STEP-06-01 Audit Zod usage across codebase]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

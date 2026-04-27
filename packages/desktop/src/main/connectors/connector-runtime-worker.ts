@@ -15,7 +15,7 @@
  * Strict boundaries:
  *   - This file does NOT handle IPC channels, Electron internals, or UI concerns.
  *   - The worker NEVER accesses the OS keychain directly — the token is fetched by
- *     the main process (from keychain via `credentials.getToken`) and passed in
+ *     the main process (from the credential adapter via `credentials.getToken`) and passed in
  *     via `workerData` when the worker is spawned (DEC-0017 token boundary).
  *   - All filesystem access goes through the injected `FileAdapter`, not raw `fs`.
  */
@@ -28,7 +28,7 @@ interface WorkerData {
   packageId: string;
   connectorId: string;
   packageEntry?: string;
-  /** Token fetched by main process from OS keychain and passed in (DEC-0017) */
+  /** Token fetched by main process from the credential adapter and passed in (DEC-0017) */
   token?: string;
   /** Workspace root passed in so worker can construct file paths */
   workspaceRoot?: string;
@@ -107,7 +107,7 @@ function buildHostContext(
         capabilities.workspace = { root: workspaceRoot ?? '' };
         break;
       case 'credentials.getToken':
-        // Token was fetched by main process from OS keychain (DEC-0017) and
+        // Token was fetched by main process from the credential adapter (DEC-0017) and
         // passed in via workerData. The worker only stores it in memory.
         capabilities.credentials = {
           getToken: async (_connectorId: string): Promise<string | undefined> => token,

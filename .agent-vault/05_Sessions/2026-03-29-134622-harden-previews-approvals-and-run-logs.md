@@ -9,6 +9,19 @@ status: in-progress
 owner: ''
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
+context:
+  context_id: 'SESSION-2026-03-29-134622'
+  status: active
+  updated_at: '2026-03-29T00:00:00.000Z'
+  current_focus:
+    summary: 'Advance [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]].'
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]]'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]]'
+    section: 'Context Handoff'
+  last_action:
+    type: saved
 related_bugs:
   - '[[03_Bugs/BUG-0003_today-view-launch-hardcodes-intent-readonly-bypassing-approval-preview|BUG-0003 Today View launch hardcodes intent: readOnly bypassing approval preview]]'
 related_decisions: []
@@ -62,6 +75,12 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
     1. Approval-required path (command blocked until approved)
     2. Read-only path (no approval needed)
     3. Run log persistence inspection
+
+## Context Handoff
+
+- Resume from the latest completion summary and validation notes below.
+- Primary resume target: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]].
+- Preserve durable conclusions in linked phase, bug, decision, or architecture notes.
 
 ## Changed Paths
 

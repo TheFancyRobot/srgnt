@@ -38,7 +38,6 @@ test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo
     await waitForDesktopReady(page);
 
     // Navigate to Notes
-    await page.getByRole('button', { name: 'Notes' }).click();
     const noteTreeItem = page.getByRole('treeitem', { name: /Your mom\.md/ });
     await expect(noteTreeItem).toBeVisible();
     await noteTreeItem.evaluate((element) => {

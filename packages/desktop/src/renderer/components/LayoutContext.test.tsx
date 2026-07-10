@@ -5,8 +5,8 @@ import { LayoutProvider, useLayout, type PanelDefinition } from './LayoutContext
 import { navIcons } from './icons.js';
 
 const defaultPanels: PanelDefinition[] = [
-  { id: 'today', icon: navIcons['today']!, label: 'Daily Dashboard', section: 'main', order: 1, sidePanelContent: () => <div /> },
-  { id: 'calendar', icon: navIcons['calendar']!, label: 'Calendar', section: 'main', order: 2, sidePanelContent: () => <div /> },
+  { id: 'notes', icon: navIcons['notes']!, label: 'Notes', section: 'main', order: 1, sidePanelContent: () => <div /> },
+  { id: 'settings', icon: navIcons['settings']!, label: 'Settings', section: 'system', order: 2, sidePanelContent: () => <div /> },
   { id: 'terminal', icon: navIcons['terminal']!, label: 'Terminal', section: 'utility', order: 3 },
 ];
 
@@ -21,9 +21,9 @@ function TestConsumer(): React.ReactElement {
       <button data-testid="toggle-sidebar" onClick={layout.toggleSidebar}>Toggle</button>
       <button data-testid="set-width" onClick={() => layout.setSidebarWidth(300)}>SetWidth</button>
       <button data-testid="set-collapsed" onClick={() => layout.setSidebarCollapsed(true)}>SetCollapsed</button>
-      <button data-testid="set-panel" onClick={() => layout.setActivePanel('calendar')}>SetPanel</button>
+      <button data-testid="set-panel" onClick={() => layout.setActivePanel('settings')}>SetPanel</button>
       <button data-testid="register-panel" onClick={() => layout.registerPanel({ id: 'new', icon: navIcons['notes']!, label: 'New', section: 'main', order: 10 })}>Register</button>
-      <button data-testid="unregister-panel" onClick={() => layout.unregisterPanel('today')}>Unregister</button>
+      <button data-testid="unregister-panel" onClick={() => layout.unregisterPanel('notes')}>Unregister</button>
     </div>
   );
 }
@@ -47,7 +47,7 @@ describe('LayoutContext', () => {
   it('initial state has correct defaults', () => {
     render(<LayoutProvider initialPanels={defaultPanels}><TestConsumer /></LayoutProvider>);
 
-    expect(screen.getByTestId('active-panel')).toHaveTextContent('today');
+    expect(screen.getByTestId('active-panel')).toHaveTextContent('notes');
     expect(screen.getByTestId('sidebar-collapsed')).toHaveTextContent('false');
     expect(screen.getByTestId('sidebar-width')).toHaveTextContent('240');
     expect(screen.getByTestId('panels-count')).toHaveTextContent('3');
@@ -57,7 +57,7 @@ describe('LayoutContext', () => {
     render(<LayoutProvider initialPanels={defaultPanels}><TestConsumer /></LayoutProvider>);
 
     fireEvent.click(screen.getByTestId('set-panel'));
-    expect(screen.getByTestId('active-panel')).toHaveTextContent('calendar');
+    expect(screen.getByTestId('active-panel')).toHaveTextContent('settings');
   });
 
   it('toggleSidebar flips isSidebarCollapsed', () => {
@@ -132,7 +132,7 @@ describe('LayoutContext', () => {
           <span data-testid="panels-count">{String(layout.panels.length)}</span>
           <button
             data-testid="replace-panel"
-            onClick={() => layout.registerPanel({ id: 'today', icon: navIcons['notes']!, label: 'Replaced Today', section: 'main', order: 1 })}
+            onClick={() => layout.registerPanel({ id: 'notes', icon: navIcons['notes']!, label: 'Replaced Notes', section: 'main', order: 1 })}
           >
             Replace
           </button>
@@ -168,9 +168,9 @@ describe('LayoutContext', () => {
     }
 
     const unsortedPanels: PanelDefinition[] = [
-      { id: 'b', icon: navIcons['today']!, label: 'B', section: 'main', order: 2 },
-      { id: 'a', icon: navIcons['calendar']!, label: 'A', section: 'main', order: 1 },
-      { id: 'c', icon: navIcons['notes']!, label: 'C', section: 'main', order: 3 },
+      { id: 'b', icon: navIcons['notes']!, label: 'B', section: 'main', order: 2 },
+      { id: 'a', icon: navIcons['settings']!, label: 'A', section: 'main', order: 1 },
+      { id: 'c', icon: navIcons['terminal']!, label: 'C', section: 'main', order: 3 },
     ];
 
     render(<LayoutProvider initialPanels={unsortedPanels}><OrderTest /></LayoutProvider>);
@@ -184,13 +184,13 @@ describe('LayoutContext', () => {
         initialPanels={defaultPanels}
         initialWidth={320}
         initialCollapsed={true}
-        defaultPanel="calendar"
+        defaultPanel="settings"
       >
         <TestConsumer />
       </LayoutProvider>
     );
 
-    expect(screen.getByTestId('active-panel')).toHaveTextContent('calendar');
+    expect(screen.getByTestId('active-panel')).toHaveTextContent('settings');
     expect(screen.getByTestId('sidebar-collapsed')).toHaveTextContent('true');
     expect(screen.getByTestId('sidebar-width')).toHaveTextContent('320');
   });

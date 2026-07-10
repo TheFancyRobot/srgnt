@@ -15,10 +15,7 @@ export interface ActivityBarProps {
 }
 
 export const defaultActivityBarItems: ActivityBarItem[] = [
-  { id: 'today', label: 'Daily Dashboard', icon: navIcons['today']!, section: 'main' },
-  { id: 'calendar', label: 'Calendar', icon: navIcons['calendar']!, section: 'main' },
   { id: 'notes', label: 'Notes', icon: navIcons['notes']!, section: 'main' },
-  { id: 'connectors', label: 'Connectors', icon: navIcons['connectors']!, section: 'system' },
   { id: 'settings', label: 'Settings', icon: navIcons['settings']!, section: 'system' },
   { id: 'terminal', label: 'Terminal', icon: navIcons['terminal']!, section: 'utility' },
 ];

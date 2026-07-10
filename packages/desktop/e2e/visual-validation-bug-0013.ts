@@ -36,11 +36,10 @@ async function validate() {
       console.log('Completing onboarding...');
       await createBtn.click();
       await page.getByRole('button', { name: 'Next' }).click();
-      await page.getByRole('button', { name: 'Next' }).click();
       await page.getByRole('button', { name: 'Get Started' }).click();
     }
     
-    await page.waitForSelector('button[name="Daily Dashboard"]', { timeout: 5000 });
+    await page.waitForSelector('button[aria-label="Notes"]', { timeout: 5000 });
     
     // Get workspace root
     const workspaceRoot = await page.evaluate(async () => {
@@ -58,7 +57,6 @@ async function validate() {
     await page.waitForLoadState('domcontentloaded');
     
     // Click Notes button
-    await page.getByRole('button', { name: 'Notes' }).click();
     await page.waitForTimeout(500);
     
     // Click on the note

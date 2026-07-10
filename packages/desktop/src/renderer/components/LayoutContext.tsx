@@ -26,9 +26,6 @@ export interface LayoutContextValue {
   panels: PanelDefinition[];
   registerPanel: (panel: PanelDefinition) => void;
   unregisterPanel: (id: string) => void;
-  calendarYear: number;
-  calendarMonth: number;
-  setCalendarDate: (year: number, month: number) => void;
 }
 
 const LayoutContext = React.createContext<LayoutContextValue | null>(null);
@@ -46,7 +43,7 @@ function sameLayoutPreferences(a: LayoutPreferences | null, b: LayoutPreferences
 
 export function LayoutProvider({
   children,
-  defaultPanel = 'today',
+  defaultPanel = 'notes',
   initialWidth = 240,
   initialCollapsed = false,
   initialPanels = [],
@@ -65,15 +62,6 @@ export function LayoutProvider({
   const [panels, setPanels] = React.useState<PanelDefinition[]>(() =>
     [...initialPanels].sort((a, b) => a.order - b.order),
   );
-
-  const now = new Date();
-  const [calendarYear, setCalendarYear] = React.useState(now.getFullYear());
-  const [calendarMonth, setCalendarMonth] = React.useState(now.getMonth());
-
-  const setCalendarDate = React.useCallback((year: number, month: number) => {
-    setCalendarYear(year);
-    setCalendarMonth(month);
-  }, []);
 
   const userCollapsedPref = React.useRef(initialCollapsed);
   const collapsedRef = React.useRef(initialCollapsed);
@@ -227,11 +215,8 @@ export function LayoutProvider({
       panels,
       registerPanel,
       unregisterPanel,
-      calendarYear,
-      calendarMonth,
-      setCalendarDate,
     }),
-    [activePanel, setActivePanel, isSidebarCollapsed, setSidebarCollapsed, toggleSidebar, sidebarWidth, setSidebarWidth, panels, registerPanel, unregisterPanel, calendarYear, calendarMonth, setCalendarDate],
+    [activePanel, setActivePanel, isSidebarCollapsed, setSidebarCollapsed, toggleSidebar, sidebarWidth, setSidebarWidth, panels, registerPanel, unregisterPanel],
   );
 
   return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;

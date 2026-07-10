@@ -1,7 +1,5 @@
 import { Schema } from "@effect/schema";
-import { PositiveInt, SemVerString, UrlString } from '../shared-schemas.js';
-import { SConnectorLifecycleState } from '../connectors/package-runtime.js';
-import { SConnectorPackageRegistry } from '../connectors/package-registry.js';
+import { PositiveInt } from '../shared-schemas.js';
 import { SLaunchContext } from '../entities/launch.js';
 
 export const ipcChannels = {
@@ -12,16 +10,6 @@ export const ipcChannels = {
   workspaceSetRoot: 'workspace:set-root',
   workspaceChooseRoot: 'workspace:choose-root',
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
-  connectorList: 'connector:list',
-  connectorStatus: 'connector:status',
-  connectorInstall: 'connector:install',
-  connectorUninstall: 'connector:uninstall',
-  connectorConnect: 'connector:connect',
-  connectorDisconnect: 'connector:disconnect',
-  connectorPackageInstall: 'connector:package:install',
-  connectorPackageInspect: 'connector:package:inspect',
-  connectorPackageList: 'connector:package:list',
-  connectorPackageUninstall: 'connector:package:uninstall',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
   skillList: 'skill:list',
@@ -73,9 +61,6 @@ export const SIpcChannel = Schema.Literal(
 );
 export type IpcChannel = Schema.Schema.Type<typeof SIpcChannel>;
 
-export const SConnectorId = Schema.String.pipe(Schema.pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/));
-export type ConnectorId = Schema.Schema.Type<typeof SConnectorId>;
-
 export const SIpcRequest = Schema.Struct({
   channel: SIpcChannel,
   payload: Schema.optional(Schema.Unknown),
@@ -107,17 +92,6 @@ export type DesktopTheme = Schema.Schema.Type<typeof SDesktopTheme>;
 export const SUpdateChannel = Schema.Literal('stable', 'beta', 'nightly');
 export type UpdateChannel = Schema.Schema.Type<typeof SUpdateChannel>;
 
-export const SDesktopConnectorPreferences = Schema.Struct({
-  installedConnectorIds: Schema.optionalWith(
-    Schema.Array(SConnectorId),
-    { default: () => [] as readonly string[] },
-  ),
-  installedPackages: Schema.optionalWith(SConnectorPackageRegistry, {
-    default: () => ({ packages: [] }),
-  }),
-});
-export type DesktopConnectorPreferences = Schema.Schema.Type<typeof SDesktopConnectorPreferences>;
-
 export const SLayoutPreferences = Schema.Struct({
   sidebarWidth: Schema.Number,
   sidebarCollapsed: Schema.Boolean,
@@ -129,7 +103,6 @@ export const SDesktopSettings = Schema.Struct({
   updateChannel: SUpdateChannel,
   telemetryEnabled: Schema.Boolean,
   crashReportsEnabled: Schema.Boolean,
-  connectors: SDesktopConnectorPreferences,
   debugMode: Schema.Boolean,
   maxConcurrentRuns: Schema.Literal('1', '3', '5'),
   layout: Schema.optionalWith(SLayoutPreferences, {
@@ -152,53 +125,6 @@ export const SUpdateCheckResponse = Schema.Struct({
   version: Schema.optional(Schema.String),
 });
 export type UpdateCheckResponse = Schema.Schema.Type<typeof SUpdateCheckResponse>;
-
-export const SConnectorListEntry = Schema.Struct({
-  id: Schema.String,
-  name: Schema.String,
-  status: Schema.String,
-  installed: Schema.optionalWith(Schema.Boolean, { default: () => false }),
-  available: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-  description: Schema.optional(Schema.String),
-  provider: Schema.optional(Schema.String),
-  version: Schema.optional(Schema.String),
-});
-
-export const SConnectorListResponse = Schema.Struct({
-  connectors: Schema.Array(SConnectorListEntry),
-});
-export type ConnectorListResponse = Schema.Schema.Type<typeof SConnectorListResponse>;
-
-// CLI package lifecycle request/response types (IPC channel payloads)
-
-export const SConnectorPackageInstallRequest = Schema.Struct({
-  connectorId: Schema.String,
-  sourceUrl: UrlString,
-  checksum: Schema.optional(Schema.String),
-});
-export type ConnectorPackageInstallRequest = Schema.Schema.Type<typeof SConnectorPackageInstallRequest>;
-
-// CLI package inspect response (safe for logs/reports — no secrets)
-export const SConnectorPackageInspectResponse = Schema.Struct({
-  packageId: Schema.String,
-  connectorId: Schema.String,
-  packageVersion: SemVerString,
-  sdkVersion: SemVerString,
-  minHostVersion: SemVerString,
-  sourceUrl: UrlString,
-  installedAt: Schema.String,
-  verificationStatus: Schema.Literal('unverified', 'verified', 'failed'),
-  lifecycleState: SConnectorLifecycleState,
-  lastError: Schema.optional(Schema.String),
-  executionModel: Schema.Literal('worker', 'subprocess'),
-});
-export type ConnectorPackageInspectResponse = Schema.Schema.Type<typeof SConnectorPackageInspectResponse>;
-
-// CLI list response
-export const SConnectorPackageListResponse = Schema.Struct({
-  packages: Schema.Array(SConnectorPackageInspectResponse),
-});
-export type ConnectorPackageListResponse = Schema.Schema.Type<typeof SConnectorPackageListResponse>;
 
 export const SSkillListEntry = Schema.Struct({
   name: Schema.String,

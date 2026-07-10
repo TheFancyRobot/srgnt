@@ -23,14 +23,12 @@ async function setupNote(page: import('@playwright/test').Page, userDataDir: str
   await waitForDesktopReady(page);
   await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
   await page.evaluate(async (root) => { await window.srgnt.setWorkspaceRoot(root); }, workspaceRoot);
   await page.reload();
   await waitForDesktopReady(page);
 
-  await page.getByRole('button', { name: 'Notes' }).click();
   return { workspaceRoot, notesDir };
 }
 

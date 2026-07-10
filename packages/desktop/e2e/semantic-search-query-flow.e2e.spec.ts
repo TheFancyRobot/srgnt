@@ -44,7 +44,6 @@ test.describe('Semantic Search Query Flow', () => {
     );
 
     // 3. Navigate to Notes via Activity Bar
-    await page.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
 
     // 4. Click Semantic mode toggle
@@ -95,7 +94,6 @@ test.describe('Semantic Search Query Flow', () => {
     );
 
     // Navigate to Notes
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     // Toggle to Semantic mode
     await page.getByTestId('semantic-search-mode').click();
@@ -140,7 +138,6 @@ test.describe('Semantic Search Query Flow', () => {
     );
 
     // Navigate to Notes
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     // Toggle to Semantic mode
     await page.getByTestId('semantic-search-mode').click();
@@ -181,7 +178,6 @@ test.describe('Semantic Search Query Flow', () => {
     );
 
     // Navigate to Notes
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     // Toggle to Semantic mode
     await page.getByTestId('semantic-search-mode').click();
@@ -220,7 +216,6 @@ test.describe('Semantic Search Query Flow', () => {
     );
 
     // Navigate to Notes
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     // Stay in Notes mode (default)
     const searchInput = page.locator('input[placeholder="Search notes..."]');

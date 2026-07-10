@@ -25,60 +25,6 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0)
 
-  examples/connectors/jira:
-    dependencies:
-      '@srgnt/connectors':
-        specifier: workspace:*
-        version: link:../../../packages/connectors
-      '@srgnt/contracts':
-        specifier: workspace:*
-        version: link:../../../packages/contracts
-    devDependencies:
-      '@srgnt/tsconfig':
-        specifier: workspace:*
-        version: link:../../../packages/tsconfig
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0)
-
-  examples/skills/daily-briefing:
-    dependencies:
-      '@srgnt/contracts':
-        specifier: workspace:*
-        version: link:../../../packages/contracts
-    devDependencies:
-      '@srgnt/tsconfig':
-        specifier: workspace:*
-        version: link:../../../packages/tsconfig
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0)
-
-  packages/connectors:
-    dependencies:
-      '@srgnt/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@srgnt/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-    devDependencies:
-      '@srgnt/tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0)
-
   packages/contracts:
     dependencies:
       '@effect/schema':
@@ -136,9 +82,6 @@ importers:
       '@lezer/markdown':
         specifier: ^1.6.3
         version: 1.6.3
-      '@srgnt/connectors':
-        specifier: workspace:*
-        version: link:../connectors
       '@srgnt/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -246,75 +189,6 @@ importers:
         specifier: ^9.0.4
         version: 9.0.4
 
-  packages/entitlements:
-    dependencies:
-      '@effect/schema':
-        specifier: ^0.75.5
-        version: 0.75.5(effect@3.21.0)
-      '@srgnt/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@srgnt/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      effect:
-        specifier: ^3.21.0
-        version: 3.21.0
-    devDependencies:
-      '@srgnt/tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0)
-
-  packages/executors:
-    dependencies:
-      '@srgnt/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@srgnt/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-    devDependencies:
-      '@srgnt/tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0)
-
-  packages/fred:
-    dependencies:
-      '@effect/schema':
-        specifier: ^0.75.5
-        version: 0.75.5(effect@3.21.0)
-      '@srgnt/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@srgnt/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      effect:
-        specifier: ^3.21.0
-        version: 3.21.0
-    devDependencies:
-      '@srgnt/tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0)
-
   packages/runtime:
     dependencies:
       '@effect/schema':
@@ -342,31 +216,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^1.6.1
         version: 1.6.1(vitest@1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0))
-      typescript:
-        specifier: ^5.4.0
-        version: 5.9.3
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.37)(jsdom@24.1.3)(lightningcss@1.32.0)
-
-  packages/sync:
-    dependencies:
-      '@effect/schema':
-        specifier: ^0.75.5
-        version: 0.75.5(effect@3.21.0)
-      '@srgnt/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@srgnt/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      effect:
-        specifier: ^3.21.0
-        version: 3.21.0
-    devDependencies:
-      '@srgnt/tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
       typescript:
         specifier: ^5.4.0
         version: 5.9.3

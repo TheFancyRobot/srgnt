@@ -1,19 +1,9 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { defaultWorkspaceLayout, type DesktopSettings, type ConnectorPackageRegistry } from '@srgnt/contracts';
+import { defaultWorkspaceLayout, type DesktopSettings } from '@srgnt/contracts';
 
-const knownCatalogConnectorIds = ['jira', 'outlook', 'teams'] as const;
 export interface DesktopBootstrapState {
   workspaceRoot: string;
-}
-
-function normalizeInstalledConnectorId(id: unknown): string | undefined {
-  if (typeof id !== 'string') {
-    return undefined;
-  }
-
-  const trimmed = id.trim();
-  return trimmed === '' ? undefined : trimmed;
 }
 
 export const defaultDesktopSettings: DesktopSettings = {
@@ -21,10 +11,6 @@ export const defaultDesktopSettings: DesktopSettings = {
   updateChannel: 'stable',
   telemetryEnabled: false,
   crashReportsEnabled: false,
-  connectors: {
-    installedConnectorIds: [] as readonly string[],
-    installedPackages: { packages: [] } as ConnectorPackageRegistry,
-  },
   debugMode: false,
   maxConcurrentRuns: '3',
   layout: {
@@ -32,53 +18,6 @@ export const defaultDesktopSettings: DesktopSettings = {
     sidebarCollapsed: false,
   },
 };
-
-/**
- * Migrates legacy connector flags or reads the new install-map shape.
- *
- * Migration contract:
- * - Legacy { id: true } (id in catalog)   → add id to installedConnectorIds
- * - Legacy { id: false } or absent         → exclude id
- * - Legacy unknown ID                       → ignore (no throw)
- * - Legacy malformed value (string/null)    → exclude id, keep startup safe
- * - New shape already present               → new shape wins (no double-truth)
- * - Fresh / empty                           → defaults (all false)
- */
-function migrateConnectorSettings(rawConnectors: unknown): string[] {
-  if (!rawConnectors || typeof rawConnectors !== 'object' || Array.isArray(rawConnectors)) {
-    return [];
-  }
-
-  const parsed = rawConnectors as Record<string, unknown>;
-
-  // New shape already present — wins over legacy
-  // Preserve ALL valid non-empty string IDs in new shape (knownCatalogConnectorIds
-  // filter only applies to legacy boolean migration to avoid unexpectedly dropping
-  // arbitrary valid custom connector IDs).
-  if (Object.prototype.hasOwnProperty.call(parsed, 'installedConnectorIds')) {
-    const installed = parsed.installedConnectorIds;
-    if (Array.isArray(installed)) {
-      const uniqueIds = [...new Set(installed
-        .map((candidate) => normalizeInstalledConnectorId(candidate))
-        .filter((candidate): candidate is string => candidate !== undefined)
-      )].sort();
-
-      return uniqueIds;
-    }
-    return [];
-  }
-
-  // Legacy shape: { jira: true, outlook: false, teams: false }
-  const installed: string[] = [];
-
-  for (const id of knownCatalogConnectorIds) {
-    if (parsed[id] === true) {
-      installed.push(id);
-    }
-  }
-
-  return installed;
-}
 
 export function resolveDefaultWorkspaceRoot(homePath: string): string {
   return path.join(homePath, 'srgnt-workspace');
@@ -152,25 +91,14 @@ export async function writeDesktopSettings(workspaceRoot: string, settings: Desk
 }
 
 export function mergeDesktopSettings(settings?: Partial<DesktopSettings>): DesktopSettings {
-  const installedConnectorIds: readonly string[] = migrateConnectorSettings(settings?.connectors);
-
-  // Handle installedPackages - extract from connectors if present, otherwise use default
-  const rawConnectors = settings?.connectors;
-  let installedPackages: ConnectorPackageRegistry | undefined;
-  if (rawConnectors && typeof rawConnectors === 'object' && 'installedPackages' in rawConnectors) {
-    const pkgs = (rawConnectors as Record<string, unknown>).installedPackages;
-    if (pkgs && typeof pkgs === 'object' && 'packages' in pkgs && Array.isArray((pkgs as { packages: unknown }).packages)) {
-      installedPackages = pkgs as ConnectorPackageRegistry;
-    }
-  }
+  // Older profiles may still carry an aggregator-era `connectors` key on disk.
+  // Strip it here so it never re-enters memory or gets persisted again.
+  const { connectors: _legacyConnectors, ...rest } = (settings ?? {}) as Partial<DesktopSettings> & { connectors?: unknown };
+  void _legacyConnectors;
 
   return {
     ...defaultDesktopSettings,
-    ...settings,
-    connectors: {
-      installedConnectorIds,
-      installedPackages: installedPackages ?? { packages: [] },
-    },
+    ...rest,
     layout: {
       ...defaultDesktopSettings.layout,
       ...(settings?.layout ?? {}),

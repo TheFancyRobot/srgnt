@@ -2,7 +2,6 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { existsSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { createServer, type Server } from 'node:http';
 
 // On Linux, use ANGLE's Vulkan backend when available to avoid eglCreateImage
 // EGL_BAD_MATCH crashes with Mesa drivers on Wayland. Falls back to default
@@ -26,10 +25,6 @@ import {
   parseSync,
   SApprovalResolveRequest,
   SBriefingSaveRequest,
-  ConnectorId,
-  ConnectorManifest,
-  SConnectorId,
-  SConnectorManifest,
   SDesktopSettings,
   SIpcApprovalRequest,
   SLaunchApprovalResolveRequest,
@@ -50,9 +45,6 @@ import {
   type TerminalLaunchWithContextRequest,
   type UpdateCheckResponse,
 } from '@srgnt/contracts';
-import {
-  BUILTIN_CONNECTOR_MANIFESTS,
-} from '@srgnt/connectors';
 import { CanonicalStore, createRunLogService, createApprovalService, redactEnv, truncateOutput, DEFAULT_REDACTION_POLICY } from '@srgnt/runtime';
 import { taskFixtures, eventFixtures, messageFixtures } from '@srgnt/contracts';
 import { createPtySessionManager } from './pty/session-manager.js';
@@ -81,62 +73,6 @@ import {
   writeBootstrapState,
   writeDesktopSettings,
 } from './settings.js';
-import { ConnectorPackageHost, nullSpawn } from './connectors/index.js';
-
-const HOST_SDK_VERSION = '1.0.0';
-
-interface ConnectorState {
-  id: ConnectorId;
-  name: string;
-  description: string;
-  provider: string;
-  version: string;
-  installed: boolean;
-  available: boolean;
-  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
-  lastSyncAt?: string;
-  lastError?: string;
-  entityCounts?: Record<string, number>;
-}
-
-interface ConnectorDefinition {
-  manifest: ConnectorManifest;
-  packageUrl?: string;
-  entityCounts?: Record<string, number>;
-}
-
-interface RegistryConnectorResponse {
-  manifest: ConnectorManifest;
-  packagePath?: string;
-  packageUrl?: string;
-  entityCounts?: Record<string, number>;
-}
-
-interface RegistryCatalogResponse {
-  connectors: RegistryConnectorResponse[];
-}
-
-const DEV_CONNECTOR_REGISTRY_PORT = Number(process.env.SRGNT_CONNECTOR_REGISTRY_PORT ?? 4311);
-const DEV_CONNECTOR_REGISTRY_PATH = '/connectors';
-const DEFAULT_CONNECTOR_CATALOG_PATH = `${DEV_CONNECTOR_REGISTRY_PATH}/catalog.json`;
-const DEV_CONNECTOR_REGISTRY_ROOT = path.resolve(__dirname, '../dev-connectors');
-const DEV_CONNECTOR_REGISTRY_HOST = '127.0.0.1';
-const DEV_CONNECTOR_REGISTRY_URL = `${`http://${DEV_CONNECTOR_REGISTRY_HOST}`}:${DEV_CONNECTOR_REGISTRY_PORT}`;
-
-const builtinConnectorDefinitions: Record<string, Omit<ConnectorDefinition, 'packageUrl'>> = Object.fromEntries(
-  BUILTIN_CONNECTOR_MANIFESTS.map((manifest: ConnectorManifest) => [manifest.id, { manifest }])
-);
-
-let connectorDefinitions: Record<string, ConnectorDefinition> = Object.entries(builtinConnectorDefinitions).reduce((next, [id, def]) => {
-  next[id] = {
-    ...def,
-    packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
-  };
-  return next;
-}, {} as Record<string, ConnectorDefinition>);
-
-let devConnectorRegistryServer: Server | null = null;
-let connectorRegistryBaseUrl: string | null = null;
 
 let mainWindow: BrowserWindow | null = null;
 let workspaceRoot = '';
@@ -148,7 +84,6 @@ let lastUpdateCheck: UpdateCheckResponse = {
   message: 'Update check has not run yet.',
 };
 
-const connectorState = new Map<ConnectorId, ConnectorState>();
 const approvalRequests = new Map<string, { id: string; capability: string; reason: string; requestedAt: string; requestedBy: string }>();
 
 const canonicalStore = new CanonicalStore();
@@ -170,29 +105,6 @@ const pendingLaunches = new Map<string, { resolve: (approved: boolean) => void }
 const crashReporter = createCrashReporter();
 crashReporter.start();
 
-// Connector package host: owns installed-package registry + isolated loader
-// boundary. Runs third-party packages through `nullSpawn` until Step 05 wires
-// CLI install commands and the worker script is bundled. Built-in connectors
-// are registered through `@srgnt/connectors` and do not use this runtime.
-const connectorPackageHost = new ConnectorPackageHost({
-  spawnRuntime: nullSpawn,
-  hostSdkVersion: HOST_SDK_VERSION,
-  persistRegistry: async (snapshot) => {
-    desktopSettings = mergeDesktopSettings({
-      ...desktopSettings,
-      connectors: {
-        ...desktopSettings.connectors,
-        installedPackages: snapshot,
-      },
-    });
-    if (workspaceRoot) {
-      await writeDesktopSettings(workspaceRoot, desktopSettings);
-    }
-  },
-  onRuntimeCrash: (packageId, reason) => {
-    console.warn('[main] connector package crash', { packageId, reason });
-  },
-});
 const semanticSearchHost = createSemanticSearchHost();
 let semanticSearchEnabled = false;
 let semanticSearchWatcher: WorkspaceWatcher | null = null;
@@ -236,222 +148,6 @@ function sanitizeStorageStem(value: string, fallback: string): string {
     .slice(0, 120);
 
   return sanitized || `${fallback}-${Date.now()}`;
-}
-
-async function getConnectorRegistrySourcePath(): Promise<string | null> {
-  const candidates = [
-    process.env.SRGNT_CONNECTOR_REGISTRY_ROOT,
-    DEV_CONNECTOR_REGISTRY_ROOT,
-    process.env.SRGNT_DEV_CONNECTORS_PATH,
-    path.resolve(process.cwd(), 'packages/desktop/dev-connectors'),
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) {
-      continue;
-    }
-
-    try {
-      const info = await fs.stat(candidate);
-      if (info.isDirectory()) {
-        return candidate;
-      }
-    } catch {
-      // continue
-    }
-  }
-
-  return null;
-}
-
-async function startDevConnectorRegistryServer(): Promise<void> {
-  if (!isDev || process.env.SRGNT_DISABLE_DEV_CONNECTOR_REGISTRY === '1') {
-    return;
-  }
-
-  if (devConnectorRegistryServer) {
-    return;
-  }
-
-  const sourcePath = await getConnectorRegistrySourcePath();
-  if (!sourcePath) {
-    return;
-  }
-
-  const requestCatalog = async (pathname: string, response: import('node:http').ServerResponse): Promise<void> => {
-    const normalized = pathname.split('?')[0];
-
-    if (normalized === DEFAULT_CONNECTOR_CATALOG_PATH) {
-      const catalogPath = path.join(sourcePath, 'catalog.json');
-      const raw = await fs.readFile(catalogPath, 'utf8');
-      response.setHeader('Content-Type', 'application/json');
-      response.writeHead(200);
-      response.end(raw);
-      return;
-    }
-
-    if (!normalized.startsWith(`${DEV_CONNECTOR_REGISTRY_PATH}/packages/`) || !normalized.endsWith('.json')) {
-      response.writeHead(404);
-      response.end('not found');
-      return;
-    }
-
-    const packageFile = normalized.slice(`${DEV_CONNECTOR_REGISTRY_PATH}/packages/`.length);
-    if (packageFile.includes('/') || packageFile.includes('..')) {
-      response.writeHead(400);
-      response.end('invalid package path');
-      return;
-    }
-
-    const packagePath = path.join(sourcePath, 'packages', packageFile);
-    const raw = await fs.readFile(packagePath, 'utf8');
-    response.setHeader('Content-Type', 'application/json');
-    response.writeHead(200);
-    response.end(raw);
-  };
-
-  const requestListener = (req: import('node:http').IncomingMessage, response: import('node:http').ServerResponse): void => {
-    const target = new URL(req.url ?? '/', DEV_CONNECTOR_REGISTRY_URL);
-    void requestCatalog(target.pathname, response).catch(() => {
-      response.writeHead(500);
-      response.end('connector registry error');
-    });
-  };
-
-  devConnectorRegistryServer = createServer(requestListener);
-
-  await new Promise<void>((resolve, reject) => {
-    devConnectorRegistryServer!.listen(DEV_CONNECTOR_REGISTRY_PORT, DEV_CONNECTOR_REGISTRY_HOST, () => {
-      connectorRegistryBaseUrl = DEV_CONNECTOR_REGISTRY_URL;
-      console.log('[main] started local connector registry server', connectorRegistryBaseUrl);
-      resolve();
-    });
-
-    devConnectorRegistryServer!.once('error', (error) => {
-      const nextError = error as NodeJS.ErrnoException;
-      if (nextError.code === 'EADDRINUSE') {
-        console.warn('[main] connector registry port already in use', DEV_CONNECTOR_REGISTRY_PORT);
-      } else {
-        console.warn('[main] failed to start local connector registry', nextError.message);
-      }
-      connectorRegistryBaseUrl = null;
-      reject(error);
-      void devConnectorRegistryServer?.close();
-      devConnectorRegistryServer = null;
-    });
-  }).catch(() => {
-    // fallback to static built-in catalog
-    devConnectorRegistryServer = null;
-  });
-}
-
-async function fetchConnectorCatalogFromRemote(url: string): Promise<Record<string, ConnectorDefinition>> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch connector catalog from ${url}`);
-  }
-
-  const rawPayload = await response.json();
-  const parsedPayload = rawPayload as RegistryCatalogResponse;
-
-  const entries = Array.isArray(parsedPayload?.connectors) ? parsedPayload.connectors : [];
-  const nextDefinitions: Record<string, ConnectorDefinition> = {};
-
-  for (const entry of entries) {
-    if (!entry || typeof entry !== 'object') {
-      continue;
-    }
-
-    const manifest = parseSync(SConnectorManifest, entry.manifest);
-    const packageUrl = entry.packageUrl ?? (entry.packagePath ? `${connectorRegistryBaseUrl ?? DEV_CONNECTOR_REGISTRY_URL}${entry.packagePath}` : undefined);
-
-    nextDefinitions[manifest.id] = {
-      manifest,
-      packageUrl,
-      entityCounts: entry.entityCounts,
-    };
-  }
-
-  return nextDefinitions;
-}
-
-function buildConnectorCatalogSource(): string | null {
-  if (process.env.SRGNT_CONNECTOR_CATALOG_URL) {
-    return process.env.SRGNT_CONNECTOR_CATALOG_URL;
-  }
-
-  return connectorRegistryBaseUrl ? `${connectorRegistryBaseUrl}${DEFAULT_CONNECTOR_CATALOG_PATH}` : null;
-}
-
-function buildDevConnectorPackageUrl(id: string): string | undefined {
-  return connectorRegistryBaseUrl ? `${connectorRegistryBaseUrl}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json` : undefined;
-}
-
-async function refreshConnectorDefinitions(): Promise<void> {
-  await startDevConnectorRegistryServer();
-
-  const registryUrl = buildConnectorCatalogSource();
-  if (!registryUrl) {
-    connectorDefinitions = {
-      ...Object.fromEntries(
-        Object.entries(builtinConnectorDefinitions).map(([id, definition]) => [
-          id,
-          {
-            manifest: definition.manifest,
-            entityCounts: definition.entityCounts,
-            packageUrl: buildDevConnectorPackageUrl(id),
-          },
-        ]),
-      ),
-    };
-    return;
-  }
-
-  try {
-    connectorDefinitions = await fetchConnectorCatalogFromRemote(registryUrl);
-    if (Object.keys(connectorDefinitions).length === 0) {
-      throw new Error('Empty catalog payload.');
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn('[main] connector catalog fetch failed, using built-in catalog:', message);
-    connectorDefinitions = {
-      ...Object.fromEntries(
-        Object.entries(builtinConnectorDefinitions).map(([id, definition]) => [
-          id,
-          {
-            manifest: definition.manifest,
-            entityCounts: definition.entityCounts,
-            packageUrl: buildDevConnectorPackageUrl(id),
-          },
-        ]),
-      ),
-    };
-  }
-}
-
-async function fetchAndValidateConnectorPackage(connectorId: string, definition: ConnectorDefinition): Promise<void> {
-  if (!definition.packageUrl) {
-    return;
-  }
-
-  const response = await fetch(definition.packageUrl);
-  if (!response.ok) {
-    throw new Error(`Connector package download failed: ${definition.packageUrl}`);
-  }
-
-  const rawPayload = (await response.json()) as { manifest?: unknown };
-  const packageManifest = parseSync(SConnectorManifest, rawPayload.manifest ?? rawPayload);
-
-  if (packageManifest.id !== connectorId) {
-    throw new Error(`Connector package id mismatch for ${connectorId}`);
-  }
-
-  connectorDefinitions[connectorId] = {
-    ...definition,
-    manifest: packageManifest,
-    packageUrl: definition.packageUrl,
-  };
 }
 
 function getManagedMarkdownPath(directory: 'runs' | 'artifacts', stem: string): string {
@@ -512,12 +208,8 @@ async function initializeDesktopState(): Promise<void> {
   const userDataPath = app.getPath('userData');
   crashReporter.setCrashDirectory(path.join(userDataPath, 'crashes'));
 
-  await refreshConnectorDefinitions();
-
   const bootstrapState = await readBootstrapState(userDataPath);
   if (!bootstrapState.workspaceRoot) {
-    syncConnectorStateFromSettings(defaultDesktopSettings);
-    await syncConnectorPackageHostFromSettings(defaultDesktopSettings);
     return;
   }
 
@@ -551,8 +243,6 @@ async function setWorkspaceRootInternal(root: string): Promise<string> {
   await writeDesktopSettings(resolvedRoot, desktopSettings);
 
   crashReporter.setWorkspaceRoot(resolvedRoot);
-  syncConnectorStateFromSettings(desktopSettings);
-  await syncConnectorPackageHostFromSettings(desktopSettings);
   registerNotesHandlers(workspaceRoot);
 
   // Initialize semantic search for the new workspace
@@ -570,123 +260,6 @@ async function persistDesktopSettings(nextSettings: DesktopSettings): Promise<vo
   if (workspaceRoot) {
     await writeDesktopSettings(workspaceRoot, desktopSettings);
   }
-  syncConnectorStateFromSettings(desktopSettings);
-  await syncConnectorPackageHostFromSettings(desktopSettings);
-}
-
-function connectorDefinition(id: string): ConnectorDefinition | undefined {
-  return connectorDefinitions[id];
-}
-
-function createUnknownConnectorManifest(id: string): ConnectorManifest {
-  return {
-    id,
-    name: `Connector ${id}`,
-    version: '0.1.0',
-    description: `External connector package: ${id}`,
-    provider: 'external',
-    authType: 'none',
-    config: {
-      authType: 'none',
-      timeout: 30000,
-      retryAttempts: 3,
-    },
-    capabilities: [],
-    entityTypes: [],
-    freshnessThresholdMs: 300000,
-    metadata: {},
-  };
-}
-
-function createConnectorManifest(id: string): ConnectorManifest {
-  return connectorDefinitions[id]?.manifest ?? createUnknownConnectorManifest(id);
-}
-
-function getInstalledStateFromSettings(settings: DesktopSettings, id: ConnectorId): boolean {
-  return settings.connectors?.installedConnectorIds?.includes(id) ?? false;
-}
-
-function syncConnectorStateFromSettings(settings: DesktopSettings): void {
-  const installedConnectorIds = new Set(settings.connectors?.installedConnectorIds ?? []);
-  const manifestIds = new Set<string>([...Object.keys(connectorDefinitions), ...installedConnectorIds]);
-
-  const nextState = new Map<ConnectorId, ConnectorState>();
-
-  for (const id of manifestIds) {
-    const definition = connectorDefinitions[id];
-    const isInstalled = installedConnectorIds.has(id);
-    const current = connectorState.get(id);
-    const status =
-      current?.status === 'connected' || current?.status === 'refreshing'
-        ? current.status
-        : current?.status === 'connecting' || current?.status === 'error'
-          ? current.status
-          : 'disconnected';
-
-    if (isInstalled) {
-      nextState.set(id, createInstalledConnectorState(id, definition, status));
-      continue;
-    }
-
-    if (definition) {
-      nextState.set(id, createAvailableConnectorState(id, definition));
-    }
-  }
-
-  connectorState.clear();
-  for (const [id, state] of nextState.entries()) {
-    connectorState.set(id, state);
-  }
-}
-
-async function syncConnectorPackageHostFromSettings(settings: DesktopSettings): Promise<void> {
-  const durablePackages = settings.connectors?.installedPackages?.packages ?? [];
-  // Clear any previously seeded packages so workspace switches do not carry
-  // stale runtime state from an earlier workspace.
-  for (const existing of connectorPackageHost.listPackages()) {
-    await connectorPackageHost.uninstall(existing.packageId);
-  }
-  for (const pkg of durablePackages) {
-    await connectorPackageHost.registerInstalledPackage(pkg);
-  }
-  await connectorPackageHost.applyRestartRecovery();
-}
-
-function createAvailableConnectorState(id: string, definition?: ConnectorDefinition): ConnectorState {
-  const manifest = createConnectorManifest(id);
-  return {
-    ...manifest,
-    id,
-    installed: false,
-    available: Boolean(definition),
-    status: 'disconnected',
-    entityCounts: definition?.entityCounts,
-  };
-}
-
-function createInstalledConnectorState(
-  id: string,
-  definition?: ConnectorDefinition,
-  status: ConnectorState['status'] = 'disconnected',
-): ConnectorState {
-  const manifest = createConnectorManifest(id);
-  const state: ConnectorState = {
-    ...manifest,
-    id,
-    installed: true,
-    available: true,
-    status,
-    entityCounts: definition?.entityCounts,
-  };
-
-  if (status === 'connected' || status === 'refreshing') {
-    return {
-      ...state,
-      lastSyncAt: new Date().toISOString(),
-    };
-  }
-
-  return state;
 }
 
 async function chooseWorkspaceRoot(): Promise<string> {
@@ -759,108 +332,6 @@ ipcMain.handle(ipcChannels.workspaceSetRoot, async (_event, root: string) => set
 ipcMain.handle(ipcChannels.workspaceChooseRoot, async () => chooseWorkspaceRoot());
 
 ipcMain.handle(ipcChannels.workspaceCreateDefaultRoot, async () => createDefaultWorkspaceRoot());
-
-ipcMain.handle(ipcChannels.connectorList, () => ({
-  connectors: Array.from(connectorState.values()),
-}));
-
-function normalizeConnectorId(id: string): ConnectorId {
-  return parseSync(SConnectorId, id);
-}
-
-function getConnectorOrFallbackState(connectorId: ConnectorId): ConnectorState {
-  return (
-    connectorState.get(connectorId) ??
-    createAvailableConnectorState(connectorId, connectorDefinition(connectorId))
-  );
-}
-
-ipcMain.handle(ipcChannels.connectorStatus, (_event, id: string) => {
-  const connectorId = normalizeConnectorId(id);
-  return getConnectorOrFallbackState(connectorId);
-});
-
-ipcMain.handle(ipcChannels.connectorInstall, async (_event, id: string) => {
-  const connectorId = normalizeConnectorId(id);
-  const definition = connectorDefinition(connectorId);
-
-  if (!definition) {
-    throw new Error(`Connector ${connectorId} is not available in catalog`);
-  }
-
-  try {
-    await fetchAndValidateConnectorPackage(connectorId, definition);
-  } catch (error) {
-    console.warn('[main] failed to validate connector package before install', error);
-  }
-
-  const current = desktopSettings.connectors.installedConnectorIds;
-  const next = current.includes(connectorId) ? current : [...current, connectorId];
-
-  await persistDesktopSettings({
-    ...desktopSettings,
-    connectors: {
-      ...desktopSettings.connectors,
-      installedConnectorIds: next,
-    },
-  });
-
-  return createInstalledConnectorState(connectorId, definition, 'disconnected');
-});
-
-ipcMain.handle(ipcChannels.connectorUninstall, async (_event, id: string) => {
-  const connectorId = normalizeConnectorId(id);
-
-  // Idempotent: if not installed, just return available-not-installed state
-  if (!getInstalledStateFromSettings(desktopSettings, connectorId)) {
-    return createAvailableConnectorState(connectorId, connectorDefinition(connectorId));
-  }
-
-  const next = desktopSettings.connectors.installedConnectorIds.filter((installedId) => installedId !== connectorId);
-
-  await persistDesktopSettings({
-    ...desktopSettings,
-    connectors: {
-      ...desktopSettings.connectors,
-      installedConnectorIds: next,
-    },
-  });
-
-  // connectorState is updated by syncConnectorStateFromSettings inside persistDesktopSettings
-  return createAvailableConnectorState(connectorId, connectorDefinition(connectorId));
-});
-
-ipcMain.handle(ipcChannels.connectorConnect, async (_event, id: string) => {
-  const connectorId = normalizeConnectorId(id);
-  if (!getInstalledStateFromSettings(desktopSettings, connectorId)) {
-    throw new Error(`Connector ${connectorId} is not installed`);
-  }
-
-  const definition = connectorDefinition(connectorId);
-  if (!definition) {
-    throw new Error(`Connector package metadata for ${connectorId} is unavailable`);
-  }
-
-  connectorState.set(
-    connectorId,
-    createInstalledConnectorState(connectorId, definition, 'connected'),
-  );
-
-  return connectorState.get(connectorId);
-});
-
-ipcMain.handle(ipcChannels.connectorDisconnect, async (_event, id: string) => {
-  const connectorId = normalizeConnectorId(id);
-  const definition = connectorDefinition(connectorId);
-
-  const nextState = getInstalledStateFromSettings(desktopSettings, connectorId)
-    ? createInstalledConnectorState(connectorId, definition, 'disconnected')
-    : createAvailableConnectorState(connectorId, definition);
-
-  connectorState.set(connectorId, nextState);
-
-  return connectorState.get(connectorId);
-});
 
 ipcMain.handle(ipcChannels.settingsGet, () => ({
   workspaceRoot,

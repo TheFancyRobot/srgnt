@@ -5,9 +5,6 @@ import {
   SIpcRequest,
   SIpcResponse,
   SAppVersionResponse,
-  SConnectorId,
-  SConnectorListResponse,
-  SDesktopConnectorPreferences,
   SDesktopSettings,
   SUserDataPathResponse,
   SSkillListResponse,
@@ -42,11 +39,6 @@ describe('IPC Channel', () => {
       'app:get-version',
       'app:get-user-data-path',
       'workspace:get-root',
-      'connector:list',
-      'connector:install',
-      'connector:uninstall',
-      'connector:connect',
-      'connector:disconnect',
       'skill:run',
       'approval:request',
     ] as const;
@@ -113,32 +105,13 @@ describe('User Data Path Response', () => {
   });
 });
 
-describe('Connector Id Validation', () => {
-  it('accepts connector IDs that match id shape', () => {
-    const knownIds = ['jira', 'outlook', 'teams', 'notes-connector', 'calendar-plus'];
-    for (const id of knownIds) {
-      expect(() => parseSync(SConnectorId, id)).not.toThrow();
-    }
-  });
-
-  it('rejects malformed connector IDs', () => {
-    const malformed = ['', 'bad id', '-invalid', 'Invalid', 'A-Z'];
-    for (const id of malformed) {
-      expect(() => parseSync(SConnectorId, id)).toThrow();
-    }
-  });
-});
-
-describe('Desktop Settings Migration & Schema', () => {
-  it('accepts the new installed array shape with jira installed', () => {
+describe('Desktop Settings Schema', () => {
+  it('accepts a full desktop settings payload', () => {
     const parsed = parseSync(SDesktopSettings, {
       theme: 'system',
       updateChannel: 'stable',
       telemetryEnabled: false,
       crashReportsEnabled: false,
-      connectors: {
-        installedConnectorIds: ['jira'],
-      },
       debugMode: false,
       maxConcurrentRuns: '3',
       layout: {
@@ -147,90 +120,21 @@ describe('Desktop Settings Migration & Schema', () => {
       },
     });
 
-    expect(parsed.connectors).toEqual({
-      installedConnectorIds: ['jira'],
-      installedPackages: { packages: [] },
-    });
+    expect(parsed.theme).toBe('system');
+    expect(parsed.layout).toEqual({ sidebarWidth: 300, sidebarCollapsed: true });
   });
 
-  it('fills the install array with empty defaults when omitted', () => {
-    const parsed = parseSync(SDesktopConnectorPreferences, {});
-    expect(parsed).toMatchObject({
-      installedConnectorIds: [],
-    });
-  });
-
-  it('accepts desktop settings with connector install array omitted', () => {
+  it('fills layout defaults when omitted', () => {
     const parsed = parseSync(SDesktopSettings, {
       theme: 'light',
       updateChannel: 'beta',
       telemetryEnabled: true,
       crashReportsEnabled: true,
-      connectors: {},
       debugMode: true,
       maxConcurrentRuns: '1',
     });
 
-    expect(parsed.connectors.installedConnectorIds).toEqual([]);
-  });
-});
-
-describe('Connector List Response', () => {
-  it('validates empty connector list', () => {
-    const response = { connectors: [] };
-    expect(() => parseSync(SConnectorListResponse, response)).not.toThrow();
-  });
-
-  it('validates connector list with items', () => {
-    const response = {
-      connectors: [
-        { id: 'jira', name: 'Jira', status: 'connected' },
-        { id: 'outlook', name: 'Outlook', status: 'disconnected' },
-      ],
-    };
-    expect(() => parseSync(SConnectorListResponse, response)).not.toThrow();
-  });
-
-  it('applies connector list defaults', () => {
-    const response = {
-      connectors: [
-        {
-          id: 'jira',
-          name: 'Jira',
-          status: 'connected',
-          installed: true,
-          available: false,
-          description: 'Fixture-backed connector',
-          provider: 'atlassian',
-          version: '0.1.0',
-        },
-      ],
-    };
-    const parsed = parseSync(SConnectorListResponse, response);
-    expect(parsed.connectors[0]).toMatchObject({
-      installed: true,
-      available: false,
-      description: 'Fixture-backed connector',
-      provider: 'atlassian',
-      version: '0.1.0',
-    });
-  });
-
-  it('fills connector list defaults when omitted', () => {
-    const response = {
-      connectors: [
-        {
-          id: 'teams',
-          name: 'Teams',
-          status: 'disconnected',
-        },
-      ],
-    };
-    const parsed = parseSync(SConnectorListResponse, response);
-    expect(parsed.connectors[0]).toMatchObject({
-      installed: false,
-      available: true,
-    });
+    expect(parsed.layout).toEqual({ sidebarWidth: 240, sidebarCollapsed: false });
   });
 });
 

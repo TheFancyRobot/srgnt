@@ -83,14 +83,14 @@ export async function waitForDesktopReady(window: Page): Promise<void> {
   await expect(window.locator('body')).toBeVisible();
 
   const onboardingHeading = window.getByRole('heading', { name: 'Create Your Workspace' });
-  const dashboardButton = window.getByRole('button', { name: 'Daily Dashboard' });
+  const notesButton = window.getByRole('button', { name: 'Notes', exact: true });
 
   await expect
     .poll(async () => {
       if (await onboardingHeading.count()) {
         return 'onboarding';
       }
-      if (await dashboardButton.count()) {
+      if (await notesButton.count()) {
         return 'app';
       }
       return 'loading';
@@ -103,10 +103,8 @@ export async function completeOnboarding(window: Page): Promise<void> {
   await expect(window.getByRole('heading', { name: 'Create Your Workspace' })).toBeVisible();
   await window.getByRole('button', { name: 'Use Default Location' }).click();
   await window.getByRole('button', { name: 'Next' }).click();
-  await expect(window.getByRole('heading', { name: 'Know What Connects First' })).toBeVisible();
-  await window.getByRole('button', { name: 'Next' }).click();
   await expect(window.getByRole('heading', { name: "You're All Set" })).toBeVisible();
   await window.getByRole('button', { name: 'Get Started' }).click();
-  await expect(window.getByRole('button', { name: 'Daily Dashboard' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(window.getByRole('heading', { name: 'Priorities' })).toBeVisible();
+  await expect(window.getByRole('button', { name: 'Notes', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(window.getByRole('heading', { name: 'Explorer' })).toBeVisible();
 }

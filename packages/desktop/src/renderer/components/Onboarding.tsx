@@ -30,11 +30,6 @@ const stepIcons: Record<string, React.ReactNode> = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
     </svg>
   ),
-  connectors: (
-    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-    </svg>
-  ),
   ready: (
     <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
@@ -228,19 +223,8 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
     },
   },
   {
-    id: 'connectors',
-    title: 'Connect Your Tools',
-    description: 'Connect Microsoft Teams, Jira, and Outlook to start aggregating your tasks, calendar, and messages into one view.',
-    action: {
-      label: 'Add Connector',
-      action: () => {
-        console.log('[onboarding] Navigate to connectors panel');
-      },
-    },
-  },
-  {
     id: 'ready',
     title: 'You\'re All Set',
-    description: 'Your daily command center is ready. srgnt will aggregate data from your connected tools each morning.',
+    description: 'Your command center is ready. Notes, Terminal, and Settings are available from the activity bar.',
   },
 ];

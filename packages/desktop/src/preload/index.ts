@@ -19,16 +19,6 @@ const ipcChannels = {
   workspaceSetRoot: 'workspace:set-root',
   workspaceChooseRoot: 'workspace:choose-root',
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
-  connectorList: 'connector:list',
-  connectorStatus: 'connector:status',
-  connectorInstall: 'connector:install',
-  connectorUninstall: 'connector:uninstall',
-  connectorConnect: 'connector:connect',
-  connectorDisconnect: 'connector:disconnect',
-  connectorPackageInstall: 'connector:package:install',
-  connectorPackageInspect: 'connector:package:inspect',
-  connectorPackageList: 'connector:package:list',
-  connectorPackageUninstall: 'connector:package:uninstall',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
   skillList: 'skill:list',
@@ -71,20 +61,6 @@ const ipcChannels = {
   semanticSearchStatus: 'semantic-search:status',
 } as const;
 
-export interface DesktopConnectorState {
-  id: 'jira' | 'outlook' | 'teams';
-  name: string;
-  description: string;
-  provider: string;
-  version: string;
-  installed: boolean;
-  available: boolean;
-  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
-  lastSyncAt?: string;
-  lastError?: string;
-  entityCounts?: Record<string, number>;
-}
-
 const api = {
   checkForUpdates: (): Promise<UpdateCheckResponse> => ipcRenderer.invoke(ipcChannels.appCheckForUpdates),
 
@@ -92,12 +68,6 @@ const api = {
   setWorkspaceRoot: (root: string): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceSetRoot, root),
   chooseWorkspaceRoot: (): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceChooseRoot),
   createDefaultWorkspaceRoot: (): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceCreateDefaultRoot),
-
-  listConnectors: (): Promise<{ connectors: DesktopConnectorState[] }> => ipcRenderer.invoke(ipcChannels.connectorList),
-  installConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorInstall, id),
-  uninstallConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorUninstall, id),
-  connectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorConnect, id),
-  disconnectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorDisconnect, id),
 
   getDesktopSettings: (): Promise<DesktopSettingsResponse> => ipcRenderer.invoke(ipcChannels.settingsGet),
   saveDesktopSettings: (settings: DesktopSettings): Promise<DesktopSettingsResponse> => ipcRenderer.invoke(ipcChannels.settingsSave, settings),

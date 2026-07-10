@@ -5,18 +5,22 @@ contract_version: 1
 title: Delete aggregator packages UI IPC and CLI surfaces
 step_id: STEP-21-02
 phase: '[[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-fable-5-worker
 created: '2026-07-10'
 updated: '2026-07-10'
 depends_on:
   - STEP-21-01
-
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-10-145042-delete-aggregator-packages-ui-ipc-and-cli-surfaces-claude-fable-5-worker|SESSION-2026-07-10-145042 claude-fable-5-worker session for Delete aggregator packages UI IPC and CLI surfaces]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-10-145042
+active_session_id: 05_Sessions/2026-07-10-145042-delete-aggregator-packages-ui-ipc-and-cli-surfaces-claude-fable-5-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces|STEP-21-02 Delete aggregator packages UI IPC and CLI surfaces]].
 ---
 
 # Step 02 - Delete aggregator packages UI IPC and CLI surfaces
@@ -75,16 +79,15 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
+- Status: completed
+- Current owner: claude-fable-5-worker
 - Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces/Validation_Plan|Validation Plan]].
+- Next action: None — step complete. Continue with [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_03_slim-runtime-unbundle-search-model-and-modularize-desktop-main-services|STEP-21-03]].
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- See [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces/Implementation_Notes|Implementation Notes]] for durable findings (deletion order, STEP-21-03 slices pulled forward, legacy settings stripping, e2e Notes-default behavior shift, preload-sync tests vs stale contracts dist).
 
 ## Human Notes
 
@@ -93,10 +96,11 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-10 - [[05_Sessions/2026-07-10-145042-delete-aggregator-packages-ui-ipc-and-cli-surfaces-claude-fable-5-worker|SESSION-2026-07-10-145042 claude-fable-5-worker session for Delete aggregator packages UI IPC and CLI surfaces]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Completed 2026-07-10. Aggregator packages (connectors/executors/sync/entitlements/fred), examples/, dev-connectors/, main cli/ + connectors/, connector IPC/preload/CLI surfaces, and aggregator views with their specs are deleted; workspace is tsconfig/contracts/runtime/desktop; app boots to the slim Notes/Settings/Terminal shell.
+- Validation: sweep regex zero hits; `pnpm typecheck` green; `pnpm test` green (contracts 191, runtime 436, desktop 756); `pnpm test:e2e` 68 passed / 3 failed — all three are the pre-existing STEP-21-01 baseline failures (PTY posix_spawnp, gfm ATX-heading classes, bug-0013 Linux-only binary).
+- Details in [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces/Outcome|Outcome]].

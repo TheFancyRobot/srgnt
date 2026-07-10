@@ -7,7 +7,7 @@ phase_id: PHASE-20
 status: completed
 owner: coordinator
 created: '2026-04-19'
-updated: '2026-04-19'
+updated: '2026-07-10'
 depends_on:
   - '[[02_Phases/Phase_19_implement_connector_pluggability/Phase|PHASE-19 Implement Connector Pluggability]]'
 related_architecture:
@@ -100,7 +100,7 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_19_implement_connector_pluggability/Phase|PHASE-19 Implement Connector Pluggability]]
 - Current phase status: in_progress
-- Next phase: not planned yet.
+- Next phase: [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|PHASE-21 Pivot Groundwork and Aggregator Teardown]]
 <!-- AGENT-END:phase-linear-context -->
 
 ## Related Architecture

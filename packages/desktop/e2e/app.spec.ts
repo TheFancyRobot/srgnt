@@ -14,7 +14,7 @@ test('shows onboarding on first launch and boots into the command center', async
   await expect(page.getByRole('heading', { name: 'Create Your Workspace' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Skip setup' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByRole('heading', { name: 'Know What Connects First' })).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click();
@@ -231,7 +231,7 @@ test('Tab key indents the current line in the notes editor', async ({ userDataDi
   await fs.writeFile(path.join(notesDir, 'Tab Test.md'), 'hello world\n', 'utf8');
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
@@ -272,7 +272,7 @@ test('notes editor defaults to active-line editing and supports fully rendered m
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
@@ -385,7 +385,7 @@ test('notes editor arrow-key navigation does not trigger recursive inline coordi
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
@@ -437,7 +437,7 @@ test('notes editor styles indented and fenced code blocks as code containers', a
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
@@ -512,7 +512,7 @@ test('creates a note, types content, verifies autosave, reopens and confirms per
   await fs.mkdir(notesDir, { recursive: true });
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
@@ -568,7 +568,7 @@ test('slash command inserts valid markdown', async ({ userDataDir, window: page 
   await fs.writeFile(path.join(notesDir, 'Slash Test.md'), '', 'utf8');
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
@@ -616,7 +616,7 @@ test('wikilink navigation works: insert link, click, navigate, return', async ({
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
@@ -660,7 +660,7 @@ test('search finds content and opens result', async ({ userDataDir, window: page
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
@@ -699,7 +699,7 @@ test('notes editor renders horizontal rules as visible separators', async ({ use
   await fs.writeFile(path.join(notesDir, 'Horizontal Rule.md'), 'Above\n\n----\n\nBelow\n', 'utf8');
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();

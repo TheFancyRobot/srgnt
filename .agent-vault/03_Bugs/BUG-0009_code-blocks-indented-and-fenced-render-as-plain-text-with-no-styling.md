@@ -78,6 +78,7 @@ Use one note per bug in `03_Bugs/`. This note is the source of truth for one def
 - Package: `packages/desktop` — MarkdownEditor component and `styles.css`.
 - Affects all users writing documentation, code snippets, or technical notes.
 - Widespread: code blocks are among the most heavily used markdown features.
+- Related execution: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] (markdown editor work this bug belongs to; link added during 2026-07-10 enrichment).
 
 ## Suspected Root Cause
 

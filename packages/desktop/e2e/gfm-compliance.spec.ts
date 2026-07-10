@@ -21,7 +21,7 @@ async function setupNote(page: import('@playwright/test').Page, userDataDir: str
   await fs.writeFile(path.join(notesDir, fileName), content, 'utf8');
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();

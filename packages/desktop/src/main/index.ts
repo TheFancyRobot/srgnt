@@ -380,7 +380,11 @@ function buildConnectorCatalogSource(): string | null {
     return process.env.SRGNT_CONNECTOR_CATALOG_URL;
   }
 
-  return isDev ? `${connectorRegistryBaseUrl ?? DEV_CONNECTOR_REGISTRY_URL}${DEFAULT_CONNECTOR_CATALOG_PATH}` : null;
+  return connectorRegistryBaseUrl ? `${connectorRegistryBaseUrl}${DEFAULT_CONNECTOR_CATALOG_PATH}` : null;
+}
+
+function buildDevConnectorPackageUrl(id: string): string | undefined {
+  return connectorRegistryBaseUrl ? `${connectorRegistryBaseUrl}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json` : undefined;
 }
 
 async function refreshConnectorDefinitions(): Promise<void> {
@@ -395,7 +399,7 @@ async function refreshConnectorDefinitions(): Promise<void> {
           {
             manifest: definition.manifest,
             entityCounts: definition.entityCounts,
-            packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
+            packageUrl: buildDevConnectorPackageUrl(id),
           },
         ]),
       ),
@@ -409,7 +413,8 @@ async function refreshConnectorDefinitions(): Promise<void> {
       throw new Error('Empty catalog payload.');
     }
   } catch (error) {
-    console.warn('[main] connector catalog fetch failed, using built-in catalog', error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('[main] connector catalog fetch failed, using built-in catalog:', message);
     connectorDefinitions = {
       ...Object.fromEntries(
         Object.entries(builtinConnectorDefinitions).map(([id, definition]) => [
@@ -417,7 +422,7 @@ async function refreshConnectorDefinitions(): Promise<void> {
           {
             manifest: definition.manifest,
             entityCounts: definition.entityCounts,
-            packageUrl: `${DEV_CONNECTOR_REGISTRY_URL}${DEV_CONNECTOR_REGISTRY_PATH}/packages/${id}.json`,
+            packageUrl: buildDevConnectorPackageUrl(id),
           },
         ]),
       ),
@@ -686,11 +691,15 @@ function createInstalledConnectorState(
 
 async function chooseWorkspaceRoot(): Promise<string> {
   const defaultPath = workspaceRoot || resolveDefaultWorkspaceRoot(app.getPath('home'));
-  const result = await dialog.showOpenDialog({
+  const options: Electron.OpenDialogOptions = {
     title: 'Choose srgnt workspace',
     properties: ['openDirectory', 'createDirectory'],
     defaultPath,
-  });
+  };
+
+  const result = mainWindow && !mainWindow.isDestroyed()
+    ? await dialog.showOpenDialog(mainWindow, options)
+    : await dialog.showOpenDialog(options);
 
   if (result.canceled || result.filePaths.length === 0) {
     return workspaceRoot;

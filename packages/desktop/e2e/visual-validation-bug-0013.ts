@@ -31,7 +31,7 @@ async function validate() {
     await page.waitForSelector('heading[name="Create Your Workspace"]', { timeout: 5000 }).catch(() => null);
     
     // Check if we're on onboarding or already in the app
-    const createBtn = page.getByRole('button', { name: 'Create Workspace' });
+    const createBtn = page.getByRole('button', { name: 'Use Default Location' });
     if (await createBtn.count() > 0) {
       console.log('Completing onboarding...');
       await createBtn.click();

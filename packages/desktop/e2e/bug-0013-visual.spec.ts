@@ -20,7 +20,7 @@ test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo
     await waitForDesktopReady(page);
 
     // Complete onboarding when needed.
-    if (await page.getByRole('button', { name: 'Create Workspace' }).count()) {
+    if (await page.getByRole('button', { name: 'Use Default Location' }).count()) {
       await completeOnboarding(page);
     }
 

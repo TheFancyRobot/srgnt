@@ -30,7 +30,7 @@ test('semantic search works in packaged Linux build', async () => {
     await waitForDesktopReady(page);
 
     // Complete onboarding
-    await page.getByRole('button', { name: 'Create Workspace' }).click();
+    await page.getByRole('button', { name: 'Use Default Location' }).click();
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Get Started' }).click();
@@ -125,7 +125,7 @@ test('worker thread starts correctly in packaged build', async () => {
     await waitForDesktopReady(page);
 
     // Complete onboarding
-    await page.getByRole('button', { name: 'Create Workspace' }).click();
+    await page.getByRole('button', { name: 'Use Default Location' }).click();
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Get Started' }).click();
@@ -187,7 +187,7 @@ test('model path resolves correctly in packaged build', async () => {
     const page = await electronApp.firstWindow();
     await waitForDesktopReady(page);
     // Complete onboarding so workspace is set
-    await page.getByRole('button', { name: 'Create Workspace' }).click();
+    await page.getByRole('button', { name: 'Use Default Location' }).click();
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Get Started' }).click();

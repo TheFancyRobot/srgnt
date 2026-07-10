@@ -59,6 +59,7 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - Package: `packages/desktop` — MarkdownEditor component and `styles.css`.
 - Affects all users viewing or editing notes with blockquotes.
 - Widespread: blockquotes are a fundamental markdown element.
+- Related execution: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] (markdown editor work this bug belongs to; link added during 2026-07-10 enrichment).
 
 ## Suspected Root Cause
 

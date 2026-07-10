@@ -101,7 +101,7 @@ export async function waitForDesktopReady(window: Page): Promise<void> {
 export async function completeOnboarding(window: Page): Promise<void> {
   await waitForDesktopReady(window);
   await expect(window.getByRole('heading', { name: 'Create Your Workspace' })).toBeVisible();
-  await window.getByRole('button', { name: 'Create Workspace' }).click();
+  await window.getByRole('button', { name: 'Use Default Location' }).click();
   await window.getByRole('button', { name: 'Next' }).click();
   await expect(window.getByRole('heading', { name: 'Know What Connects First' })).toBeVisible();
   await window.getByRole('button', { name: 'Next' }).click();

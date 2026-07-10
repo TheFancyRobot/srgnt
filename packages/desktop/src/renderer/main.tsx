@@ -313,12 +313,16 @@ function AppContent({
         title: 'Create Your Workspace',
         description: workspaceRoot
           ? 'Your workspace is ready. You can adjust the path later from Settings if you want to move it.'
-          : 'Create a local-first workspace now. srgnt will scaffold the command-center folders for you and keep non-secret settings there.',
+          : 'Choose where srgnt should keep your local-first workspace, or use the default location.',
         note: workspaceRoot || 'Suggested path: ~/srgnt-workspace',
         requiresAction: true,
         isComplete: Boolean(workspaceRoot),
         action: {
-          label: workspaceRoot ? 'Workspace Ready' : 'Create Workspace',
+          label: workspaceRoot ? 'Workspace Ready' : 'Choose Workspace Directory',
+          action: handleChooseWorkspaceRoot,
+        },
+        secondaryAction: workspaceRoot ? undefined : {
+          label: 'Use Default Location',
           action: ensureDefaultWorkspace,
         },
       },
@@ -341,7 +345,7 @@ function AppContent({
     onSkip: () => {
       void handleOnboardingSkip();
     },
-  }), [ensureDefaultWorkspace, handleOnboardingComplete, handleOnboardingSkip, workspaceRoot]);
+  }), [ensureDefaultWorkspace, handleChooseWorkspaceRoot, handleOnboardingComplete, handleOnboardingSkip, workspaceRoot]);
 
   const settingsSections: SettingsSection[] = React.useMemo(() => ([
     {

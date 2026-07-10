@@ -29,6 +29,7 @@ reviewer_notes: 'SCOPE ADJUSTED: Minimal semantic-search UI shipped in NotesSide
 - **Current owner**: executor-1
 - **Last touched**: 2026-04-16
 - **Next action**: None — scope-adjusted closure. Minimal semantic-search UI shipped. E2E tests blocked by pre-existing Effect DI wiring issue.
+- Architecture: [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]] (link added during 2026-07-10 enrichment).
 
 ## Outcome Summary
 

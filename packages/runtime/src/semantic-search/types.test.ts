@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Schema } from '@effect/schema';
+import { Schema } from 'effect';
 import {
   SChunkMetadata,
   SSearchResult,

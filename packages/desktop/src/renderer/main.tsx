@@ -240,7 +240,7 @@ function AppContent({
         id: 'ready',
         title: 'You\'re All Set',
         description: 'Notes, Terminal, and Settings are ready to use.',
-        note: 'Settings persist in .command-center/config/desktop-settings.json inside your workspace.',
+        note: 'Settings persist in settings.json inside your workspace.',
       },
     ],
     onComplete: () => {

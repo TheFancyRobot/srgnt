@@ -24,14 +24,41 @@ afterEach(async () => {
 });
 
 describe('desktop settings helpers', () => {
-  it('scaffolds the workspace layout', async () => {
+  it('scaffolds the workspace v2 layout', async () => {
     const workspaceRoot = await makeTempDir('srgnt-workspace-');
 
     await ensureWorkspaceLayout(workspaceRoot);
 
-    await expect(fs.stat(path.join(workspaceRoot, 'Daily'))).resolves.toBeDefined();
-    await expect(fs.stat(path.join(workspaceRoot, '.command-center', 'config'))).resolves.toBeDefined();
-    await expect(fs.stat(path.join(workspaceRoot, '.command-center', 'artifacts')).catch(() => null)).resolves.toBeNull();
+    await expect(fs.stat(path.join(workspaceRoot, 'projects'))).resolves.toBeDefined();
+    await expect(fs.stat(path.join(workspaceRoot, 'groups', 'templates'))).resolves.toBeDefined();
+    await expect(fs.stat(path.join(workspaceRoot, 'harnesses.json'))).resolves.toBeDefined();
+    await expect(fs.stat(path.join(workspaceRoot, 'settings.json'))).resolves.toBeDefined();
+    await expect(fs.stat(path.join(workspaceRoot, 'Daily')).catch(() => null)).resolves.toBeNull();
+    await expect(fs.stat(path.join(workspaceRoot, '.command-center')).catch(() => null)).resolves.toBeNull();
+  });
+
+  it('re-running ensureWorkspaceLayout never overwrites existing files', async () => {
+    const workspaceRoot = await makeTempDir('srgnt-workspace-rerun-');
+
+    await ensureWorkspaceLayout(workspaceRoot);
+    const custom = '{ "theme": "dark" }\n';
+    await fs.writeFile(path.join(workspaceRoot, 'settings.json'), custom, 'utf8');
+
+    await ensureWorkspaceLayout(workspaceRoot);
+
+    await expect(fs.readFile(path.join(workspaceRoot, 'settings.json'), 'utf8')).resolves.toBe(custom);
+  });
+
+  it('falls back to the legacy aggregator-era settings file when settings.json is a fresh seed', async () => {
+    const workspaceRoot = await makeTempDir('srgnt-legacy-fallback-');
+    const legacyPath = path.join(workspaceRoot, '.command-center', 'config', 'desktop-settings.json');
+
+    await fs.mkdir(path.dirname(legacyPath), { recursive: true });
+    await fs.writeFile(legacyPath, JSON.stringify({ ...defaultDesktopSettings, theme: 'dark' }), 'utf8');
+    await ensureWorkspaceLayout(workspaceRoot); // seeds an empty settings.json
+
+    const read = await readDesktopSettings(workspaceRoot);
+    expect(read.theme).toBe('dark');
   });
 
   it('empty workspace root returns fresh defaults', async () => {

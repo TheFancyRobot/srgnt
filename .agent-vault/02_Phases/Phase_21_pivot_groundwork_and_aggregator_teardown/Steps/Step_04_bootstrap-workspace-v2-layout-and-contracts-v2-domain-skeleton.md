@@ -5,17 +5,22 @@ contract_version: 1
 title: Bootstrap workspace v2 layout and contracts v2 domain skeleton
 step_id: STEP-21-04
 phase: '[[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-fable-5-worker
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-12'
 depends_on:
   - STEP-21-02
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-12-182319-bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton-claude-fable-5-worker|SESSION-2026-07-12-182319 claude-fable-5-worker session for Bootstrap workspace v2 layout and contracts v2 domain skeleton]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-12-182319
+active_session_id: 05_Sessions/2026-07-12-182319-bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton-claude-fable-5-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton|STEP-21-04 Bootstrap workspace v2 layout and contracts v2 domain skeleton]].
 ---
 
 # Step 04 - Bootstrap workspace v2 layout and contracts v2 domain skeleton
@@ -73,16 +78,15 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton/Validation_Plan|Validation Plan]].
+- Status: complete
+- Current owner: claude-fable-5-worker
+- Last touched: 2026-07-12
+- Next action: None — step complete. See [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton/Outcome|Outcome]]; continue with STEP-21-05 (docs rewrite).
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- See [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton/Implementation_Notes|Implementation Notes]] for the durable findings (layout source of truth, seed-file `wx` semantics, desktop settings.json move + legacy fallback, tolerant SessionEvent reader semantics, stale contracts dist gotcha).
 
 ## Human Notes
 
@@ -91,10 +95,9 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-12 - [[05_Sessions/2026-07-12-182319-bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton-claude-fable-5-worker|SESSION-2026-07-12-182319 claude-fable-5-worker session for Bootstrap workspace v2 layout and contracts v2 domain skeleton]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Complete (2026-07-12). Bootstrap creates the v2 layout (`projects/`, `groups/templates/`, seeded `harnesses.json` + `settings.json`) in runtime and desktop main, strictly additively; contracts gained `project.ts`/`session.ts`/`harness.ts` on `effect/Schema` with a tolerant SessionEvent envelope; `@effect/schema` removed repo-wide (zero rg hits, lockfile clean). Validation: contracts 127/127, runtime 287/287, desktop 758/758, typecheck clean; e2e 68 passed with only the 3 documented pre-existing baseline failures. Details and follow-ups in [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton/Outcome|Outcome]].

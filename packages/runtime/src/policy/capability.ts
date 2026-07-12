@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 
 export const SPolicyEffect = Schema.Literal("allow", "deny", "prompt");
 export type PolicyEffect = Schema.Schema.Type<typeof SPolicyEffect>;

@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { PositiveInt } from '../shared-schemas.js';
 import { SLaunchContext } from '../entities/launch.js';
 

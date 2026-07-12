@@ -111,7 +111,7 @@ test('persists settings and writes redacted crash diagnostics', async ({ userDat
   expect(saved.settings.telemetryEnabled).toBe(true);
   expect(saved.updateStatus).toBe('skipped');
 
-  const settingsPath = path.join(saved.workspaceRoot, '.command-center', 'config', 'desktop-settings.json');
+  const settingsPath = path.join(saved.workspaceRoot, 'settings.json');
   const settingsContent = await fs.readFile(settingsPath, 'utf8');
   expect(settingsContent).toContain('"theme": "dark"');
   expect(settingsContent).toContain('"updateChannel": "beta"');

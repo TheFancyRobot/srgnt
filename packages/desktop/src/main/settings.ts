@@ -28,21 +28,32 @@ export function getBootstrapStatePath(userDataPath: string): string {
 }
 
 export function getDesktopSettingsPath(workspaceRoot: string): string {
+  return path.join(workspaceRoot, 'settings.json');
+}
+
+/** Aggregator-era settings location; read as a fallback, never written. */
+export function getLegacyDesktopSettingsPath(workspaceRoot: string): string {
   return path.join(workspaceRoot, '.command-center', 'config', 'desktop-settings.json');
 }
 
 export async function ensureWorkspaceLayout(workspaceRoot: string): Promise<void> {
   await fs.mkdir(workspaceRoot, { recursive: true });
 
-  for (const directory of defaultWorkspaceLayout.rootDirectories) {
+  for (const directory of defaultWorkspaceLayout.directories) {
     await fs.mkdir(path.join(workspaceRoot, directory.path), { recursive: true });
   }
 
-  const commandCenterRoot = path.join(workspaceRoot, defaultWorkspaceLayout.commandCenter.root);
-  await fs.mkdir(commandCenterRoot, { recursive: true });
-
-  for (const subdirectory of Object.values(defaultWorkspaceLayout.commandCenter.subdirectories)) {
-    await fs.mkdir(path.join(workspaceRoot, subdirectory), { recursive: true });
+  for (const seedFile of defaultWorkspaceLayout.seedFiles) {
+    const filePath = path.join(workspaceRoot, seedFile.path);
+    try {
+      // 'wx' never overwrites an existing file.
+      await fs.writeFile(filePath, seedFile.defaultContent, { encoding: 'utf8', flag: 'wx' });
+    } catch (error: unknown) {
+      if (error instanceof Error && 'code' in error && error.code === 'EEXIST') {
+        continue;
+      }
+      throw error;
+    }
   }
 }
 
@@ -71,15 +82,22 @@ export async function readDesktopSettings(workspaceRoot: string): Promise<Deskto
     return { ...defaultDesktopSettings };
   }
 
-  const filePath = getDesktopSettingsPath(workspaceRoot);
-
-  try {
-    const raw = await fs.readFile(filePath, 'utf8');
-    const parsed = JSON.parse(raw) as Partial<DesktopSettings>;
-    return mergeDesktopSettings(parsed);
-  } catch {
-    return { ...defaultDesktopSettings };
+  for (const filePath of [getDesktopSettingsPath(workspaceRoot), getLegacyDesktopSettingsPath(workspaceRoot)]) {
+    try {
+      const raw = await fs.readFile(filePath, 'utf8');
+      const parsed = JSON.parse(raw) as Partial<DesktopSettings>;
+      // A fresh v2 seed is an empty object; fall through to the legacy file
+      // so aggregator-era settings survive the layout change.
+      if (Object.keys(parsed).length === 0) {
+        continue;
+      }
+      return mergeDesktopSettings(parsed);
+    } catch {
+      continue;
+    }
   }
+
+  return { ...defaultDesktopSettings };
 }
 
 export async function writeDesktopSettings(workspaceRoot: string, settings: DesktopSettings): Promise<void> {

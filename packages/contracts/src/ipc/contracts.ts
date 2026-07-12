@@ -12,11 +12,6 @@ export const ipcChannels = {
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
-  skillList: 'skill:list',
-  skillRun: 'skill:run',
-  skillCancel: 'skill:cancel',
-  approvalRequest: 'approval:request',
-  approvalResolve: 'approval:resolve',
   terminalSpawn: 'terminal:spawn',
   terminalWrite: 'terminal:write',
   terminalResize: 'terminal:resize',
@@ -25,12 +20,6 @@ export const ipcChannels = {
   terminalLaunchWithContext: 'terminal:launch-with-context',
   launchApprovalRequired: 'launch:approval-required',
   launchApprovalResolve: 'launch:approval-resolve',
-  runHistoryList: 'run-history:list',
-  runHistoryGet: 'run-history:get',
-  runLogSave: 'run-log:save',
-  entitiesList: 'entities:list',
-  briefingSave: 'briefing:save',
-  briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
   notesListDir: 'notes:list-dir',
   notesReadFile: 'notes:read-file',
@@ -126,46 +115,6 @@ export const SUpdateCheckResponse = Schema.Struct({
 });
 export type UpdateCheckResponse = Schema.Schema.Type<typeof SUpdateCheckResponse>;
 
-export const SSkillListEntry = Schema.Struct({
-  name: Schema.String,
-  version: Schema.String,
-});
-
-export const SSkillListResponse = Schema.Struct({
-  skills: Schema.Array(SSkillListEntry),
-});
-export type SkillListResponse = Schema.Schema.Type<typeof SSkillListResponse>;
-
-export const SSkillRunRequest = Schema.Struct({
-  skillName: Schema.String,
-  skillVersion: Schema.String,
-  parameters: Schema.optionalWith(Schema.Record({ key: Schema.String, value: Schema.Unknown }), {
-    default: () => ({}),
-  }),
-});
-export type SkillRunRequest = Schema.Schema.Type<typeof SSkillRunRequest>;
-
-export const SSkillRunResponse = Schema.Struct({
-  runId: Schema.String,
-  status: Schema.String,
-});
-export type SkillRunResponse = Schema.Schema.Type<typeof SSkillRunResponse>;
-
-export const SIpcApprovalRequest = Schema.Struct({
-  id: Schema.String,
-  capability: Schema.String,
-  reason: Schema.String,
-  requestedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
-  requestedBy: Schema.String,
-});
-export type IpcApprovalRequest = Schema.Schema.Type<typeof SIpcApprovalRequest>;
-
-export const SApprovalResolveRequest = Schema.Struct({
-  id: Schema.String,
-  approved: Schema.Boolean,
-});
-export type ApprovalResolveRequest = Schema.Schema.Type<typeof SApprovalResolveRequest>;
-
 export const STerminalSpawnRequest = Schema.Struct({
   rows: Schema.optionalWith(PositiveInt, { default: () => 24 }),
   cols: Schema.optionalWith(PositiveInt, { default: () => 80 }),
@@ -222,43 +171,6 @@ export const STerminalLaunchWithContextResponse = Schema.Struct({
 });
 export type TerminalLaunchWithContextResponse = Schema.Schema.Type<typeof STerminalLaunchWithContextResponse>;
 
-export const SRunHistoryEntry = Schema.Struct({
-  id: Schema.String,
-  launchId: Schema.String,
-  command: Schema.String,
-  startTime: Schema.String.pipe(Schema.pattern(datetimePattern)),
-  endTime: Schema.optional(Schema.String.pipe(Schema.pattern(datetimePattern))),
-  exitCode: Schema.optional(Schema.Number),
-  outputSummary: Schema.String,
-  redactedFields: Schema.Array(Schema.String),
-});
-
-export const SRunHistoryListResponse = Schema.Struct({
-  runs: Schema.Array(SRunHistoryEntry),
-});
-export type RunHistoryListResponse = Schema.Schema.Type<typeof SRunHistoryListResponse>;
-
-export const SRunHistoryGetRequest = Schema.Struct({
-  launchId: Schema.String,
-});
-
-export const SRunHistoryGetResponse = Schema.Struct({
-  run: Schema.optional(SRunHistoryEntry),
-});
-export type RunHistoryGetResponse = Schema.Schema.Type<typeof SRunHistoryGetResponse>;
-
-export const SRunLogSaveRequest = Schema.Struct({
-  content: Schema.String,
-  runId: Schema.String,
-  launchId: Schema.String,
-});
-export type RunLogSaveRequest = Schema.Schema.Type<typeof SRunLogSaveRequest>;
-
-export const SRunLogSaveResponse = Schema.Struct({
-  path: Schema.String,
-});
-export type RunLogSaveResponse = Schema.Schema.Type<typeof SRunLogSaveResponse>;
-
 export const SLaunchApprovalPayload = Schema.Struct({
   approvalId: Schema.String,
   launchContext: SLaunchContext,
@@ -280,40 +192,6 @@ export const SRedactionPolicy = Schema.Struct({
   sensitiveEnvKeys: Schema.Array(Schema.String),
 });
 export type RedactionPolicySchema = Schema.Schema.Type<typeof SRedactionPolicy>;
-
-export const SEntitiesListResponse = Schema.Struct({
-  entities: Schema.Array(Schema.Unknown),
-});
-export type EntitiesListResponse = Schema.Schema.Type<typeof SEntitiesListResponse>;
-
-export const SBriefingSaveMetadata = Schema.Struct({
-  id: Schema.String,
-  runId: Schema.String,
-  generatedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
-  sources: Schema.Record({ key: Schema.String, value: Schema.String }),
-});
-
-export const SBriefingSaveRequest = Schema.Struct({
-  content: Schema.String,
-  metadata: SBriefingSaveMetadata,
-});
-export type BriefingSaveRequest = Schema.Schema.Type<typeof SBriefingSaveRequest>;
-
-export const SBriefingSaveResponse = Schema.Struct({
-  path: Schema.String,
-});
-export type BriefingSaveResponse = Schema.Schema.Type<typeof SBriefingSaveResponse>;
-
-export const SBriefingListEntry = Schema.Struct({
-  id: Schema.String,
-  path: Schema.String,
-  generatedAt: Schema.String,
-});
-
-export const SBriefingListResponse = Schema.Struct({
-  briefings: Schema.Array(SBriefingListEntry),
-});
-export type BriefingListResponse = Schema.Schema.Type<typeof SBriefingListResponse>;
 
 // Notes IPC types
 

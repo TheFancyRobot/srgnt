@@ -131,25 +131,10 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
 
   const result = await page.evaluate(async () => {
     const generatedAt = new Date('2026-03-28T12:00:00.000Z').toISOString();
-    const saveResult = await window.srgnt.saveBriefing({
-      content: '# E2E Briefing\n\n- Confirm preload to main persistence.\n',
-      metadata: {
-        id: 'e2e-briefing',
-        runId: 'run-e2e',
-        generatedAt,
-        sources: {
-          jira: 'fixtures',
-          outlook: 'fixtures',
-          teams: 'fixtures',
-        },
-      },
-    });
-
-    const briefings = await window.srgnt.listBriefings();
     const launch = await window.srgnt.terminalLaunchWithContext({
       launchContext: {
         launchId: 'e2e-launch',
-        sourceWorkflow: 'daily-briefing',
+        sourceWorkflow: 'e2e-suite',
         sourceArtifactId: 'SRGNT-142',
         workingDirectory: '/',
         intent: 'readOnly',
@@ -163,8 +148,6 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
     await window.srgnt.terminalClose(launch.sessionId);
 
     return {
-      briefingPath: saveResult.path,
-      briefingIds: briefings.briefings.map((briefing) => briefing.id),
       launch,
       sessionIds: sessions.sessions.map((session) => session.id),
       workspaceRoot: await window.srgnt.getWorkspaceRoot(),
@@ -177,14 +160,12 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
   expect(result.hasApi).toBe(true);
   expect(result.hasProcess).toBe(false);
   expect(result.hasRequire).toBe(false);
-  expect(result.briefingIds).toContain('e2e-briefing');
   expect(result.launch.launchId).toBe('e2e-launch');
   expect(result.sessionIds).toContain(result.launch.sessionId);
-  expect(result.briefingPath.startsWith(path.join(result.workspaceRoot, '.command-center', 'artifacts'))).toBe(true);
 
-  const content = await fs.readFile(result.briefingPath, 'utf8');
-  expect(content).toContain('# E2E Briefing');
-  expect(content).toContain('Confirm preload to main persistence.');
+  const runLogDir = path.join(result.workspaceRoot, '.command-center', 'runs');
+  const runLogFiles = await fs.readdir(runLogDir);
+  expect(runLogFiles.some((file) => file.endsWith('.md'))).toBe(true);
 });
 
 test('Tab key indents the current line in the notes editor', async ({ userDataDir, window: page }) => {

@@ -42,8 +42,6 @@ export interface SrgntAPI {
   }) => void): () => void;
   resolveLaunchApproval(approvalId: string, approved: boolean): Promise<void>;
 
-  saveBriefing(request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }): Promise<{ path: string }>;
-  listBriefings(): Promise<{ briefings: { id: string; path: string; generatedAt: string }[] }>;
   writeDiagnosticCrashLog(): Promise<{ directory: string }>;
 
   // Notes operations

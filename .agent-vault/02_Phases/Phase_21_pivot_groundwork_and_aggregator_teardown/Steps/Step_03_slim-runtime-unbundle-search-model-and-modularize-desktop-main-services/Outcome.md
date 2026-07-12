@@ -1,6 +1,9 @@
 # Outcome
 
-- Record the final result, validation performed, and explicit follow-up here.
+- Completed 2026-07-12. `packages/runtime` slimmed to `approvals/`, `logs/`, `policy/`, `semantic-search/`, `workspace/` — deleted `workflows/`, `artifacts/`, `launch/`, `loaders/`, `query/`, `store/`; root index exports only logs, approvals, semantic-search (policy/workspace parked, unexported). Embedding model removed from electron-builder `extraResources` (the `../assets/model` source dir was already absent, so the entry was vestigial; worker fail-soft fallback already handled the no-model case). `packages/desktop/src/main/index.ts` rewritten as a 137-line composition root delegating to `src/main/services/{window,workspace,settings,updater,terminal,semantic-search,crash,shell}.ts`.
+- Dead aggregator IPC surface removed end to end (no live renderer consumers): `entitiesList`, `briefingSave/List`, `skillList/Run/Cancel`, `approvalRequest/Resolve`, `runHistoryList/Get`, `runLogSave` — dropped from contracts channels/schemas, preload, env.d.ts, renderer test mocks, and the e2e briefing round-trip. Terminal launch-approval flow (launchApprovalRequired/Resolve) and run-log-to-disk persistence are unchanged.
+- Validation: `pnpm typecheck` green. `pnpm test`: contracts 181/181, runtime 283/283 (delta from 436 = deleted modules' own tests), desktop 756/756. `pnpm test:e2e`: 68 passed / 3 failed — exactly the pre-existing baseline (app.spec PTY posix_spawnp, gfm-compliance `.cm-header-*`, bug-0013-visual Linux binary). Packaged mac-arm64 artifact (589M) contains no `model` directory; ad-hoc packaged macOS boot smoke passed (onboarding visible, `isPackaged: true`, `modelBundled: false`). `test:e2e:packaged:linux` self-skips off Linux and could not run on this host.
+- Follow-up: contracts `entities/`, `skills/`, fixtures modules are now only self-referenced; their teardown/replacement belongs to STEP-21-04/05. `SEMANTIC_SEARCH_VALIDATION.md` annotated as PARKED.
 
 ## Related Notes
 

@@ -7,15 +7,8 @@ import {
   SAppVersionResponse,
   SDesktopSettings,
   SUserDataPathResponse,
-  SSkillListResponse,
-  SSkillRunRequest,
-  SSkillRunResponse,
-  SIpcApprovalRequest,
-  SApprovalResolveRequest,
   STerminalLaunchWithContextRequest,
   STerminalLaunchWithContextResponse,
-  SRunLogSaveRequest,
-  SRunLogSaveResponse,
   SLaunchApprovalPayload,
   SLaunchApprovalResolveRequest,
   SOpenExternalRequest,
@@ -39,8 +32,8 @@ describe('IPC Channel', () => {
       'app:get-version',
       'app:get-user-data-path',
       'workspace:get-root',
-      'skill:run',
-      'approval:request',
+      'terminal:launch-with-context',
+      'launch:approval-resolve',
     ] as const;
     for (const channel of channels) {
       expect(() => parseSync(SIpcChannel, channel)).not.toThrow();
@@ -63,9 +56,9 @@ describe('IPC Request', () => {
 
   it('validates request with payload', () => {
     const request = {
-      channel: 'skill:run' as const,
+      channel: 'terminal:write' as const,
       requestId: 'req-1',
-      payload: { skillName: 'daily-briefing', version: '1.0.0' },
+      payload: { sessionId: 'pty-1', data: 'ls\n' },
     };
     expect(() => parseSync(SIpcRequest, request)).not.toThrow();
   });
@@ -138,83 +131,6 @@ describe('Desktop Settings Schema', () => {
   });
 });
 
-describe('Skill List Response', () => {
-  it('validates empty skill list', () => {
-    const response = { skills: [] };
-    expect(() => parseSync(SSkillListResponse, response)).not.toThrow();
-  });
-
-  it('validates skill list with items', () => {
-    const response = {
-      skills: [
-        { name: 'daily-briefing', version: '1.0.0' },
-      ],
-    };
-    expect(() => parseSync(SSkillListResponse, response)).not.toThrow();
-  });
-});
-
-describe('Skill Run Request', () => {
-  it('validates a run request', () => {
-    const request = {
-      skillName: 'daily-briefing',
-      skillVersion: '1.0.0',
-      parameters: { date: '2024-03-25' },
-    };
-    expect(() => parseSync(SSkillRunRequest, request)).not.toThrow();
-  });
-
-  it('applies defaults', () => {
-    const request = {
-      skillName: 'daily-briefing',
-      skillVersion: '1.0.0',
-    };
-    const parsed = parseSync(SSkillRunRequest, request);
-    expect(parsed.parameters).toEqual({});
-  });
-});
-
-describe('Skill Run Response', () => {
-  it('validates the response', () => {
-    const response = {
-      runId: 'run-1',
-      status: 'pending',
-    };
-    expect(() => parseSync(SSkillRunResponse, response)).not.toThrow();
-  });
-});
-
-describe('Approval Request', () => {
-  it('validates an approval request', () => {
-    const request = {
-      id: 'approval-1',
-      capability: 'read:tasks',
-      reason: 'Need to read tasks',
-      requestedAt: '2024-03-25T10:00:00Z',
-      requestedBy: 'agent@srgnt.app',
-    };
-    expect(() => parseSync(SIpcApprovalRequest, request)).not.toThrow();
-  });
-});
-
-describe('Approval Resolve Request', () => {
-  it('validates approve request', () => {
-    const request = {
-      id: 'approval-1',
-      approved: true,
-    };
-    expect(() => parseSync(SApprovalResolveRequest, request)).not.toThrow();
-  });
-
-  it('validates deny request', () => {
-    const request = {
-      id: 'approval-1',
-      approved: false,
-    };
-    expect(() => parseSync(SApprovalResolveRequest, request)).not.toThrow();
-  });
-});
-
 describe('Terminal Launch With Context', () => {
   it('validates a wrapped launch request', () => {
     const request = {
@@ -253,24 +169,6 @@ describe('Terminal Launch With Context', () => {
     };
 
     expect(() => parseSync(STerminalLaunchWithContextResponse, response)).not.toThrow();
-  });
-});
-
-describe('RunLog Save', () => {
-  it('validates a run log save request', () => {
-    const request = {
-      content: '# Run Log\n\n## Metadata\n- Run ID: runlog-123',
-      runId: 'runlog-123',
-      launchId: 'launch-456',
-    };
-    expect(() => parseSync(SRunLogSaveRequest, request)).not.toThrow();
-  });
-
-  it('validates a run log save response', () => {
-    const response = {
-      path: '/workspace/.command-center/runs/runlog-123.md',
-    };
-    expect(() => parseSync(SRunLogSaveResponse, response)).not.toThrow();
   });
 });
 

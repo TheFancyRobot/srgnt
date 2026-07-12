@@ -21,11 +21,6 @@ const ipcChannels = {
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
-  skillList: 'skill:list',
-  skillRun: 'skill:run',
-  skillCancel: 'skill:cancel',
-  approvalRequest: 'approval:request',
-  approvalResolve: 'approval:resolve',
   terminalSpawn: 'terminal:spawn',
   terminalWrite: 'terminal:write',
   terminalResize: 'terminal:resize',
@@ -34,12 +29,6 @@ const ipcChannels = {
   terminalLaunchWithContext: 'terminal:launch-with-context',
   launchApprovalRequired: 'launch:approval-required',
   launchApprovalResolve: 'launch:approval-resolve',
-  runHistoryList: 'run-history:list',
-  runHistoryGet: 'run-history:get',
-  runLogSave: 'run-log:save',
-  entitiesList: 'entities:list',
-  briefingSave: 'briefing:save',
-  briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
   notesListDir: 'notes:list-dir',
   notesReadFile: 'notes:read-file',
@@ -101,11 +90,6 @@ const api = {
     ipcRenderer.on('terminal:exit', handler);
     return () => ipcRenderer.removeListener('terminal:exit', handler);
   },
-
-  saveBriefing: (request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }): Promise<{ path: string }> =>
-    ipcRenderer.invoke(ipcChannels.briefingSave, request),
-  listBriefings: (): Promise<{ briefings: { id: string; path: string; generatedAt: string }[] }> =>
-    ipcRenderer.invoke(ipcChannels.briefingList),
 
   writeDiagnosticCrashLog: (): Promise<{ directory: string }> => ipcRenderer.invoke(ipcChannels.crashWriteTestLog),
 

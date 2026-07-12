@@ -5,17 +5,22 @@ contract_version: 1
 title: Slim runtime unbundle search model and modularize desktop main services
 step_id: STEP-21-03
 phase: '[[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-fable-5-worker
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-12'
 depends_on:
   - STEP-21-02
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-12-181229-slim-runtime-unbundle-search-model-and-modularize-desktop-main-services-claude-fable-5-worker|SESSION-2026-07-12-181229 claude-fable-5-worker session for Slim runtime unbundle search model and modularize desktop main services]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-12-181229
+active_session_id: 05_Sessions/2026-07-12-181229-slim-runtime-unbundle-search-model-and-modularize-desktop-main-services-claude-fable-5-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_03_slim-runtime-unbundle-search-model-and-modularize-desktop-main-services|STEP-21-03 Slim runtime unbundle search model and modularize desktop main services]].
 ---
 
 # Step 03 - Slim runtime unbundle search model and modularize desktop main services
@@ -84,6 +89,12 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Capture facts learned during execution.
 - Prefer short bullets with file paths, commands, and observed behavior.
+- Import audit reconciled against the post-STEP-21-02 tree: `runs/` was already gone; `createRunLogService` lives in `logs/run-log.ts` and stays. Deleted runtime `workflows/`, `artifacts/` (only consumed by workflows), `launch/`, `loaders/`, `query/`, `store/`. Runtime root now exports `logs`, `approvals`, `semantic-search`; `policy/` and `workspace/` kept as parked unexported source.
+- `CanonicalStore` removal cascaded into deleting the dead aggregator IPC surface (no live renderer consumers): `entitiesList`, `briefingSave/List`, `skillList/Run/Cancel`, `approvalRequest/Resolve`, `runHistoryList/Get`, `runLogSave` — removed from contracts channels + schemas, preload inline map + API, env.d.ts, renderer test mocks, and the e2e briefing round-trip. The BUG-0002 preload sync guards force this to be bidirectional.
+- `main/index.ts`: 811 -> 137 lines. New modules under `src/main/services/`: window, workspace (hook-based root-change lifecycle: beforeRootChanged/prepareWorkspace/afterRootChanged), settings, updater, terminal (pty + launch approvals + run-log persistence), semantic-search, crash, shell. Preload/renderer paths injected from index.ts because dist/main mirrors src/main and `__dirname` shifts inside services/.
+- `extraResources` model entry removed from `packages/desktop/package.json`. Note: `../assets/model` did not exist in the tree, so the entry was already vestigial — artifact size is unchanged; the worker's `fs.access(modelAssetPath)` fail-soft path (fallback keyword search) was already in place and is what the packaged smoke exercises.
+- `semantic-search/ipc-handlers.test.ts` reads main source for structural assertions — repointed from `main/index.ts` to `services/semantic-search.ts` with the new identifier names.
+- Stale `dist/` in contracts/runtime made the preload sync tests fail on first run after the contracts edit; clean rebuild (`rm -rf dist` + build) fixed it. Worth remembering for any step that edits contracts channels.
 
 ## Human Notes
 
@@ -92,10 +103,13 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-12 - [[05_Sessions/2026-07-12-181229-slim-runtime-unbundle-search-model-and-modularize-desktop-main-services-claude-fable-5-worker|SESSION-2026-07-12-181229 claude-fable-5-worker session for Slim runtime unbundle search model and modularize desktop main services]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Record the final result, the validation performed, and any follow-up required.
 - If the step is blocked, say exactly what is blocking it.
+- Completed 2026-07-12. Runtime slimmed to `approvals/`, `logs/`, `policy/`, `semantic-search/`, `workspace/` (root exports: logs, approvals, semantic-search). Embedding model unbundled from electron-builder `extraResources`. Desktop main is a 137-line composition root delegating to eight `services/` modules. Dead aggregator IPC (entities/briefing/skill/approval-request/run-history/run-log-save) removed across contracts, preload, and main.
+- Validation: `pnpm typecheck` green; `pnpm test` green — contracts 181/181, runtime 283/283, desktop 756/756; `pnpm test:e2e` 68 passed / 3 failed, all three the known pre-existing baseline (app.spec PTY posix_spawnp, gfm-compliance `.cm-header-*`, bug-0013-visual Linux-only binary). Packaged `electron-builder --dir` artifact (mac-arm64, 589M) contains no `model` directory; ad-hoc packaged macOS boot smoke passed (onboarding renders, `isPackaged: true`, `modelBundled: false`). `test:e2e:packaged:linux` is Linux-only and could not run on this macOS host.
+- Follow-up: contracts still carries aggregator-era `entities/`, `skills/`, and fixtures modules (now only self-referenced) — teardown/replacement belongs to STEP-21-04/05.

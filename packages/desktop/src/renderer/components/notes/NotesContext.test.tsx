@@ -70,8 +70,6 @@ describe('NotesContext', () => {
       terminalLaunchWithContext: vi.fn(),
       onLaunchApprovalRequired: vi.fn(() => () => {}),
       resolveLaunchApproval: vi.fn(),
-      saveBriefing: vi.fn(),
-      listBriefings: vi.fn(),
       writeDiagnosticCrashLog: vi.fn(),
       notesListDir,
       notesReadFile: vi.fn(async (filePath: string) => ({

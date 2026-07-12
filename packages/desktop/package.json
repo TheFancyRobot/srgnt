@@ -47,13 +47,6 @@
       "dist/**/*",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "../assets/model",
-        "to": "model",
-        "filter": ["**/*"]
-      }
-    ],
     "directories": {
       "output": "release",
       "buildResources": "build"

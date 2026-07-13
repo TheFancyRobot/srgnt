@@ -5,17 +5,22 @@ contract_version: 1
 title: Implement harness supervisor with lazy spawn health and kill-tree lifecycle
 step_id: STEP-22-02
 phase: '[[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|Phase 22 acp core package and pi integration spike]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-worker
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-13'
 depends_on:
   - STEP-22-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-13-160726-implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle-claude-worker|SESSION-2026-07-13-160726 claude-worker session for Implement harness supervisor with lazy spawn health and kill-tree lifecycle]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-13-160726
+active_session_id: 05_Sessions/2026-07-13-160726-implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle-claude-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_02_implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle|STEP-22-02 Implement harness supervisor with lazy spawn health and kill-tree lifecycle]].
 ---
 
 # Step 02 - Implement harness supervisor with lazy spawn health and kill-tree lifecycle
@@ -74,16 +79,28 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_02_implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_02_implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-worker
+- Last touched: 2026-07-13
+- Next action: None — supervisor shipped and validated (harness 46/46, root 1218/1218). Proceed to STEP-22-03 (harness registry + built-in pi definition).
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
 - Capture facts learned during execution.
 - Prefer short bullets with file paths, commands, and observed behavior.
+### 2026-07-13 — supervisor implemented (claude-worker)
+
+- New module `packages/harness/src/supervisor/` (pure Node, boundary-clean):
+  - `types.ts` — `ProcessState` (idle → spawning → ready → reaping → dead), `ExitInfo`, `ChildProcessLike`/`ChildSpawner`/`KillTree` injection seams, `RunningHandle`, `HealthSnapshot`, `SupervisorEvent`, `RestartPolicy` (default max 3 / 250ms / 5000ms), `SupervisorClock` (+ `systemClock`).
+  - `kill-tree.ts` — `posixKillTree` signals the process **group** (`process.kill(-pid, sig)`, ESRCH-swallowed, EPERM→single-pid fallback); `windowsKillTree` = `taskkill /pid <pid> /T [/F]` (SIGKILL→/F), best-effort; `platformKillTree` picks by `process.platform`.
+  - `harness-process.ts` — `HarnessProcess`: single-use, one PID, linear state machine. `start()` is lazy + coalescing (resolves on the child's `'spawn'` event, rejects `SpawnFailed` on `'error'`/ENOENT). Spawns detached (`detached: !win32`) with `stdio: ['pipe','pipe','pipe']` so the child is its own group leader. stderr ring buffer (64 KiB default) for crash tails. `get transport()` lazily builds a `SpawnedAgent` via `ndJsonStream(Writable.toWeb, Readable.toWeb)` — the composition point with `AcpAgentConnection`. `dispose()` = SIGTERM to tree → grace (default 5000ms) → SIGKILL; idempotent across idle/spawning/ready/reaping/dead.
+  - `supervisor.ts` — `Supervisor`: `register` (lazy, no spawn), `ensureRunning` (coalesced, respawns after crash/idle-reap), `spawnerFor(id): AgentSpawner` (drops straight into `AcpAgentConnection.connect({ spawn })`), `markActivity`, idle-reap timer (off unless `idleTimeoutMs` set), crash restart with capped exponential backoff then typed `SupervisorGaveUp`, `dispose`/`disposeAll` (marks handles disposed so late `ensureRunning` fails `UnknownHandle`), `health`, `onEvent`.
+  - `errors.ts` — re-exports `SpawnFailed` from acp/; adds `SupervisorGaveUp`, `UnknownHandle` (Schema.TaggedError).
+- Wired into `src/index.ts` (`export * from './supervisor/index.js'`). Added `fast-check@^4.6.0` to harness devDeps (already in lockfile/store).
+- Two real design bugs surfaced by the fast-check state-machine property and fixed: (1) a late `'spawn'` event after `dispose()` mid-spawn wrongly drove `reaping→ready` — now ignored unless still `spawning`; (2) a `start()` promise left pending when the process died before ready — `finalizeExit` now settles it with `SpawnFailed`. Honest legal edge set includes `idle→dead` (dispose before start) and `spawning→reaping` (dispose mid-spawn).
+- Prior-art note: `packages/desktop/src/main/pty/node-pty-service.ts` relies on node-pty's own `.kill()` with **no** process-group kill-tree; the lesson ported is exit-driven cleanup ordering, not the code. Real process-group kill-tree is new here.
+- Test fixtures live under `src/supervisor/__fixtures__/` (excluded from tsc build/typecheck via tsconfig): `fake-agent.mjs` (scriptable: sleep / echo / spawn-grandchild / crash / ignore-sigterm), `fake-child.ts`, `manual-clock.ts`.
 
 ## Human Notes
 
@@ -92,7 +109,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-13 - [[05_Sessions/2026-07-13-160726-implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle-claude-worker|SESSION-2026-07-13-160726 claude-worker session for Implement harness supervisor with lazy spawn health and kill-tree lifecycle]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary

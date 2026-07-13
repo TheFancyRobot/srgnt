@@ -3,21 +3,20 @@ note_type: architecture
 template_version: 2
 contract_version: 1
 title: Connector Package Runtime
-architecture_id: "ARCH-0008"
+architecture_id: ARCH-0008
 status: active
-owner: ""
-reviewed_on: "2026-04-19"
-created: "2026-04-19"
-updated: "2026-04-19"
+owner: ''
+reviewed_on: '2026-07-12'
+created: '2026-04-19'
+updated: '2026-04-19'
 related_notes:
-  - "[[01_Architecture/Integration_Map|Integration Map]]"
-  - "[[01_Architecture/System_Overview|System Overview]]"
-  - "[[02_Phases/Phase_19_implement_connector_pluggability/Phase|PHASE-19 Implement Connector Pluggability]]"
-  - "[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20 Connector Factory and Remote Package Installation]]"
-  - "[[06_Shared_Knowledge/srgnt_framework_adr004_connector_contract|ADR-004 Connector Contract and Capability Model]]"
-  - "[[06_Shared_Knowledge/srgnt_framework_desktop_technical_design|Desktop App Technical Design]]"
-  - "[[06_Shared_Knowledge/srgnt_framework_security_boundary_model|Security Boundary Model]]"
-
+  - '[[01_Architecture/Integration_Map|Integration Map]]'
+  - '[[01_Architecture/System_Overview|System Overview]]'
+  - '[[02_Phases/Phase_19_implement_connector_pluggability/Phase|PHASE-19 Implement Connector Pluggability]]'
+  - '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20 Connector Factory and Remote Package Installation]]'
+  - '[[06_Shared_Knowledge/srgnt_framework_adr004_connector_contract|ADR-004 Connector Contract and Capability Model]]'
+  - '[[06_Shared_Knowledge/srgnt_framework_desktop_technical_design|Desktop App Technical Design]]'
+  - '[[06_Shared_Knowledge/srgnt_framework_security_boundary_model|Security Boundary Model]]'
 tags:
   - agent-vault
   - architecture
@@ -31,6 +30,7 @@ tags:
 
 - Explain how pluggable connector packages should be described, installed, loaded, and instantiated.
 - Define the boundary between connector metadata discovery, installation state, executable package loading, and live connection/auth state.
+- **Historical — subsystem removed (2026-07-12)**: the connector package runtime, `@srgnt/connectors` SDK, and `srgnt-connectors` CLI described here were deleted in Phase 21 per [[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]]. This note is preserved as the design record (isolation model, integrity checks, fail-closed lifecycle lessons feed the harness supervisor design in [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009]]); nothing in it describes live code.
 
 ## Overview
 

@@ -5,18 +5,23 @@ contract_version: 1
 title: Rewrite repo docs and re-point vault architecture notes
 step_id: STEP-21-05
 phase: '[[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-fable-5-worker
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-12'
 depends_on:
   - STEP-21-03
   - STEP-21-04
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-13-015439-rewrite-repo-docs-and-re-point-vault-architecture-notes-claude-fable-5-worker|SESSION-2026-07-13-015439 claude-fable-5-worker session for Rewrite repo docs and re-point vault architecture notes]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-13-015439
+active_session_id: 05_Sessions/2026-07-13-015439-rewrite-repo-docs-and-re-point-vault-architecture-notes-claude-fable-5-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_05_rewrite-repo-docs-and-re-point-vault-architecture-notes|STEP-21-05 Rewrite repo docs and re-point vault architecture notes]].
 ---
 
 # Step 05 - Rewrite repo docs and re-point vault architecture notes
@@ -74,16 +79,17 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_05_rewrite-repo-docs-and-re-point-vault-architecture-notes/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_05_rewrite-repo-docs-and-re-point-vault-architecture-notes/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-fable-5-worker
+- Last touched: 2026-07-12
+- Next action: None — step complete. Phase 21 exit: see [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase note]]; next milestone is PHASE-22 (`@srgnt/harness`).
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
 - Capture facts learned during execution.
 - Prefer short bullets with file paths, commands, and observed behavior.
+- 2026-07-12: executed; durable findings recorded in [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_05_rewrite-repo-docs-and-re-point-vault-architecture-notes/Implementation_Notes|Implementation Notes companion]]. Key facts: repo is 4 packages today (`@srgnt/harness` is Phase 22, docs mark it upcoming); `fred-workflow-design.md` needed frontmatter added before `vault_mutate` could append; `docs/flagship-workflow-walkthrough.md` banner-marked historical rather than deleted.
 
 ## Human Notes
 
@@ -92,10 +98,11 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-13 - [[05_Sessions/2026-07-13-015439-rewrite-repo-docs-and-re-point-vault-architecture-notes-claude-fable-5-worker|SESSION-2026-07-13-015439 claude-fable-5-worker session for Rewrite repo docs and re-point vault architecture notes]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Record the final result, the validation performed, and any follow-up required.
 - If the step is blocked, say exactly what is blocking it.
+- Complete (2026-07-12). README/AGENTS/TESTING rewritten for the ACP command-center product; connector-plugin guide and `srgnt-connectors` CLI docs removed; Pi Team Workflow and agent-vault block preserved. Re-pointed with bounded mutations: ARCH-0001/0004/0005/0008 (Purpose pointer + `reviewed_on: 2026-07-12`) and 06_Shared_Knowledge sync-architecture / fred-workflow-design / conflict-resolution-design (historical pointer); ARCH-0009 Related Notes back-links all seven. Validation: `pnpm typecheck` + `pnpm test` green (desktop 758/758); doc grep clean of unintentional aggregator references; `vault_refresh` + `vault_validate` run at close. Details in [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_05_rewrite-repo-docs-and-re-point-vault-architecture-notes/Outcome|Outcome companion]].

@@ -36,6 +36,7 @@ The sync service provides encrypted cloud sync, multi-device continuity, and bac
 │  (Encrypted replicas + metadata + coordination state)      │
 └─────────────────────────────────────────────────────────────┘
 ```
+> **Historical (aggregator era, 2026-07-12)**: this sync design belongs to the retired aggregator product line, superseded for product surface by [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009]] ([[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]]). No sync package exists in the repo; kept as a design record.
 
 ## Sync Model
 

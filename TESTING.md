@@ -27,53 +27,40 @@ pnpm run release:rc:linux
 pnpm --filter @srgnt/desktop dev
 ```
 
-## Connector Package CLI
+The Electron app currently supports:
 
-Manage third-party connector packages with the `srgnt-connectors` CLI:
-
-```bash
-pnpm run cli:connectors -- help
-pnpm run cli:connectors -- install https://example.com/pkg.json --connector-id demo --json
-pnpm run cli:connectors -- list --workspace "$SRGNT_WORKSPACE"
-pnpm run cli:connectors -- inspect demo --json
-pnpm run cli:connectors -- remove demo@1.0.0
-```
-
-The CLI only writes durable package records into `.command-center/config/desktop-settings.json`. The Electron desktop boots the isolated worker runtime on next launch. Only `https://` URLs (plus `http://localhost` dev registries) are accepted; the CLI fails closed on checksum, connector-id, or manifest validation errors and returns a non-zero exit status with a structured JSON error body when `--json` is passed.
-
-The Electron app now supports:
-
-- first-run onboarding that creates a local workspace
+- first-run onboarding that creates a local workspace (workspace v2 layout: `projects/`, `groups/templates/`, `harnesses.json`, `settings.json`)
 - settings persisted in `.command-center/config/desktop-settings.json`
-- connector status stored through main-process IPC instead of renderer-only timers
+- the three-panel workspace shell with notes editor, terminal panel, and semantic search
 - local redacted crash logs plus a renderer fallback screen
 - release-QA utility actions for update checks and diagnostic crash logging
 - generated platform icon assets from `packages/desktop/build/icon.svg`
+
+Chat over ACP sessions arrives with `@srgnt/harness` in Phase 22+ and is not testable yet.
 
 ## Automated Coverage
 
 ### Workspace-wide
 
-- `pnpm test` runs all package and example test suites.
-- `pnpm build` rebuilds all workspace packages and refreshes tracked `dist/` outputs.
+- `pnpm test` runs all package test suites (`contracts`, `runtime`, `desktop`).
+- `pnpm build` rebuilds all workspace packages.
 
-### Desktop unit tests
+### Package unit tests
 
-- crash redaction and crash-log rotation helpers
-- workspace bootstrap and desktop settings persistence helpers
-- PTY service and terminal IPC schemas
-- renderer component smoke coverage for Today and Calendar
+- `@srgnt/contracts`: schema round-trips for Project, Session, HarnessDefinition, workspace, and shared schemas.
+- `@srgnt/runtime`: workspace v2 bootstrap/repair, approvals, policy, logs, semantic-search runtime.
+- `@srgnt/desktop`: crash redaction and crash-log rotation, settings persistence, PTY service and terminal IPC schemas, notes/markdown editor behavior, and renderer smoke coverage for the shell components (ActivityBar, Navigation, SidePanel, NotesView, TerminalPanel, Settings, Onboarding).
 
 ### Desktop E2E
 
 `pnpm --filter @srgnt/desktop test:e2e` validates:
 
 - onboarding and first-run workspace creation
-- navigation across Today, Calendar, Connectors, and Settings
-- connector connect/disconnect flows through preload IPC
-- persisted desktop settings written to workspace config
-- diagnostic crash-log writing and redaction
-- privileged PTY launch and briefing persistence
+- navigation across the key surfaces of the workspace shell
+- notes editor flows: autosave and persistence, GFM rendering (code blocks, horizontal rules), slash commands, wikilink navigation, search
+- terminal view opening without CSP bootstrap failures
+- persisted desktop settings and redacted crash diagnostics
+- privileged PTY launch through preload IPC
 - renderer security boundaries (`require` and `process` are not exposed)
 
 `pnpm --filter @srgnt/desktop test:e2e:packaged:linux` validates the packaged Linux launch path.
@@ -88,7 +75,7 @@ The Electron app now supports:
 
 ## Current Known Gaps
 
-- Fedora local RPM packaging now uses `packages/desktop/scripts/build-fedora-rpm.sh`; install `libxcrypt-compat` and `rpm-build` first.
+- Fedora local RPM packaging uses `packages/desktop/scripts/build-fedora-rpm.sh`; install `libxcrypt-compat` and `rpm-build` first.
 - Update checks are wired, but a real hosted release feed is still an operator step.
 
 ## Pi Team Workflow

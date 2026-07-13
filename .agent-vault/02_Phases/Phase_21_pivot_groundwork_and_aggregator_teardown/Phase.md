@@ -4,10 +4,10 @@ template_version: 2
 contract_version: 1
 title: Pivot Groundwork and Aggregator Teardown
 phase_id: PHASE-21
-status: planned
+status: completed
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-12'
 depends_on:
   - '[[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20 Connector Factory and Remote Package Installation]]'
 related_architecture:
@@ -65,16 +65,16 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 ## Acceptance Criteria
 
-- [ ] Scope is concrete and linked to the right durable notes.
-- [ ] Step notes exist for the first executable work units.
-- [ ] Validation and documentation expectations are explicit.
-- [ ] `v0-aggregator-final` tag exists after the in-flight diff lands; pivot commits start after it.
-- [ ] `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` pass with the five remaining packages (tsconfig, contracts, runtime, desktop + placeholder-free graph); deleted packages leave no references.
-- [ ] App boots to the slim shell (layout, titlebar, notes, terminal, settings, onboarding) with no aggregator views, IPC channels, or CLI bins.
-- [ ] Workspace v2 bootstrap creates the new layout; contracts v2 Project/Session/SessionEvent/HarnessDefinition schemas exist on `effect/Schema` with tests; `@effect/schema` dependency is gone.
-- [ ] `main/index.ts` is a thin composition root delegating to per-service modules.
-- [ ] Packaged artifact no longer bundles the embedding model; README/AGENTS describe the ACP command-center product.
-- [ ] Vault: home + architecture notes re-pointed; DEC-0017 accepted; Roadmap shows phases 21–29.
+- [x] Scope is concrete and linked to the right durable notes.
+- [x] Step notes exist for the first executable work units.
+- [x] Validation and documentation expectations are explicit.
+- [x] `v0-aggregator-final` tag exists after the in-flight diff lands; pivot commits start after it.
+- [x] `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` pass with the five remaining packages (tsconfig, contracts, runtime, desktop + placeholder-free graph); deleted packages leave no references. *(E2E at the documented pre-existing baseline: 68 passed / 3 host-specific known failures — see STEP-21-03/04 Outcomes.)*
+- [x] App boots to the slim shell (layout, titlebar, notes, terminal, settings, onboarding) with no aggregator views, IPC channels, or CLI bins.
+- [x] Workspace v2 bootstrap creates the new layout; contracts v2 Project/Session/SessionEvent/HarnessDefinition schemas exist on `effect/Schema` with tests; `@effect/schema` dependency is gone.
+- [x] `main/index.ts` is a thin composition root delegating to per-service modules.
+- [x] Packaged artifact no longer bundles the embedding model; README/AGENTS describe the ACP command-center product.
+- [x] Vault: home + architecture notes re-pointed; DEC-0017 accepted; Roadmap shows phases 21–29.
 
 ## Linear Context
 

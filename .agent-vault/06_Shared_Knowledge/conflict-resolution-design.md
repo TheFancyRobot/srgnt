@@ -13,6 +13,7 @@ tags:
 
 ## Purpose
 Define how sync conflicts are detected, resolved, and recovered. This ensures the sync architecture handles real-world scenarios where multiple devices edit the same content offline.
+> **Historical (aggregator era, 2026-07-12)**: this conflict-resolution design supported the retired sync subsystem, superseded for product surface by [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009]] ([[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]]). No sync/conflict code exists in the repo; kept as a design record.
 
 ## Core Principles
 

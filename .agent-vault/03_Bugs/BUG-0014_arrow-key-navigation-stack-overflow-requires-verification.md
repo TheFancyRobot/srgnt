@@ -52,6 +52,7 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 
 - List affected packages, commands, integrations, environments, or users.
 - Note whether this is isolated, widespread, data-sensitive, or release-blocking.
+- Related execution: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] (notes editor keyboard handling; link added during 2026-07-10 enrichment).
 
 ## Suspected Root Cause
 

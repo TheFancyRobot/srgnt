@@ -1,6 +1,10 @@
 # srgnt
 
-Desktop-first personal command center built with Electron.
+Desktop command center for CLI coding agents, built with Electron.
+
+srgnt speaks the [Agent Client Protocol](https://agentclientprotocol.com) (ACP) to run, supervise, and persist sessions with coding-agent harnesses (Pi, opencode, custom agents). The product pillars: a chat GUI over any ACP agent, sessions organized into projects, honestly-resumable local-first session history, and Groups — multiple harness instances collaborating through a srgnt-provided bus.
+
+> **Pivot note (2026-07-10).** srgnt was previously a personal data aggregator (Jira/Outlook/Teams connectors, Today/Calendar views, a connector-package CLI). That product line is retired and its surfaces were removed in Phase 21. The rationale lives in vault decision `DEC-0017`; the target architecture is `ARCH-0009` (`.agent-vault/01_Architecture/ACP_Command_Center_Target_Architecture.md`).
 
 ## Project Structure
 
@@ -8,22 +12,22 @@ Desktop-first personal command center built with Electron.
 srgnt/
 ├── packages/
 │   ├── tsconfig/          # Shared TypeScript configs
-│   ├── contracts/         # Zod schemas and entity definitions
-│   ├── runtime/           # Local-first runtime, storage, approvals
-│   ├── desktop/           # Electron main/preload/renderer
-│   ├── connectors/        # Jira, Outlook Calendar, Teams SDK
-│   ├── executors/         # Skill executor contracts
-│   ├── sync/              # Sync engine for workspace continuity
-│   ├── entitlements/      # Premium/Fred entitlement separation
-│   └── fred/              # Fred premium orchestration layer
-├── examples/
-│   ├── skills/
-│   │   └── daily-briefing/ # Example skill package validated against shared contracts
-│   └── connectors/
-│       └── jira/           # Example connector package validated against shared contracts
+│   ├── contracts/         # effect/Schema domain + IPC contracts (Project, Session, SessionEvent, HarnessDefinition)
+│   ├── runtime/           # Local-first persistence & policy: workspace v2 bootstrap, approvals, policy, logs, semantic search
+│   └── desktop/           # Electron main/preload/renderer; main-process logic composed from services/ modules
+├── docs/                  # Dev workflow docs (pi-teams.md)
 ├── .agent-vault/          # Durable roadmap, phase, and architecture notes
-└── TESTING.md             # Manual verification guide and known limitations
+└── TESTING.md             # Testing guide
 ```
+
+A fifth package, **`@srgnt/harness`, is planned for Phase 22 and does not exist yet**: a pure-Node package (zero Electron imports) holding all agent-facing logic — the ACP SDK wrapper, harness registry, process supervisor, group broker, and a scriptable mock-agent test substrate.
+
+### Package boundaries
+
+- `@srgnt/contracts` — `effect/Schema` definitions only (entities, workspace, IPC); no runtime behavior.
+- `@srgnt/runtime` — owns disk layout and policy. Workspace v2 bootstrap creates `projects/`, `groups/templates/`, `harnesses.json`, and `settings.json` under the workspace root. Never speaks ACP.
+- `@srgnt/desktop` — Electron composition root. Main-process services live in `packages/desktop/src/main/services/` (window, workspace, settings, terminal, shell, crash, updater, semantic-search); the renderer keeps the three-panel workspace shell, notes editor, and terminal panel.
+- `@srgnt/harness` *(upcoming, Phase 22)* — all ACP/harness logic; never touches disk layout.
 
 ## Package Manager
 
@@ -45,6 +49,9 @@ pnpm build
 # Lint all packages
 pnpm lint
 
+# Run the desktop app in dev mode
+pnpm --filter @srgnt/desktop dev
+
 # Run the desktop Electron E2E suite
 pnpm test:e2e
 
@@ -54,101 +61,12 @@ pnpm test:e2e:packaged:linux
 
 ## Desktop QA
 
-The desktop app now has a dedicated `Desktop E2E` GitHub Actions workflow that runs on Linux and validates both:
+The desktop app has a dedicated `Desktop E2E` GitHub Actions workflow that runs on Linux and validates both:
 
 - the Electron end-to-end suite against the built app
 - a packaged Linux smoke test against the unpacked desktop bundle
 
 For local details and the full desktop testing workflow, see `TESTING.md`.
-
-## Creating a Connector Plugin
-
-Third-party connectors are distributed as isolated packages that the desktop app installs via CLI, verifies with sha256, and loads in a worker/subprocess runtime (see `DEC-0016`). The public surface lives in `@srgnt/connectors` (SDK) and `@srgnt/contracts` (schemas). A working reference is `examples/connectors/jira/`.
-
-### Package shape
-
-Every connector package must export one `ConnectorPackage` object from its entrypoint:
-
-```ts
-import type { ConnectorPackage } from '@srgnt/connectors';
-
-export const connectorPackage: ConnectorPackage = {
-  manifest,  // ConnectorManifest — identity, auth, capabilities, entity types
-  runtime,   // ConnectorPackageRuntime — sdkVersion, host range, capabilities, executionModel
-  factory,   // (host: HostContext) => Promise<Connector>
-};
-```
-
-- `manifest`: validated by `SConnectorManifest`. Declares `id`, `version`, `provider`, `authType`, capability matrix, and `entityTypes`.
-- `runtime`: validated by `SConnectorPackageRuntime`. Must declare `sdkVersion`, `minHostVersion`, `entrypoint`, `capabilities` (subset of `http.fetch`, `logger`, `crypto.randomUUID`, `workspace.root`), and `executionModel: 'worker' | 'subprocess'`. Third-party packages may not run in the Electron main process.
-- `factory`: receives a `HostContext` (bounded `HostCapabilities` + `connectorId` + `sdkVersion`) and returns a `Connector`. Typically extends `BaseConnector` or `SyncableConnector` from the SDK.
-
-### Step-by-step
-
-1. **Scaffold the package.** Use `examples/connectors/jira/` as a template: a standalone npm/pnpm package that depends on `@srgnt/connectors` and `@srgnt/contracts`. Build to `./dist/` (TS → ESM) and set `main` to the compiled entrypoint.
-
-2. **Define the manifest.** Shape and validate against `SConnectorManifest` in `packages/contracts/src/connectors/manifest.ts`. Pick a stable `id`; it is the activation key and must match the one the host expects.
-
-3. **Implement the connector.** Extend `BaseConnector` (no sync) or `SyncableConnector` (with `sync(): Promise<SyncResult>`) from `@srgnt/connectors`. Only use capabilities your `runtime.capabilities` block declared — the host mediates all I/O through `HostContext`.
-
-4. **Write the factory.** A minimal factory:
-
-   ```ts
-   import { BaseConnector, type HostContext } from '@srgnt/connectors';
-   import type { ConnectorPackage } from '@srgnt/connectors';
-
-   class MyConnector extends BaseConnector {
-     async connect() { this.updateHealth('connected'); }
-     async disconnect() { this.updateHealth('disconnected'); }
-     async refresh() { this.updateHealth('connected'); }
-   }
-
-   export const connectorPackage: ConnectorPackage = {
-     manifest: { id: 'my-connector', /* ... */ },
-     runtime: {
-       sdkVersion: '0.1.0',
-       minHostVersion: '0.1.0',
-       entrypoint: 'connectorPackage',
-       capabilities: ['http.fetch', 'logger'],
-       executionModel: 'worker',
-     },
-     factory: async (host: HostContext) => new MyConnector(/* manifest */),
-   };
-   ```
-
-5. **Publish the package.** Host it at an `https://` URL the desktop app can fetch (plain `https` only; `localhost` is allowed for dev registries).
-
-### Installing via CLI
-
-Installation is CLI-only in v1. The binary is `srgnt-connectors`, shipped from `@srgnt/desktop`.
-
-```bash
-# Install (HTTPS required; sha256 integrity check is pinned when --checksum is passed)
-pnpm --filter @srgnt/desktop cli:connectors -- install https://example.com/my-connector.json \
-  --connector-id my-connector \
-  --checksum <sha256-hex>
-
-# List installed packages with lifecycle state
-pnpm --filter @srgnt/desktop cli:connectors -- list
-
-# Inspect one package (redacted — no tokens, no secrets)
-pnpm --filter @srgnt/desktop cli:connectors -- inspect my-connector
-
-# Remove a package
-pnpm --filter @srgnt/desktop cli:connectors -- remove my-connector
-
-# JSON output for any command
-pnpm --filter @srgnt/desktop cli:connectors -- list --json
-```
-
-Flags:
-
-- `--workspace <path>`: override the target workspace (default `$SRGNT_WORKSPACE` or `~/srgnt-workspace`).
-- `--connector-id <id>`: assert the installed package's manifest id; mismatches fail closed.
-- `--checksum <sha256>`: pin the expected sha256 of the fetched package payload.
-- `--json` / `--text`: output format.
-
-Installing only writes a durable package record to the workspace. Activation (handshake, isolated runtime spawn, load) happens when the Electron app boots and calls `ConnectorPackageHost.applyRestartRecovery()`. Integrity, compatibility, or handshake failures all leave the package in a clearly-marked non-active state and the record remains inspectable and removable.
 
 ## Pi Team Workflow
 

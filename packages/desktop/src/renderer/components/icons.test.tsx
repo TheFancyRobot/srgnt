@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { navIcons } from './icons.js';
 
-const iconKeys = ['today', 'calendar', 'notes', 'connectors', 'settings', 'terminal'] as const;
+const iconKeys = ['notes', 'settings', 'terminal'] as const;
 
 describe('navIcons', () => {
   it('exports all expected icon keys', () => {

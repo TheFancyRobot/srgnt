@@ -9,20 +9,6 @@ import type {
   UpdateCheckResponse,
 } from '@srgnt/contracts';
 
-export interface ConnectorState {
-  id: string;
-  name: string;
-  description: string;
-  provider: string;
-  version: string;
-  installed: boolean;
-  available: boolean;
-  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
-  lastSyncAt?: string;
-  lastError?: string;
-  entityCounts?: Record<string, number>;
-}
-
 export interface SrgntAPI {
   checkForUpdates(): Promise<UpdateCheckResponse>;
 
@@ -31,11 +17,6 @@ export interface SrgntAPI {
   chooseWorkspaceRoot(): Promise<string>;
   createDefaultWorkspaceRoot(): Promise<string>;
 
-  listConnectors(): Promise<{ connectors: ConnectorState[] }>;
-  installConnector(id: string): Promise<ConnectorState>;
-  uninstallConnector(id: string): Promise<ConnectorState>;
-  connectConnector(id: string): Promise<ConnectorState>;
-  disconnectConnector(id: string): Promise<ConnectorState>;
   getDesktopSettings(): Promise<DesktopSettingsResponse>;
   saveDesktopSettings(settings: DesktopSettings): Promise<DesktopSettingsResponse>;
 
@@ -61,8 +42,6 @@ export interface SrgntAPI {
   }) => void): () => void;
   resolveLaunchApproval(approvalId: string, approved: boolean): Promise<void>;
 
-  saveBriefing(request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }): Promise<{ path: string }>;
-  listBriefings(): Promise<{ briefings: { id: string; path: string; generatedAt: string }[] }>;
   writeDiagnosticCrashLog(): Promise<{ directory: string }>;
 
   // Notes operations

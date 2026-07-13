@@ -250,7 +250,6 @@ test.describe('Semantic Search Integration', () => {
       await window.srgnt.semanticSearchIndexWorkspace(root, true);
     }, workspaceRoot);
 
-    await page.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
     await page.getByTestId('semantic-search-mode').click();
 

@@ -20,7 +20,7 @@ test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo
     await waitForDesktopReady(page);
 
     // Complete onboarding when needed.
-    if (await page.getByRole('button', { name: 'Create Workspace' }).count()) {
+    if (await page.getByRole('button', { name: 'Use Default Location' }).count()) {
       await completeOnboarding(page);
     }
 
@@ -38,7 +38,6 @@ test('BUG-0013 visual: heading whitespace fix verification', async ({}, testInfo
     await waitForDesktopReady(page);
 
     // Navigate to Notes
-    await page.getByRole('button', { name: 'Notes' }).click();
     const noteTreeItem = page.getByRole('treeitem', { name: /Your mom\.md/ });
     await expect(noteTreeItem).toBeVisible();
     await noteTreeItem.evaluate((element) => {

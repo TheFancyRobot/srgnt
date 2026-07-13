@@ -46,10 +46,10 @@ describe('OnboardingWizard', () => {
     expect(screen.getByText('Skip setup')).toBeTruthy();
   });
 
-  it('shows step counter (1/3)', () => {
+  it('shows step counter (1/2)', () => {
     const flow = makeFlow();
     render(React.createElement(OnboardingWizard, { flow }));
-    expect(screen.getByText('1/3')).toBeTruthy();
+    expect(screen.getByText('1/2')).toBeTruthy();
   });
 
   it('shows progress bar', () => {
@@ -61,7 +61,7 @@ describe('OnboardingWizard', () => {
       '.bg-gradient-to-r.from-srgnt-400',
     ) as HTMLElement;
     expect(bar).toBeTruthy();
-    expect(bar.style.width).toBe('33.33333333333333%');
+    expect(bar.style.width).toBe('50%');
   });
 
   it('calls onComplete when "Get Started" clicked on last step', () => {
@@ -88,18 +88,18 @@ describe('OnboardingWizard', () => {
     render(React.createElement(OnboardingWizard, { flow }));
     expect(screen.getByText('Set Up Your Workspace')).toBeTruthy();
     fireEvent.click(screen.getByText('Next'));
-    expect(screen.getByText('Connect Your Tools')).toBeTruthy();
-    expect(screen.getByText('2/3')).toBeTruthy();
+    expect(screen.getByText("You're All Set")).toBeTruthy();
+    expect(screen.getByText('2/2')).toBeTruthy();
   });
 
   it('navigates back when "Back" clicked', () => {
     const flow = makeFlow();
     render(React.createElement(OnboardingWizard, { flow }));
     fireEvent.click(screen.getByText('Next'));
-    expect(screen.getByText('Connect Your Tools')).toBeTruthy();
+    expect(screen.getByText("You're All Set")).toBeTruthy();
     fireEvent.click(screen.getByText('Back'));
     expect(screen.getByText('Set Up Your Workspace')).toBeTruthy();
-    expect(screen.getByText('1/3')).toBeTruthy();
+    expect(screen.getByText('1/2')).toBeTruthy();
   });
 
   it('navigates through all steps and clicks "Get Started" on last', () => {
@@ -108,11 +108,8 @@ describe('OnboardingWizard', () => {
     render(React.createElement(OnboardingWizard, { flow }));
     // Step 1 -> Step 2
     fireEvent.click(screen.getByText('Next'));
-    expect(screen.getByText('Connect Your Tools')).toBeTruthy();
-    // Step 2 -> Step 3
-    fireEvent.click(screen.getByText('Next'));
     expect(screen.getByText("You're All Set")).toBeTruthy();
-    // Step 3: click Get Started
+    // Step 2: click Get Started
     fireEvent.click(screen.getByText('Get Started'));
     expect(onComplete).toHaveBeenCalledTimes(1);
   });

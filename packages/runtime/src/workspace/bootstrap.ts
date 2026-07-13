@@ -23,23 +23,32 @@ export class WorkspaceBootstrapError extends Error {
 }
 
 function resolveDirectoryPaths(workspaceRoot: string, layout: WorkspaceLayout): string[] {
-  const dirs: string[] = [];
+  return layout.directories.map((dir) => path.join(workspaceRoot, dir.path));
+}
 
-  for (const dir of layout.rootDirectories) {
-    dirs.push(path.join(workspaceRoot, dir.path));
-  }
-
-  for (const [, dirPath] of Object.entries(layout.commandCenter.subdirectories)) {
-    dirs.push(path.join(workspaceRoot, dirPath));
-  }
-
-  return dirs;
+function resolveSeedFiles(
+  workspaceRoot: string,
+  layout: WorkspaceLayout
+): Array<{ path: string; defaultContent: string }> {
+  return layout.seedFiles.map((file) => ({
+    path: path.join(workspaceRoot, file.path),
+    defaultContent: file.defaultContent,
+  }));
 }
 
 async function directoryExists(dirPath: string): Promise<boolean> {
   try {
     const stat = await fs.stat(dirPath);
     return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.isFile();
   } catch {
     return false;
   }
@@ -68,26 +77,37 @@ async function validateWorkspaceRoot(workspaceRoot: string): Promise<void> {
 }
 
 function buildWorkspaceLayout(workspaceRoot: string, layout: WorkspaceLayout): WorkspaceLayout {
-  const rootDirectories = layout.rootDirectories.map((dir) => ({
-    ...dir,
-    path: path.join(workspaceRoot, dir.path),
-  }));
-
-  const subdirectories: Record<string, string> = {};
-  for (const [key, dirPath] of Object.entries(layout.commandCenter.subdirectories)) {
-    subdirectories[key] = path.join(workspaceRoot, dirPath);
-  }
-
   return {
     ...layout,
-    rootDirectories,
-    commandCenter: {
-      ...layout.commandCenter,
-      subdirectories,
-    },
-  }
+    directories: layout.directories.map((dir) => ({
+      ...dir,
+      path: path.join(workspaceRoot, dir.path),
+    })),
+    seedFiles: layout.seedFiles.map((file) => ({
+      ...file,
+      path: path.join(workspaceRoot, file.path),
+    })),
+  };
 }
 
+function toBootstrapError(error: unknown, subject: string): WorkspaceBootstrapError {
+  if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
+    return new WorkspaceBootstrapError(`Permission denied: ${subject}`, 'permission-denied');
+  }
+  return new WorkspaceBootstrapError(
+    `${subject}: ${(error as Error).message}`,
+    'unknown'
+  );
+}
+
+/**
+ * Create or repair the workspace v2 layout under `workspaceRoot`:
+ * `projects/`, `groups/templates/`, and seed `harnesses.json` / `settings.json`.
+ *
+ * Strictly additive: existing files are never overwritten and unknown
+ * directories (including aggregator-era v1 layout dirs) are ignored, never
+ * removed. Re-running on a complete workspace is a no-op (`created: false`).
+ */
 export async function bootstrapWorkspace(
   workspaceRoot: string,
   options: { create?: boolean } = {}
@@ -98,79 +118,84 @@ export async function bootstrapWorkspace(
     try {
       await createDirectory(workspaceRoot);
     } catch (error: unknown) {
-      if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
-        throw new WorkspaceBootstrapError(
-          `Permission denied creating workspace root: ${workspaceRoot}`,
-          'permission-denied'
-        );
-      }
-      throw new WorkspaceBootstrapError(
-        `Failed to create workspace root: ${(error as Error).message}`,
-        'unknown'
-      );
+      throw toBootstrapError(error, `creating workspace root ${workspaceRoot}`);
     }
   } else {
     await validateWorkspaceRoot(workspaceRoot);
   }
 
-  const targetDirs = resolveDirectoryPaths(workspaceRoot, layout);
   const missingDirectories: string[] = [];
-  const createdDirs: string[] = [];
+  let createdAnything = false;
 
-  for (const dirPath of targetDirs) {
+  for (const dirPath of resolveDirectoryPaths(workspaceRoot, layout)) {
     const exists = await directoryExists(dirPath);
     if (!exists) {
       try {
         await createDirectory(dirPath);
-        createdDirs.push(dirPath);
+        createdAnything = true;
       } catch (error: unknown) {
         missingDirectories.push(dirPath);
-        if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
-          throw new WorkspaceBootstrapError(
-            `Permission denied creating directory: ${dirPath}`,
-            'permission-denied'
-          );
-        }
-        throw new WorkspaceBootstrapError(
-          `Failed to create directory ${dirPath}: ${(error as Error).message}`,
-          'unknown'
-        );
+        throw toBootstrapError(error, `creating directory ${dirPath}`);
       }
     }
   }
 
-  const resolvedLayout = buildWorkspaceLayout(workspaceRoot, layout);
-
-  return {
-    workspaceRoot: {
-      path: workspaceRoot,
-      layout: resolvedLayout,
-      createdAt: new Date().toISOString(),
-      lastAccessedAt: new Date().toISOString(),
-    },
-    created: createdDirs.length > 0,
-    missingDirectories,
-  };
-}
-
-export async function validateWorkspace(
-  workspaceRoot: string
-): Promise<{ valid: boolean; missingDirectories: string[] }> {
-  await validateWorkspaceRoot(workspaceRoot);
-
-  const layout = defaultWorkspaceLayout;
-  const targetDirs = resolveDirectoryPaths(workspaceRoot, layout);
-  const missingDirectories: string[] = [];
-
-  for (const dirPath of targetDirs) {
-    const exists = await directoryExists(dirPath);
+  for (const seedFile of resolveSeedFiles(workspaceRoot, layout)) {
+    const exists = await fileExists(seedFile.path);
     if (!exists) {
-      missingDirectories.push(dirPath);
+      try {
+        // 'wx' guards against clobbering a file created between check and write.
+        await fs.writeFile(seedFile.path, seedFile.defaultContent, { encoding: 'utf8', flag: 'wx' });
+        createdAnything = true;
+      } catch (error: unknown) {
+        if (error instanceof Error && 'code' in error && error.code === 'EEXIST') {
+          continue;
+        }
+        throw toBootstrapError(error, `creating seed file ${seedFile.path}`);
+      }
     }
   }
 
   return {
-    valid: missingDirectories.length === 0,
+    workspaceRoot: {
+      path: workspaceRoot,
+      layout: buildWorkspaceLayout(workspaceRoot, layout),
+      createdAt: new Date().toISOString(),
+      lastAccessedAt: new Date().toISOString(),
+    },
+    created: createdAnything,
     missingDirectories,
+  };
+}
+
+/**
+ * Report which v2 layout directories and seed files are absent without
+ * creating anything.
+ */
+export async function validateWorkspace(
+  workspaceRoot: string
+): Promise<{ valid: boolean; missingDirectories: string[]; missingFiles: string[] }> {
+  await validateWorkspaceRoot(workspaceRoot);
+
+  const layout = defaultWorkspaceLayout;
+  const missingDirectories: string[] = [];
+  const missingFiles: string[] = [];
+
+  for (const dirPath of resolveDirectoryPaths(workspaceRoot, layout)) {
+    if (!(await directoryExists(dirPath))) {
+      missingDirectories.push(dirPath);
+    }
+  }
+
+  for (const seedFile of resolveSeedFiles(workspaceRoot, layout)) {
+    if (!(await fileExists(seedFile.path))) {
+      missingFiles.push(seedFile.path);
+    }
+  }
+
+  return {
+    valid: missingDirectories.length === 0 && missingFiles.length === 0,
+    missingDirectories,
+    missingFiles,
   };
 }

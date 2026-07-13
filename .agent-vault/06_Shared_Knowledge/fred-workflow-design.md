@@ -1,3 +1,14 @@
+---
+note_type: shared_knowledge
+title: Fred Premium Workflow Design
+created: '2026-04-16'
+updated: '2026-07-12'
+tags:
+  - architecture
+  - fred
+  - premium
+---
+
 # Fred Premium Workflow Design
 
 ## Overview
@@ -5,6 +16,7 @@
 This document describes the design for premium workflows orchestrated by Fred, the optional AI orchestration layer. It covers what premium workflows are, how Fred executes them, how results flow back to the base product without creating coupling, and the integration points with base product features.
 
 For the underlying architecture and data minimization rules, see [fred-architecture](./fred-architecture.md) and STEP-10-02. For the entitlement framework that gates access to premium features, see STEP-10-01 and its entitlement table.
+> **Historical (aggregator era, 2026-07-12)**: Fred and the premium workflow layer belong to the retired aggregator product line, superseded for product surface by [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009]] ([[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]]). No fred/entitlements packages exist in the repo; kept as a design record.
 
 ## What Are Premium Workflows
 

@@ -19,23 +19,8 @@ const ipcChannels = {
   workspaceSetRoot: 'workspace:set-root',
   workspaceChooseRoot: 'workspace:choose-root',
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
-  connectorList: 'connector:list',
-  connectorStatus: 'connector:status',
-  connectorInstall: 'connector:install',
-  connectorUninstall: 'connector:uninstall',
-  connectorConnect: 'connector:connect',
-  connectorDisconnect: 'connector:disconnect',
-  connectorPackageInstall: 'connector:package:install',
-  connectorPackageInspect: 'connector:package:inspect',
-  connectorPackageList: 'connector:package:list',
-  connectorPackageUninstall: 'connector:package:uninstall',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
-  skillList: 'skill:list',
-  skillRun: 'skill:run',
-  skillCancel: 'skill:cancel',
-  approvalRequest: 'approval:request',
-  approvalResolve: 'approval:resolve',
   terminalSpawn: 'terminal:spawn',
   terminalWrite: 'terminal:write',
   terminalResize: 'terminal:resize',
@@ -44,12 +29,6 @@ const ipcChannels = {
   terminalLaunchWithContext: 'terminal:launch-with-context',
   launchApprovalRequired: 'launch:approval-required',
   launchApprovalResolve: 'launch:approval-resolve',
-  runHistoryList: 'run-history:list',
-  runHistoryGet: 'run-history:get',
-  runLogSave: 'run-log:save',
-  entitiesList: 'entities:list',
-  briefingSave: 'briefing:save',
-  briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
   notesListDir: 'notes:list-dir',
   notesReadFile: 'notes:read-file',
@@ -71,20 +50,6 @@ const ipcChannels = {
   semanticSearchStatus: 'semantic-search:status',
 } as const;
 
-export interface DesktopConnectorState {
-  id: 'jira' | 'outlook' | 'teams';
-  name: string;
-  description: string;
-  provider: string;
-  version: string;
-  installed: boolean;
-  available: boolean;
-  status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'refreshing';
-  lastSyncAt?: string;
-  lastError?: string;
-  entityCounts?: Record<string, number>;
-}
-
 const api = {
   checkForUpdates: (): Promise<UpdateCheckResponse> => ipcRenderer.invoke(ipcChannels.appCheckForUpdates),
 
@@ -92,12 +57,6 @@ const api = {
   setWorkspaceRoot: (root: string): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceSetRoot, root),
   chooseWorkspaceRoot: (): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceChooseRoot),
   createDefaultWorkspaceRoot: (): Promise<string> => ipcRenderer.invoke(ipcChannels.workspaceCreateDefaultRoot),
-
-  listConnectors: (): Promise<{ connectors: DesktopConnectorState[] }> => ipcRenderer.invoke(ipcChannels.connectorList),
-  installConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorInstall, id),
-  uninstallConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorUninstall, id),
-  connectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorConnect, id),
-  disconnectConnector: (id: string): Promise<DesktopConnectorState> => ipcRenderer.invoke(ipcChannels.connectorDisconnect, id),
 
   getDesktopSettings: (): Promise<DesktopSettingsResponse> => ipcRenderer.invoke(ipcChannels.settingsGet),
   saveDesktopSettings: (settings: DesktopSettings): Promise<DesktopSettingsResponse> => ipcRenderer.invoke(ipcChannels.settingsSave, settings),
@@ -131,11 +90,6 @@ const api = {
     ipcRenderer.on('terminal:exit', handler);
     return () => ipcRenderer.removeListener('terminal:exit', handler);
   },
-
-  saveBriefing: (request: { content: string; metadata: { id: string; runId: string; generatedAt: string; sources: Record<string, string> } }): Promise<{ path: string }> =>
-    ipcRenderer.invoke(ipcChannels.briefingSave, request),
-  listBriefings: (): Promise<{ briefings: { id: string; path: string; generatedAt: string }[] }> =>
-    ipcRenderer.invoke(ipcChannels.briefingList),
 
   writeDiagnosticCrashLog: (): Promise<{ directory: string }> => ipcRenderer.invoke(ipcChannels.crashWriteTestLog),
 

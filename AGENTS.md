@@ -1,5 +1,7 @@
 # AGENTS
 
+srgnt is a **desktop command center for CLI coding agents over the Agent Client Protocol (ACP)**. Before assuming anything about the product, read `DEC-0017` (the 2026-07-10 pivot decision) and `ARCH-0009` (`.agent-vault/01_Architecture/ACP_Command_Center_Target_Architecture.md`). The aggregator-era product (connectors, Today/Calendar views, connector CLI) is retired; notes describing it are historical.
+
 > Pi workflow note: shared Pi team templates are maintained globally in `~/.pi/` only. See `docs/pi-teams.md` for the current review/bugfix orchestration workflow.
 
 <!-- agent-vault:start -->

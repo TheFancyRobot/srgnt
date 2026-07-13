@@ -1,7 +1,5 @@
-import { Schema } from "@effect/schema";
-import { PositiveInt, SemVerString, UrlString } from '../shared-schemas.js';
-import { SConnectorLifecycleState } from '../connectors/package-runtime.js';
-import { SConnectorPackageRegistry } from '../connectors/package-registry.js';
+import { Schema } from "effect";
+import { PositiveInt } from '../shared-schemas.js';
 import { SLaunchContext } from '../entities/launch.js';
 
 export const ipcChannels = {
@@ -12,23 +10,8 @@ export const ipcChannels = {
   workspaceSetRoot: 'workspace:set-root',
   workspaceChooseRoot: 'workspace:choose-root',
   workspaceCreateDefaultRoot: 'workspace:create-default-root',
-  connectorList: 'connector:list',
-  connectorStatus: 'connector:status',
-  connectorInstall: 'connector:install',
-  connectorUninstall: 'connector:uninstall',
-  connectorConnect: 'connector:connect',
-  connectorDisconnect: 'connector:disconnect',
-  connectorPackageInstall: 'connector:package:install',
-  connectorPackageInspect: 'connector:package:inspect',
-  connectorPackageList: 'connector:package:list',
-  connectorPackageUninstall: 'connector:package:uninstall',
   settingsGet: 'settings:get',
   settingsSave: 'settings:save',
-  skillList: 'skill:list',
-  skillRun: 'skill:run',
-  skillCancel: 'skill:cancel',
-  approvalRequest: 'approval:request',
-  approvalResolve: 'approval:resolve',
   terminalSpawn: 'terminal:spawn',
   terminalWrite: 'terminal:write',
   terminalResize: 'terminal:resize',
@@ -37,12 +20,6 @@ export const ipcChannels = {
   terminalLaunchWithContext: 'terminal:launch-with-context',
   launchApprovalRequired: 'launch:approval-required',
   launchApprovalResolve: 'launch:approval-resolve',
-  runHistoryList: 'run-history:list',
-  runHistoryGet: 'run-history:get',
-  runLogSave: 'run-log:save',
-  entitiesList: 'entities:list',
-  briefingSave: 'briefing:save',
-  briefingList: 'briefing:list',
   crashWriteTestLog: 'crash:write-test-log',
   notesListDir: 'notes:list-dir',
   notesReadFile: 'notes:read-file',
@@ -72,9 +49,6 @@ export const SIpcChannel = Schema.Literal(
   ...ipcChannelValues
 );
 export type IpcChannel = Schema.Schema.Type<typeof SIpcChannel>;
-
-export const SConnectorId = Schema.String.pipe(Schema.pattern(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/));
-export type ConnectorId = Schema.Schema.Type<typeof SConnectorId>;
 
 export const SIpcRequest = Schema.Struct({
   channel: SIpcChannel,
@@ -107,17 +81,6 @@ export type DesktopTheme = Schema.Schema.Type<typeof SDesktopTheme>;
 export const SUpdateChannel = Schema.Literal('stable', 'beta', 'nightly');
 export type UpdateChannel = Schema.Schema.Type<typeof SUpdateChannel>;
 
-export const SDesktopConnectorPreferences = Schema.Struct({
-  installedConnectorIds: Schema.optionalWith(
-    Schema.Array(SConnectorId),
-    { default: () => [] as readonly string[] },
-  ),
-  installedPackages: Schema.optionalWith(SConnectorPackageRegistry, {
-    default: () => ({ packages: [] }),
-  }),
-});
-export type DesktopConnectorPreferences = Schema.Schema.Type<typeof SDesktopConnectorPreferences>;
-
 export const SLayoutPreferences = Schema.Struct({
   sidebarWidth: Schema.Number,
   sidebarCollapsed: Schema.Boolean,
@@ -129,7 +92,6 @@ export const SDesktopSettings = Schema.Struct({
   updateChannel: SUpdateChannel,
   telemetryEnabled: Schema.Boolean,
   crashReportsEnabled: Schema.Boolean,
-  connectors: SDesktopConnectorPreferences,
   debugMode: Schema.Boolean,
   maxConcurrentRuns: Schema.Literal('1', '3', '5'),
   layout: Schema.optionalWith(SLayoutPreferences, {
@@ -152,93 +114,6 @@ export const SUpdateCheckResponse = Schema.Struct({
   version: Schema.optional(Schema.String),
 });
 export type UpdateCheckResponse = Schema.Schema.Type<typeof SUpdateCheckResponse>;
-
-export const SConnectorListEntry = Schema.Struct({
-  id: Schema.String,
-  name: Schema.String,
-  status: Schema.String,
-  installed: Schema.optionalWith(Schema.Boolean, { default: () => false }),
-  available: Schema.optionalWith(Schema.Boolean, { default: () => true }),
-  description: Schema.optional(Schema.String),
-  provider: Schema.optional(Schema.String),
-  version: Schema.optional(Schema.String),
-});
-
-export const SConnectorListResponse = Schema.Struct({
-  connectors: Schema.Array(SConnectorListEntry),
-});
-export type ConnectorListResponse = Schema.Schema.Type<typeof SConnectorListResponse>;
-
-// CLI package lifecycle request/response types (IPC channel payloads)
-
-export const SConnectorPackageInstallRequest = Schema.Struct({
-  connectorId: Schema.String,
-  sourceUrl: UrlString,
-  checksum: Schema.optional(Schema.String),
-});
-export type ConnectorPackageInstallRequest = Schema.Schema.Type<typeof SConnectorPackageInstallRequest>;
-
-// CLI package inspect response (safe for logs/reports — no secrets)
-export const SConnectorPackageInspectResponse = Schema.Struct({
-  packageId: Schema.String,
-  connectorId: Schema.String,
-  packageVersion: SemVerString,
-  sdkVersion: SemVerString,
-  minHostVersion: SemVerString,
-  sourceUrl: UrlString,
-  installedAt: Schema.String,
-  verificationStatus: Schema.Literal('unverified', 'verified', 'failed'),
-  lifecycleState: SConnectorLifecycleState,
-  lastError: Schema.optional(Schema.String),
-  executionModel: Schema.Literal('worker', 'subprocess'),
-});
-export type ConnectorPackageInspectResponse = Schema.Schema.Type<typeof SConnectorPackageInspectResponse>;
-
-// CLI list response
-export const SConnectorPackageListResponse = Schema.Struct({
-  packages: Schema.Array(SConnectorPackageInspectResponse),
-});
-export type ConnectorPackageListResponse = Schema.Schema.Type<typeof SConnectorPackageListResponse>;
-
-export const SSkillListEntry = Schema.Struct({
-  name: Schema.String,
-  version: Schema.String,
-});
-
-export const SSkillListResponse = Schema.Struct({
-  skills: Schema.Array(SSkillListEntry),
-});
-export type SkillListResponse = Schema.Schema.Type<typeof SSkillListResponse>;
-
-export const SSkillRunRequest = Schema.Struct({
-  skillName: Schema.String,
-  skillVersion: Schema.String,
-  parameters: Schema.optionalWith(Schema.Record({ key: Schema.String, value: Schema.Unknown }), {
-    default: () => ({}),
-  }),
-});
-export type SkillRunRequest = Schema.Schema.Type<typeof SSkillRunRequest>;
-
-export const SSkillRunResponse = Schema.Struct({
-  runId: Schema.String,
-  status: Schema.String,
-});
-export type SkillRunResponse = Schema.Schema.Type<typeof SSkillRunResponse>;
-
-export const SIpcApprovalRequest = Schema.Struct({
-  id: Schema.String,
-  capability: Schema.String,
-  reason: Schema.String,
-  requestedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
-  requestedBy: Schema.String,
-});
-export type IpcApprovalRequest = Schema.Schema.Type<typeof SIpcApprovalRequest>;
-
-export const SApprovalResolveRequest = Schema.Struct({
-  id: Schema.String,
-  approved: Schema.Boolean,
-});
-export type ApprovalResolveRequest = Schema.Schema.Type<typeof SApprovalResolveRequest>;
 
 export const STerminalSpawnRequest = Schema.Struct({
   rows: Schema.optionalWith(PositiveInt, { default: () => 24 }),
@@ -296,43 +171,6 @@ export const STerminalLaunchWithContextResponse = Schema.Struct({
 });
 export type TerminalLaunchWithContextResponse = Schema.Schema.Type<typeof STerminalLaunchWithContextResponse>;
 
-export const SRunHistoryEntry = Schema.Struct({
-  id: Schema.String,
-  launchId: Schema.String,
-  command: Schema.String,
-  startTime: Schema.String.pipe(Schema.pattern(datetimePattern)),
-  endTime: Schema.optional(Schema.String.pipe(Schema.pattern(datetimePattern))),
-  exitCode: Schema.optional(Schema.Number),
-  outputSummary: Schema.String,
-  redactedFields: Schema.Array(Schema.String),
-});
-
-export const SRunHistoryListResponse = Schema.Struct({
-  runs: Schema.Array(SRunHistoryEntry),
-});
-export type RunHistoryListResponse = Schema.Schema.Type<typeof SRunHistoryListResponse>;
-
-export const SRunHistoryGetRequest = Schema.Struct({
-  launchId: Schema.String,
-});
-
-export const SRunHistoryGetResponse = Schema.Struct({
-  run: Schema.optional(SRunHistoryEntry),
-});
-export type RunHistoryGetResponse = Schema.Schema.Type<typeof SRunHistoryGetResponse>;
-
-export const SRunLogSaveRequest = Schema.Struct({
-  content: Schema.String,
-  runId: Schema.String,
-  launchId: Schema.String,
-});
-export type RunLogSaveRequest = Schema.Schema.Type<typeof SRunLogSaveRequest>;
-
-export const SRunLogSaveResponse = Schema.Struct({
-  path: Schema.String,
-});
-export type RunLogSaveResponse = Schema.Schema.Type<typeof SRunLogSaveResponse>;
-
 export const SLaunchApprovalPayload = Schema.Struct({
   approvalId: Schema.String,
   launchContext: SLaunchContext,
@@ -354,40 +192,6 @@ export const SRedactionPolicy = Schema.Struct({
   sensitiveEnvKeys: Schema.Array(Schema.String),
 });
 export type RedactionPolicySchema = Schema.Schema.Type<typeof SRedactionPolicy>;
-
-export const SEntitiesListResponse = Schema.Struct({
-  entities: Schema.Array(Schema.Unknown),
-});
-export type EntitiesListResponse = Schema.Schema.Type<typeof SEntitiesListResponse>;
-
-export const SBriefingSaveMetadata = Schema.Struct({
-  id: Schema.String,
-  runId: Schema.String,
-  generatedAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
-  sources: Schema.Record({ key: Schema.String, value: Schema.String }),
-});
-
-export const SBriefingSaveRequest = Schema.Struct({
-  content: Schema.String,
-  metadata: SBriefingSaveMetadata,
-});
-export type BriefingSaveRequest = Schema.Schema.Type<typeof SBriefingSaveRequest>;
-
-export const SBriefingSaveResponse = Schema.Struct({
-  path: Schema.String,
-});
-export type BriefingSaveResponse = Schema.Schema.Type<typeof SBriefingSaveResponse>;
-
-export const SBriefingListEntry = Schema.Struct({
-  id: Schema.String,
-  path: Schema.String,
-  generatedAt: Schema.String,
-});
-
-export const SBriefingListResponse = Schema.Struct({
-  briefings: Schema.Array(SBriefingListEntry),
-});
-export type BriefingListResponse = Schema.Schema.Type<typeof SBriefingListResponse>;
 
 // Notes IPC types
 

@@ -109,7 +109,6 @@ test('BUG-0014: rapid arrow key navigation through large document does not stack
     });
 
     // Navigate to Notes and open the large document
-    await page.getByRole('button', { name: 'Notes' }).click();
     const noteTreeItem = page.getByRole('treeitem', { name: /Your mom\.md/ });
     await expect(noteTreeItem).toBeVisible();
     await noteTreeItem.evaluate((element) => {

@@ -10,7 +10,7 @@ const { resolve } = await import('node:path');
 const normalizeEol = (raw: string): string => raw.replace(/\r\n/g, '\n');
 const preloadSource = normalizeEol(readFileSync(resolve(__dirname, '../../preload/index.ts'), 'utf-8'));
 const envSource = normalizeEol(readFileSync(resolve(__dirname, '../../renderer/env.d.ts'), 'utf-8'));
-const mainSource = normalizeEol(readFileSync(resolve(__dirname, '../index.ts'), 'utf-8'));
+const mainSource = normalizeEol(readFileSync(resolve(__dirname, '../services/semantic-search.ts'), 'utf-8'));
 
 describe('Semantic Search IPC handlers', () => {
   // -------------------------------------------------------------------------
@@ -154,27 +154,27 @@ describe('Semantic Search IPC handlers', () => {
     it('semanticSearchInit parses the init request schema and delegates to host.initialize', () => {
       expect(mainSource).toContain('ipcMain.handle(ipcChannels.semanticSearchInit');
       expect(mainSource).toContain('parseSync(SSemanticSearchInitRequest, rawRequest ?? {})');
-      expect(mainSource).toContain('await semanticSearchHost.initialize(workspaceRoot)');
+      expect(mainSource).toContain('await host.initialize(deps.getWorkspaceRoot())');
     });
 
     it('semanticSearchEnableForWorkspace parses schema and delegates to host.enableForWorkspace', () => {
       expect(mainSource).toContain('parseSync(SSemanticSearchEnableForWorkspaceRequest, rawRequest ?? {})');
-      expect(mainSource).toContain('await semanticSearchHost.enableForWorkspace(request.workspaceRoot)');
+      expect(mainSource).toContain('await host.enableForWorkspace(request.workspaceRoot)');
     });
 
     it('semanticSearchIndexWorkspace parses schema and delegates to host.indexWorkspace', () => {
       expect(mainSource).toContain('parseSync(SSemanticSearchIndexWorkspaceRequest, rawRequest ?? {})');
-      expect(mainSource).toContain('semanticSearchHost.indexWorkspace(request.workspaceRoot');
+      expect(mainSource).toContain('host.indexWorkspace(request.workspaceRoot');
     });
 
     it('semanticSearchRebuildAll parses schema and delegates to host.rebuildAll', () => {
       expect(mainSource).toContain('parseSync(SSemanticSearchRebuildAllRequest, rawRequest ?? {})');
-      expect(mainSource).toContain('semanticSearchHost.rebuildAll(request.workspaceRoot)');
+      expect(mainSource).toContain('host.rebuildAll(request.workspaceRoot)');
     });
 
     it('semanticSearchSearch parses schema and delegates to host.search', () => {
       expect(mainSource).toContain('parseSync(SSemanticSearchSearchRequest, rawRequest ?? {})');
-      expect(mainSource).toContain('const results = await semanticSearchHost.search(');
+      expect(mainSource).toContain('const results = await host.search(');
       expect(mainSource).toContain('request.query,');
       expect(mainSource).toContain('request.workspaceRoot,');
       expect(mainSource).toContain('request.maxResults,');
@@ -184,10 +184,10 @@ describe('Semantic Search IPC handlers', () => {
 
     it('semanticSearchStatus returns extended status data', () => {
       expect(mainSource).toContain('parseSync(SSemanticSearchStatusRequest, rawRequest ?? {})');
-      expect(mainSource).toContain('semanticSearchStatus.indexedFileCount');
-      expect(mainSource).toContain('semanticSearchStatus.totalChunkCount');
-      expect(mainSource).toContain('semanticSearchStatus.progressPercent');
-      expect(mainSource).toContain('semanticSearchStatus.lastIndexedAt');
+      expect(mainSource).toContain('status.indexedFileCount');
+      expect(mainSource).toContain('status.totalChunkCount');
+      expect(mainSource).toContain('status.progressPercent');
+      expect(mainSource).toContain('status.lastIndexedAt');
     });
   });
 

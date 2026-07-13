@@ -61,6 +61,7 @@ Use one note per bug in \`03_Bugs/\`. This note is the source of truth for one d
 - Package: `packages/desktop` — MarkdownEditor component and `styles.css`.
 - Lower severity than blockquotes/code blocks: horizontal rules are used less frequently.
 - Affects document structure/readability for users who rely on section breaks.
+- Related execution: [[02_Phases/Phase_14_notes_view/Phase|PHASE-14 Notes View]] (markdown editor work this bug belongs to; link added during 2026-07-10 enrichment).
 
 ## Suspected Root Cause
 

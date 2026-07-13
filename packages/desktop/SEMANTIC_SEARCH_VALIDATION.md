@@ -1,5 +1,10 @@
 # Semantic Search Validation Documentation
 
+> **Status: PARKED (Phase 21, STEP-21-03).** The embedding model is no longer bundled with the
+> packaged app (`extraResources` entry removed). The semantic search source, tests, and IPC
+> surface remain, but the runtime falls back to keyword search until a model is provisioned.
+> References below to bundled-model behavior describe the Phase 17 state and are kept as history.
+
 ## Overview
 
 This document records the test coverage, residual risks, and known limitations for the semantic search subsystem implemented in Phase 17.

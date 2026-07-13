@@ -12,6 +12,10 @@ export interface OnboardingStep {
     label: string;
     action: () => void | Promise<void>;
   };
+  secondaryAction?: {
+    label: string;
+    action: () => void | Promise<void>;
+  };
 }
 
 export interface OnboardingFlow {
@@ -24,11 +28,6 @@ const stepIcons: Record<string, React.ReactNode> = {
   workspace: (
     <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-    </svg>
-  ),
-  connectors: (
-    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
     </svg>
   ),
   ready: (
@@ -60,14 +59,14 @@ export function OnboardingWizard({ flow }: { flow: OnboardingFlow }): React.Reac
     }
   };
 
-  const handleAction = async () => {
-    if (!step.action) {
+  const runStepAction = async (action?: { action: () => void | Promise<void> }) => {
+    if (!action) {
       return;
     }
 
     setIsWorking(true);
     try {
-      await step.action.action();
+      await action.action();
     } catch {
       // Action failed — swallow so the UI still resets via finally
     } finally {
@@ -137,19 +136,31 @@ export function OnboardingWizard({ flow }: { flow: OnboardingFlow }): React.Reac
             </div>
 
             {/* Step action */}
-            {step.action && (
-              <div className="flex justify-center mb-8">
-                <button
-                  type="button"
-                  onClick={handleAction}
-                  disabled={isWorking}
-                  className="btn btn-secondary"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
-                  </svg>
-                  {isWorking ? 'Working...' : step.action.label}
-                </button>
+            {(step.action || step.secondaryAction) && (
+              <div className="flex flex-wrap justify-center gap-3 mb-8">
+                {step.action && (
+                  <button
+                    type="button"
+                    onClick={() => { void runStepAction(step.action); }}
+                    disabled={isWorking}
+                    className="btn btn-secondary"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
+                    </svg>
+                    {isWorking ? 'Working...' : step.action.label}
+                  </button>
+                )}
+                {step.secondaryAction && (
+                  <button
+                    type="button"
+                    onClick={() => { void runStepAction(step.secondaryAction); }}
+                    disabled={isWorking}
+                    className="btn btn-ghost"
+                  >
+                    {step.secondaryAction.label}
+                  </button>
+                )}
               </div>
             )}
 
@@ -212,19 +223,8 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
     },
   },
   {
-    id: 'connectors',
-    title: 'Connect Your Tools',
-    description: 'Connect Microsoft Teams, Jira, and Outlook to start aggregating your tasks, calendar, and messages into one view.',
-    action: {
-      label: 'Add Connector',
-      action: () => {
-        console.log('[onboarding] Navigate to connectors panel');
-      },
-    },
-  },
-  {
     id: 'ready',
     title: 'You\'re All Set',
-    description: 'Your daily command center is ready. srgnt will aggregate data from your connected tools each morning.',
+    description: 'Your command center is ready. Notes, Terminal, and Settings are available from the activity bar.',
   },
 ];

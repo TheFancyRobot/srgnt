@@ -1,132 +1,98 @@
 import { describe, it, expect } from 'vitest';
-import { parseSync } from '../shared-schemas.js';
+import { parseSync, safeParse } from '../shared-schemas.js';
 import {
-  SWorkspaceDirectoryType,
-  SCommandCenterSubdirectory,
   SWorkspaceLayout,
   SWorkspaceRoot,
-  SPersistenceContract,
-  SFileBackedRecord,
   defaultWorkspaceLayout,
+  workspaceDirectories,
+  workspaceFiles,
 } from './layout.js';
-
-describe('SWorkspaceDirectoryType', () => {
-  it('accepts valid directory types', () => {
-    const types = ['daily', 'projects', 'people', 'meetings', 'systems', 'dashboards', 'inbox'] as const;
-    for (const type of types) {
-      expect(() => parseSync(SWorkspaceDirectoryType, type)).not.toThrow();
-    }
-  });
-
-  it('rejects invalid directory types', () => {
-    expect(() => parseSync(SWorkspaceDirectoryType, 'invalid')).toThrow();
-  });
-});
-
-describe('SCommandCenterSubdirectory', () => {
-  it('accepts valid subdirectories', () => {
-    const subs = ['config', 'skills', 'connectors', 'state', 'logs', 'cache', 'templates'] as const;
-    for (const sub of subs) {
-      expect(() => parseSync(SCommandCenterSubdirectory, sub)).not.toThrow();
-    }
-  });
-});
 
 describe('SWorkspaceLayout', () => {
   it('validates a minimal layout', () => {
-    const layout = { version: '1.0.0' };
-    expect(() => parseSync(SWorkspaceLayout, layout)).not.toThrow();
+    const layout = parseSync(SWorkspaceLayout, { version: '2.0.0' });
+    expect(layout.directories).toEqual([]);
+    expect(layout.seedFiles).toEqual([]);
   });
 
-  it('applies defaults', () => {
-    const layout = { version: '1.0.0' };
-    const parsed = parseSync(SWorkspaceLayout, layout);
-    expect(parsed.rootDirectories).toEqual([]);
-    expect(parsed.commandCenter.root).toBe('.command-center');
+  it('rejects a non-semver version', () => {
+    expect(safeParse(SWorkspaceLayout, { version: 'two' }).success).toBe(false);
   });
 
-  it('validates the default layout', () => {
+  it('rejects directory entries without a path', () => {
+    const result = safeParse(SWorkspaceLayout, {
+      version: '2.0.0',
+      directories: [{ description: 'missing path' }],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('defaultWorkspaceLayout (workspace v2)', () => {
+  it('is a valid SWorkspaceLayout', () => {
     expect(() => parseSync(SWorkspaceLayout, defaultWorkspaceLayout)).not.toThrow();
   });
 
-  it('rejects invalid semver', () => {
-    expect(() => parseSync(SWorkspaceLayout, { version: 'invalid' })).toThrow();
+  it('declares exactly the v2 directories', () => {
+    expect(defaultWorkspaceLayout.directories.map((dir) => dir.path)).toEqual([
+      'projects',
+      'groups',
+      'groups/templates',
+    ]);
+  });
+
+  it('declares exactly the v2 seed files', () => {
+    expect(defaultWorkspaceLayout.seedFiles.map((file) => file.path)).toEqual([
+      'harnesses.json',
+      'settings.json',
+    ]);
+  });
+
+  it('contains no PARA aggregator directories', () => {
+    const paths = defaultWorkspaceLayout.directories.map((dir) => dir.path);
+    for (const legacy of ['Daily', 'Projects', 'People', 'Meetings', '.command-center']) {
+      expect(paths.some((p) => p === legacy || p.startsWith(`${legacy}/`))).toBe(false);
+    }
+  });
+
+  it('seeds harnesses.json with a valid empty harness list', () => {
+    const seed = defaultWorkspaceLayout.seedFiles.find((f) => f.path === workspaceFiles.harnesses);
+    expect(seed).toBeDefined();
+    expect(JSON.parse(seed!.defaultContent)).toEqual({ version: 1, harnesses: [] });
+  });
+
+  it('seeds settings.json with parseable JSON', () => {
+    const seed = defaultWorkspaceLayout.seedFiles.find((f) => f.path === workspaceFiles.settings);
+    expect(seed).toBeDefined();
+    expect(() => JSON.parse(seed!.defaultContent)).not.toThrow();
+  });
+
+  it('exposes canonical path constants matching the layout', () => {
+    expect(workspaceDirectories.projects).toBe('projects');
+    expect(workspaceDirectories.groupTemplates).toBe('groups/templates');
+    expect(workspaceFiles.harnesses).toBe('harnesses.json');
+    expect(workspaceFiles.settings).toBe('settings.json');
   });
 });
 
 describe('SWorkspaceRoot', () => {
-  it('validates a workspace root', () => {
+  it('round-trips a workspace root record', () => {
     const root = {
-      path: '/Users/test/workspace',
-      layout: defaultWorkspaceLayout,
-      createdAt: '2024-03-25T10:00:00Z',
-      lastAccessedAt: '2024-03-25T10:00:00Z',
+      path: '/home/user/srgnt-workspace',
+      layout: { version: '2.0.0' },
+      createdAt: '2026-07-12T00:00:00.000Z',
+      lastAccessedAt: '2026-07-12T00:00:00.000Z',
     };
     expect(() => parseSync(SWorkspaceRoot, root)).not.toThrow();
   });
-});
 
-describe('SPersistenceContract', () => {
-  it('validates json format', () => {
-    const contract = { format: 'json' as const, schema: 'Task', fileExtension: '.json' };
-    expect(() => parseSync(SPersistenceContract, contract)).not.toThrow();
-  });
-
-  it('validates yaml format', () => {
-    const contract = { format: 'yaml' as const, schema: 'Task', fileExtension: '.yaml' };
-    expect(() => parseSync(SPersistenceContract, contract)).not.toThrow();
-  });
-
-  it('validates markdown format', () => {
-    const contract = { format: 'markdown' as const, schema: 'Task', fileExtension: '.md' };
-    expect(() => parseSync(SPersistenceContract, contract)).not.toThrow();
-  });
-});
-
-describe('SFileBackedRecord', () => {
-  it('validates a minimal record', () => {
-    const record = {
-      path: 'Daily/2024-03-25.md',
-      format: 'markdown' as const,
-      schema: 'Artifact',
-      content: '# Daily Briefing',
-      lastModified: '2024-03-25T10:00:00Z',
+  it('rejects malformed timestamps', () => {
+    const root = {
+      path: '/home/user/srgnt-workspace',
+      layout: { version: '2.0.0' },
+      createdAt: 'yesterday',
+      lastAccessedAt: '2026-07-12T00:00:00.000Z',
     };
-    expect(() => parseSync(SFileBackedRecord, record)).not.toThrow();
-  });
-
-  it('validates with optional fields', () => {
-    const record = {
-      path: 'Daily/2024-03-25.md',
-      format: 'markdown' as const,
-      schema: 'Artifact',
-      content: '# Daily Briefing',
-      checksum: 'abc123',
-      lastModified: '2024-03-25T10:00:00Z',
-      metadata: { author: 'test' },
-    };
-    expect(() => parseSync(SFileBackedRecord, record)).not.toThrow();
-  });
-});
-
-describe('defaultWorkspaceLayout', () => {
-  it('has all required directory types', () => {
-    const types = defaultWorkspaceLayout.rootDirectories.map(d => d.type);
-    expect(types).toContain('daily');
-    expect(types).toContain('projects');
-    expect(types).toContain('people');
-    expect(types).toContain('meetings');
-    expect(types).toContain('systems');
-    expect(types).toContain('dashboards');
-    expect(types).toContain('inbox');
-  });
-
-  it('has all command center subdirectories', () => {
-    const cc = defaultWorkspaceLayout.commandCenter;
-    expect(cc.subdirectories.config).toBe('.command-center/config');
-    expect(cc.subdirectories.skills).toBe('.command-center/skills');
-    expect(cc.subdirectories.connectors).toBe('.command-center/connectors');
-    expect(cc.subdirectories.state).toBe('.command-center/state');
-    expect(cc.subdirectories.logs).toBe('.command-center/logs');
+    expect(safeParse(SWorkspaceRoot, root).success).toBe(false);
   });
 });

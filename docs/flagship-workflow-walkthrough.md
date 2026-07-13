@@ -1,5 +1,7 @@
 # Flagship Workflow E2E Walkthrough
 
+> **HISTORICAL (aggregator era).** This walkthrough describes the retired daily-briefing product flow. The connector/Today/Calendar surfaces it exercises were removed in Phase 21 after the ACP pivot (`DEC-0017`, `ARCH-0009`). Kept for historical reference only — none of these steps work against the current codebase.
+
 **Phase**: PHASE-05 Flagship Workflow
 **Step**: STEP-05-04 Compose End To End Command Center Workflow
 **Date**: 2026-03-27

@@ -14,16 +14,13 @@ test('shows onboarding on first launch and boots into the command center', async
   await expect(page.getByRole('heading', { name: 'Create Your Workspace' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Skip setup' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByRole('heading', { name: 'Know What Connects First' })).toBeVisible();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByRole('heading', { name: "You're All Set" })).toBeVisible();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
-  await expect(page.getByRole('button', { name: 'Daily Dashboard' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('heading', { name: 'Priorities' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Attention Needed' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Notes', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
 
   const appState = await electronApp.evaluate(async ({ app }) => ({
     isPackaged: app.isPackaged,
@@ -34,47 +31,13 @@ test('shows onboarding on first launch and boots into the command center', async
   expect(appState.userDataPath).toBe(userDataDir);
 });
 
-test('navigates across key surfaces and updates connector status', async ({ window: page }) => {
+test('navigates across key surfaces', async ({ window: page }) => {
   await completeOnboarding(page);
 
-  await page.getByRole('button', { name: 'Calendar' }).click();
-  await expect(page.locator('main h1').filter({ hasText: 'Calendar' })).toBeVisible();
-  await page.getByRole('button', { name: /Sprint Planning/ }).first().click();
-  await expect(page.getByRole('heading', { name: 'Event Detail' })).toBeVisible();
-  await expect(page.getByText('Prep Notes')).toBeVisible();
-
-  await page.getByRole('button', { name: 'Connectors' }).click();
-  await expect(page.locator('main h1').filter({ hasText: 'Connectors' })).toBeVisible();
-
-  // Fresh workspace: all connectors are available but NOT installed
-  await expect(page.getByRole('button', { name: 'Install Jira' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Install Outlook Calendar' })).toBeVisible();
-
-  // Install Jira before connecting (install-before-use enforced)
-  await page.getByRole('button', { name: 'Install Jira' }).click();
-  await expect(page.getByRole('button', { name: 'Connect Jira' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Uninstall Jira' })).toBeVisible();
-
-  // Connect Jira
-  await page.getByRole('button', { name: 'Connect Jira' }).click();
-  await expect(page.getByRole('button', { name: 'Disconnect Jira' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Uninstall Jira' })).toBeVisible();
-
-  // Disconnect Jira
-  await page.getByRole('button', { name: 'Disconnect Jira' }).click();
-  await expect(page.getByRole('button', { name: 'Connect Jira' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Uninstall Jira' })).toBeVisible();
-
-  // Uninstall Jira
-  await page.getByRole('button', { name: 'Uninstall Jira' }).click();
-  await expect(page.getByRole('button', { name: 'Install Jira' })).toBeVisible();
-  // Outlook and Teams remain uninstalled
-  await expect(page.getByRole('button', { name: 'Install Outlook Calendar' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Install Microsoft Teams' })).toBeVisible();
-
-  await page.getByRole('button', { name: 'Notes', exact: true }).click();
+  // Onboarding lands on Notes with the Explorer side panel expanded
   await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
 
+  // Clicking the active panel toggles the side panel collapsed state
   await page.getByRole('button', { name: 'Notes', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Side panel' })).toHaveAttribute('data-collapsed', 'true');
   await page.getByRole('button', { name: 'Expand side panel' }).click();
@@ -148,7 +111,7 @@ test('persists settings and writes redacted crash diagnostics', async ({ userDat
   expect(saved.settings.telemetryEnabled).toBe(true);
   expect(saved.updateStatus).toBe('skipped');
 
-  const settingsPath = path.join(saved.workspaceRoot, '.command-center', 'config', 'desktop-settings.json');
+  const settingsPath = path.join(saved.workspaceRoot, 'settings.json');
   const settingsContent = await fs.readFile(settingsPath, 'utf8');
   expect(settingsContent).toContain('"theme": "dark"');
   expect(settingsContent).toContain('"updateChannel": "beta"');
@@ -168,25 +131,10 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
 
   const result = await page.evaluate(async () => {
     const generatedAt = new Date('2026-03-28T12:00:00.000Z').toISOString();
-    const saveResult = await window.srgnt.saveBriefing({
-      content: '# E2E Briefing\n\n- Confirm preload to main persistence.\n',
-      metadata: {
-        id: 'e2e-briefing',
-        runId: 'run-e2e',
-        generatedAt,
-        sources: {
-          jira: 'fixtures',
-          outlook: 'fixtures',
-          teams: 'fixtures',
-        },
-      },
-    });
-
-    const briefings = await window.srgnt.listBriefings();
     const launch = await window.srgnt.terminalLaunchWithContext({
       launchContext: {
         launchId: 'e2e-launch',
-        sourceWorkflow: 'daily-briefing',
+        sourceWorkflow: 'e2e-suite',
         sourceArtifactId: 'SRGNT-142',
         workingDirectory: '/',
         intent: 'readOnly',
@@ -200,8 +148,6 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
     await window.srgnt.terminalClose(launch.sessionId);
 
     return {
-      briefingPath: saveResult.path,
-      briefingIds: briefings.briefings.map((briefing) => briefing.id),
       launch,
       sessionIds: sessions.sessions.map((session) => session.id),
       workspaceRoot: await window.srgnt.getWorkspaceRoot(),
@@ -214,14 +160,12 @@ test('exercises preload APIs for persistence, PTY launch, and renderer security'
   expect(result.hasApi).toBe(true);
   expect(result.hasProcess).toBe(false);
   expect(result.hasRequire).toBe(false);
-  expect(result.briefingIds).toContain('e2e-briefing');
   expect(result.launch.launchId).toBe('e2e-launch');
   expect(result.sessionIds).toContain(result.launch.sessionId);
-  expect(result.briefingPath.startsWith(path.join(result.workspaceRoot, '.command-center', 'artifacts'))).toBe(true);
 
-  const content = await fs.readFile(result.briefingPath, 'utf8');
-  expect(content).toContain('# E2E Briefing');
-  expect(content).toContain('Confirm preload to main persistence.');
+  const runLogDir = path.join(result.workspaceRoot, '.command-center', 'runs');
+  const runLogFiles = await fs.readdir(runLogDir);
+  expect(runLogFiles.some((file) => file.endsWith('.md'))).toBe(true);
 });
 
 test('Tab key indents the current line in the notes editor', async ({ userDataDir, window: page }) => {
@@ -231,8 +175,7 @@ test('Tab key indents the current line in the notes editor', async ({ userDataDi
   await fs.writeFile(path.join(notesDir, 'Tab Test.md'), 'hello world\n', 'utf8');
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -240,7 +183,6 @@ test('Tab key indents the current line in the notes editor', async ({ userDataDi
   await page.reload();
   await waitForDesktopReady(page);
 
-  await page.getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('treeitem', { name: /Tab Test\.md/ }).click();
   await expect(page.getByRole('heading', { name: 'Tab Test.md' })).toBeVisible();
 
@@ -272,8 +214,7 @@ test('notes editor defaults to active-line editing and supports fully rendered m
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -284,7 +225,6 @@ test('notes editor defaults to active-line editing and supports fully rendered m
   await page.reload();
   await waitForDesktopReady(page);
 
-  await page.getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('treeitem', { name: /Live Preview\.md/ }).click();
   await expect(page.getByRole('heading', { name: 'Live Preview.md' })).toBeVisible();
   
@@ -385,8 +325,7 @@ test('notes editor arrow-key navigation does not trigger recursive inline coordi
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -407,7 +346,6 @@ test('notes editor arrow-key navigation does not trigger recursive inline coordi
     rendererErrors.push(String(error));
   });
 
-  await page.getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('treeitem', { name: /Arrow Navigation\.md/ }).click();
   await expect(page.getByRole('heading', { name: 'Arrow Navigation.md' })).toBeVisible();
 
@@ -437,8 +375,7 @@ test('notes editor styles indented and fenced code blocks as code containers', a
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -449,7 +386,6 @@ test('notes editor styles indented and fenced code blocks as code containers', a
   await page.reload();
   await waitForDesktopReady(page);
 
-  await page.getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('treeitem', { name: /Code Blocks\.md/ }).click();
   await expect(page.getByRole('heading', { name: 'Code Blocks.md' })).toBeVisible();
 
@@ -512,8 +448,7 @@ test('creates a note, types content, verifies autosave, reopens and confirms per
   await fs.mkdir(notesDir, { recursive: true });
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -522,7 +457,6 @@ test('creates a note, types content, verifies autosave, reopens and confirms per
   await waitForDesktopReady(page);
 
   // Open Notes panel
-  await page.getByRole('button', { name: 'Notes' }).click();
   await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
 
   // Create a new note (the button opens an inline input)
@@ -568,8 +502,7 @@ test('slash command inserts valid markdown', async ({ userDataDir, window: page 
   await fs.writeFile(path.join(notesDir, 'Slash Test.md'), '', 'utf8');
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -577,7 +510,6 @@ test('slash command inserts valid markdown', async ({ userDataDir, window: page 
   await page.reload();
   await waitForDesktopReady(page);
 
-  await page.getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('treeitem', { name: /Slash Test\.md/ }).click();
   await expect(page.getByRole('heading', { name: 'Slash Test.md' })).toBeVisible();
 
@@ -616,8 +548,7 @@ test('wikilink navigation works: insert link, click, navigate, return', async ({
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -625,7 +556,6 @@ test('wikilink navigation works: insert link, click, navigate, return', async ({
   await page.reload();
   await waitForDesktopReady(page);
 
-  await page.getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('treeitem', { name: /Source\.md/ }).click();
   await expect(page.getByRole('heading', { name: 'Source.md' })).toBeVisible();
 
@@ -660,8 +590,7 @@ test('search finds content and opens result', async ({ userDataDir, window: page
   );
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -669,7 +598,6 @@ test('search finds content and opens result', async ({ userDataDir, window: page
   await page.reload();
   await waitForDesktopReady(page);
 
-  await page.getByRole('button', { name: 'Notes' }).click();
 
   // Type a search query
   const searchInput = page.getByPlaceholder('Search notes...');
@@ -699,8 +627,7 @@ test('notes editor renders horizontal rules as visible separators', async ({ use
   await fs.writeFile(path.join(notesDir, 'Horizontal Rule.md'), 'Above\n\n----\n\nBelow\n', 'utf8');
 
   await waitForDesktopReady(page);
-  await page.getByRole('button', { name: 'Create Workspace' }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Use Default Location' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Get Started' }).click();
 
@@ -711,7 +638,6 @@ test('notes editor renders horizontal rules as visible separators', async ({ use
   await page.reload();
   await waitForDesktopReady(page);
 
-  await page.getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('treeitem', { name: /Horizontal Rule\.md/ }).click();
   await expect(page.getByRole('heading', { name: 'Horizontal Rule.md' })).toBeVisible();
 

@@ -40,6 +40,21 @@ This roadmap tracks the product build plan for `srgnt`, using `[[06_Shared_Knowl
 | Phase 10 Premium Fred Preparation | partial | Define entitlements and premium AI boundaries without coupling the base product to Fred |
 
 Status legend: `completed` = acceptance is met; `partial` = meaningful implementation exists but key acceptance gaps remain; `scaffolded` = contracts or shells exist without the promised end-to-end behavior.
+### Direction pivot — ACP coding-agent command center (2026-07-10)
+
+Per [[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]], srgnt pivots to a desktop GUI for CLI coding-agent harnesses over the Agent Client Protocol. The aggregator concept moves to an external collaboration project; phases 00–20 above are historical record, and their unfinished backlog is void. The build plan is now phases 21–29:
+
+| Phase | Status | Goal |
+| --- | --- | --- |
+| [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase\|Phase 21 Pivot Groundwork and Aggregator Teardown]] | planned | Land housekeeping, tag `v0-aggregator-final`, delete aggregator packages/UI, workspace v2 + contracts v2 foundations, re-point docs and vault |
+| [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase\|Phase 22 ACP Core Package and Pi Integration Spike]] | planned | `@srgnt/harness` (SDK wrapper, supervisor, registry), mock ACP agent, real-Pi round-trip, pi-acp adapter decision gate |
+| [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase\|Phase 23 Chat UI v1 Over Ephemeral ACP Sessions]] | planned | Streaming chat surface, tool-call cards with diff/terminal embeds, default-ask permissions, composer with slash/modes, mock-agent E2E |
+| [[02_Phases/Phase_24_projects_and_session_persistence/Phase\|Phase 24 Projects and Session Persistence]] | planned | JSONL event-log persistence, projects, session lists, honest resume (load/resume vs read-only + fork), lifecycle cleanup |
+| [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase\|Phase 25 Opencode Integration and Harness Settings]] | planned | Second harness via `opencode acp`, harness settings UI, capability matrix, lessons-learned for generic support |
+| [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase\|Phase 26 Generic Harness Support and Conformance]] | planned | Custom harness editor, conformance smoke-runner, ACP Registry catalog with snapshot fallback, third-party docs |
+| [[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase\|Phase 27 Groups v1 Multi-Harness Sessions and Bus]] | planned | Group sessions, three-tier bus (MCP server → nudges → mailbox), bus timeline, shared notes + optional memsearch, attach-group escalation |
+| [[02_Phases/Phase_28_reusable_group_pipelines/Phase\|Phase 28 Reusable Group Pipelines]] | planned | GroupTemplate/Pipeline schemas, deterministic runner with gates and loop-backs, GroupBoard, built-in implement→review→QA→iterate template |
+| [[02_Phases/Phase_29_polish_packaging_and_release/Phase\|Phase 29 Polish Packaging and Release]] | planned | Onboarding rewrite, perf, packaging matrix, docs/license, release checklist; stretch: transcript/notes semantic search |
 
 ## Near-Term Outcomes
 

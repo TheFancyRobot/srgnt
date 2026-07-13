@@ -3,14 +3,14 @@ note_type: architecture
 template_version: 2
 contract_version: 1
 title: Domain Model
-architecture_id: "ARCH-0004"
+architecture_id: ARCH-0004
 status: active
-owner: ""
-reviewed_on: "2026-03-20"
-created: "2026-03-20"
-updated: "2026-03-22"
+owner: ''
+reviewed_on: '2026-07-12'
+created: '2026-03-20'
+updated: '2026-03-22'
 related_notes:
-  - "[[01_Architecture/System_Overview|System Overview]]"
+  - '[[01_Architecture/System_Overview|System Overview]]'
 tags:
   - agent-vault
   - architecture
@@ -21,6 +21,7 @@ tags:
 ## Purpose
 
 - Describe the core domain concepts, their relationships, and the vocabulary used across the codebase.
+- **Superseded for product surface (2026-07-12)**: the aggregator domain vocabulary (`Connector`, `CanonicalEntity`, `Skill`, `SyncPayload`, `Entitlement`, ...) is historical per [[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]]. The post-pivot domain (Project, Session, SessionEvent, HarnessDefinition, GroupTemplate/Pipeline) is defined in [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009]] and implemented as contracts v2 in `packages/contracts/src/`.
 
 ## Overview
 

@@ -30,6 +30,7 @@ reviewer_notes: 'SCOPE ADJUSTED: Vitest/Effect Context.Tag identity incompatibil
 - **Current owner**: executor-1
 - **Last touched**: 2026-04-16
 - **Next action**: None — scope-adjusted closure. Integration tests for real Worker threads blocked by Vitest/Effect Context.Tag identity incompatibility. Equivalent coverage provided by runtime tests + E2E tests + host tests.
+- Architecture: [[01_Architecture/Semantic_Search_Subsystem|Semantic Search Subsystem]] (link added during 2026-07-10 enrichment; subsystem parked post-pivot per [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009]]).
 
 ## Outcome Summary
 

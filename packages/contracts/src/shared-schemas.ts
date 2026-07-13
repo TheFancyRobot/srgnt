@@ -1,5 +1,4 @@
-import { Schema } from "@effect/schema";
-import { Either } from "effect";
+import { Schema, Either } from "effect";
 
 
 export const EmailString = Schema.String.pipe(

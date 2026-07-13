@@ -40,9 +40,6 @@ describe('NotesView', () => {
       setWorkspaceRoot: vi.fn(),
       chooseWorkspaceRoot: vi.fn(),
       createDefaultWorkspaceRoot: vi.fn(),
-      listConnectors: vi.fn(),
-      connectConnector: vi.fn(),
-      disconnectConnector: vi.fn(),
       getDesktopSettings: vi.fn(),
       saveDesktopSettings: vi.fn(),
       terminalSpawn: vi.fn(),
@@ -55,8 +52,6 @@ describe('NotesView', () => {
       terminalLaunchWithContext: vi.fn(),
       onLaunchApprovalRequired: vi.fn(() => () => {}),
       resolveLaunchApproval: vi.fn(),
-      saveBriefing: vi.fn(),
-      listBriefings: vi.fn(),
       writeDiagnosticCrashLog: vi.fn(),
       notesListDir,
       notesReadFile: vi.fn(async () => ({

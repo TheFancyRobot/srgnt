@@ -1,13 +1,9 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import type { DesktopSettings, LaunchContext, UpdateCheckResponse } from '@srgnt/contracts';
+import type { DesktopSettings, UpdateCheckResponse } from '@srgnt/contracts';
 import { AppLayout } from './components/Navigation.js';
 import { SettingsPanel } from './components/Settings.js';
 import type { SettingsSection } from './components/Settings.js';
-import { ConnectorStatusPanel } from './components/ConnectorStatus.js';
-import type { ConnectorInfo } from './components/ConnectorStatus.js';
-import { TodayView } from './components/TodayView.js';
-import { CalendarView } from './components/CalendarView.js';
 import { OnboardingWizard } from './components/Onboarding.js';
 import type { OnboardingFlow } from './components/Onboarding.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
@@ -15,10 +11,7 @@ import { LayoutProvider, useLayout } from './components/LayoutContext.js';
 import type { PanelDefinition } from './components/LayoutContext.js';
 import { navIcons } from './components/icons.js';
 import { NotesView } from './components/NotesView.js';
-import { TodaySidePanel } from './components/sidepanels/TodaySidePanel.js';
-import { CalendarSidePanel } from './components/sidepanels/CalendarSidePanel.js';
 import { NotesSidePanel } from './components/sidepanels/NotesSidePanel.js';
-import { ConnectorsSidePanel } from './components/sidepanels/ConnectorsSidePanel.js';
 import { SettingsSidePanel } from './components/sidepanels/SettingsSidePanel.js';
 import { NotesProvider } from './components/notes/NotesContext.js';
 
@@ -32,10 +25,6 @@ const defaultSettings: DesktopSettings = {
   updateChannel: 'stable',
   telemetryEnabled: false,
   crashReportsEnabled: false,
-  connectors: {
-    installedConnectorIds: [] as readonly string[],
-    installedPackages: { packages: [] },
-  },
   debugMode: false,
   maxConcurrentRuns: '3',
   layout: {
@@ -52,17 +41,10 @@ const initialUpdateStatus: UpdateCheckResponse = {
 };
 
 const defaultPanels: PanelDefinition[] = [
-  { id: 'today', icon: navIcons['today']!, label: 'Daily Dashboard', section: 'main', order: 1, sidePanelContent: TodaySidePanel },
-  { id: 'calendar', icon: navIcons['calendar']!, label: 'Calendar', section: 'main', order: 2, sidePanelContent: CalendarSidePanel },
-  { id: 'notes', icon: navIcons['notes']!, label: 'Notes', section: 'main', order: 3, sidePanelContent: NotesSidePanel },
-  { id: 'connectors', icon: navIcons['connectors']!, label: 'Connectors', section: 'system', order: 4, sidePanelContent: EmptyConnectorsSidePanel },
-  { id: 'settings', icon: navIcons['settings']!, label: 'Settings', section: 'system', order: 5, sidePanelContent: SettingsSidePanel },
-  { id: 'terminal', icon: navIcons['terminal']!, label: 'Terminal', section: 'utility', order: 6 },
+  { id: 'notes', icon: navIcons['notes']!, label: 'Notes', section: 'main', order: 1, sidePanelContent: NotesSidePanel },
+  { id: 'settings', icon: navIcons['settings']!, label: 'Settings', section: 'system', order: 2, sidePanelContent: SettingsSidePanel },
+  { id: 'terminal', icon: navIcons['terminal']!, label: 'Terminal', section: 'utility', order: 3 },
 ];
-
-function EmptyConnectorsSidePanel(): React.ReactElement {
-  return <ConnectorsSidePanel connectors={[]} />;
-}
 
 function TerminalLoadingState(): React.ReactElement {
   return (
@@ -84,9 +66,7 @@ function AppContent({
   initialSettings: DesktopSettings;
   persistSettings: (nextSettings: DesktopSettings) => Promise<DesktopSettings>;
 }): React.ReactElement {
-  const { activePanel, setActivePanel, registerPanel } = useLayout();
-  const [pendingLaunchContext, setPendingLaunchContext] = React.useState<LaunchContext | null>(null);
-  const [connectors, setConnectors] = React.useState<ConnectorInfo[]>([]);
+  const { activePanel } = useLayout();
   const [settings, setSettings] = React.useState<DesktopSettings>(initialSettings);
   const [workspaceRoot, setWorkspaceRoot] = React.useState('');
   const [workspaceRootDraft, setWorkspaceRootDraft] = React.useState('');
@@ -115,10 +95,7 @@ function AppContent({
 
     const load = async () => {
       try {
-        const [{ settings: loadedSettings, workspaceRoot: loadedWorkspaceRoot }, connectorResponse] = await Promise.all([
-          window.srgnt.getDesktopSettings(),
-          window.srgnt.listConnectors(),
-        ]);
+        const { settings: loadedSettings, workspaceRoot: loadedWorkspaceRoot } = await window.srgnt.getDesktopSettings();
 
         if (cancelled) {
           return;
@@ -128,7 +105,6 @@ function AppContent({
         setWorkspaceRoot(loadedWorkspaceRoot);
         setWorkspaceRootDraft(loadedWorkspaceRoot);
         setShowOnboarding(!loadedWorkspaceRoot);
-        setConnectors(connectorResponse.connectors);
       } catch (error) {
         console.error('[renderer] failed to load desktop state', error);
       } finally {
@@ -144,32 +120,6 @@ function AppContent({
       cancelled = true;
     };
   }, [syncSettings]);
-
-  React.useEffect(() => {
-    if (activePanel !== 'terminal') {
-      setPendingLaunchContext(null);
-    }
-  }, [activePanel]);
-
-  const connectorsSidePanel = React.useMemo(() => {
-    function ConnectorsPanel(): React.ReactElement {
-      return <ConnectorsSidePanel connectors={connectors} />;
-    }
-
-    ConnectorsPanel.displayName = 'ConnectorsPanel';
-    return ConnectorsPanel;
-  }, [connectors]);
-
-  React.useEffect(() => {
-    registerPanel({
-      id: 'connectors',
-      icon: navIcons['connectors']!,
-      label: 'Connectors',
-      section: 'system',
-      order: 4,
-      sidePanelContent: connectorsSidePanel,
-    });
-  }, [connectorsSidePanel, registerPanel]);
 
   React.useEffect(() => {
     const updateTheme = () => {
@@ -189,27 +139,17 @@ function AppContent({
     return undefined;
   }, [settings.theme]);
 
-  const reloadConnectors = React.useCallback(async () => {
-    const response = await window.srgnt.listConnectors();
-    setConnectors(response.connectors);
-  }, []);
-
   const saveSettings = React.useCallback(async (nextSettings: DesktopSettings) => {
     syncSettings(nextSettings);
     const savedSettings = await persistSettings(nextSettings);
     syncSettings(savedSettings);
-    await reloadConnectors();
-  }, [persistSettings, reloadConnectors, syncSettings]);
+  }, [persistSettings, syncSettings]);
 
   const patchSettings = React.useCallback(async (patch: Partial<DesktopSettings>) => {
     const currentSettings = settingsRef.current;
     const nextSettings: DesktopSettings = {
       ...currentSettings,
       ...patch,
-      connectors: {
-        ...currentSettings.connectors,
-        ...(patch.connectors ?? {}),
-      },
       layout: {
         ...currentSettings.layout,
         ...(patch.layout ?? {}),
@@ -224,44 +164,14 @@ function AppContent({
     setWorkspaceRoot(response.workspaceRoot);
     setWorkspaceRootDraft(response.workspaceRoot);
     setShowOnboarding(!response.workspaceRoot);
-    await reloadConnectors();
-  }, [reloadConnectors, syncSettings]);
-
-  const handleInstallConnector = React.useCallback(async (id: string) => {
-    await window.srgnt.installConnector(id);
-    await refreshWorkspaceState();
-  }, [refreshWorkspaceState]);
-
-  const handleUninstallConnector = React.useCallback(async (id: string) => {
-    await window.srgnt.uninstallConnector(id);
-    await refreshWorkspaceState();
-  }, [refreshWorkspaceState]);
-
-  const handleConnect = React.useCallback(async (id: string) => {
-    await window.srgnt.connectConnector(id);
-    await refreshWorkspaceState();
-  }, [refreshWorkspaceState]);
-
-  const handleDisconnect = React.useCallback(async (id: string) => {
-    await window.srgnt.disconnectConnector(id);
-    await refreshWorkspaceState();
-  }, [refreshWorkspaceState]);
-
-  const handleLaunchContext = React.useCallback((launchContext: LaunchContext) => {
-    setPendingLaunchContext(launchContext);
-    setActivePanel('terminal');
-  }, [setActivePanel]);
+  }, [syncSettings]);
 
   const ensureDefaultWorkspace = React.useCallback(async () => {
     const nextRoot = await window.srgnt.createDefaultWorkspaceRoot();
-    const [{ settings: loadedSettings, workspaceRoot: loadedWorkspaceRoot }, connectorResponse] = await Promise.all([
-      window.srgnt.getDesktopSettings(),
-      window.srgnt.listConnectors(),
-    ]);
+    const { settings: loadedSettings, workspaceRoot: loadedWorkspaceRoot } = await window.srgnt.getDesktopSettings();
     syncSettings(loadedSettings);
     setWorkspaceRoot(loadedWorkspaceRoot || nextRoot);
     setWorkspaceRootDraft(loadedWorkspaceRoot || nextRoot);
-    setConnectors(connectorResponse.connectors);
   }, [syncSettings]);
 
   const handleChooseWorkspaceRoot = React.useCallback(async () => {
@@ -313,26 +223,24 @@ function AppContent({
         title: 'Create Your Workspace',
         description: workspaceRoot
           ? 'Your workspace is ready. You can adjust the path later from Settings if you want to move it.'
-          : 'Create a local-first workspace now. srgnt will scaffold the command-center folders for you and keep non-secret settings there.',
+          : 'Choose where srgnt should keep your local-first workspace, or use the default location.',
         note: workspaceRoot || 'Suggested path: ~/srgnt-workspace',
         requiresAction: true,
         isComplete: Boolean(workspaceRoot),
         action: {
-          label: workspaceRoot ? 'Workspace Ready' : 'Create Workspace',
+          label: workspaceRoot ? 'Workspace Ready' : 'Choose Workspace Directory',
+          action: handleChooseWorkspaceRoot,
+        },
+        secondaryAction: workspaceRoot ? undefined : {
+          label: 'Use Default Location',
           action: ensureDefaultWorkspace,
         },
       },
       {
-        id: 'connectors',
-        title: 'Know What Connects First',
-        description: 'Teams, Jira, and Outlook are discoverable by default, but none are installed yet. Install first, then connect when you are ready.',
-        note: 'Live auth is still optional. Offline validation stays first-class for release QA.',
-      },
-      {
         id: 'ready',
         title: 'You\'re All Set',
-        description: 'Today, Calendar, Terminal, Connectors, and Settings are ready for the release-readiness walkthrough.',
-        note: 'Settings persist in .command-center/config/desktop-settings.json inside your workspace.',
+        description: 'Notes, Terminal, and Settings are ready to use.',
+        note: 'Settings persist in settings.json inside your workspace.',
       },
     ],
     onComplete: () => {
@@ -341,7 +249,7 @@ function AppContent({
     onSkip: () => {
       void handleOnboardingSkip();
     },
-  }), [ensureDefaultWorkspace, handleOnboardingComplete, handleOnboardingSkip, workspaceRoot]);
+  }), [ensureDefaultWorkspace, handleChooseWorkspaceRoot, handleOnboardingComplete, handleOnboardingSkip, workspaceRoot]);
 
   const settingsSections: SettingsSection[] = React.useMemo(() => ([
     {
@@ -448,7 +356,7 @@ function AppContent({
         },
       ],
     },
-  ]), [handleChooseWorkspaceRoot, handleInstallConnector, handleUninstallConnector, patchSettings, settings, workspaceRootDraft]);
+  ]), [handleChooseWorkspaceRoot, patchSettings, settings, workspaceRootDraft]);
 
   if (simulateRenderCrash) {
     throw new Error('Simulated renderer crash for release QA');
@@ -473,35 +381,11 @@ function AppContent({
 
   const renderContent = () => {
     switch (activePanel) {
-      case 'today':
-        return <TodayView onLaunchContext={handleLaunchContext} />;
-      case 'calendar':
-        return <CalendarView onLaunchContext={handleLaunchContext} />;
-      case 'notes':
-        return <NotesView />;
       case 'terminal':
         return (
           <React.Suspense fallback={<TerminalLoadingState />}>
-            <LazyTerminalPanel className="h-full w-full" launchContext={pendingLaunchContext} />
+            <LazyTerminalPanel className="h-full w-full" launchContext={null} />
           </React.Suspense>
-        );
-      case 'connectors':
-        return (
-          <ConnectorStatusPanel
-            connectors={connectors}
-            onInstall={(id) => {
-              void handleInstallConnector(id);
-            }}
-            onUninstall={(id) => {
-              void handleUninstallConnector(id);
-            }}
-            onConnect={(id) => {
-              void handleConnect(id);
-            }}
-            onDisconnect={(id) => {
-              void handleDisconnect(id);
-            }}
-          />
         );
       case 'settings':
         return (
@@ -527,8 +411,9 @@ function AppContent({
             />
           </div>
         );
+      case 'notes':
       default:
-        return <TodayView onLaunchContext={handleLaunchContext} />;
+        return <NotesView />;
     }
   };
 
@@ -538,9 +423,9 @@ function AppContent({
     </AppLayout>
   );
 
-  return activePanel === 'notes'
-    ? <NotesProvider>{layout}</NotesProvider>
-    : layout;
+  return activePanel === 'terminal' || activePanel === 'settings'
+    ? layout
+    : <NotesProvider>{layout}</NotesProvider>;
 }
 
 function SettingsUtilityPanel({
@@ -675,7 +560,7 @@ function App(): React.ReactElement {
 
   if (isLoading) {
     return (
-      <LayoutProvider defaultPanel="today" initialPanels={defaultPanels}>
+      <LayoutProvider defaultPanel="notes" initialPanels={defaultPanels}>
         <div className="min-h-screen bg-surface-secondary grain flex items-center justify-center p-6">
           <div className="card p-8 text-center space-y-3 animate-scale-in">
             <p className="text-sm font-mono-data text-text-tertiary">Bootstrapping desktop state...</p>
@@ -687,7 +572,7 @@ function App(): React.ReactElement {
 
   return (
     <LayoutProvider
-      defaultPanel="today"
+      defaultPanel="notes"
       initialPanels={defaultPanels}
       initialWidth={settings.layout?.sidebarWidth ?? 240}
       initialCollapsed={settings.layout?.sidebarCollapsed ?? false}

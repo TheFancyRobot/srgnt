@@ -3,17 +3,17 @@ note_type: architecture
 template_version: 2
 contract_version: 1
 title: System Overview
-architecture_id: "ARCH-0001"
+architecture_id: ARCH-0001
 status: active
-owner: ""
-reviewed_on: "2026-03-20"
-created: "2026-03-20"
-updated: "2026-03-22"
+owner: ''
+reviewed_on: '2026-07-12'
+created: '2026-03-20'
+updated: '2026-03-22'
 related_notes:
-  - "[[01_Architecture/Domain_Model|Domain Model]]"
-  - "[[01_Architecture/Code_Map|Code Map]]"
-  - "[[01_Architecture/Integration_Map|Integration Map]]"
-  - "[[01_Architecture/Agent_Workflow|Agent Workflow]]"
+  - '[[01_Architecture/Domain_Model|Domain Model]]'
+  - '[[01_Architecture/Code_Map|Code Map]]'
+  - '[[01_Architecture/Integration_Map|Integration Map]]'
+  - '[[01_Architecture/Agent_Workflow|Agent Workflow]]'
 tags:
   - agent-vault
   - architecture
@@ -24,6 +24,7 @@ tags:
 ## Purpose
 
 - Explain the top-level shape of the repository and the boundaries that future changes should preserve.
+- **Superseded for product surface (2026-07-12)**: the aggregator product this note grew up with is retired per [[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]]; the canonical post-pivot architecture is [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009]]. This note remains accurate for the Electron main/preload/renderer boundary model and the surviving shell/terminal/notes internals; treat connector/aggregator content as historical.
 
 ## Overview
 

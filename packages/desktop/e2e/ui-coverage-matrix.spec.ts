@@ -8,16 +8,12 @@
  *
  * Surfaces covered:
  *  - Titlebar: minimize, maximize/restore, close buttons
- *  - Activity Bar: toolbar with all 6 navigation items, sections, online indicator
+ *  - Activity Bar: toolbar with all 3 navigation items (Notes, Settings, Terminal), sections, online indicator
  *  - Side Panel: expanded/collapsed states, resize handle, toggle chevron
- *  - Today View: all 4 sections (blockers, priorities, schedule, attention)
  *  - Settings: 3 categories (general, privacy, advanced)
- *  - Connectors: Jira, Outlook, Teams card structure and status indicators
  *  - Notes Side Panel: file tree, search input, action buttons
  *  - Notes Editor: display mode toggle, close button, CodeMirror container
- *  - Today Side Panel: section navigation links
  *  - Settings Side Panel: category navigation links
- *  - Connectors Side Panel: connector list with status dots
  */
 
 import fs from 'node:fs/promises';
@@ -69,10 +65,7 @@ test.describe('Titlebar structure', () => {
 
 test.describe('Activity Bar structure', () => {
   const navItems = [
-    { name: 'Daily Dashboard', section: 'main' },
-    { name: 'Calendar', section: 'main' },
     { name: 'Notes', section: 'main' },
-    { name: 'Connectors', section: 'system' },
     { name: 'Settings', section: 'system' },
     { name: 'Terminal', section: 'utility' },
   ];
@@ -92,9 +85,9 @@ test.describe('Activity Bar structure', () => {
     await completeOnboarding(page);
     const toolbar = page.getByRole('toolbar', { name: 'Application views' });
 
-    // Daily Dashboard should be active by default
-    await expect(toolbar.getByRole('button', { name: 'Daily Dashboard' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(toolbar.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'false');
+    // Notes should be active by default
+    await expect(toolbar.getByRole('button', { name: 'Notes' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(toolbar.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('has online status indicator', async ({ window: page }) => {
@@ -140,54 +133,6 @@ test.describe('Side Panel structure', () => {
   });
 });
 
-// ─── Today View Sections ───────────────────────────────────────────────────
-
-test.describe('Today View sections', () => {
-  const todaySections = [
-    { id: 'section-blockers', heading: 'Blockers & Watch-outs' },
-    { id: 'section-priorities', heading: 'Priorities' },
-    { id: 'section-schedule', heading: 'Schedule' },
-    { id: 'section-attention-needed', heading: 'Attention Needed' },
-  ];
-
-  test('all four sections are present on Daily Dashboard', async ({ window: page }) => {
-    await completeOnboarding(page);
-
-    for (const section of todaySections) {
-      await expect(page.locator(`#${section.id}`)).toBeVisible();
-      await expect(page.getByRole('heading', { name: section.heading })).toBeVisible();
-    }
-  });
-
-  test('summary strip shows counts', async ({ window: page }) => {
-    await completeOnboarding(page);
-    // The summary strip shows high priority count, meetings count, unread count
-    await expect(page.locator('header').getByText('high priority')).toBeVisible();
-    await expect(page.locator('header').getByText('meetings')).toBeVisible();
-    await expect(page.locator('header').getByText('unread')).toBeVisible();
-  });
-
-  test('Priorities section shows fixture tasks with badges', async ({ window: page }) => {
-    await completeOnboarding(page);
-    const prioritiesSection = page.locator('#section-priorities');
-    // Fixture has 6 tasks
-    await expect(prioritiesSection.locator('.badge')).toHaveCount(6);
-  });
-
-  test('Schedule section shows fixture events', async ({ window: page }) => {
-    await completeOnboarding(page);
-    const scheduleSection = page.locator('#section-schedule');
-    // Fixture has 5 events
-    await expect(scheduleSection.locator('.font-mono-data').first()).toBeVisible();
-  });
-
-  test('Attention Needed section shows unread count badge', async ({ window: page }) => {
-    await completeOnboarding(page);
-    const attentionHeading = page.getByRole('heading', { name: 'Attention Needed' });
-    await expect(attentionHeading.locator('.rounded-full')).toHaveText('2');
-  });
-});
-
 // ─── Settings Sections ─────────────────────────────────────────────────────
 
 test.describe('Settings sections', () => {
@@ -229,8 +174,7 @@ test.describe('Settings sections', () => {
     await expect(privacy.locator('input[type="checkbox"]')).toHaveCount(2);
   });
 
-  // Phase 19: Settings no longer has connector toggle rows.
-  // Connectors are managed via the three-state model in the ConnectorStatusPanel (Install/Connect/Disconnect/Uninstall).
+  // Phase 21: the aggregator connector surface is deleted entirely.
   // This test verifies Settings has exactly 3 sections (no Connectors section) and no old boolean connector toggles.
   test('Settings has three sections (General, Privacy, Advanced) without connector toggles', async ({ window: page }) => {
     await completeOnboarding(page);
@@ -259,65 +203,11 @@ test.describe('Settings sections', () => {
   });
 });
 
-// ─── Connectors Panel ──────────────────────────────────────────────────────
-
-test.describe('Connectors panel structure', () => {
-  const connectorIds = ['connector-jira', 'connector-outlook', 'connector-teams'];
-
-
-  test('all three connector cards are present', async ({ window: page }) => {
-    await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Connectors' }).click();
-
-    for (const id of connectorIds) {
-      await expect(page.locator(`#${id}`)).toBeVisible();
-    }
-  });
-
-  test('each connector card has name, description, and status indicator', async ({ window: page }) => {
-    await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Connectors' }).click();
-
-    // Verify each card by its ID, checking name and description within the card
-    const jiraCard = page.locator('#connector-jira');
-    await expect(jiraCard.locator('h3')).toHaveText('Jira');
-    await expect(jiraCard.getByText('Tasks, stories, and sprint data')).toBeVisible();
-
-    const outlookCard = page.locator('#connector-outlook');
-    await expect(outlookCard.locator('h3')).toHaveText('Outlook Calendar');
-    await expect(outlookCard.getByText('Calendar events and scheduling')).toBeVisible();
-
-    const teamsCard = page.locator('#connector-teams');
-    await expect(teamsCard.locator('h3')).toHaveText('Microsoft Teams');
-    await expect(teamsCard.getByText('Messages, mentions, and channels')).toBeVisible();
-
-    // All start disconnected — each card should show 'Disconnected' status text
-    for (const id of connectorIds) {
-      await expect(page.locator(`#${id}`).getByText('Disconnected')).toBeVisible();
-    }
-  });
-
-  // Fresh workspace: all connectors are available but NOT installed (Phase 19 install-before-use model)
-  test('fresh workspace: all connectors show Install button (not Connect)', async ({ window: page }) => {
-    await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Connectors' }).click();
-
-    // All connectors are uninstalled by default — show Install, not Connect
-    await expect(page.getByRole('button', { name: 'Install Jira' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Install Outlook Calendar' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Install Microsoft Teams' })).toBeVisible();
-
-    // No Connect buttons visible yet (must install first)
-    await expect(page.getByRole('button', { name: 'Connect Jira' })).toHaveCount(0);
-  });
-});
-
 // ─── Notes Side Panel ──────────────────────────────────────────────────────
 
 test.describe('Notes Side Panel structure', () => {
   test('shows Explorer heading and action buttons', async ({ window: page }) => {
     await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     await expect(page.getByRole('heading', { name: 'Explorer' })).toBeVisible();
     // Action buttons: new note, new folder, refresh
@@ -328,7 +218,6 @@ test.describe('Notes Side Panel structure', () => {
 
   test('has search input', async ({ window: page }) => {
     await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     const searchInput = page.locator('input[placeholder="Search notes..."]');
     await expect(searchInput).toBeVisible();
@@ -336,7 +225,6 @@ test.describe('Notes Side Panel structure', () => {
 
   test('shows file tree with role="tree"', async ({ window: page }) => {
     await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Notes' }).click();
     const tree = page.getByRole('tree', { name: 'Notes file tree' });
     await expect(tree).toBeVisible({ timeout: 20000 });
   });
@@ -344,7 +232,6 @@ test.describe('Notes Side Panel structure', () => {
   test('shows empty state when no notes exist', async ({ window: page }) => {
     await cleanWorkspaceNotes();
     await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     // Wait for the loading indicator to disappear, then assert empty state.
     const loadingText = page.getByText('Loading notes...');
@@ -360,7 +247,6 @@ test.describe('Notes Side Panel structure', () => {
 test.describe('Notes Editor structure', () => {
   test('shows placeholder when no note is selected', async ({ window: page }) => {
     await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     await expect(page.getByText('Select a note from the Explorer panel')).toBeVisible();
   });
@@ -368,7 +254,6 @@ test.describe('Notes Editor structure', () => {
   test('has display mode toggle and close button after selecting a note', async ({ window: page }) => {
     await cleanWorkspaceNotes();
     await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     // Create a note first
     await page.getByRole('button', { name: 'New note' }).click();
@@ -385,7 +270,6 @@ test.describe('Notes Editor structure', () => {
   test('CodeMirror editor container is present when editing a note', async ({ window: page }) => {
     await cleanWorkspaceNotes();
     await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Notes' }).click();
 
     // Create a note
     await page.getByRole('button', { name: 'New note' }).click();
@@ -401,14 +285,6 @@ test.describe('Notes Editor structure', () => {
 // ─── Side Panel Content Variants ───────────────────────────────────────────
 
 test.describe('Side Panel content variants', () => {
-  test('Today side panel shows section navigation', async ({ window: page }) => {
-    await completeOnboarding(page);
-    // Today is active by default, side panel should show section nav
-    const sectionNav = page.getByRole('navigation', { name: 'Dashboard sections' });
-    await expect(sectionNav).toBeVisible();
-    await expect(sectionNav.getByRole('listitem')).toHaveCount(4);
-  });
-
   test('Settings side panel shows category navigation', async ({ window: page }) => {
     await completeOnboarding(page);
     await page.getByRole('button', { name: 'Settings' }).click();
@@ -416,15 +292,6 @@ test.describe('Side Panel content variants', () => {
     const categoryNav = page.getByRole('navigation', { name: 'Settings categories' });
     await expect(categoryNav).toBeVisible();
     await expect(categoryNav.getByRole('listitem')).toHaveCount(3);
-  });
-
-  test('Connectors side panel shows connector list', async ({ window: page }) => {
-    await completeOnboarding(page);
-    await page.getByRole('button', { name: 'Connectors' }).click();
-
-    const connectorNav = page.getByRole('navigation', { name: 'Connector list' });
-    await expect(connectorNav).toBeVisible();
-    await expect(connectorNav.getByRole('listitem')).toHaveCount(3);
   });
 });
 
@@ -434,7 +301,7 @@ test.describe('Focus and keyboard navigation', () => {
   test('activity bar first button is focusable', async ({ window: page }) => {
     await completeOnboarding(page);
     const toolbar = page.getByRole('toolbar', { name: 'Application views' });
-    const firstButton = toolbar.getByRole('button', { name: 'Daily Dashboard' });
+    const firstButton = toolbar.getByRole('button', { name: 'Notes' });
 
     // The ActivityBar uses roving tabindex — first item has tabIndex=0 by default
     // Focus it explicitly and verify it's focusable

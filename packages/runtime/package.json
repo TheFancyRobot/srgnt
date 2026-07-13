@@ -19,7 +19,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@effect/schema": "^0.75.5",
     "@huggingface/transformers": "^3.4.0",
     "@srgnt/contracts": "workspace:*",
     "effect": "^3.21.0",

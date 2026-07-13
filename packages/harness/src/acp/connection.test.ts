@@ -312,6 +312,26 @@ describe('AcpAgentConnection.connect', () => {
     expect(error).toBeInstanceOf(InitializeFailed);
     expect(error._tag).toBe('InitializeFailed');
   });
+
+  it('tears down the spawned agent when initialize fails (no orphan)', async () => {
+    const { clientStream, agentStream } = messagePair();
+    new AgentSideConnection(
+      (conn) => new MockAgent(conn, { initializeError: RequestError.authRequired() }),
+      agentStream,
+    );
+    let killed = false;
+    const error = await Effect.runPromise(
+      Effect.flip(
+        AcpAgentConnection.connect({
+          launch: { command: 'mock-agent', args: [], env: {} },
+          spawn: () => ({ stream: clientStream, kill: () => (killed = true) }),
+          ports: { permission: permissionPort },
+        }),
+      ),
+    );
+    expect(error).toBeInstanceOf(InitializeFailed);
+    expect(killed).toBe(true);
+  });
 });
 
 describe('prompt turns and the typed update stream', () => {

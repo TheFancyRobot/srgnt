@@ -86,6 +86,9 @@ export class SessionUpdateHub {
           return Promise.resolve({ done: false, value: buffered });
         }
         if (channel.ended) {
+          // Fully drained and ended: drop the channel so its buffer can be GC'd
+          // instead of lingering in the Map for the process's lifetime.
+          this.channels.delete(sessionId);
           return Promise.resolve({ done: true, value: undefined });
         }
         return new Promise((resolve) => {
@@ -94,6 +97,7 @@ export class SessionUpdateHub {
       },
       return: () => {
         this.end(sessionId);
+        this.channels.delete(sessionId);
         return Promise.resolve({ done: true, value: undefined });
       },
     };
@@ -122,13 +126,18 @@ export class SessionUpdateHub {
     if (channel.waiter !== undefined && channel.buffer.length === 0) {
       const waiter = channel.waiter;
       channel.waiter = undefined;
+      // Terminal delivery to a blocked consumer: the channel is finished, so
+      // remove it. (An ended channel with no waiter is kept so late dispatches
+      // still warn `after-end` rather than `unknown-session`.)
+      this.channels.delete(sessionId);
       waiter({ done: true, value: undefined });
     }
   }
 
   /** Ends every session stream (connection closed). */
   endAll(): void {
-    for (const sessionId of this.channels.keys()) {
+    // Snapshot keys: end() may delete channels mid-iteration.
+    for (const sessionId of [...this.channels.keys()]) {
       this.end(sessionId);
     }
   }

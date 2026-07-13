@@ -98,21 +98,41 @@ export type AgentSpawner = (launch: LaunchSpec) => Promise<SpawnedAgent> | Spawn
  * Default pure-Node spawner: child process over stdio wired through
  * `ndJsonStream`. stderr is left to the caller (supervisor captures it later).
  */
-export const childProcessSpawner: AgentSpawner = (launch) => {
-  const child = nodeSpawn(launch.command, [...launch.args], {
-    cwd: launch.cwd,
-    env: { ...process.env, ...launch.env },
-    stdio: ['pipe', 'pipe', 'inherit'],
+export const childProcessSpawner: AgentSpawner = (launch) =>
+  new Promise<SpawnedAgent>((resolve, reject) => {
+    const child = nodeSpawn(launch.command, [...(launch.args ?? [])], {
+      cwd: launch.cwd,
+      env: { ...process.env, ...(launch.env ?? {}) },
+      stdio: ['pipe', 'pipe', 'inherit'],
+    });
+    // A missing or non-executable binary surfaces asynchronously as an 'error'
+    // event; without a listener Node treats it as an unhandled error and can
+    // crash the host process. Reject the spawn (→ SpawnFailed) instead, and
+    // keep a persistent listener so a post-spawn error is never unhandled.
+    let settled = false;
+    child.once('error', (cause) => {
+      if (settled) return;
+      settled = true;
+      reject(cause);
+    });
+    child.once('spawn', () => {
+      if (settled) return;
+      settled = true;
+      if (child.stdin === null || child.stdout === null) {
+        child.kill();
+        reject(new Error(`Failed to open stdio pipes for ${launch.command}`));
+        return;
+      }
+      // Swallow late errors post-spawn: the connection surfaces the resulting
+      // stream close as ConnectionLost; an unhandled 'error' must never crash.
+      child.on('error', () => {});
+      const stream = ndJsonStream(
+        Writable.toWeb(child.stdin) as WritableStream<Uint8Array>,
+        Readable.toWeb(child.stdout) as ReadableStream<Uint8Array>,
+      );
+      resolve({ stream, kill: () => void child.kill() });
+    });
   });
-  if (child.stdin === null || child.stdout === null) {
-    throw new Error(`Failed to open stdio pipes for ${launch.command}`);
-  }
-  const stream = ndJsonStream(
-    Writable.toWeb(child.stdin) as WritableStream<Uint8Array>,
-    Readable.toWeb(child.stdout) as ReadableStream<Uint8Array>,
-  );
-  return { stream, kill: () => void child.kill() };
-};
 
 // ─── Connection ───
 
@@ -205,12 +225,17 @@ export class AcpAgentConnection {
             clientCapabilities: buildClientCapabilities(options.ports),
             clientInfo: options.clientInfo ?? { name: 'srgnt', version: '0.0.0' },
           }),
-        catch: (cause) =>
-          new InitializeFailed({
+        catch: (cause) => {
+          // connect() returns no handle on this path, so the caller cannot
+          // clean up; tear down the spawned child here to honor the
+          // no-orphans lifecycle invariant.
+          spawned.kill?.();
+          return new InitializeFailed({
             message: `ACP initialize failed: ${cause instanceof Error ? cause.message : String(cause)}`,
             requestedProtocolVersion,
             cause,
-          }),
+          });
+        },
       });
       const negotiated = negotiateCapabilities(init);
       const capabilities =

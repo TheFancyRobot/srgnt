@@ -75,6 +75,29 @@ describe('SessionUpdateHub', () => {
     expect((await iterator.next()).done).toBe(true);
   });
 
+  it('drops the channel once ended and fully drained (no unbounded Map growth)', async () => {
+    const hub = new SessionUpdateHub();
+    hub.register('s1');
+    hub.dispatch(note('s1', 'a'));
+    hub.end('s1');
+    // An ended-but-undrained channel is retained so late dispatches still warn.
+    expect(hub.has('s1')).toBe(true);
+    const iterator = hub.updates('s1');
+    await iterator.next(); // 'a'
+    await iterator.next(); // done → channel removed
+    expect(hub.has('s1')).toBe(false);
+  });
+
+  it('drops the channel when a blocked consumer is completed by endAll()', async () => {
+    const hub = new SessionUpdateHub();
+    hub.register('s1');
+    const iterator = hub.updates('s1');
+    const pending = iterator.next();
+    hub.endAll();
+    await pending;
+    expect(hub.has('s1')).toBe(false);
+  });
+
   it('endAll() completes a consumer blocked on next()', async () => {
     const hub = new SessionUpdateHub();
     hub.register('s1');

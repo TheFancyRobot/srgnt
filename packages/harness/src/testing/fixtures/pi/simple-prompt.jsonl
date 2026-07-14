@@ -1,0 +1,6 @@
+{"seq":0,"ts":"2026-07-14T12:00:00.000Z","protocolVersion":1,"kind":"client/session_created","payload":{"sessionId":"sess-pi-01","cwd":"/<HOME>/dev/demo"}}
+{"seq":1,"ts":"2026-07-14T12:00:00.100Z","protocolVersion":1,"kind":"client/prompt","payload":{"sessionId":"sess-pi-01","prompt":[{"type":"text","text":"say hello"}]}}
+{"seq":2,"ts":"2026-07-14T12:00:00.400Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-01","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Hello"}}}}
+{"seq":3,"ts":"2026-07-14T12:00:00.450Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-01","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":" there!"},"_meta":{"pi.chunkIndex":1}}}}
+{"seq":4,"ts":"2026-07-14T12:00:00.500Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-01","update":{"sessionUpdate":"usage_update","usage":{"inputTokens":42,"outputTokens":7}}}}
+{"seq":5,"ts":"2026-07-14T12:00:00.600Z","protocolVersion":1,"kind":"client/stop","payload":{"sessionId":"sess-pi-01","stopReason":"end_turn"}}

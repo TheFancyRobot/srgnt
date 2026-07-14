@@ -1,0 +1,7 @@
+{"seq":0,"ts":"2026-07-14T12:10:00.000Z","protocolVersion":1,"kind":"client/prompt","payload":{"sessionId":"sess-pi-03","prompt":[{"type":"text","text":"refactor the whole repo"}]}}
+{"seq":1,"ts":"2026-07-14T12:10:00.300Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-03","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Starting the refactor..."}}}}
+{"seq":2,"ts":"2026-07-14T12:10:00.600Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-03","update":{"sessionUpdate":"tool_call","toolCallId":"call-9","title":"Edit src/index.ts","kind":"edit","status":"in_progress"}}}
+{"seq":3,"ts":"2026-07-14T12:10:01.000Z","protocolVersion":1,"kind":"client/permission_request","payload":{"sessionId":"sess-pi-03","toolCallId":"call-9","options":[{"optionId":"allow","name":"Allow","kind":"allow_once"},{"optionId":"reject","name":"Reject","kind":"reject_once"}]}}
+{"seq":4,"ts":"2026-07-14T12:10:05.000Z","protocolVersion":1,"kind":"client/permission_decision","payload":{"sessionId":"sess-pi-03","outcome":"cancelled"}}
+{"seq":5,"ts":"2026-07-14T12:10:05.100Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-03","update":{"sessionUpdate":"tool_call_update","toolCallId":"call-9","status":"failed"}}}
+{"seq":6,"ts":"2026-07-14T12:10:05.200Z","protocolVersion":1,"kind":"client/stop","payload":{"sessionId":"sess-pi-03","stopReason":"cancelled"}}

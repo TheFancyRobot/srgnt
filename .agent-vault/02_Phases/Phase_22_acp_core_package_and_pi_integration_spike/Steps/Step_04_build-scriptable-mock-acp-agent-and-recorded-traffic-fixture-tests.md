@@ -5,18 +5,23 @@ contract_version: 1
 title: Build scriptable mock ACP agent and recorded-traffic fixture tests
 step_id: STEP-22-04
 phase: '[[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|Phase 22 acp core package and pi integration spike]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-worker
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-14'
 depends_on:
   - STEP-22-02
   - STEP-22-03
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-14-214450-build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests-claude-worker|SESSION-2026-07-14-214450 claude-worker session for Build scriptable mock ACP agent and recorded-traffic fixture tests]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-14-214450
+active_session_id: 05_Sessions/2026-07-14-214450-build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests-claude-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_04_build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests|STEP-22-04 Build scriptable mock ACP agent and recorded-traffic fixture tests]].
 ---
 
 # Step 04 - Build scriptable mock ACP agent and recorded-traffic fixture tests
@@ -74,10 +79,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_04_build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_04_build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-worker
+- Last touched: 2026-07-14
+- Next action: None — mock ACP agent + fixture decode suite shipped and validated (harness 110/110 + 1 skipped pi-IT; root 1282/1282). Proceed to STEP-22-05 (dev console + pi adapter spike).
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -92,7 +97,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-14 - [[05_Sessions/2026-07-14-214450-build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests-claude-worker|SESSION-2026-07-14-214450 claude-worker session for Build scriptable mock ACP agent and recorded-traffic fixture tests]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary

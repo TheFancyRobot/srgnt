@@ -5,10 +5,10 @@ contract_version: 1
 title: Implement harness registry with built-in Pi definition and capability model
 step_id: STEP-22-03
 phase: '[[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|Phase 22 acp core package and pi integration spike]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-worker
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-14'
 depends_on:
   - STEP-22-01
 related_sessions: []
@@ -16,6 +16,8 @@ related_bugs: []
 tags:
   - agent-vault
   - step
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_03_implement-harness-registry-with-built-in-pi-definition-and-capability-model|STEP-22-03 Implement harness registry with built-in Pi definition and capability model]].
 ---
 
 # Step 03 - Implement harness registry with built-in Pi definition and capability model
@@ -73,16 +75,27 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_03_implement-harness-registry-with-built-in-pi-definition-and-capability-model/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_03_implement-harness-registry-with-built-in-pi-definition-and-capability-model/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-worker
+- Last touched: 2026-07-14
+- Next action: None — registry + built-in Pi definition + detection shipped and validated (harness 73/73 pass + 1 env-gated IT that passes with SRGNT_IT_PI=1; root typecheck + boundary lint clean). Proceed to STEP-22-04 (mock ACP agent + recorded-traffic fixture tests).
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
 - Capture facts learned during execution.
 - Prefer short bullets with file paths, commands, and observed behavior.
+
+### 2026-07-14 — registry + Pi definition + detection (claude-worker)
+
+- New module `packages/harness/src/registry/` (pure Node, boundary-clean), wired into `src/index.ts`:
+  - `builtins.ts` — `PI_ACP_VERSION = '0.0.31'` (pinned), `PI_HARNESS_ID = 'pi'`, `piDefinition` (typed `HarnessDefinition` from `@srgnt/contracts`), and `BUILTIN_HARNESSES`. Pi shape: `{ id:'pi', name:'Pi', source:'builtin', launch:{ command:'npx', args:['pi-acp@0.0.31'], env:{} }, quirks:['adapter-mediated','permission-routing-gaps','mcp-passthrough-gaps'], capabilityOverrides:{ mcpServers:false }, docsUrl }`. Note: contracts `SHarnessDefinition` has **no** `installHint` field (the Execution Brief's example listed one) — install guidance went into `description` instead to respect "don't redefine schemas".
+  - `detect.ts` — `detectCommand(command, {timeoutMs, probe})` → `DetectionResult` with three mutually exclusive states: `ok` (binary found, `--version` clean), `probe-failed` (`timeout` | `nonzero-exit` | `no-version-output`), `not-installed` (ENOENT). `nodeVersionProbe` is the default `VersionProbe` seam (spawns real process, **SIGKILLs on timeout so a hung PATH shim leaves no orphan**); unit tests inject fake `ProbeOutcome`s. `detectPi()` = `detectCommand('pi')`.
+  - `registry.ts` — `HarnessRegistry.create({builtins?, workspace?})`, `list/get/has/require(→UnknownHarness)`, `effectiveCapabilities(id, negotiated)`. `loadWorkspaceHarnesses(raw)` decodes untrusted `harnesses.json` via `Schema.decodeUnknownEither(SHarnessesFile)` → `{ok:true,file} | {ok:false,error}` (typed failure, no throw).
+- Merge precedence (low→high): built-ins (declared order) → workspace `harnesses.json` (file order). Same-`id` entry **replaces** the earlier one wholesale (delete-then-set keeps `list()` order stable and "last write wins" observable); workspace can shadow/customize a built-in (e.g. repin Pi), later workspace dup beats earlier.
+- Capability merge: `effectiveCapabilities(definition, negotiated)` delegates to the acp-layer `applyCapabilityOverrides` — single-sourced, no second/divergent merge semantics. Pi's only override restricts (`mcpServers:false`); tested both directions (disable a negotiated cap; a def with no overrides is a no-op). Design note: the acp `applyCapabilityOverrides` uses force on/off (booleans win) per contracts `SHarnessCapabilityOverrides`, deliberately so `modes`/`slashCommands` (never advertised at `initialize`) can be *asserted* by a definition; the Validation Plan's "override cannot enable a non-negotiated one" is upheld by built-in **authoring convention** (Pi only clamps), not a hard code clamp. Flag for a future decision note if a hard clamp on initialize-negotiated caps is later wanted.
+- Integration test `pi.integration.test.ts` gated behind `SRGNT_IT_PI=1` (`describe.skip` otherwise), 120s timeout for cold `npx` download, auto-denies permissions. **Ran locally 2026-07-14 — passed.** Captured pi-acp `initialize` payload (STEP-22-05 baseline): `protocolVersion:1, agentName:'pi-acp', agentVersion:'0.0.31', loadSession:true, resumeSession:false, modes:false, slashCommands:false, images:true, audio:false, embeddedContext:false, mcpServers:true(negotiated → effective false via override), mcpHttp:false, mcpSse:false`. Local ground truth: `pi --version` → 0.80.6; node v24.15.0.
+- Validation: `pnpm --filter @srgnt/harness test` → 73 passed / 1 skipped (registry.test.ts 15, detect.test.ts 9 new). `SRGNT_IT_PI=1 …` → +1 pass. Root `pnpm typecheck` clean (5 projects). `pnpm --filter @srgnt/harness lint` (tsc + boundary) passed.
 
 ## Human Notes
 
@@ -96,5 +109,6 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Result: `packages/harness/src/registry/` ships the `HarnessDefinition`-based registry (merge of built-ins + workspace `harnesses.json`), the built-in Pi definition (`npx pi-acp@0.0.31`, three adapter quirks, `mcpServers:false` override), Pi binary/version detection with three typed outcomes and a no-orphan probe timeout, and `effectiveCapabilities` (negotiated + overrides) reusing the acp-layer merge. Barrel-exported via `src/index.ts`.
+- Validation performed: harness unit suite 73 passed / 1 skipped (new: `registry.test.ts` 15, `detect.test.ts` 9); env-gated `pi.integration.test.ts` ran with `SRGNT_IT_PI=1` and passed, capturing the real pi-acp `initialize` capability payload (recorded in Implementation Notes for STEP-22-05). Root `pnpm typecheck` clean; `pnpm --filter @srgnt/harness lint` (tsc + boundary) passed.
+- Follow-up: (1) STEP-22-05 spike should confirm/refine the three declared Pi quirks against the captured payload. (2) If a hard clamp preventing definitions from enabling non-negotiated initialize caps is later desired, raise a decision note — current merge follows contracts force-semantics by design (so `modes`/`slashCommands` can be asserted).

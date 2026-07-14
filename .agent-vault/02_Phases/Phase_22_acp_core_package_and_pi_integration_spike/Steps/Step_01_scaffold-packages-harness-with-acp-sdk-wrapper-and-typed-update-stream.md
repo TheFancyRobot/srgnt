@@ -5,16 +5,21 @@ contract_version: 1
 title: Scaffold packages/harness with ACP SDK wrapper and typed update stream
 step_id: STEP-22-01
 phase: '[[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|Phase 22 acp core package and pi integration spike]]'
-status: planned
+status: completed
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-13'
 depends_on: []
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-13-024429-scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream-claude-worker|SESSION-2026-07-13-024429 claude-worker session for Scaffold packages/harness with ACP SDK wrapper and typed update stream]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-13-024429
+active_session_id: 05_Sessions/2026-07-13-024429-scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream-claude-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream|STEP-22-01 Scaffold packages/harness with ACP SDK wrapper and typed update stream]].
 ---
 
 # Step 01 - Scaffold packages/harness with ACP SDK wrapper and typed update stream
@@ -83,6 +88,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Capture facts learned during execution.
 - Prefer short bullets with file paths, commands, and observed behavior.
+- See [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream/Implementation_Notes|Implementation Notes companion]] for the full durable findings. Headlines: SDK pinned exact 1.2.1; package is ESM (SDK is ESM-only — deviation from runtime's CJS); SDK 1.2.1 deprecates ClientSideConnection (still fully functional; migrate at next bump); ndJsonStream tolerates garbage stdout lines (pinned by test); boundary script `packages/harness/scripts/check-harness-boundary.mjs` wired into package lint.
 
 ## Human Notes
 
@@ -91,10 +97,11 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-13 - [[05_Sessions/2026-07-13-024429-scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream-claude-worker|SESSION-2026-07-13-024429 claude-worker session for Scaffold packages/harness with ACP SDK wrapper and typed update stream]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Record the final result, the validation performed, and any follow-up required.
 - If the step is blocked, say exactly what is blocking it.
+- Completed 2026-07-13. `@srgnt/harness` scaffolded with the full acp/ wrapper (connection, typed update stream, capability model, tagged errors) and boundary enforcement. Validation: harness tests 25/25; harness typecheck clean; root lint green (boundary check included, proven to fail on a deliberate electron import); root build green; root tests 1197/1197 (contracts 127, harness 25, runtime 287, desktop 758). Only `packages/harness/`, `pnpm-lock.yaml`, and vault notes changed. Follow-ups recorded in the Outcome companion (supervisor kill-tree, SDK deprecation migration, stream fan-out).

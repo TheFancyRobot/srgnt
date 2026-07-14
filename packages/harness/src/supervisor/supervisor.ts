@@ -41,6 +41,9 @@ interface Entry {
   restarts: number;
   lastExit: ExitInfo | undefined;
   disposed: boolean;
+  /** Set just before an intentional dispose so the single `reaped` emission (from
+   *  the exit path) reports the right reason instead of guessing 'dispose'. */
+  reapReason: 'idle' | 'dispose' | undefined;
 }
 
 /**
@@ -87,6 +90,7 @@ export class Supervisor {
       restarts: 0,
       lastExit: undefined,
       disposed: false,
+      reapReason: undefined,
     });
   }
 
@@ -112,12 +116,12 @@ export class Supervisor {
 
     const existing = entry.process;
     if (existing !== undefined && existing.state === 'ready') {
-      this.armIdle(id, entry);
+      this.armIdle(entry);
       return this.handleFor(id, entry, existing);
     }
     if (entry.starting !== undefined) {
       const process = await entry.starting;
-      this.armIdle(id, entry);
+      this.armIdle(entry);
       return this.handleFor(id, entry, process);
     }
 
@@ -125,7 +129,7 @@ export class Supervisor {
     entry.starting = startPromise;
     try {
       const process = await startPromise;
-      this.armIdle(id, entry);
+      this.armIdle(entry);
       return this.handleFor(id, entry, process);
     } finally {
       if (entry.starting === startPromise) {
@@ -135,25 +139,35 @@ export class Supervisor {
   }
 
   private async startEntry(id: string, entry: Entry): Promise<HarnessProcess> {
-    // Give up cleanly once the crash cap is exhausted.
+    // Give up cleanly once the crash cap is exhausted. entry.restarts is the
+    // actual consecutive-crash count (incremented once per crash in
+    // onProcessExit), so report it directly rather than an off-by-one.
     if (entry.restarts > this.restart.maxRestarts) {
       throw new SupervisorGaveUp({
-        message: `Supervised handle '${id}' crashed ${entry.restarts - 1} times; giving up`,
+        message: `Supervised handle '${id}' crashed ${entry.restarts} times; giving up`,
         id,
-        restarts: entry.restarts - 1,
+        restarts: entry.restarts,
         stderrTail: entry.lastExit?.stderrTail,
       });
     }
     // Backoff before a *respawn* (not the first start).
     if (entry.restarts > 0) {
       await this.clock.delay(this.backoffFor(entry.restarts));
+      if (entry.disposed) {
+        // disposeAll()/dispose() ran while we were waiting out backoff — do not
+        // resurrect a process the supervisor already committed to tearing down.
+        throw new UnknownHandle({ message: `Supervised handle '${id}' was disposed`, id });
+      }
     }
 
     this.emit({ kind: 'spawning', id });
     const process = new HarnessProcess({ launch: entry.launch, ...this.processOptions });
+    // Assign before awaiting start(): if the spawn itself fails, the exit
+    // fires synchronously inside start() and onProcessExit needs entry.process
+    // to already be this instance to record lastExit (see onProcessExit).
+    entry.process = process;
     process.onExit((info) => this.onProcessExit(id, entry, process, info));
     await process.start();
-    entry.process = process;
     this.emit({ kind: 'ready', id, pid: process.pid });
     return process;
   }
@@ -169,8 +183,12 @@ export class Supervisor {
 
     if (info.reaped) {
       // Intentional teardown (idle reap or dispose): a clean slate, no backoff.
+      // Emitted exactly once, here, after the process has actually exited —
+      // armIdle/dispose only record *why* via entry.reapReason.
       entry.restarts = 0;
-      this.emit({ kind: 'reaped', id, reason: 'dispose' });
+      const reason = entry.reapReason ?? 'dispose';
+      entry.reapReason = undefined;
+      this.emit({ kind: 'reaped', id, reason });
       return;
     }
     if (info.crashed) {
@@ -186,7 +204,7 @@ export class Supervisor {
     this.emit({ kind: 'exited', id, info });
   }
 
-  private armIdle(id: string, entry: Entry): void {
+  private armIdle(entry: Entry): void {
     entry.cancelIdle?.();
     entry.cancelIdle = undefined;
     if (this.idleTimeoutMs === undefined) {
@@ -197,7 +215,9 @@ export class Supervisor {
       if (process === undefined || process.state !== 'ready') {
         return;
       }
-      this.emit({ kind: 'reaped', id, reason: 'idle' });
+      // Record the reason; onProcessExit emits 'reaped' once the kill-tree
+      // teardown actually completes.
+      entry.reapReason = 'idle';
       void process.dispose();
     });
   }
@@ -207,7 +227,7 @@ export class Supervisor {
       id,
       pid: process.pid,
       transport: process.transport,
-      markActivity: () => this.armIdle(id, entry),
+      markActivity: () => this.armIdle(entry),
     };
   }
 
@@ -257,6 +277,7 @@ export class Supervisor {
     const starting = entry.starting;
     const process = entry.process ?? (starting !== undefined ? await starting.catch(() => undefined) : undefined);
     if (process !== undefined) {
+      entry.reapReason = 'dispose';
       await process.dispose();
     }
     entry.process = undefined;

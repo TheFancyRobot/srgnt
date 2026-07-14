@@ -262,6 +262,15 @@ export class HarnessProcess {
           this.stderrBytes -= dropped.length;
         }
       }
+      // A single chunk can itself exceed the budget (one huge write) — the
+      // whole-chunk trim above can't shrink it further, so slice it directly.
+      // Keeps the retained tail always <= stderrRingBytes.
+      if (this.stderrBytes > this.stderrRingBytes && this.stderrChunks.length === 1) {
+        const only = this.stderrChunks[0];
+        const trimmed = only.subarray(only.length - this.stderrRingBytes);
+        this.stderrChunks[0] = trimmed;
+        this.stderrBytes = trimmed.length;
+      }
     });
     stderr.on('error', () => {});
   }

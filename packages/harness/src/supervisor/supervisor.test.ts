@@ -109,7 +109,7 @@ describe('Supervisor', () => {
     // Restart cap exhausted → clean typed give-up.
     await expect(supervisor.ensureRunning('a')).rejects.toMatchObject({
       _tag: 'SupervisorGaveUp',
-      restarts: 2,
+      restarts: 3, // actual crash count, matching the field's documented semantics
     });
 
     expect(clock.delays).toEqual([100, 200]); // exponential backoff, respawns only
@@ -174,5 +174,77 @@ describe('Supervisor', () => {
         _tag: 'UnknownHandle',
       });
     }
+  });
+
+  it('emits exactly one reaped event with the correct reason (idle vs dispose)', async () => {
+    const fleet = fakeFleet();
+    const clock = new ManualClock();
+    const events: SupervisorEvent[] = [];
+    const supervisor = new Supervisor({
+      idleTimeoutMs: 1_000,
+      clock,
+      processOptions: { spawnChild: fleet.spawnChild, killTree: fleet.killTree },
+    });
+    supervisor.onEvent((event) => events.push(event));
+    supervisor.register('a', LAUNCH);
+    supervisor.register('b', LAUNCH);
+
+    await supervisor.ensureRunning('a');
+    clock.fireIdle();
+    await flush();
+
+    await supervisor.ensureRunning('b');
+    await supervisor.dispose('b');
+
+    const reapedA = events.filter((e) => e.kind === 'reaped' && e.id === 'a');
+    const reapedB = events.filter((e) => e.kind === 'reaped' && e.id === 'b');
+    expect(reapedA).toHaveLength(1);
+    expect(reapedA[0]).toMatchObject({ reason: 'idle' });
+    expect(reapedB).toHaveLength(1);
+    expect(reapedB[0]).toMatchObject({ reason: 'dispose' });
+
+    await supervisor.disposeAll();
+  });
+
+  it('records lastExit and reports dead health when the process fails to spawn', async () => {
+    const fleet = fakeFleet({ autoSpawn: false });
+    const supervisor = new Supervisor({
+      processOptions: { spawnChild: fleet.spawnChild, killTree: fleet.killTree },
+    });
+    supervisor.register('a', LAUNCH);
+
+    const ensureRunningPromise = supervisor.ensureRunning('a');
+    fleet.last().fail(new Error('ENOENT: no such binary'));
+
+    await expect(ensureRunningPromise).rejects.toMatchObject({ _tag: 'SpawnFailed' });
+    const health = supervisor.health('a');
+    expect(health?.state).toBe('dead');
+    expect(health?.running).toBe(false);
+    expect(health?.lastExit).toBeDefined();
+  });
+
+  it('disposeAll() aborts a pending backoff respawn instead of resurrecting the process', async () => {
+    const fleet = fakeFleet();
+    const clock = new ManualClock();
+    const supervisor = new Supervisor({
+      restart: { maxRestarts: 5, baseDelayMs: 100, maxDelayMs: 1_000 },
+      clock,
+      processOptions: { spawnChild: fleet.spawnChild, killTree: fleet.killTree },
+    });
+    supervisor.register('a', LAUNCH);
+
+    await supervisor.ensureRunning('a'); // start #1
+    fleet.last().crash('boom\n');
+    await flush();
+
+    // Trigger the respawn attempt: it awaits clock.delay(100), an
+    // already-resolved promise whose continuation is a queued microtask.
+    // disposeAll() below runs its synchronous "mark disposed" pass before
+    // that microtask gets a chance to run.
+    const restart = supervisor.ensureRunning('a');
+    await supervisor.disposeAll();
+
+    await expect(restart).rejects.toMatchObject({ _tag: 'UnknownHandle' });
+    expect(fleet.children).toHaveLength(1); // no second process was ever spawned
   });
 });

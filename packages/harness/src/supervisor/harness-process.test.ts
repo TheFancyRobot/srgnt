@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import type { AnyMessage } from '@agentclientprotocol/sdk';
 import type { LaunchSpec } from '@srgnt/contracts';
 import { describe, expect, it } from 'vitest';
+import { fakeFleet } from './__fixtures__/fake-child.js';
 import { HarnessProcess } from './harness-process.js';
 
 const FAKE_AGENT = fileURLToPath(new URL('./__fixtures__/fake-agent.mjs', import.meta.url));
@@ -100,6 +101,25 @@ describe('HarnessProcess', () => {
     expect(info.reaped).toBe(false);
     expect(info.code).toBe(1);
     expect(info.stderrTail).toContain('fatal boom');
+  });
+
+  it('caps the retained stderr tail even when a single chunk exceeds the ring budget', async () => {
+    const fleet = fakeFleet();
+    const hp = new HarnessProcess({
+      launch: { command: 'fake', args: [], env: {} },
+      spawnChild: fleet.spawnChild,
+      killTree: fleet.killTree,
+      stderrRingBytes: 16,
+    });
+    await hp.start();
+    const child = fleet.last();
+    const huge = `${'x'.repeat(1_000)}TAIL`; // one write, far over the 16-byte budget
+    child.stderr.write(huge);
+    await new Promise((resolve) => setImmediate(resolve));
+    const tail = hp.stderrTail();
+    expect(tail.length).toBeLessThanOrEqual(16);
+    expect(tail).toBe(huge.slice(-16));
+    await hp.dispose();
   });
 
   it('rejects start() with SpawnFailed when the binary is missing (ENOENT)', async () => {

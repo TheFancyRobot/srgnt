@@ -39,18 +39,22 @@ describePi('Pi definition (integration, SRGNT_IT_PI=1)', () => {
         }),
       );
 
-      const negotiated = connection.capabilities;
-      const effective = effectiveCapabilities(piDefinition, negotiated);
+      try {
+        const negotiated = connection.capabilities;
+        const effective = effectiveCapabilities(piDefinition, negotiated);
 
-      // eslint-disable-next-line no-console -- intentional evidence for STEP-22-05.
-      console.log('[SRGNT_IT_PI] pi-acp negotiated capabilities:', JSON.stringify(negotiated, null, 2));
+        // eslint-disable-next-line no-console -- intentional evidence for STEP-22-05.
+        console.log('[SRGNT_IT_PI] pi-acp negotiated capabilities:', JSON.stringify(negotiated, null, 2));
 
-      expect(negotiated.protocolVersion).toBeGreaterThan(0);
-      // The definition's mcp-passthrough-gaps override must clamp mcpServers off
-      // in the effective view regardless of what the adapter advertised.
-      expect(effective.mcpServers).toBe(false);
-
-      connection.close();
+        expect(negotiated.protocolVersion).toBeGreaterThan(0);
+        // The definition's mcp-passthrough-gaps override must clamp mcpServers off
+        // in the effective view regardless of what the adapter advertised.
+        expect(effective.mcpServers).toBe(false);
+      } finally {
+        // Always tear down the spawned adapter, even if an assertion above threw,
+        // so a failed run never leaks the pi-acp process/transport.
+        connection.close();
+      }
     },
     IT_TIMEOUT_MS,
   );

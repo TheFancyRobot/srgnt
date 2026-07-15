@@ -36,9 +36,11 @@ describe('detectCommand (result mapping via injected probe)', () => {
     expect(result).toMatchObject({ status: 'probe-failed', reason: 'no-version-output' });
   });
 
-  it('non-ENOENT spawn error → probe-failed', async () => {
+  it('non-ENOENT spawn error → probe-failed/spawn-error with the errno', async () => {
     const result = await detectCommand('pi', { probe: fakeProbe({ kind: 'spawn-error', code: 'EACCES' }) });
-    expect(result).toMatchObject({ status: 'probe-failed', reason: 'nonzero-exit', detail: 'EACCES' });
+    // Distinct from nonzero-exit: the process never ran, so callers can tell
+    // "could not launch" from "ran and failed".
+    expect(result).toMatchObject({ status: 'probe-failed', reason: 'spawn-error', detail: 'EACCES' });
   });
 });
 

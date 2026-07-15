@@ -101,10 +101,15 @@ export class HarnessRegistry {
   /**
    * Effective capabilities the UI consumes: live `initialize` negotiation with
    * the definition's overrides layered on. Delegates to the acp-layer
-   * {@link applyCapabilityOverrides} so the merge stays single-sourced — a
-   * definition override can clamp a negotiated capability off (e.g. Pi's
-   * `mcpServers: false`); it never invents a protocol feature the transport
-   * lacks.
+   * {@link applyCapabilityOverrides} so the merge stays single-sourced.
+   *
+   * Overrides are authoritative (force-semantics): a definition can clamp a
+   * negotiated capability *off* (e.g. Pi's `mcpServers: false`) and can also
+   * force one *on* that `initialize` doesn't advertise — some capabilities
+   * (e.g. `modes`, `slashCommands`) are discovered mid-session via
+   * `available_commands_update`/`current_mode_update` rather than negotiated
+   * up front, so a definition may assert them. It is the definition author's
+   * responsibility not to force a capability the harness genuinely lacks.
    */
   effectiveCapabilities(id: string, negotiated: NegotiatedCapabilities): NegotiatedCapabilities {
     return effectiveCapabilities(this.require(id), negotiated);

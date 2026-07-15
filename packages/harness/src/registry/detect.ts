@@ -1,5 +1,26 @@
 import { spawn as nodeSpawn } from 'node:child_process';
 
+const IS_WINDOWS = process.platform === 'win32';
+
+/** Best-effort kill of the probe's whole process group (POSIX) so a hung PATH
+ *  shim that spawned descendants leaves no orphans; falls back to a direct kill. */
+const killProbeTree = (child: { pid?: number; kill: (signal: NodeJS.Signals) => boolean }): void => {
+  const pid = child.pid;
+  if (pid !== undefined && !IS_WINDOWS) {
+    try {
+      process.kill(-pid, 'SIGKILL'); // negative pid → the detached process group
+      return;
+    } catch {
+      // ESRCH (already gone) / EPERM → fall through to a direct child kill.
+    }
+  }
+  try {
+    child.kill('SIGKILL');
+  } catch {
+    // Already exited — nothing to reap.
+  }
+};
+
 /**
  * Binary/version detection for a harness's underlying CLI (e.g. `pi`). This is
  * onboarding-facing: STEP-22-05 and Phase 25's settings UI render the three
@@ -19,7 +40,7 @@ export type DetectionResult =
       /** Binary found but the version probe failed, hung (timed out), or exited non-zero. */
       readonly status: 'probe-failed';
       readonly command: string;
-      readonly reason: 'timeout' | 'nonzero-exit' | 'no-version-output';
+      readonly reason: 'timeout' | 'nonzero-exit' | 'no-version-output' | 'spawn-error';
       readonly detail?: string;
     }
   | {
@@ -53,7 +74,11 @@ const parseVersion = (stdout: string): string | undefined => {
  */
 export const nodeVersionProbe: VersionProbe = (command, timeoutMs) =>
   new Promise<ProbeOutcome>((resolve) => {
-    const child = nodeSpawn(command, ['--version'], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const child = nodeSpawn(command, ['--version'], {
+      stdio: ['ignore', 'pipe', 'ignore'],
+      // Own process group on POSIX so a timeout can signal the whole tree.
+      detached: !IS_WINDOWS,
+    });
     let stdout = '';
     let settled = false;
     const finish = (outcome: ProbeOutcome): void => {
@@ -63,8 +88,8 @@ export const nodeVersionProbe: VersionProbe = (command, timeoutMs) =>
       resolve(outcome);
     };
     const timer = setTimeout(() => {
-      // Reap the hung probe (and any children) before resolving — no orphans.
-      child.kill('SIGKILL');
+      // Reap the hung probe (and any descendants) before resolving — no orphans.
+      killProbeTree(child);
       finish({ kind: 'timeout' });
     }, timeoutMs);
     (timer as { unref?: () => void }).unref?.();
@@ -95,10 +120,12 @@ export async function detectCommand(command: string, options: DetectOptions = {}
     case 'timeout':
       return { status: 'probe-failed', command, reason: 'timeout' };
     case 'spawn-error':
-      // ENOENT means "not on PATH"; any other spawn error is a genuine probe failure.
+      // ENOENT means "not on PATH"; any other spawn error (e.g. EACCES) is a
+      // failure to *launch* — distinct from a process that ran and exited
+      // non-zero, so it gets its own reason carrying the errno.
       return outcome.code === 'ENOENT'
         ? { status: 'not-installed', command }
-        : { status: 'probe-failed', command, reason: 'nonzero-exit', detail: outcome.code };
+        : { status: 'probe-failed', command, reason: 'spawn-error', detail: outcome.code };
     case 'exit': {
       if (outcome.code !== 0) {
         return { status: 'probe-failed', command, reason: 'nonzero-exit', detail: `exit ${outcome.code}` };

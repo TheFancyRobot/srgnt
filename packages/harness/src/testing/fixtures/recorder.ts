@@ -13,7 +13,10 @@ import type { AcpAgentConnection } from '../../acp/connection.js';
  */
 
 const HOME = homedir();
-const HOME_TOKEN = '<HOME>';
+// A single canonical token (with leading slash) so every absolute user home —
+// the current machine's and any other — normalizes to the identical string; the
+// committed fixtures and README use this exact form.
+const HOME_TOKEN = '/<HOME>';
 // Any absolute macOS/Linux user home, so a fixture recorded on one machine never
 // leaks another's username when re-recorded or hand-edited.
 const USER_HOME_PATTERN = /\/(?:Users|home)\/[^/\s"]+/g;
@@ -21,8 +24,11 @@ const USER_HOME_PATTERN = /\/(?:Users|home)\/[^/\s"]+/g;
 /** Redacts absolute home paths from any JSON value, returning a deep copy. */
 export function redactHomePaths<T>(value: T): T {
   if (typeof value === 'string') {
-    const withHome = HOME.length > 0 ? value.split(HOME).join(HOME_TOKEN) : value;
-    return withHome.replace(USER_HOME_PATTERN, `/${HOME_TOKEN}`) as unknown as T;
+    // Standard user homes first, then the current machine's home in case it is
+    // non-standard (e.g. `/root`) and the pattern above misses it. Both map to
+    // the same token.
+    const withPattern = value.replace(USER_HOME_PATTERN, HOME_TOKEN);
+    return (HOME.length > 0 ? withPattern.split(HOME).join(HOME_TOKEN) : withPattern) as unknown as T;
   }
   if (Array.isArray(value)) {
     return value.map((item) => redactHomePaths(item)) as unknown as T;

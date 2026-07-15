@@ -222,7 +222,9 @@ const SInitCapabilities = Schema.Struct({
   loadSession: Schema.optionalWith(Schema.Boolean, { default: () => false }),
   resumeSession: Schema.optionalWith(Schema.Boolean, { default: () => false }),
   images: Schema.optionalWith(Schema.Boolean, { default: () => false }),
-  slashCommands: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+  // Note: slash commands are not an `initialize` capability in ACP — they are
+  // discovered mid-session via `available_commands_update` (drive them with the
+  // `advertise_commands` directive), so there is deliberately no knob here.
   /** Advertised session modes (drives `set_mode` acceptance). */
   modes: Schema.optionalWith(Schema.Array(Schema.String), { default: () => [] }),
   agentName: Schema.optionalWith(Schema.String, { default: () => 'srgnt-mock-agent' }),

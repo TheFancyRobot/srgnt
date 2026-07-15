@@ -295,6 +295,48 @@ describe('expect_prompt / expect_cancel', () => {
     expect(response.stopReason).toBe('cancelled');
     expect(agent.assertionErrors).toEqual([]);
   });
+
+  it('cancel resolves only its own session\'s expect_cancel waiter', async () => {
+    // Drive the agent directly so we can run two concurrent sessions (the
+    // connection helper hands out one fixed sessionId).
+    const { agent } = await connectMockAgent(
+      scenario({ directives: [{ type: 'expect_cancel', timeoutMs: 2000 }] }),
+    );
+    const turnA = agent.prompt({ sessionId: 'A', prompt: [{ type: 'text', text: 'a' }] });
+    const turnB = agent.prompt({ sessionId: 'B', prompt: [{ type: 'text', text: 'b' }] });
+    let bResolved = false;
+    void turnB.then(() => {
+      bResolved = true;
+    });
+
+    await agent.cancel({ sessionId: 'A' });
+    expect((await turnA).stopReason).toBe('cancelled');
+    // Flush microtasks: a leaked shared waiter would have resolved B by now.
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(bResolved).toBe(false); // B stayed blocked; only A was cancelled
+
+    await agent.cancel({ sessionId: 'B' }); // clean up
+    await turnB;
+    expect(agent.assertionErrors).toEqual([]);
+  });
+
+  it('does not carry a cancel into the next prompt turn on the same session', async () => {
+    const { connection } = await connectMockAgent(
+      scenario({ stopReason: 'end_turn', directives: [{ type: 'emit_chunks', chunks: ['x'] }] }),
+    );
+    const session = await newSession(connection);
+    const first = await Effect.runPromise(
+      connection.prompt({ sessionId: session.sessionId, prompt: [{ type: 'text', text: '1' }] }),
+    );
+    expect(first.stopReason).toBe('end_turn');
+    // A stray cancel lands against the just-finished turn.
+    await Effect.runPromise(connection.cancel({ sessionId: session.sessionId }));
+    // The next turn must start fresh, not inherit the prior cancel.
+    const second = await Effect.runPromise(
+      connection.prompt({ sessionId: session.sessionId, prompt: [{ type: 'text', text: '2' }] }),
+    );
+    expect(second.stopReason).toBe('end_turn');
+  });
 });
 
 // ─── Failure modelling ───

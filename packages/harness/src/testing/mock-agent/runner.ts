@@ -93,8 +93,12 @@ export class MockAgent implements Agent {
   readonly executed: Directive['type'][] = [];
 
   private readonly delay: (ms: number) => Promise<void>;
-  private cancelWaiters: Array<() => void> = [];
-  private cancelled = new Set<string>();
+  /** Pending `expect_cancel` resolvers, keyed by sessionId so cancelling one
+   *  session never unblocks another's waiter. */
+  private readonly cancelWaiters = new Map<string, Set<() => void>>();
+  /** Sessions cancelled *during the current prompt turn* — cleared at each
+   *  prompt() start so a later turn on the same session isn't spuriously cancelled. */
+  private readonly cancelledTurns = new Set<string>();
 
   constructor(
     private readonly conn: AgentSideConnection,
@@ -145,20 +149,28 @@ export class MockAgent implements Agent {
   }
 
   async prompt(params: PromptRequest): Promise<PromptResponse> {
+    // Each prompt is a fresh turn: a cancel from a previous turn must not carry
+    // over and mark this one cancelled.
+    this.cancelledTurns.delete(params.sessionId);
     this.lastPrompt = promptText(params.prompt);
     for (const directive of this.scenario.directives) {
       await this.execute(params.sessionId, directive);
     }
-    if (this.cancelled.has(params.sessionId)) {
+    if (this.cancelledTurns.has(params.sessionId)) {
       return { stopReason: 'cancelled' };
     }
     return { stopReason: this.scenario.stopReason };
   }
 
   async cancel(params: CancelNotification): Promise<void> {
-    this.cancelled.add(params.sessionId);
-    for (const waiter of this.cancelWaiters.splice(0)) {
-      waiter();
+    this.cancelledTurns.add(params.sessionId);
+    // Resolve only this session's pending expect_cancel waiters, then drop them.
+    const waiters = this.cancelWaiters.get(params.sessionId);
+    if (waiters !== undefined) {
+      this.cancelWaiters.delete(params.sessionId);
+      for (const waiter of waiters) {
+        waiter();
+      }
     }
   }
 
@@ -338,19 +350,29 @@ export class MockAgent implements Agent {
   }
 
   private async waitForCancel(sessionId: string, timeoutMs: number): Promise<void> {
-    if (this.cancelled.has(sessionId)) {
+    if (this.cancelledTurns.has(sessionId)) {
       return;
     }
     await new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
+        // Drop our waiter on timeout so it can't leak or be invoked by a later
+        // cancel(). Directives run sequentially, so there is at most one pending
+        // waiter per session.
+        this.cancelWaiters.delete(sessionId);
         this.assertionErrors.push(`expect_cancel: no session/cancel arrived within ${timeoutMs}ms`);
         resolve();
       }, timeoutMs);
       (timer as { unref?: () => void }).unref?.();
-      this.cancelWaiters.push(() => {
+      const waiter = (): void => {
         clearTimeout(timer);
         resolve();
-      });
+      };
+      const existing = this.cancelWaiters.get(sessionId);
+      if (existing !== undefined) {
+        existing.add(waiter);
+      } else {
+        this.cancelWaiters.set(sessionId, new Set([waiter]));
+      }
     });
   }
 }

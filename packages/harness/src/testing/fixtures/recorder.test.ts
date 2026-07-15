@@ -6,7 +6,7 @@ import { connectMockAgent, parseScenario } from '../mock-agent/index.js';
 import { FrameRecorder, recordUpdates, redactHomePaths } from './recorder.js';
 
 describe('redactHomePaths', () => {
-  it('replaces the real home dir and any /Users|/home path with <HOME>', () => {
+  it('normalizes the real home dir and any /Users|/home path to the same /<HOME> token', () => {
     const home = homedir();
     const value = {
       cwd: `${home}/dev/demo`,
@@ -17,8 +17,11 @@ describe('redactHomePaths', () => {
     const redacted = redactHomePaths(value);
     expect(JSON.stringify(redacted)).not.toContain('someone-else');
     expect(JSON.stringify(redacted)).not.toContain('/home/bob');
+    // Every user-home path — the current machine's and others' — uses one token.
+    expect(redacted.other).toBe('/<HOME>/secret');
+    expect(redacted.nested[0]).toBe('/<HOME>/thing');
     if (home.length > 0) {
-      expect(redacted.cwd).toBe('<HOME>/dev/demo');
+      expect(redacted.cwd).toBe('/<HOME>/dev/demo');
     }
     expect(redacted.keep).toBe(42);
   });

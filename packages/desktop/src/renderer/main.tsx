@@ -14,6 +14,7 @@ import { NotesView } from './components/NotesView.js';
 import { NotesSidePanel } from './components/sidepanels/NotesSidePanel.js';
 import { SettingsSidePanel } from './components/sidepanels/SettingsSidePanel.js';
 import { NotesProvider } from './components/notes/NotesContext.js';
+import { DevConsoleGate } from './components/DevConsole.js';
 
 const LazyTerminalPanel = React.lazy(async () => {
   const module = await import('./components/TerminalPanel.js');
@@ -589,6 +590,7 @@ if (container) {
   root.render(
     <ErrorBoundary onReset={() => window.location.reload()}>
       <App />
+      <DevConsoleGate />
     </ErrorBoundary>,
   );
 }

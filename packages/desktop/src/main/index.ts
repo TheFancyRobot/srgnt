@@ -29,6 +29,7 @@ import { createTerminalService } from './services/terminal.js';
 import { createSemanticSearchService } from './services/semantic-search.js';
 import { registerCrashHandlers } from './services/crash.js';
 import { registerShellHandlers } from './services/shell.js';
+import { registerDevConsoleHandlers } from './dev-console/index.js';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const forceLocalRenderer = process.env.SRGNT_E2E === '1';
@@ -106,6 +107,17 @@ semanticSearch.registerIpcHandlers();
 registerShellHandlers();
 registerCrashHandlers({ crashReporter, getWorkspaceRoot: () => workspace.getRoot() });
 windowManager.registerIpcHandlers();
+
+// Flag-gated raw ACP dev console (SRGNT_DEV_CONSOLE=1). With the flag off this
+// only registers a `dev:console:enabled` query returning false, so the renderer
+// keeps the console invisible and default behavior is unchanged.
+const disposeDevConsole = registerDevConsoleHandlers({
+  getWindow: () => windowManager.getWindow(),
+  getCwd: () => workspace.getRoot() || undefined,
+});
+app.on('will-quit', () => {
+  void disposeDevConsole();
+});
 
 // ---------------------------------------------------------------------------
 // App lifecycle

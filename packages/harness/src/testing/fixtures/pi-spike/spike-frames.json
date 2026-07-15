@@ -1,0 +1,192 @@
+{
+  "README": "STEP-22-05 Pi adapter spike — curated raw JSON-RPC frames (redacted home paths; model catalogs trimmed). pi-acp@0.0.31, pi 0.80.6, ACP protocol v1. Full untrimmed dumps captured to a scratch dir during the run.",
+  "probe3_initialize_response": {
+    "dir": "in",
+    "t": 1394,
+    "msg": {
+      "jsonrpc": "2.0",
+      "id": 0,
+      "result": {
+        "protocolVersion": 1,
+        "agentInfo": {
+          "name": "pi-acp",
+          "title": "pi ACP adapter",
+          "version": "0.0.31"
+        },
+        "authMethods": [
+          {
+            "id": "pi_terminal_login",
+            "name": "Launch pi in the terminal",
+            "description": "Start pi in an interactive terminal to configure API keys or login",
+            "type": "terminal",
+            "args": [
+              "--terminal-login"
+            ],
+            "env": {}
+          }
+        ],
+        "agentCapabilities": {
+          "loadSession": true,
+          "mcpCapabilities": {
+            "http": false,
+            "sse": false
+          },
+          "promptCapabilities": {
+            "image": true,
+            "audio": false,
+            "embeddedContext": false
+          },
+          "sessionCapabilities": {
+            "list": {}
+          }
+        }
+      }
+    }
+  },
+  "probe3_session_load_request": {
+    "dir": "out",
+    "t": 5753,
+    "msg": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "method": "session/load",
+      "params": {
+        "sessionId": "019f6729-a1d0-7336-a341-f85dd12a5a4d",
+        "cwd": "/var/folders/gt/86vbhphn2hl8361_yrlcpdm80000gn/T/pi-spike-p3-h2xgFS",
+        "mcpServers": []
+      }
+    }
+  },
+  "probe3_session_load_response_trimmed": {
+    "dir": "in",
+    "t": 5753,
+    "msg": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "configOptions": "[trimmed: model + thought_level selectors; full catalog in raw dump]",
+        "models": {
+          "currentModelId": "cathulu/unsloth/gemma-4-31B-it-GGUF:Q5_K_M",
+          "availableModels_count": 100
+        },
+        "modes": {
+          "currentModeId": "high",
+          "availableModes": [
+            {
+              "id": "off",
+              "name": "Thinking: off",
+              "description": null
+            },
+            {
+              "id": "minimal",
+              "name": "Thinking: minimal",
+              "description": null
+            },
+            {
+              "id": "low",
+              "name": "Thinking: low",
+              "description": null
+            },
+            {
+              "id": "medium",
+              "name": "Thinking: medium",
+              "description": null
+            },
+            {
+              "id": "high",
+              "name": "Thinking: high",
+              "description": null
+            },
+            {
+              "id": "xhigh",
+              "name": "Thinking: xhigh",
+              "description": null
+            }
+          ]
+        },
+        "_meta": {
+          "piAcp": {
+            "startupInfo": "pi v0.80.6\n---\n\n## Skills\n- /<HOME>/.pi/agent/skills/zilliz/SKILL.md\n- /<HOME>/.pi/agent/skills/wrangler/SKILL.md\n- /<HOME>/.pi/agent/skills/workers-best-practices/SKILL.md\n- /<HOME>/.pi/agent/skills/web-perf/SKILL.md\n- /<HOME>/.pi/agent/skills/ui-ux-pro-max/SKILL.md\n- /<HOME>/.pi/agent/skills/turnstile-spin/SKILL.md\n- /<HOME>/.pi/agent/skills/status/SKILL.md\n- /<HOME>/.pi/agent/skills/statistics-math/SKILL.md\n- /<HOME>/.pi/agent/skills/send-request/SKILL.md\n- /<HOME>/.pi/agent/skills/sandbox-sdk/SKILL.md\n- /<HOME>/.pi/agent/skills/runpodctl/SKILL.md\n- /<HOME>/.pi/agent/skills/ripgrep/SKILL.md\n- /<HOME>/.pi/agent/skills/result/SKILL.md\n- /<HOME>/.pi/agent/skills/python-testing-patterns/SKILL.md\n- /<HOME>/.pi/agent/skills/python-resilience/SKILL.md\n- /<HOME>/.pi/agent/skills/python-background-jobs/SKILL.md\n- /<HOME>/.pi/agent/skills/programmatic-seo/SKILL.md\n- /<HOME>/.pi/agent/skills/parallel-web-search/SKILL.md\n- /<HOME>/.pi/agent/skills/parallel-web-extract/SKILL.md\n- /<HOME>/.pi/agent/skills/parallel-monitor/SKILL.md\n- /<HOME>/.pi/agent/skills/parallel-findall/SKILL.md\n- /<HOME>/.pi/agent/skills/parallel-deep-research/SKILL.md\n- /<HOME>/.pi/agent/skills/parallel-data-enrichment/SKILL.md\n- /<HOME>/.pi/agent/skills/parallel-cli-setup/SKILL.md\n- /<HOME>/.pi/agent/skills/outreach-specialist/SKILL.md\n- /<HOME>/.pi/agent/skills/opentui/SKILL.md\n- /<HOME>/.pi/agent/skills/opentraces/SKILL.md\n- /<HOME>/.pi/agent/skills/opentraces/workflow-authoring/SKILL.md\n- /<HOME>/.pi/agent/skills/opentraces/workflow-authoring/examples/grill-me-intent-curator/SKILL.md\n- /<HOME>/.pi/agent/skills/opentraces/verifier-creator/SKILL.md\n- /<HOME>/.pi/agent/skills/nocodb/SKILL.md\n- /<HOME>/.pi/agent/skills/nocodb/plugins/nc-skills/SKILL.md\n- /<HOME>/.pi/agent/skills/niche-research/SKILL.md\n- /<HOME>/.pi/agent/skills/music-downloader/SKILL.md\n- /<HOME>/.pi/agent/skills/milvus/SKILL.md\n- /<HOME>/.pi/agent/skills/memory-recall/SKILL.md\n- /<HOME>/.pi/agent/skills/marketing-psychology/SKILL.md\n- /<HOME>/.pi/agent/skills/leads-researcher/SKILL.md\n- /<HOME>/.pi/agent/skills/lead-sources-guide/SKILL.md\n- /<HOME>/.pi/agent/skills/lead-scoring/SKILL.md\n- /<HOME>/.pi/agent/skills/lead-research-assistant/SKILL.md\n- /<HOME>/.pi/agent/skills/lead-qualification/SKILL.md\n- /<HOME>/.pi/agent/skills/lead-magnets/SKILL.md\n- /<HOME>/.pi/agent/skills/lead-generation-and-demand/SKILL.md\n- /<HOME>/.pi/agent/skills/huggingface-datasets/SKILL.md\n- /<HOME>/.pi/agent/skills/frontend-design/SKILL.md\n- /<HOME>/.pi/agent/skills/frontend-design/data-dashboard-redesign/SKILL.md\n- /<HOME>/.pi/agent/skills/frontend-design/dashboard-ui-delivery/SKILL.md\n- /<HOME>/.pi/agent/skills/find-skills/SKILL.md\n- /<HOME>/.pi/agent/skills/find-keywords/SKILL.md\n- /<HOME>/.pi/agent/skills/effect-ts/SKILL.md\n- /<HOME>/.pi/agent/skills/effect-best-practices/SKILL.md\n- /<HOME>/.pi/agent/skills/durable-objects/SKILL.md\n- /<HOME>/.pi/agent/skills/dataset-transformation/SKILL.md\n- /<HOME>/.pi/agent/skills/dataset-evaluation/SKILL.md\n- /<HOME>/.pi/agent/skills/create-adr/SKILL.md\n- /<HOME>/.pi/agent/skills/cloudflare-one-migrations/SKILL.md\n- /<HOME>/.pi/agent/skills/cloudflare-one/SKILL.md\n- /<HOME>/.pi/agent/skills/cloudflare-email-service/SKILL.md\n- /<HOME>/.pi/agent/skills/cloudflare/SKILL.md\n- /<HOME>/.pi/agent/skills/build-links/SKILL.md\n- /<HOME>/.pi/agent/skills/brainstorming/SKILL.md\n- /<HOME>/.pi/agent/skills/baml/SKILL.md\n- /<HOME>/.pi/agent/skills/agents-sdk/SKILL.md\n- /<HOME>/.pi/agent/skills/agent-browser/SKILL.md\n- /<HOME>/.agents/skills/zilliz/SKILL.md\n- /<HOME>/.agents/skills/wrangler/SKILL.md\n- /<HOME>/.agents/skills/workers-best-practices/SKILL.md\n- /<HOME>/.agents/skills/web-perf/SKILL.md\n- /<HOME>/.agents/skills/validate/SKILL.md\n- /<HOME>/.agents/skills/ui-ux-pro-max/SKILL.md\n- /<HOME>/.agents/skills/turnstile-spin/SKILL.md\n- /<HOME>/.agents/skills/status/SKILL.md\n- /<HOME>/.agents/skills/statistics-math/SKILL.md\n- /<HOME>/.agents/skills/send-request/SKILL.md\n- /<HOME>/.agents/skills/sandbox-sdk/SKILL.md\n- /<HOME>/.agents/skills/runpodctl/SKILL.md\n- /<HOME>/.agents/skills/ripgrep/SKILL.md\n- /<HOME>/.agents/skills/resume/SKILL.md\n- /<HOME>/.agents/skills/result/SKILL.md\n- /<HOME>/.agents/skills/resolve-merge-conflicts/SKILL.md\n- /<HOME>/.agents/skills/refresh/SKILL.md\n- /<HOME>/.agents/skills/refine/SKILL.md\n- /<HOME>/.agents/skills/python-testing-patterns/SKILL.md\n- /<HOME>/.agents/skills/python-resilience/SKILL.md\n- /<HOME>/.agents/skills/python-background-jobs/SKILL.md\n- /<HOME>/.agents/skills/programmatic-seo/SKILL.md\n- /<HOME>/.agents/skills/plan/SKILL.md\n- /<HOME>/.agents/skills/parallel-web-search/SKILL.md\n- /<HOME>/.agents/skills/parallel-web-extract/SKILL.md\n- /<HOME>/.agents/skills/parallel-monitor/SKILL.md\n- /<HOME>/.agents/skills/parallel-findall/SKILL.md\n- /<HOME>/.agents/skills/parallel-deep-research/SKILL.md\n- /<HOME>/.agents/skills/parallel-data-enrichment/SKILL.md\n- /<HOME>/.agents/skills/parallel-cli-setup/SKILL.md\n- /<HOME>/.agents/skills/outreach-specialist/SKILL.md\n- /<HOME>/.agents/skills/orchestrate/SKILL.md\n- /<HOME>/.agents/skills/opentui/SKILL.md\n- /<HOME>/.agents/skills/opentraces/SKILL.md\n- /<HOME>/.agents/skills/opentraces/workflow-authoring/SKILL.md\n- /<HOME>/.agents/skills/opentraces/workflow-authoring/examples/grill-me-intent-curator/SKILL.md\n- /<HOME>/.agents/skills/opentraces/verifier-creator/SKILL.md\n- /<HOME>/.agents/skills/nocodb/SKILL.md\n- /<HOME>/.agents/skills/nocodb/plugins/nc-skills/SKILL.md\n- /<HOME>/.agents/skills/niche-research/SKILL.md\n- /<HOME>/.agents/skills/music-downloader/SKILL.md\n- /<HOME>/.agents/skills/milvus/SKILL.md\n- /<HOME>/.agents/skills/migrate-step-notes/SKILL.md\n- /<HOME>/.agents/skills/memory-to-skill/SKILL.md\n- /<HOME>/.agents/skills/memory-recall/SKILL.md\n- /<HOME>/.agents/skills/memory-config/SKILL.md\n- /<HOME>/.agents/skills/marketing-psychology/SKILL.md\n- /<HOME>/.agents/skills/leads-researcher/SKILL.md\n- /<HOME>/.agents/skills/lead-sources-guide/SKILL.md\n- /<HOME>/.agents/skills/lead-scoring/SKILL.md\n- /<HOME>/.agents/skills/lead-research-assistant/SKILL.md\n- /<HOME>/.agents/skills/lead-qualification/SKILL.md\n- /<HOME>/.agents/skills/lead-magnets/SKILL.md\n- /<HOME>/.agents/skills/lead-generation-and-demand/SKILL.md\n- /<HOME>/.agents/skills/init/SKILL.md\n- /<HOME>/.agents/skills/huggingface-datasets/SKILL.md\n- /<HOME>/.agents/skills/frontend-design/SKILL.md\n- /<HOME>/.agents/skills/frontend-design/data-dashboard-redesign/SKILL.md\n- /<HOME>/.agents/skills/frontend-design/dashboard-ui-delivery/SKILL.md\n- /<HOME>/.agents/skills/find-skills/SKILL.md\n- /<HOME>/.agents/skills/find-keywords/SKILL.md\n- /<HOME>/.agents/skills/execute/SKILL.md\n- /<HOME>/.agents/skills/enrich/SKILL.md\n- /<HOME>/.agents/skills/effect-ts/SKILL.md\n- /<HOME>/.agents/skills/effect-best-practices/SKILL.md\n- /<HOME>/.agents/skills/durable-objects/SKILL.md\n- /<HOME>/.agents/skills/dataset-transformation/SKILL.md\n- /<HOME>/.agents/skills/dataset-evaluation/SKILL.md\n- /<HOME>/.agents/skills/create-step/SKILL.md\n- /<HOME>/.agents/skills/create-session/SKILL.md\n- /<HOME>/.agents/skills/create-phase/SKILL.md\n- /<HOME>/.agents/skills/create-decision/SKILL.md\n- /<HOME>/.agents/skills/create-bug/SKILL.md\n- /<HOME>/.agents/skills/create-adr/SKILL.md\n- /<HOME>/.agents/skills/cloudflare-one-migrations/SKILL.md\n- /<HOME>/.agents/skills/cloudflare-one/SKILL.md\n- /<HOME>/.agents/skills/cloudflare-email-service/SKILL.md\n- /<HOME>/.agents/skills/cloudflare/SKILL.md\n- /<HOME>/.agents/skills/build-links/SKILL.md\n- /<HOME>/.agents/skills/brainstorming/SKILL.md\n- /<HOME>/.agents/skills/baml/SKILL.md\n- /<HOME>/.agents/skills/agents-sdk/SKILL.md\n- /<HOME>/.agents/skills/agent-browser/SKILL.md\n\n## Extensions\n- npm:pi-teams\n  - index.ts\n- npm:pi-mcp-adapter\n  - index.ts\n- npm:pi-dumb\n  - index.ts\n- npm:pi-context\n  - index.ts\n- npm:pi-context-cap\n  - index.ts\n- npm:@sincspecv/pi-chutes\n  - index.ts\n- npm:pi-copilot-usage\n  - index.ts\n- npm:pi-super-curl\n  - index.ts\n- npm:pi-superpowers\n  - index.ts\n- npm:oh-pi\n  - index.ts\n- npm:@ifi/pi-web-remote\n  - index.ts\n- npm:@malinamnam/pi-phone\n  - index.ts\n- npm:@imsus/pi-extension-minimax-coding-plan-mcp\n  - index.ts\n- npm:@benvargas/pi-synthetic-provider\n  - index.ts\n- npm:pi-autoresearch\n  - index.ts\n- npm:@apmantza/greedysearch-pi\n  - index.ts\n- npm:pi-cache-optimizer\n  - index.ts\n- npm:@apolosan/idea-refinement\n  - index.ts\n- npm:pi-star-router\n  - index.ts\n- npm:pi-convex\n  - index.ts\n- npm:pi-sidebar\n  - index.ts\n- npm:@firstpick/pi-skill-tech-deep-dive\n  - index.ts\n- npm:opentraces-pi\n  - index.ts\n- /<HOME>/.agent-vault/.runtime/node_modules/@fancyrobot/agent-vault\n- npm:pi-btw\n  - index.ts\n- npm:pitgram\n  - index.ts\n\n---\nNew version available: v0.80.7 (installed v0.80.6). Run: `npm i -g @earendil-works/pi-coding-agent`\n"
+          }
+        }
+      }
+    }
+  },
+  "probe3_session_resume_error": {
+    "dir": "in",
+    "t": 8065,
+    "msg": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "error": {
+        "code": -32601,
+        "message": "\"Method not found\": session/resume",
+        "data": {
+          "method": "session/resume"
+        }
+      }
+    }
+  },
+  "probe1_session_new_request": {
+    "dir": "out",
+    "t": 1229,
+    "msg": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "session/new",
+      "params": {
+        "cwd": "/var/folders/gt/86vbhphn2hl8361_yrlcpdm80000gn/T/pi-spike-p14-t4ALry",
+        "mcpServers": []
+      }
+    }
+  },
+  "probe1_request_permission_observed": "NONE — pi-acp never called session/request_permission (self-approves)",
+  "probe4_fs_delegation_observed": "NONE — pi-acp never called client fs/* (executes in-process)",
+  "probe4_sample_tool_call_update": {
+    "dir": "in",
+    "t": 59871,
+    "msg": {
+      "jsonrpc": "2.0",
+      "method": "session/update",
+      "params": {
+        "sessionId": "019f6729-bfc3-7fcb-92fb-785c4456875f",
+        "update": {
+          "sessionUpdate": "tool_call",
+          "toolCallId": "JBD10lCrClV7lDFJd2sMsdK2MDqQWk9C",
+          "title": "write",
+          "kind": "edit",
+          "status": "pending",
+          "rawInput": {}
+        }
+      }
+    }
+  },
+  "probe2_session_new_with_mcpServers": {
+    "dir": "out",
+    "t": 1189,
+    "msg": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "session/new",
+      "params": {
+        "cwd": "/var/folders/gt/86vbhphn2hl8361_yrlcpdm80000gn/T/pi-spike-p2-NXKKJD",
+        "mcpServers": [
+          {
+            "name": "spike-echo",
+            "command": "/<HOME>/.nvm/versions/node/v24.15.0/bin/node",
+            "args": [
+              "/<HOME>/dev/srgnt/packages/harness/src/testing/fixtures/mcp-echo-server.mjs"
+            ],
+            "env": [
+              {
+                "name": "MCP_ECHO_LOG",
+                "value": "/private/tmp/claude-501/-Users-dino-dev-srgnt/02792d60-78fc-4280-b7cf-63e9ee9940ed/scratchpad/spike-evidence/probe2-echo-server.log"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "probe2_echo_server_launched": false
+}

@@ -48,6 +48,13 @@ const ipcChannels = {
   semanticSearchRebuildAll: 'semantic-search:rebuild-all',
   semanticSearchSearch: 'semantic-search:search',
   semanticSearchStatus: 'semantic-search:status',
+  // Flag-gated dev console (SRGNT_DEV_CONSOLE=1).
+  devConsoleEnabled: 'dev:console:enabled',
+  devSessionNew: 'dev:session:new',
+  devSessionPrompt: 'dev:session:prompt',
+  devSessionCancel: 'dev:session:cancel',
+  devSessionDispose: 'dev:session:dispose',
+  devSessionUpdate: 'dev:session:update',
 } as const;
 
 const api = {
@@ -174,6 +181,23 @@ const api = {
     error: string | null;
   }> =>
     ipcRenderer.invoke(ipcChannels.semanticSearchStatus, { workspaceRoot }),
+
+  // Flag-gated dev console. `devConsoleEnabled` is always answerable (returns
+  // false when the flag is off); the rest only resolve when the flag is on.
+  devConsoleEnabled: (): Promise<boolean> => ipcRenderer.invoke(ipcChannels.devConsoleEnabled),
+  devSessionNew: (target: 'mock' | 'pi'): Promise<{ sessionId: string; target: 'mock' | 'pi'; capabilities: Record<string, unknown> }> =>
+    ipcRenderer.invoke(ipcChannels.devSessionNew, { target }),
+  devSessionPrompt: (sessionId: string, text: string): Promise<{ stopReason: string }> =>
+    ipcRenderer.invoke(ipcChannels.devSessionPrompt, { sessionId, text }),
+  devSessionCancel: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.devSessionCancel, { sessionId }),
+  devSessionDispose: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.devSessionDispose, { sessionId }),
+  onDevSessionUpdate: (callback: (event: { sessionId: string; update: unknown }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: { sessionId: string; update: unknown }) => callback(payload);
+    ipcRenderer.on(ipcChannels.devSessionUpdate, handler);
+    return () => ipcRenderer.removeListener(ipcChannels.devSessionUpdate, handler);
+  },
 
   platform: process.platform,
 };

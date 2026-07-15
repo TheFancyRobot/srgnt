@@ -100,6 +100,14 @@ export interface SrgntAPI {
   windowIsMaximized(): Promise<boolean>;
   onWindowMaximizedChange(callback: (isMaximized: boolean) => void): () => void;
 
+  // Flag-gated dev console (SRGNT_DEV_CONSOLE=1)
+  devConsoleEnabled(): Promise<boolean>;
+  devSessionNew(target: 'mock' | 'pi'): Promise<{ sessionId: string; target: 'mock' | 'pi'; capabilities: Record<string, unknown> }>;
+  devSessionPrompt(sessionId: string, text: string): Promise<{ stopReason: string }>;
+  devSessionCancel(sessionId: string): Promise<void>;
+  devSessionDispose(sessionId: string): Promise<void>;
+  onDevSessionUpdate(callback: (event: { sessionId: string; update: unknown }) => void): () => void;
+
   platform: string;
 }
 

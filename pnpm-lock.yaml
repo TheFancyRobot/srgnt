@@ -79,6 +79,9 @@ importers:
       '@srgnt/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@srgnt/harness':
+        specifier: workspace:*
+        version: link:../harness
       '@srgnt/runtime':
         specifier: workspace:*
         version: link:../runtime

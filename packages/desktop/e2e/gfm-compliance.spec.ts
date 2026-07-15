@@ -53,17 +53,14 @@ test('GFM: ATX headings h1-h6 render with different font sizes', async ({ userDa
   await expect(page.getByRole('heading', { name: 'Headings.md' })).toBeVisible();
 
   // In live-preview mode, headings get .cm-header-N spans inside .cm-line elements.
-  // Verify all heading levels are present in the DOM.
-  const headingCounts = await page.evaluate(() => {
-    const counts: Record<string, number> = {};
-    for (let i = 1; i <= 6; i++) {
-      counts[`h${i}`] = document.querySelectorAll(`.cm-header-${i}`).length;
-    }
-    return counts;
-  });
-
+  // Loading the note and CodeMirror's decoration pass are both async, so assert
+  // each level with an auto-retrying locator rather than reading querySelectorAll
+  // once — a one-shot snapshot races the decoration pass and flakes under CI.
   for (let level = 1; level <= 6; level++) {
-    expect(headingCounts[`h${level}`], `expected .cm-header-${level}`).toBeGreaterThan(0);
+    await expect(
+      page.locator(`.cm-header-${level}`),
+      `expected .cm-header-${level}`,
+    ).not.toHaveCount(0);
   }
 });
 

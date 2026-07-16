@@ -3,6 +3,7 @@
  */
 import type { DevSessionUpdateEvent } from '@srgnt/contracts';
 import { connectMockAgent, type Scenario } from '@srgnt/harness/testing';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 import { DevSessionController, type DevConnectFn } from './session-controller.js';
 
@@ -75,6 +76,20 @@ describe('DevSessionController (mock target, in-process)', () => {
     const controller = new DevSessionController({ connect: mockConnect, onUpdate: () => {} });
     const session = await controller.newSession('mock');
     await expect(controller.cancel(session.sessionId)).resolves.toBeUndefined();
+    await controller.dispose(session.sessionId);
+  });
+
+  it('cancel surfaces a transport failure instead of silently succeeding', async () => {
+    const failingConnect: DevConnectFn = async () => {
+      const { connection } = await connectMockAgent(demoScenario);
+      // Force the cancel round-trip to fail at the transport level.
+      (connection as unknown as { cancel: () => unknown }).cancel = () =>
+        Effect.fail(new Error('cancel transport boom'));
+      return { connection, cleanup: async () => connection.close() };
+    };
+    const controller = new DevSessionController({ connect: failingConnect, onUpdate: () => {} });
+    const session = await controller.newSession('mock');
+    await expect(controller.cancel(session.sessionId)).rejects.toThrow(/cancel transport boom/i);
     await controller.dispose(session.sessionId);
   });
 

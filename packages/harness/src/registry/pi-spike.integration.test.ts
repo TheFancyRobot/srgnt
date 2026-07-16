@@ -62,18 +62,24 @@ function recordingSpawner(inner: AgentSpawner, frames: Frame[]): AgentSpawner {
   return async (launch): Promise<SpawnedAgent> => {
     const spawned = await inner(launch);
     const start = Date.now();
-    const inTee = new TransformStream<AnyMessage, AnyMessage>({
+    // Typed transformers + explicit (undefined, undefined) queuing strategies:
+    // the standard single-arg `new TransformStream({ transform })` is correct
+    // WHATWG usage, but CodeQL's constructor model flags it as a superfluous
+    // trailing argument — the explicit 3-arg form disambiguates it.
+    const inTransformer: Transformer<AnyMessage, AnyMessage> = {
       transform(msg, controller) {
         frames.push({ dir: 'in', t: Date.now() - start, msg });
         controller.enqueue(msg);
       },
-    });
-    const outTee = new TransformStream<AnyMessage, AnyMessage>({
+    };
+    const outTransformer: Transformer<AnyMessage, AnyMessage> = {
       transform(msg, controller) {
         frames.push({ dir: 'out', t: Date.now() - start, msg });
         controller.enqueue(msg);
       },
-    });
+    };
+    const inTee = new TransformStream<AnyMessage, AnyMessage>(inTransformer, undefined, undefined);
+    const outTee = new TransformStream<AnyMessage, AnyMessage>(outTransformer, undefined, undefined);
     void outTee.readable.pipeTo(spawned.stream.writable).catch(() => {});
     return {
       stream: { writable: outTee.writable, readable: spawned.stream.readable.pipeThrough(inTee) },

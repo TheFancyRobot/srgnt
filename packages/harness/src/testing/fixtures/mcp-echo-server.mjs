@@ -71,6 +71,12 @@ function handle(request) {
   }
 }
 
+// Startup marker: create/append the log the instant the process starts, so the
+// spike can tell "server was spawned but never received a line" (a passthrough
+// failure) from "server was never spawned" — without it, existsSync(LOG) is a
+// false negative for a process that launched but got no handshake.
+log('start', { pid: process.pid });
+
 const rl = createInterface({ input: process.stdin });
 rl.on('line', (line) => {
   const trimmed = line.trim();

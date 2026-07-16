@@ -79,11 +79,14 @@ export function DevConsoleGate(): React.ReactElement | null {
       >
         {open ? '▼ hide dev console' : '▲ show dev console'}
       </button>
-      {open && (
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <DevConsole />
-        </div>
-      )}
+      {/* Keep DevConsole mounted when collapsed (hidden, not unmounted) so an
+          active mock/Pi session — and its update subscription — survives a
+          hide/show cycle. Unmounting here would drop the sessionId without
+          disposing it, leaving the main-process ACP session running with no
+          handle to cancel or dispose it. */}
+      <div style={{ flex: 1, overflow: 'hidden', display: open ? 'block' : 'none' }}>
+        <DevConsole />
+      </div>
     </div>
   );
 }
@@ -151,17 +154,30 @@ export function DevConsole(): React.ReactElement {
   const handleCancel = React.useCallback(async () => {
     if (sessionId === null) return;
     append('info', 'cancel requested');
-    await window.srgnt.devSessionCancel(sessionId);
-    setStatus('ready');
+    try {
+      await window.srgnt.devSessionCancel(sessionId);
+      setStatus('ready');
+    } catch (cause) {
+      setStatus('error');
+      setError(cause instanceof Error ? cause.message : String(cause));
+      append('error', `cancel failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+    }
   }, [append, sessionId]);
 
   const handleDispose = React.useCallback(async () => {
     if (sessionId === null) return;
-    await window.srgnt.devSessionDispose(sessionId);
-    append('info', `session ${sessionId} disposed`);
-    setSessionId(null);
-    setCapabilities(null);
-    setStatus('idle');
+    try {
+      await window.srgnt.devSessionDispose(sessionId);
+      append('info', `session ${sessionId} disposed`);
+      setSessionId(null);
+      setCapabilities(null);
+      setStatus('idle');
+    } catch (cause) {
+      // Keep the session handle so the user can retry; just surface the failure.
+      setStatus('error');
+      setError(cause instanceof Error ? cause.message : String(cause));
+      append('error', `dispose failed: ${cause instanceof Error ? cause.message : String(cause)}`);
+    }
   }, [append, sessionId]);
 
   const hasSession = sessionId !== null;

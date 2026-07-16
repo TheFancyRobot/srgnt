@@ -8,13 +8,26 @@ import type {
   DevSessionUpdateEvent,
   LaunchSpec,
 } from '@srgnt/contracts';
-import {
-  AcpAgentConnection,
-  type ClientPorts,
-  piDefinition,
-  Supervisor,
-} from '@srgnt/harness';
+import type { AcpAgentConnection, ClientPorts } from '@srgnt/harness';
 import { Effect } from 'effect';
+
+/**
+ * `@srgnt/harness` is ESM-only (`"type": "module"`) and desktop-main compiles to
+ * CommonJS, so a static `import` — or a TS `import()` (which tsc downlevels to
+ * `require()` under `module: commonjs`) — would `require()` an ESM package and
+ * throw `ERR_REQUIRE_ESM` on any Electron/Node build without require(ESM). Load
+ * it through a genuine dynamic `import()` hidden from the CommonJS transform by
+ * the `Function` indirection, so it resolves the ESM graph natively. Memoized;
+ * only ever runs on the flag-on path (a session is being opened).
+ */
+type HarnessModule = typeof import('@srgnt/harness');
+let harnessModulePromise: Promise<HarnessModule> | undefined;
+function loadHarness(): Promise<HarnessModule> {
+  if (harnessModulePromise === undefined) {
+    harnessModulePromise = Function('return import("@srgnt/harness")')() as Promise<HarnessModule>;
+  }
+  return harnessModulePromise;
+}
 
 /**
  * Ephemeral dev-console session controller — the FIRST place desktop-main drives
@@ -91,6 +104,7 @@ function mockLaunchSpec(): LaunchSpec {
  * both, just deterministically for the mock.
  */
 export const defaultDevConnect: DevConnectFn = async (target) => {
+  const { AcpAgentConnection, Supervisor, piDefinition } = await loadHarness();
   const launch = target === 'pi' ? piDefinition.launch : mockLaunchSpec();
   const capabilityOverrides = target === 'pi' ? piDefinition.capabilityOverrides : undefined;
   const supervisor = new Supervisor();
@@ -199,7 +213,12 @@ export class DevSessionController {
   /** `session/cancel` — recovers a hung turn without tearing the session down. */
   async cancel(handle: string): Promise<void> {
     const state = this.require(handle);
-    await Effect.runPromise(Effect.either(state.connection.cancel({ sessionId: state.acpSessionId })));
+    const outcome = await Effect.runPromise(
+      Effect.either(state.connection.cancel({ sessionId: state.acpSessionId })),
+    );
+    // Surface transport/JSON-RPC failures instead of silently succeeding, so the
+    // renderer doesn't show a cancelled turn as cancelled when it wasn't (mirrors prompt()).
+    if (outcome._tag === 'Left') throw toError(outcome.left);
   }
 
   /** Kill-trees the session's process and forgets it. Idempotent. */

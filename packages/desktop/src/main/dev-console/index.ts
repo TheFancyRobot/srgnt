@@ -6,9 +6,14 @@ import {
   SDevSessionPromptRequest,
   SDevSessionRef,
 } from '@srgnt/contracts';
-import { DevSessionController } from './session-controller.js';
+// Type-only import: `session-controller` statically imports the ESM-only
+// `@srgnt/harness`, and the desktop main is compiled to CommonJS, so a *value*
+// import here would become a top-level `require()` of an ESM package
+// (ERR_REQUIRE_ESM) at app startup. The concrete controller is loaded lazily
+// via dynamic import() inside the flag-on path below (see getController).
+import type { DevSessionController } from './session-controller.js';
 
-export { DevSessionController } from './session-controller.js';
+export type { DevSessionController } from './session-controller.js';
 export type { DevConnectFn, DevConnection } from './session-controller.js';
 
 /** True when the flag-gated dev console is switched on for this process. */
@@ -50,37 +55,57 @@ export function registerDevConsoleHandlers(wiring: DevConsoleWiring): () => Prom
     };
   }
 
-  const controller =
-    wiring.createController?.({
-      onUpdate: (event) => pushUpdate(wiring, event.sessionId, event.update),
-      ...(wiring.getCwd !== undefined ? { getCwd: wiring.getCwd } : {}),
-    }) ??
-    new DevSessionController({
-      onUpdate: (event) => pushUpdate(wiring, event.sessionId, event.update),
-      ...(wiring.getCwd !== undefined ? { getCwd: wiring.getCwd } : {}),
-    });
+  const controllerOptions = {
+    onUpdate: (event: { sessionId: string; update: unknown }) =>
+      pushUpdate(wiring, event.sessionId, event.update),
+    ...(wiring.getCwd !== undefined ? { getCwd: wiring.getCwd } : {}),
+  };
+
+  // Lazily construct the harness-backed controller on first use. A test-injected
+  // `createController` needs no harness at all; otherwise we dynamic-import the
+  // controller module (which pulls in the ESM `@srgnt/harness`) — deferred to the
+  // flag-on path so the default app never loads it. Memoized so all handlers and
+  // the teardown share one controller.
+  let controllerPromise: Promise<DevSessionController> | undefined;
+  const getController = (): Promise<DevSessionController> => {
+    if (controllerPromise === undefined) {
+      controllerPromise =
+        wiring.createController !== undefined
+          ? Promise.resolve(wiring.createController(controllerOptions))
+          : import('./session-controller.js').then(
+              ({ DevSessionController }) => new DevSessionController(controllerOptions),
+            );
+    }
+    return controllerPromise;
+  };
 
   ipcMain.handle(ipcChannels.devSessionNew, async (_event, payload: unknown) => {
     const { target } = parseSync(SDevSessionNewRequest, payload);
-    return controller.newSession(target);
+    return (await getController()).newSession(target);
   });
 
   ipcMain.handle(ipcChannels.devSessionPrompt, async (_event, payload: unknown) => {
     const { sessionId, text } = parseSync(SDevSessionPromptRequest, payload);
-    return controller.prompt(sessionId, text);
+    return (await getController()).prompt(sessionId, text);
   });
 
   ipcMain.handle(ipcChannels.devSessionCancel, async (_event, payload: unknown) => {
     const { sessionId } = parseSync(SDevSessionRef, payload);
-    await controller.cancel(sessionId);
+    await (await getController()).cancel(sessionId);
   });
 
   ipcMain.handle(ipcChannels.devSessionDispose, async (_event, payload: unknown) => {
     const { sessionId } = parseSync(SDevSessionRef, payload);
-    await controller.dispose(sessionId);
+    await (await getController()).dispose(sessionId);
   });
 
-  return () => controller.disposeAll();
+  // Teardown: only tear down if a controller was ever constructed (a console that
+  // was enabled but never opened a session has nothing to dispose).
+  return async () => {
+    if (controllerPromise !== undefined) {
+      await (await controllerPromise).disposeAll();
+    }
+  };
 }
 
 function pushUpdate(wiring: DevConsoleWiring, sessionId: string, update: unknown): void {

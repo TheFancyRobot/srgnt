@@ -1,7 +1,6 @@
 /**
  * @vitest-environment jsdom
  */
-import React from 'react';
 import { act, render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DevConsole, DevConsoleGate } from './DevConsole.js';
@@ -102,5 +101,45 @@ describe('DevConsole session flow', () => {
     render(<DevConsole />);
     fireEvent.click(screen.getByTestId('dev-console-new'));
     expect(await screen.findByTestId('dev-console-error')).toHaveTextContent('spawn boom');
+  });
+
+  it('surfaces a cancel failure instead of leaving an unhandled rejection', async () => {
+    installSrgntStub({ devSessionCancel: vi.fn(async () => Promise.reject(new Error('cancel boom'))) });
+    render(<DevConsole />);
+    fireEvent.click(screen.getByTestId('dev-console-new'));
+    await waitFor(() => expect(window.srgnt.devSessionNew).toHaveBeenCalled());
+    fireEvent.click(screen.getByTestId('dev-console-cancel'));
+    expect(await screen.findByTestId('dev-console-error')).toHaveTextContent('cancel boom');
+  });
+
+  it('surfaces a dispose failure and keeps the session handle for retry', async () => {
+    installSrgntStub({ devSessionDispose: vi.fn(async () => Promise.reject(new Error('dispose boom'))) });
+    render(<DevConsole />);
+    fireEvent.click(screen.getByTestId('dev-console-new'));
+    await waitFor(() => expect(window.srgnt.devSessionNew).toHaveBeenCalled());
+    fireEvent.click(screen.getByTestId('dev-console-dispose'));
+    expect(await screen.findByTestId('dev-console-error')).toHaveTextContent('dispose boom');
+    // Session id still shown → handle retained so the user can retry dispose.
+    expect(screen.getByTestId('dev-console-status').textContent).toContain('dev-mock-1');
+  });
+});
+
+describe('DevConsoleGate collapse', () => {
+  it('keeps the console (and its session) mounted when collapsed, without disposing', async () => {
+    installSrgntStub();
+    render(<DevConsoleGate />);
+    await screen.findByTestId('dev-console');
+
+    // Open a session, then collapse and re-expand.
+    fireEvent.click(screen.getByTestId('dev-console-new'));
+    await waitFor(() => expect(screen.getByTestId('dev-console-status').textContent).toContain('dev-mock-1'));
+
+    fireEvent.click(screen.getByTestId('dev-console-toggle')); // hide
+    fireEvent.click(screen.getByTestId('dev-console-toggle')); // show
+
+    // The console stayed mounted the whole time (session state survives), and
+    // collapsing never disposed the underlying ACP session.
+    expect(screen.getByTestId('dev-console-status').textContent).toContain('dev-mock-1');
+    expect(window.srgnt.devSessionDispose).not.toHaveBeenCalled();
   });
 });

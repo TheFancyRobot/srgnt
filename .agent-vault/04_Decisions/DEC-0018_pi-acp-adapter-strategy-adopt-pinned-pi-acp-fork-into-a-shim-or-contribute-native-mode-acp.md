@@ -4,9 +4,9 @@ template_version: 2
 contract_version: 1
 title: Pi ACP adapter strategy — adopt pinned pi-acp, fork into a shim, or contribute native --mode acp
 decision_id: DEC-0018
-status: proposed
+status: accepted
 decided_on: '2026-07-15'
-owner: ''
+owner: matthew
 created: '2026-07-15'
 updated: '2026-07-15'
 supersedes: []
@@ -26,10 +26,14 @@ Use one note per durable choice in \`04_Decisions/\`. This note is the source of
 
 ## Status
 
-- Current status: **proposed** — awaiting the human adopt/fork/contribute call.
-- This note records the STEP-22-05 spike evidence and a recommendation; it is
-  deliberately **not** `accepted`. Keep this section aligned with the `status`
-  frontmatter value.
+- Current status: **accepted** (ratified by matthew, 2026-07-15) — the phased
+  hybrid below is the chosen direction.
+- Ratified as recommended: **adopt pinned `pi-acp@0.0.31` now for phases 23–24**;
+  **revisit before Phase 27 to contribute native `--mode acp` upstream, forking
+  into `packages/shims/pi-acp` only if upstream stalls.** This sets direction
+  only — no fork/upstream implementation is committed in Phase 22 (spike-only).
+- Revisit trigger stands: re-open when upstream pi lands native `--mode acp`, or
+  when Phase 27 (groups/bus) work begins — whichever comes first.
 
 ## Context
 

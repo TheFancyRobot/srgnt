@@ -57,32 +57,61 @@ interface Frame {
   readonly msg: AnyMessage;
 }
 
-/** Wraps a spawner so every ACP JSON-RPC frame is teed into `frames`. */
+/**
+ * Wraps a spawner so every ACP JSON-RPC frame is teed into `frames`.
+ *
+ * Recording is done with **zero-argument** Streams constructors only — an
+ * inbound `readable.tee()` (one branch drained to record, the other passed
+ * through) and an identity `new TransformStream()` on the outbound side whose
+ * frames we read, record, and forward by hand. A `new TransformStream({ transform })`
+ * (or its 3-arg variant) is correct WHATWG usage, but CodeQL's `TransformStream`
+ * extern models the constructor as taking no parameters and flags any argument as
+ * a "superfluous trailing argument" — its suggestions to add, then remove, the
+ * arguments contradict each other. Passing no constructor arguments sidesteps the
+ * false positive without weakening the recording. Do not "simplify" this back into
+ * a transformer-object constructor.
+ */
 function recordingSpawner(inner: AgentSpawner, frames: Frame[]): AgentSpawner {
   return async (launch): Promise<SpawnedAgent> => {
     const spawned = await inner(launch);
     const start = Date.now();
-    // Typed transformers + explicit (undefined, undefined) queuing strategies:
-    // the standard single-arg `new TransformStream({ transform })` is correct
-    // WHATWG usage, but CodeQL's constructor model flags it as a superfluous
-    // trailing argument — the explicit 3-arg form disambiguates it.
-    const inTransformer: Transformer<AnyMessage, AnyMessage> = {
-      transform(msg, controller) {
-        frames.push({ dir: 'in', t: Date.now() - start, msg });
-        controller.enqueue(msg);
-      },
-    };
-    const outTransformer: Transformer<AnyMessage, AnyMessage> = {
-      transform(msg, controller) {
-        frames.push({ dir: 'out', t: Date.now() - start, msg });
-        controller.enqueue(msg);
-      },
-    };
-    const inTee = new TransformStream<AnyMessage, AnyMessage>(inTransformer, undefined, undefined);
-    const outTee = new TransformStream<AnyMessage, AnyMessage>(outTransformer, undefined, undefined);
-    void outTee.readable.pipeTo(spawned.stream.writable).catch(() => {});
+
+    // Inbound (agent → client): tee, drain one branch to record, pass the other.
+    const [inPass, inTap] = spawned.stream.readable.tee();
+    void (async () => {
+      const reader = inTap.getReader();
+      try {
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          frames.push({ dir: 'in', t: Date.now() - start, msg: value });
+        }
+      } catch {
+        /* stream ended/aborted — recording is best-effort */
+      }
+    })();
+
+    // Outbound (client → agent): identity transform; read its readable, record
+    // each frame, then forward it to the real writable.
+    const outIdentity = new TransformStream<AnyMessage, AnyMessage>();
+    void (async () => {
+      const reader = outIdentity.readable.getReader();
+      const writer = spawned.stream.writable.getWriter();
+      try {
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          frames.push({ dir: 'out', t: Date.now() - start, msg: value });
+          await writer.write(value);
+        }
+        await writer.close();
+      } catch {
+        /* stream ended/aborted — best-effort */
+      }
+    })();
+
     return {
-      stream: { writable: outTee.writable, readable: spawned.stream.readable.pipeThrough(inTee) },
+      stream: { writable: outIdentity.writable, readable: inPass },
       kill: spawned.kill,
     };
   };

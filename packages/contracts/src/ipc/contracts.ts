@@ -38,6 +38,17 @@ export const ipcChannels = {
   semanticSearchRebuildAll: 'semantic-search:rebuild-all',
   semanticSearchSearch: 'semantic-search:search',
   semanticSearchStatus: 'semantic-search:status',
+  // Flag-gated (SRGNT_DEV_CONSOLE=1) raw ACP dev console. Ephemeral, dev-only;
+  // the operational channels below are only registered when the flag is set,
+  // while `devConsoleEnabled` is always registered so the renderer can gate its
+  // own visibility. See packages/desktop/src/main/dev-console.
+  devConsoleEnabled: 'dev:console:enabled',
+  devSessionNew: 'dev:session:new',
+  devSessionPrompt: 'dev:session:prompt',
+  devSessionCancel: 'dev:session:cancel',
+  devSessionDispose: 'dev:session:dispose',
+  // Main→renderer push channel for streamed session/update frames.
+  devSessionUpdate: 'dev:session:update',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -412,3 +423,50 @@ export const SSemanticSearchStatusResponse = Schema.Struct({
   error: Schema.optional(Schema.String),
 });
 export type SemanticSearchStatusResponse = Schema.Schema.Type<typeof SSemanticSearchStatusResponse>;
+
+// Dev console IPC types (flag-gated, SRGNT_DEV_CONSOLE=1). Deliberately thin —
+// this is a developer harness for driving raw ACP sessions, not a product
+// contract. Capabilities/updates cross the wire as opaque JSON because their
+// authoritative shapes live in @srgnt/harness (which desktop-main owns), not in
+// contracts.
+
+/** Which harness the dev console drives: the deterministic mock, or real Pi. */
+export const SDevConsoleTarget = Schema.Literal('mock', 'pi');
+export type DevConsoleTarget = Schema.Schema.Type<typeof SDevConsoleTarget>;
+
+export const SDevSessionNewRequest = Schema.Struct({
+  target: SDevConsoleTarget,
+});
+export type DevSessionNewRequest = Schema.Schema.Type<typeof SDevSessionNewRequest>;
+
+export const SDevSessionNewResponse = Schema.Struct({
+  sessionId: Schema.String,
+  target: SDevConsoleTarget,
+  /** Negotiated ACP capabilities (opaque; shape owned by @srgnt/harness). */
+  capabilities: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+});
+export type DevSessionNewResponse = Schema.Schema.Type<typeof SDevSessionNewResponse>;
+
+export const SDevSessionPromptRequest = Schema.Struct({
+  sessionId: Schema.String,
+  text: Schema.String,
+});
+export type DevSessionPromptRequest = Schema.Schema.Type<typeof SDevSessionPromptRequest>;
+
+export const SDevSessionPromptResponse = Schema.Struct({
+  stopReason: Schema.String,
+});
+export type DevSessionPromptResponse = Schema.Schema.Type<typeof SDevSessionPromptResponse>;
+
+export const SDevSessionRef = Schema.Struct({
+  sessionId: Schema.String,
+});
+export type DevSessionRef = Schema.Schema.Type<typeof SDevSessionRef>;
+
+/** One streamed frame pushed main→renderer over `dev:session:update`. */
+export const SDevSessionUpdateEvent = Schema.Struct({
+  sessionId: Schema.String,
+  /** ACP `session/update` notification payload, opaque to the renderer. */
+  update: Schema.Unknown,
+});
+export type DevSessionUpdateEvent = Schema.Schema.Type<typeof SDevSessionUpdateEvent>;

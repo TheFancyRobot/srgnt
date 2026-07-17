@@ -14,6 +14,7 @@ related_architecture:
   - '[[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009 ACP Command Center Target Architecture]]'
 related_decisions:
   - '[[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017 Pivot srgnt from data aggregator to ACP coding-agent command center]]'
+  - '[[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy (STEP-22-05 spike gate — proposed)]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -92,7 +93,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Related Decisions
 
 <!-- AGENT-START:phase-related-decisions -->
-- None yet.
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy]] (STEP-22-05 spike gate, proposed) — Pi permission/MCP/fs-terminal constraints this phase's chat UI must honor.
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs
@@ -120,3 +121,4 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - Reuse map: markdown rendering ← notes-view machinery; diffs ← CodeMirror; terminal embeds ← ghostty-web/pty stack; permission UI patterns ← old approvals UX; layout ← existing three-panel shell and semantic tokens (Phase 12 brand work).
 - All E2E in this phase runs against the mock agent — deterministic, no network, no LLM cost; real-Pi checks stay manual until Phase 24 stabilizes lifecycle.
 - Validation: `pnpm --filter @srgnt/desktop test`, `test:e2e` chat specs, plus manual real-Pi conversation smoke.
+- Pi behavior constraints for the chat UI come from the STEP-22-05 spike: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] + [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (proposed). Key UI consequences: Pi self-approves permissions (informational trust badge, not a client gate); MCP injection unavailable for Pi; no client fs/terminal delegation (render tool cards from `tool_call` content); `session/load` works, `session/resume` does not.

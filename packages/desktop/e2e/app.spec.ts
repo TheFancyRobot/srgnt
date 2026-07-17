@@ -657,3 +657,16 @@ test('notes editor renders horizontal rules as visible separators', async ({ use
   expect(Number.parseFloat(hrStyles.borderBottomWidth)).toBeGreaterThan(0);
   expect(hrStyles.borderBottomColor).not.toBe('rgba(0, 0, 0, 0)');
 });
+
+test('flag-gated dev console is absent in the default (flag-off) app', async ({ window: page }) => {
+  await completeOnboarding(page);
+
+  // The main process reports the console disabled when SRGNT_DEV_CONSOLE is unset,
+  // and the renderer therefore never mounts it. STEP-22-05: the console must be
+  // invisible without the flag so default behavior is byte-identical.
+  const enabled = await page.evaluate(() => window.srgnt.devConsoleEnabled());
+  expect(enabled).toBe(false);
+
+  await expect(page.getByTestId('dev-console-gate')).toHaveCount(0);
+  await expect(page.getByTestId('dev-console')).toHaveCount(0);
+});

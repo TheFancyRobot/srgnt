@@ -7,13 +7,14 @@ phase_id: PHASE-22
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-15'
 depends_on:
   - '[[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|PHASE-21 Pivot Groundwork and Aggregator Teardown]]'
 related_architecture:
   - '[[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009 ACP Command Center Target Architecture]]'
 related_decisions:
   - '[[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017 Pivot srgnt from data aggregator to ACP coding-agent command center]]'
+  - '[[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy — adopt pinned pi-acp, fork into a shim, or contribute native --mode acp]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -90,7 +91,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Related Decisions
 
 <!-- AGENT-START:phase-related-decisions -->
-- None yet.
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy — adopt pinned pi-acp, fork into a shim, or contribute native --mode acp]]
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs
@@ -119,3 +120,4 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - The mock agent is deliberately in-scope here, not with the UI: it is the test substrate for every later phase.
 - Validation: `pnpm --filter @srgnt/harness test` + boundary lint (no Electron imports); dev-console round-trip against real Pi recorded in the spike note.
 - Post-gate follow-up (2026-07-10): once the STEP-22-05 gate decision lands, run `/vault:refine` across phases 23–29 to fill their Execution Brief / Validation Plan companions. They are deliberately left as placeholders until then so refinement can incorporate the measured pi-acp findings (permission routing, MCP passthrough, loadSession support) instead of assumptions.
+- STEP-22-05 spike evidence: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (measured pi-acp@0.0.31 permission/MCP/loadSession/fs-terminal behavior) feeding gate decision [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (status: proposed — awaiting human ratification).

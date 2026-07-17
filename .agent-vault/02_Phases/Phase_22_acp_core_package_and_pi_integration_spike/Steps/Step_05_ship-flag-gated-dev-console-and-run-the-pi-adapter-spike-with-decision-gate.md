@@ -5,17 +5,22 @@ contract_version: 1
 title: Ship flag-gated dev console and run the Pi adapter spike with decision gate
 step_id: STEP-22-05
 phase: '[[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|Phase 22 acp core package and pi integration spike]]'
-status: planned
+status: completed
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-15'
 depends_on:
   - STEP-22-04
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-15-191918-ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate-claude-worker|SESSION-2026-07-15-191918 claude-worker session for Ship flag-gated dev console and run the Pi adapter spike with decision gate]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-15-191918
+active_session_id: 05_Sessions/2026-07-15-191918-ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate-claude-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_05_ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate|STEP-22-05 Ship flag-gated dev console and run the Pi adapter spike with decision gate]].
 ---
 
 # Step 05 - Ship flag-gated dev console and run the Pi adapter spike with decision gate
@@ -92,7 +97,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-15 - [[05_Sessions/2026-07-15-191918-ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate-claude-worker|SESSION-2026-07-15-191918 claude-worker session for Ship flag-gated dev console and run the Pi adapter spike with decision gate]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary

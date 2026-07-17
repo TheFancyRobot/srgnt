@@ -31,13 +31,14 @@ Use this note as the directory for decision records in \`04_Decisions/\`.
 ## Decision Log
 
 <!-- AGENT-START:decisions-index -->
-_Last rebuilt: 2026-07-15._
+_Last rebuilt: 2026-07-17._
 
 - Notes indexed: 20
-- Status summary: accepted (16), proposed (4)
+- Status summary: accepted (17), proposed (3)
 
 | Id | Title | Status | Decided | Updated | Linear |
 | --- | --- | --- | --- | --- | --- |
+| DEC-0018 | [Pi ACP adapter strategy — adopt pinned pi-acp, fork into a shim, or contribute native --mode acp](../04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp.md) | accepted | 2026-07-15 | 2026-07-15 | - |
 | DEC-0017 | [Pivot srgnt from data aggregator to ACP coding-agent command center](../04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center.md) | accepted | 2026-07-10 | 2026-07-10 | - |
 | DEC-0016 | [Isolate third-party connector packages outside Electron main process](../04_Decisions/DEC-0016_isolate-third-party-connector-packages-outside-electron-main-process.md) | accepted | 2026-04-19 | 2026-04-19 | - |
 | DEC-0015 | [Use runtime-owned local semantic search with worker-hosted bundled model and workspace-root derived index](../04_Decisions/DEC-0015_use-runtime-owned-local-semantic-search-with-worker-hosted-bundled-model-and-workspace-root-derived-index.md) | accepted | 2026-04-02 | 2026-04-02 | - |
@@ -45,8 +46,8 @@ _Last rebuilt: 2026-07-15._
 | DEC-0013 | [Remove legacy contracts z-star exports and standardize on S-star schemas](../04_Decisions/DEC-0013_preserve-contracts-z-star-compatibility-wrappers-after-removing-zod.md) | accepted | 2026-03-28 | 2026-03-28 | - |
 | DEC-0012 | [Default crash reporting to local-only redacted logs](../04_Decisions/DEC-0012_default-crash-reporting-to-local-only-redacted-logs.md) | accepted | 2026-03-22 | 2026-03-28 | - |
 | DEC-0008 | [Define file-backed record contract for canonical workspace data](../04_Decisions/DEC-0008_define-file-backed-record-contract-for-canonical-workspace-data.md) | accepted | 2026-03-22 | 2026-03-22 | - |
-| DEC-0011 | [Standardize packaging, updates, and release channels for desktop v1](../04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1.md) | accepted | 2026-03-22 | 2026-03-22 | - |
 | DEC-0011 | [DEC-0011 Use SimpleQueryEngine over in-memory CanonicalStore for v1 query/index](../04_Decisions/DEC-0011_dec-0011-use-simplequeryengine-over-in-memory-canonicalstore-for-v1-query-index.md) | accepted | 2026-03-22 | 2026-03-22 | - |
+| DEC-0011 | [Standardize packaging, updates, and release channels for desktop v1](../04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1.md) | accepted | 2026-03-22 | 2026-03-22 | - |
 | DEC-0002 | [Use TypeScript + Zod for all contracts and schemas](../04_Decisions/DEC-0002_use-typescript-zod-for-all-contracts-and-schemas.md) | accepted | 2026-03-21 | 2026-03-22 | - |
 | DEC-0003 | [Teams first, Slack second for messaging connector](../04_Decisions/DEC-0003_teams-first-slack-second-for-messaging-connector.md) | accepted | 2026-03-21 | 2026-03-22 | - |
 | DEC-0004 | [Target macOS + Windows + Linux for desktop v1](../04_Decisions/DEC-0004_target-macos-windows-linux-for-desktop-v1.md) | accepted | 2026-03-21 | 2026-03-22 | - |
@@ -54,7 +55,6 @@ _Last rebuilt: 2026-07-15._
 | DEC-0006 | [PHASE-09 and PHASE-10 produce architecture docs plus production scaffolding](../04_Decisions/DEC-0006_phase-08-and-phase-09-produce-architecture-docs-plus-production-scaffolding.md) | accepted | 2026-03-21 | 2026-03-22 | - |
 | DEC-0007 | [Use Dataview query engine over markdown files as local data layer](../04_Decisions/DEC-0007_use-dataview-query-engine-over-markdown-files-as-local-data-layer.md) | accepted | 2026-03-21 | 2026-03-22 | - |
 | DEC-0001 | [Use Desktop-First Product Boundary For Phase 01](../04_Decisions/DEC-0001_use-desktop-first-product-boundary-for-phase-01.md) | accepted | 2026-03-21 | 2026-03-21 | - |
-| DEC-0018 | [Pi ACP adapter strategy — adopt pinned pi-acp, fork into a shim, or contribute native --mode acp](../04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp.md) | proposed | 2026-07-15 | 2026-07-15 | - |
 | DEC-0016 | [Keep semantic search IPC high-level and hide internal paths](../04_Decisions/DEC-0016_keep-semantic-search-ipc-high-level-and-hide-internal-paths.md) | proposed | 2026-04-14 | 2026-04-14 | - |
 | DEC-0009 | [Freeze renderer stack and routing contract for desktop v1](../04_Decisions/DEC-0009_freeze-renderer-stack-and-routing-contract-for-desktop-v1.md) | proposed | 2026-03-22 | 2026-03-22 | - |
 | DEC-0010 | [Use shared Microsoft auth boundary with main-process secret storage](../04_Decisions/DEC-0010_use-shared-microsoft-auth-boundary-with-main-process-secret-storage.md) | proposed | 2026-03-22 | 2026-03-22 | - |

@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-23-01
 related_sessions: []
@@ -32,18 +32,21 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- For Pi, `tool_call`/`tool_call_update` content is the ONLY window into agent activity — spike probe 4 measured zero client `fs`/`terminal` delegation (pi executes tools in-process). Faithful card rendering is the honesty guarantee.
+- Also lands client `fs`/`terminal` services v1 (phase scope): the mock agent's `use_terminal`/`read_file` directives call them, and terminal embeds need a client-created terminal to be end-to-end testable. Recorded scope decision — these services live in this step, with `fs/write_text_file` gated behind STEP-23-03's permission engine (see brief's sequencing rule).
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-23-01 merged (reducer, controller, ChatView shell).
+- Spike report probe 4 + ACP protocol-v1 tool-call content model (`content` | `diff` | `terminal` blocks; `kind`, `status`, `locations`, `rawInput`/`rawOutput`).
+- Gotcha: `@codemirror/merge` is not yet a dependency of `@srgnt/desktop` — diffs need it added.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/desktop/src/renderer/components/chat/ToolCallCard.tsx`, `DiffView.tsx` (new); reducer upsert semantics in `transcriptReducer.ts` (unknown-id updates create placeholder cards).
+- `packages/desktop/src/renderer/components/TerminalPanel.tsx` — extract a reusable ghostty-web surface for terminal embeds; Pi-path fallback renders `rawOutput`/text content as a monospace block.
+- `packages/desktop/src/main/chat/client-services.ts` (new) — `FileSystemPort` path-guarded to session cwd + `TerminalPort` over node-pty (patterns from `packages/desktop/src/main/pty/`); audit events per `fs/*` call.
+- `packages/desktop/src/renderer/components/sidepanels/ChatPlanSidePanel.tsx` (new; `NotesSidePanel.tsx` as structure reference) — `plan` updates replace the full entry list.
 
 ## Required Reading
 
@@ -51,6 +54,7 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]]
+- [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (probe 4: no client fs/terminal delegation for Pi)
 
 ## Execution Prompt
 

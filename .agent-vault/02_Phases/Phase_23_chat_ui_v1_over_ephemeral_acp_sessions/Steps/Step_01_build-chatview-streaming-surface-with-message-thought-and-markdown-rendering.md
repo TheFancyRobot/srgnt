@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on: []
 related_sessions: []
 related_bugs: []
@@ -31,18 +31,22 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- First product surface of the ACP pivot; every later step (tool cards, permissions, composer) consumes the session-controller IPC and update-stream reducer built here. Shipping it first de-risks the core UX earliest (phase decision log D16).
+- Productizes the plumbing STEP-22-05's dev console proved: desktop-main driving `@srgnt/harness` (Supervisor + `AcpAgentConnection`) with `session/update` frames streamed to the renderer.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- PHASE-22 merged (`@srgnt/harness`, mock agent, dev console on `main`); `pnpm install && pnpm build` green.
+- Read `packages/desktop/src/main/dev-console/session-controller.ts` + `index.ts` fully — the reference implementation, including the mandatory `Function('return import("@srgnt/harness")')()` lazy-ESM pattern (desktop main compiles to CommonJS; a static value import throws `ERR_REQUIRE_ESM`).
+- Spike report "Streamed-update shape": one real Pi turn = 37 thought chunks + 23 message chunks + 1 tool_call + 24 tool_call_updates + 2 `session_info_update`, interleaved — the reducer must batch renders and tolerate unknown kinds.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/ipc/contracts.ts` — add `chat:session:*` channels next to the `dev:session:*` block; new-session response must carry harness `id`/`name`/`quirks` (STEP-23-03's trust badge needs them).
+- `packages/desktop/src/main/chat/` (new) — `ChatSessionController` modeled on `DevSessionController`; wire in `main/index.ts` beside `registerDevConsoleHandlers` with app-quit teardown.
+- `packages/desktop/src/preload/index.ts` — `chatSession*` + `onChatSessionUpdate`, mirroring the `devSession*` block.
+- `packages/desktop/src/renderer/components/chat/` (new) — `ChatView`, `MessageList`, `ThoughtBlock`, `Markdown`, pure `transcriptReducer.ts`; panel registration in `renderer/main.tsx` (`defaultPanels` + `activePanel` switch) and `components/icons.tsx`.
+- Markdown reality: no standalone MD→HTML renderer exists; notes machinery is a CodeMirror editing stack — see the brief's read-only-EditorView assumption.
 
 ## Required Reading
 
@@ -50,6 +54,8 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (renderer surfaces + data flow)
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy]] (accepted — pinned pi-acp@0.0.31 for phases 23–24)
+- [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] ("Streamed-update shape" section)
 
 ## Execution Prompt
 

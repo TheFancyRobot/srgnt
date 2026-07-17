@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 pro
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-24-02
   - STEP-24-03
@@ -33,18 +33,21 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- "Honest resume" is the phase's product stance (ARCH-0009 data flow + invariant): transparent continue only where the harness genuinely supports it; read-only + explicit fork everywhere else; no silent re-priming, ever.
+- Reconciled with DEC-0018 / spike probe 3 (measured): for pinned `pi-acp@0.0.31`, `session/load` works (replay + rich config/modes) and `session/resume` is `-32601` — so resume-by-replay via `load` IS the Pi path, and capability detection comes from `NegotiatedCapabilities`, never harness ids.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-24-02 and STEP-24-03 merged.
+- Mock-agent reality: `MockAgent.loadSession` is a no-op today — the load-capable E2E variant requires extending the mock with replay-on-load (see brief; `@srgnt/harness` testing change with its own tests).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/desktop/src/main/chat/` — reconnect flow on first prompt of a reopened session: capability branch `resumeSession` → `loadSession` → read-only+fork; replay reconciliation (local log stays canonical; replayed frames never re-appended).
+- `packages/harness/src/acp/connection.ts` `load()`/`resume()` + `capabilities.ts` (`NegotiatedCapabilities` after `applyCapabilityOverrides`).
+- `packages/harness/src/testing/mock-agent/{scenario,runner}.ts` — add `loadReplay` directives.
+- `packages/contracts/src/session.ts` — add optional `forkedSessionIds` to `SSession` (lineage navigable both ways); `chat:session:fork` IPC.
+- Renderer: `ReadOnlyBanner.tsx`, fork flow with deterministic pre-filled (never auto-sent) handoff text, lineage links in `SessionList`.
 
 ## Required Reading
 
@@ -52,6 +55,8 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_04_implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_04_implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (resume data flow + honesty invariant)
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy (accepted)]]
+- [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (probe 3: load works, resume -32601)
 
 ## Execution Prompt
 

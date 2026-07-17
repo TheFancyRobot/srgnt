@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: ACP Core Package and Pi Integration Spike
 phase_id: PHASE-22
-status: planned
+status: completed
 owner: ''
 created: '2026-07-10'
 updated: '2026-07-15'
@@ -64,15 +64,15 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 ## Acceptance Criteria
 
-- [ ] Scope is concrete and linked to the right durable notes.
-- [ ] Step notes exist for the first executable work units.
-- [ ] Validation and documentation expectations are explicit.
-- [ ] `@srgnt/harness` builds standalone with no Electron imports (enforced by lint/dep-cruise check) and passes unit tests.
-- [ ] Mock ACP agent supports scripted scenarios covering streaming, tool calls + updates, permission round-trips, terminal use, plan updates, crash mid-turn, and malformed JSON-RPC.
-- [ ] Fixture-based contract tests decode recorded real-Pi traffic; tolerant-reader behavior is pinned.
-- [ ] Supervisor demonstrates lazy spawn, health detection, kill-tree on stop/quit, and crash surfacing under test.
-- [ ] Dev console (flag-gated) completes a real Pi round-trip: initialize → session/new → prompt → streamed updates → cancel.
-- [ ] Spike report exists as a vault note with measured pi-acp findings (permissions, MCP passthrough, loadSession) and the decision gate is recorded as a vault decision (adopt / fork / contribute).
+- [x] Scope is concrete and linked to the right durable notes.
+- [x] Step notes exist for the first executable work units.
+- [x] Validation and documentation expectations are explicit.
+- [x] `@srgnt/harness` builds standalone with no Electron imports (enforced by lint/dep-cruise check) and passes unit tests.
+- [x] Mock ACP agent supports scripted scenarios covering streaming, tool calls + updates, permission round-trips, terminal use, plan updates, crash mid-turn, and malformed JSON-RPC.
+- [x] Fixture-based contract tests decode recorded real-Pi traffic; tolerant-reader behavior is pinned.
+- [x] Supervisor demonstrates lazy spawn, health detection, kill-tree on stop/quit, and crash surfacing under test.
+- [x] Dev console (flag-gated) completes a real Pi round-trip: initialize → session/new → prompt → streamed updates → cancel.
+- [x] Spike report exists as a vault note with measured pi-acp findings (permissions, MCP passthrough, loadSession) and the decision gate is recorded as a vault decision (adopt / fork / contribute).
 
 ## Linear Context
 
@@ -103,11 +103,11 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream|STEP-22-01 Scaffold packages/harness with ACP SDK wrapper and typed update stream]]
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_02_implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle|STEP-22-02 Implement harness supervisor with lazy spawn health and kill-tree lifecycle]]
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_03_implement-harness-registry-with-built-in-pi-definition-and-capability-model|STEP-22-03 Implement harness registry with built-in Pi definition and capability model]]
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_04_build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests|STEP-22-04 Build scriptable mock ACP agent and recorded-traffic fixture tests]]
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_05_ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate|STEP-22-05 Ship flag-gated dev console and run the Pi adapter spike with decision gate]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream|STEP-22-01 Scaffold packages/harness with ACP SDK wrapper and typed update stream]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_02_implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle|STEP-22-02 Implement harness supervisor with lazy spawn health and kill-tree lifecycle]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_03_implement-harness-registry-with-built-in-pi-definition-and-capability-model|STEP-22-03 Implement harness registry with built-in Pi definition and capability model]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_04_build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests|STEP-22-04 Build scriptable mock ACP agent and recorded-traffic fixture tests]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_05_ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate|STEP-22-05 Ship flag-gated dev console and run the Pi adapter spike with decision gate]]
 <!-- AGENT-END:phase-steps -->
 
 ## Notes

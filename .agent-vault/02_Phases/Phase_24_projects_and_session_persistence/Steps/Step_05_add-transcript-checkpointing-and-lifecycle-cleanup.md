@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 pro
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-24-04
 related_sessions: []
@@ -32,25 +32,28 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Closes the phase's remaining ARCH-0009 invariants: `transcript.md` derived (checkpointed, never dual-written per token) and no orphan processes under any exit path (idle reaping, bounded quit cleanup, crash recovery).
+- Delivers the phase's headline acceptance test: kill mid-turn, lose at most the in-flight chunk, reopen to an instant intact transcript.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-24-04 merged (service, reconnect, statuses final).
+- The Supervisor's idle-reap mechanism already exists (`idleTimeoutMs` + `markActivity` + `reaped` events) — this step configures and wires it, it does not build timers.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/runtime/src/sessions/transcript.ts` (new) — pure deterministic `renderTranscript(events, meta)`.
+- `packages/desktop/src/main/chat/` — checkpoint triggers (turn end, 30 s active timer, close, quit) + between-turns-only idle arming.
+- `packages/desktop/src/main/index.ts` — bounded `will-quit` cleanup: best-effort `session/cancel` (2 s budget) → final checkpoint → `supervisor.disposeAll()`.
+- `packages/contracts/src/session.ts` — extend `knownSessionEventKinds` with lifecycle audit kinds (`client/harness_crashed`, `client/harness_reaped`).
+- Store reader (`truncatedTail`) → meta `interrupted` + renderer badge on open after crash.
 
 ## Required Reading
 
 - [[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]
 - [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_05_add-transcript-checkpointing-and-lifecycle-cleanup/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_05_add-transcript-checkpointing-and-lifecycle-cleanup/Validation_Plan|Validation Plan]]
-- [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (derived-transcript + no-orphans invariants)
+- [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (derived-transcript + no-orphans invariants; corrupt-tail failure mode)
 
 ## Execution Prompt
 

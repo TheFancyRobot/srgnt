@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-23-01
 related_sessions: []
@@ -32,18 +32,22 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Makes the session drivable and recoverable: cancel and crash handling are where the "no white screens, no zombie processes" acceptance criteria become real.
+- Commands and modes must render from live agent data — the spike proved Pi advertises commands mid-session (`available_commands_update`) and exposes thinking levels (`off…xhigh`) as ACP session modes, so the mode selector doubles as Pi's reasoning-effort control with zero bespoke wiring.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-23-01 merged; STEP-23-03 coordination on cancel-vs-pending-permission (04 owns the affordance, 03 resolves pending prompts).
+- Read `packages/harness/src/acp/errors.ts` (`TurnFailed`/`ConnectionLost`/`SpawnFailed`) and `supervisor/types.ts` `SupervisorEvent` — the crash-surface inputs.
+- Mock directives for this step: `expect_cancel`, `crash`, `advertise_commands`, `set_mode`, `initialize.modes`.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/desktop/src/renderer/components/chat/Composer.tsx` (new) — plain textarea + custom slash popover (recorded assumption: NOT CodeMirror; reuse interaction patterns from `notes/SlashCommandsExtension.ts`, not code).
+- `packages/contracts/src/ipc/contracts.ts` + preload — `chat:session:set-mode`, `chat:session:status` (supervisor events push).
+- `packages/desktop/src/main/chat/` — controller cancel (exists from 01), `supervisor.onEvent` → status push, crash → recoverable state.
+- Restart semantics (recorded assumption): ephemeral phase — recovery is dispose + fresh `session/new` with the dead transcript kept read-only; `session/load` restore is Phase 24.
+- Stop reasons `SStopReason` (`end_turn|cancelled|max_tokens|max_turn_requests|refusal`) each get a distinct end-of-turn rendering.
 
 ## Required Reading
 
@@ -51,6 +55,7 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]]
+- [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (probe 3: Pi modes = thinking levels; commands advertisement observed live)
 
 ## Execution Prompt
 

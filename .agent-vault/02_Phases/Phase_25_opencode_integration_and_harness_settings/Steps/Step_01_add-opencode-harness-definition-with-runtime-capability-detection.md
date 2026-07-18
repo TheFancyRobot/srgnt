@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Pha
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on: []
 related_sessions: []
 related_bugs: []
@@ -31,18 +31,23 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- opencode is the first **native** ACP harness (`opencode acp`) — the reality check on ARCH-0009's data-not-code invariant after adapter-mediated Pi; every code-not-data delta found here feeds STEP-25-04's Phase-26 requirements.
+- Establishes the runtime-detection rule for all harnesses: capabilities exclusively from live `initialize` (captured the way STEP-22-03's `SRGNT_IT_PI=1` gated test did for Pi → new `SRGNT_IT_OPENCODE=1`), persisted as last-negotiated for UI display; opencode starts with zero quirks/overrides and earns them only from measured probes.
+- Not-installed is a first-class precondition, not an error: `which opencode` is still empty on this machine (verified 2026-07-17); `registry/detect.ts` already types the `ok`/`probe-failed`/`not-installed` states for this. The *executor* installs opencode locally and records the version (srgnt itself never installs — detection + guidance only).
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- PHASE-24 merged; Phase-22 harness package is the real technical base.
+- Executor installs opencode locally (default `npm i -g opencode-ai`; record method + exact `opencode --version` in Implementation Notes — all captures are measured against it).
+- Read the spike report first: it defines the capture discipline and what a measured capability row looks like.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/harness/src/registry/builtins.ts` — `opencodeDefinition` (launch `opencode acp`, zero quirks/overrides) beside `piDefinition`; `OPENCODE_TESTED_VERSION` doc constant.
+- `packages/contracts/src/harness.ts` — new optional `detectCommand` field (Pi launches via `npx` but detects `pi`; today that mapping is hardcoded in `detectPi`).
+- `packages/harness/src/acp/capabilities.ts` — extend `NegotiatedCapabilities` with `authMethods` + `sessionList` (spike-observed, currently unmodeled).
+- `packages/runtime/src/harnesses/capability-cache.ts` (new) — last-negotiated persistence to workspace `harness-capabilities.json`; desktop main writes through on connect.
+- `packages/harness/src/registry/opencode.integration.test.ts` (new, `SRGNT_IT_OPENCODE=1`, cloned from `pi.integration.test.ts`) + `testing/fixtures/opencode/`; output note `06_Shared_Knowledge/opencode-acp-capture.md`.
 
 ## Required Reading
 
@@ -50,6 +55,8 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (HarnessDefinition model + capability invariant)
+- [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (capture discipline + measured-row shape to mirror)
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (accepted; the Pi contrast this step measures against)
 - opencode ACP docs: opencode.ai/docs/acp (external)
 
 ## Execution Prompt

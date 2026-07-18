@@ -1,8 +1,47 @@
 # Execution Brief
 
-- Record why the step exists, prerequisites, likely code paths, and the smallest execution checklist here.
+## Why
+
+- Hand-writing a `HarnessDefinition` (STEP-26-01) requires knowing an agent's launch incantation; a catalog of known ACP agents removes that barrier — pick "Gemini CLI", get a prefilled definition draft. The ACP ecosystem site (agentclientprotocol.com) lists known agents (Gemini CLI, claude-code-acp, codex-acp, opencode, Pi's adapter, …); this step surfaces that list in-app.
+- The failure architecture is already decided (ARCH-0009 failure-containment: "ACP Registry or remote catalogs unreachable → bundled static snapshot serves harness discovery — fail-to-builtin, the aggregator-era catalog lesson"). The aggregator era proved remote catalogs fail in practice; the snapshot is not a nice-to-have, it is the primary path.
+- DEC-0017's local-first rule bounds the networking: no telemetry, no phone-home. The explicit, user-initiated catalog fetch is the *only* sanctioned network call this feature adds.
+- **Verify at execution (do NOT invent):** whether agentclientprotocol.com exposes a machine-readable feed (JSON endpoint) is unverified at refinement time. Check first. If no stable feed exists, the bundled snapshot IS the catalog, "refresh from network" ships behind the same `loadCatalog(fetcher)` interface as a disabled/hidden affordance, and the documented maintainer refresh procedure is the only update path. The step succeeds either way — the offline flow is the acceptance bar.
+- **REQ-26-xx gate:** entry metadata is expected to be confirmed/extended by the lessons note (its brief telegraphs: "catalog entries need install hints + docsUrl because srgnt never installs"). Field list below is the default; reconcile against REQ-26-xx before freezing the schema.
+
+## Prerequisites
+
+- STEP-26-01 merged (the add/confirm flow reuses the editor's create path and validation wholesale).
+- Read: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20]] (the `builtinConnectorDefinitions`-fallback lesson this mirrors), DEC-0017 (local-first constraint), the lessons note's catalog-related REQs, and `packages/harness/src/registry/registry.ts` (what an added entry becomes).
+- Executor verifies the live site/feed shape and records findings (URL, format or absence) in Implementation Notes before writing the fetch code.
+
+## Likely Code Paths
+
+- `packages/contracts/src/` — `SCatalogEntry`/`SCatalog` (assumption: contracts, because the payload crosses IPC): per entry `id`, `name`, `description`, `docsUrl`, `installHint` (human command string, e.g. `npm i -g @google/gemini-cli`), draft `launch` (`command`/`args`), optional `detectCommand`, plus catalog-level `snapshotDate`/`source`. Entries deliberately map 1:1 onto `SHarnessDefinition` drafts — no fields srgnt cannot honor.
+- `packages/harness/src/registry/catalog/` (NEW): `snapshot.json` — the committed, hand-verified snapshot fixture; `README.md` — the documented refresh procedure (fetch/inspect the live list → update `snapshot.json` → **review the diff by hand** → commit; each entry's launch spec manually verified, recording the version tested, the `PI_ACP_VERSION` discipline); `catalog.ts` — `loadCatalog(options?: { fetcher })`: returns the snapshot immediately; with a fetcher, attempts the remote list, tolerant-decodes it, and on *any* failure (network, HTTP, malformed, schema-invalid) returns the snapshot with a typed `sourceUsed: 'snapshot' | 'remote'` + failure detail. **Decision needed (default recorded):** a successful remote fetch replaces the entry list wholesale (no per-entry merge) — keep it dumb; snapshot remains the fallback in memory.
+- Desktop main — `harness:catalog` IPC (`{ refresh?: boolean }`): fetch lives in main (renderer never fetches); no fetch ever happens without `refresh: true` from an explicit user action.
+- Renderer — "Add from catalog" view inside the Harnesses section: entry cards (name, description, install hint rendered as copyable text, docsUrl link, source badge snapshot/remote + snapshotDate); selecting an entry opens **STEP-26-01's editor prefilled** with the draft definition — the user reviews the full launch spec and confirms; save goes through the identical create path and validation. Never auto-trusted, never auto-installed: after add, the ordinary detection chip shows `not-installed` + the install hint until the user installs the binary themselves.
+
+## Key Design Constraints
+
+- Local-first networking: **no fetch at startup, ever** (assert this in e2e). Snapshot renders instantly when the view opens; "Refresh from list" is an explicit button; failure is a non-blocking notice, never an error state that hides the snapshot. (Recorded default for the open UX question.)
+- Security: a catalog entry's launch command is arbitrary code execution the moment the user runs a session. Mitigations are structural, both mandatory: (1) the snapshot is a *reviewed committed artifact* — the refresh procedure requires human diff review, never an automated pipeline; (2) the user always sees and confirms the full launch spec in the editor before save — no one-click-and-run.
+- Catalog-added entries are ordinary `source: 'custom'` definitions — zero downstream special-casing, no "from catalog" behavior anywhere. **Decision needed (default recorded):** no provenance field on the definition in v1; the description may mention the catalog origin as plain text.
+- An entry id colliding with a built-in (e.g. adding "opencode" from the catalog when the built-in exists) follows the editor's shadow-warning flow — the catalog should visually mark entries that are already built-ins/configured.
+- srgnt does not install harnesses (phase non-goal): install hints are text + docsUrl, nothing executable.
+
+## Execution Checklist
+
+1. Verify the live feed situation; record it. Read the lessons note's catalog REQs; freeze `SCatalogEntry`.
+2. Contracts schema + tests.
+3. `snapshot.json` (seed: Gemini CLI, claude-code-acp, codex-acp, opencode, pi — launch specs hand-verified, versions recorded) + refresh `README.md`.
+4. `catalog.ts` + unit tests (snapshot path, remote-success path with injected fetcher, every failure class → snapshot fallback with typed detail).
+5. IPC + main service + renderer view; prefill into the STEP-26-01 editor.
+6. E2E offline path; manual online path: add Gemini CLI from the catalog, install it, run the STEP-26-02 conformance runner against it.
 
 ## Related Notes
 
 - Step: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Steps/Step_03_integrate-acp-registry-catalog-with-bundled-snapshot-fallback|STEP-26-03 Integrate ACP Registry catalog with bundled snapshot fallback]]
 - Phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase 26 generic harness support and conformance]]
+- Requirements input: `06_Shared_Knowledge/cross-harness-lessons-learned.md` (REQ-26-xx; catalog metadata requirements)
+- Lesson source: [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Phase|PHASE-20]] (remote catalogs fail; fall back to builtin data)
+- Constraint: [[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]] (local-first; the catalog fetch is the only sanctioned network call)

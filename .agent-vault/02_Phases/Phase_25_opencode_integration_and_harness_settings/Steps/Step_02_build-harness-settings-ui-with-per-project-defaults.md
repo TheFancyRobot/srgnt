@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Pha
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-25-01
 related_sessions: []
@@ -32,18 +32,21 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- `harnesses.json` + registry shadowing (last-write-wins wholesale replace) already exist but are hand-edit-only; this step makes them user-operable and gives detection's `not-installed`/`probe-failed` states their remedy (binary-path override — critical because packaged macOS Electron lacks the login-shell PATH).
+- Per-project default harness turns the two-harness reality into a sticky preference: STEP-24-02's `defaultHarnessId` storage + `project:set-defaults` IPC get an editing surface.
+- Note the honest consequence of wholesale-shadow overrides: an overridden built-in stops tracking future built-in changes until reset — the UI must badge it (brief has the recorded default + alternative).
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-25-01 merged (`detectHarness`, `detectCommand` field, opencode definition); STEP-24-02 merged (project defaults IPC).
+- Read `registry.ts` merge precedence and `services/settings.ts` + `workspace.ts` (`afterRootChanged`) before designing the service.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/ipc/contracts.ts` — `harness:list` / `harness:save-override` / `harness:reset-override` channels (`parseSync` boundary).
+- `packages/desktop/src/main/services/harnesses.ts` (new) — registry build + per-definition detection + atomic `harnesses.json` writes, re-rooted via workspace hooks; lazy-ESM import of `@srgnt/harness` (CJS main).
+- `packages/desktop/src/renderer/components/Settings.tsx` (`SettingsPanel` section model) + new harness section/`components/settings/HarnessSettings.tsx`: detection chips, binary path + env editor, overridden badge + reset, per-project default harness selector (via `project:set-defaults`).
+- Per-harness permission-policy defaults: deferred by default (Decision needed — see brief).
 
 ## Required Reading
 
@@ -51,6 +54,7 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]]
+- [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults|STEP-24-02]] (per-project defaults storage + IPC this step builds on)
 
 ## Execution Prompt
 

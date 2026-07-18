@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Pha
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-25-02
   - STEP-25-03
@@ -33,18 +33,16 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- The phase note calls this the phase's real product: two measured integrations (Pi adapter-mediated, opencode native) distilled into traceable requirements — PHASE-26's dependency list names this note as its requirements input, and without it Phase 26 generalizes from one anecdote.
+- The bar is "anecdotes → requirements": every REQ-26-xx cites a measured observation (fixture path / capture-note anchor / Implementation Notes entry); unevidenced requirements get cut. Fixed comparison axes for BOTH harnesses: launch+install/detection, auth surfacing, capability gaps, quirks needed, permission behavior, session load/resume, MCP passthrough, update-stream shape.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-25-02 + STEP-25-03 complete (transitively 01's captures). Gather: spike report, `06_Shared_Knowledge/opencode-acp-capture.md`, `fixtures/pi*`/`fixtures/opencode/`, Implementation Notes + Outcomes of steps 01–03, DEC-0018, and the PHASE-26 phase note (deliverables the REQs must map onto).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- No product code — docs-only step. New note `06_Shared_Knowledge/cross-harness-lessons-learned.md` (recorded assumption on name) + wikilinks from the PHASE-25 and PHASE-26 phase notes and a backlink from the opencode capture note.
 
 ## Required Reading
 
@@ -52,7 +50,9 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]]
-- The PHASE-22 spike report note (adapter findings to compare against)
+- [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (adapter findings to compare against)
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (Phase-27 MCP consequence to restate)
+- [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|PHASE-26]] (the consumer whose deliverables the REQs map onto)
 
 ## Execution Prompt
 

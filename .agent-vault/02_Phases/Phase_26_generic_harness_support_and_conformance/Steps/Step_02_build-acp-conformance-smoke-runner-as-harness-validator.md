@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - STEP-26-01
 related_sessions: []
@@ -32,18 +32,20 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- A user-provided definition is a claim; the runner turns it into evidence — per-check pass/fail/not-supported plus *suggested* quirk flags (never auto-applied). It is the "Test this harness" button STEP-25-03 deliberately deferred, and the trust story that lets arbitrary harnesses into the app.
+- Almost every piece exists as prior art: `AcpAgentConnection` is the probe surface, `pi-spike.integration.test.ts` is a hand-rolled one-harness conformance run (probes 1/2/4 = permission round-trip, MCP passthrough via `mcp-echo-server.mjs`, delegation), `detect.ts` types the pre-flight, and the mock agent is the test substrate. The work is composition + a report contract, not invention.
+- Behavioral probes matter because `initialize` can lie (Pi advertises MCP + permissions that don't round-trip). Expect REQ-26-xx (lessons note) to pin the exact behavioral-probe designs and report vocabulary — mechanism fixed, parameters flexible.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-26-01 merged (definitions to test; Settings hosts the button). Consumes from PHASE-25: `authMethods`/`sessionList` on `NegotiatedCapabilities`, the *verified* auth-required error shape (STEP-25-03 Implementation Notes — read, don't re-derive), the mock `authRequired` directive.
+- Read `pi-spike.integration.test.ts` end to end first — it is the design document. Then the lessons note; freeze the check catalog against REQ-26-xx before coding.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/harness/src/conformance/` (new: `checks.ts`, `runner.ts` — pure, injectable spawner, no disk/Electron); `packages/contracts/src/` — `SConformanceReport` (crosses IPC).
+- `packages/harness/src/acp/connection.ts` (probe surface), `src/registry/detect.ts` (pre-flight), `src/testing/mock-agent/` + `src/testing/fixtures/mcp-echo-server.mjs` (test substrate + MCP probe), `src/supervisor/kill-tree.ts` + `registry/__fixtures__/hang-probe.mjs` (no-hang discipline).
+- Desktop: `harness:conformance-run` IPC, main service invocation (lazy-ESM), Settings button + report view + JSON export.
 
 ## Required Reading
 

@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on: []
 related_sessions: []
 related_bugs: []
@@ -31,18 +31,20 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- The mechanics of custom harnesses already shipped (contracts + `loadWorkspaceHarnesses` + registry wholesale-shadow merge, and STEP-25-02's settings service/section) — but STEP-25-02 deliberately excluded creation ("no Add harness button"). This step is the front-end that makes bring-your-own a product flow: create/edit/delete over the *full* `SHarnessDefinition` surface, plus a minimal test-launch probe.
+- First consumer of the PHASE-25 lessons-learned note: REQ-26-xx entries are expected to name editor fields/emphases. Mechanism is fixed by shipped code; parameters flex with the note.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- PHASE-25 merged (STEP-25-01 `detectCommand`/`detectHarness`, STEP-25-02 harnesses service + IPC + section, STEP-25-04 lessons note). Phase note rule: do not start without the lessons note.
+- Read the Execution Brief's field-by-field spec before touching the form; read `06_Shared_Knowledge/cross-harness-lessons-learned.md` and reconcile REQ-26-xx onto it first.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/harness.ts` — every field the form covers; `packages/contracts/src/ipc/contracts.ts` — extend the `harness:*` channels.
+- `packages/harness/src/registry/registry.ts` — shadow semantics the UI must explain (id collision with a built-in = wholesale shadow, not an error).
+- `packages/desktop/src/main/services/harnesses.ts` — create/delete paths on the 25-02 service; renderer Harnesses settings section — the Add flow + full-field editing.
+- `packages/harness/src/testing/mock-agent/bin.ts` — the zero-cost real stdio agent for validation (spawn shape in `mock-agent.subprocess.test.ts`).
 
 ## Required Reading
 
@@ -50,7 +52,7 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_26_generic_harness_support_and_conformance/Steps/Step_01_build-custom-harness-editor-with-launch-specs-and-capability-overrides/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_26_generic_harness_support_and_conformance/Steps/Step_01_build-custom-harness-editor-with-launch-specs-and-capability-overrides/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (HarnessDefinition data model)
-- The PHASE-25 lessons-learned note (requirements input)
+- `06_Shared_Knowledge/cross-harness-lessons-learned.md` — the PHASE-25 lessons-learned note (requirements input; carries the REQ-26-xx list)
 
 ## Execution Prompt
 

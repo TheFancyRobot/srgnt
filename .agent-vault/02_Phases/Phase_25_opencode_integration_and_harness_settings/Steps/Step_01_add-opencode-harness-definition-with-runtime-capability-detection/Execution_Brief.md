@@ -1,8 +1,52 @@
 # Execution Brief
 
-- Record why the step exists, prerequisites, likely code paths, and the smallest execution checklist here.
+## Why
+
+- opencode is the second harness and the first **native** ACP agent (`opencode acp` subprocess over stdio) — versus Pi, which is adapter-mediated (`npx pi-acp@0.0.31`). If the registry/connection stack absorbs opencode with only a new *data* record plus a measured capability capture, the ARCH-0009 invariant ("per-harness knowledge is HarnessDefinition data, never protocol code") holds. Every place that needs *code* instead of data is a Phase-26 generic-support gap and must be recorded for STEP-25-04.
+- This step establishes the runtime-detection rule for all harnesses: capabilities come **exclusively** from the live `initialize` response (`negotiateCapabilities` in `packages/harness/src/acp/capabilities.ts`), persisted as last-negotiated for UI display. Nothing per-harness is hardcoded beyond the launch spec. Contrast deliberately with Pi, whose quirks/overrides were *pre-declared from research* and then spike-verified — opencode starts with **zero quirks and zero overrides** and earns them only from measured behavior.
+- Not-installed is a first-class state, not an error: verified 2026-07-17, `which opencode` returns nothing on this machine. `packages/harness/src/registry/detect.ts` already models the three outcomes (`ok` / `probe-failed` / `not-installed`) for exactly this onboarding surface.
+
+## Prerequisites
+
+- PHASE-24 merged (phase dependency). This step itself only needs the Phase-22 harness package; it can start as soon as the phase branch opens.
+- **Executor installs opencode on the dev machine.** srgnt never installs harnesses (phase non-goal — the product renders detection + guidance only); installing is a *developer* prerequisite, same as having `pi` on PATH was for Phase 22. Recorded default: `npm i -g opencode-ai` (npm is pin-able and version-recordable, mirroring the `PI_ACP_VERSION` discipline); the brew tap or the opencode.ai install script are acceptable alternatives. Whatever the method, record it plus the exact `opencode --version` output in Implementation Notes — that version is what every capture in this phase is measured against.
+- Read: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (what a measured capability row looks like; the capture discipline to copy), [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]], `packages/harness/src/registry/{builtins.ts,detect.ts,registry.ts}`, `packages/harness/src/acp/capabilities.ts`, and `packages/harness/src/registry/pi.integration.test.ts` (the gated-IT pattern to clone).
+- External docs: opencode.ai/docs/acp (launch contract, auth expectations).
+
+## Likely Code Paths
+
+- `packages/harness/src/registry/builtins.ts` — `opencodeDefinition` + `OPENCODE_HARNESS_ID = 'opencode'` beside `piDefinition`: `launch: { command: 'opencode', args: ['acp'], env: {} }`, `quirks: []`, `capabilityOverrides: {}`, `docsUrl: 'https://opencode.ai/docs/acp'`, description carrying the install hint. Add an `OPENCODE_TESTED_VERSION` constant documenting the version the captures were made against — unlike Pi, opencode is a user-installed binary so srgnt **cannot pin the launch** (no `npx x@version`); the constant is documentation + test evidence, not a launch input. Append to `BUILTIN_HARNESSES`.
+- `packages/contracts/src/harness.ts` — add optional `detectCommand: Schema.optional(Schema.String)` to `SHarnessDefinition` (semantics: binary probed by detection; default = `launch.command`). **Grounded reason:** Pi launches via `npx` but its real prerequisite binary is `pi` — today `detectPi` hardcodes `'pi'` and there is no data field for it, which blocks the generic per-definition probing STEP-25-02 needs. Set `detectCommand: 'pi'` on `piDefinition`; opencode needs none (its launch command IS the binary). Tests beside `harness.test.ts`.
+- `packages/harness/src/registry/detect.ts` — `detectOpencode = detectCommand('opencode')` plus a definition-driven helper `detectHarness(definition)` resolving `definition.detectCommand ?? definition.launch.command` (this is what the settings UI consumes).
+- `packages/harness/src/acp/capabilities.ts` (+ `connection.ts`) — extend `NegotiatedCapabilities` **additively** with the two things the Pi spike observed but the model drops: `authMethods` (readonly array of `{id, name, description?}` from the raw initialize; STEP-25-03's auth surfacing needs it) and `sessionList: boolean` (from `sessionCapabilities.list`; pi advertises it). Update `negotiateCapabilities` + unit tests; `applyCapabilityOverrides` passes both through untouched — they are facts, not override toggles.
+- `packages/runtime/src/harnesses/capability-cache.ts` (NEW) — persistence of last-negotiated capabilities, respecting the boundary rules (`harness` never touches disk; `runtime` never speaks ACP): a small store writing `harness-capabilities.json` at the workspace root, shape `{ version: 1, entries: { [harnessId]: { negotiated, effective, agentVersion?, capturedAt } } }`, atomic tmp+rename writes, tolerant decode (corrupt/old file → empty cache, never a crash). **Recorded assumption (Decision needed, non-blocking):** separate file beside `harnesses.json` rather than inside `settings.json` (which is `SDesktopSettings`-schema'd) — executor takes this default unless overridden. The file schema lives in `packages/contracts/src/` next to `SHarnessesFile`.
+- `packages/desktop/src/main/` — after every successful chat connect, the controller already holds `connection.capabilities`; write-through to the cache (using `registry.effectiveCapabilities` for the effective view). Desktop main is CJS: `@srgnt/harness` via the lazy-ESM pattern (carried from PHASE-23 notes), `@srgnt/runtime` via direct import.
+- `packages/harness/src/registry/opencode.integration.test.ts` (NEW) — clone of `pi.integration.test.ts`, gated behind `SRGNT_IT_OPENCODE=1` (`describe.skip` otherwise so CI without opencode stays green): connect via `AcpAgentConnection` + `childProcessSpawner`, log the negotiated JSON as evidence (the STEP-22-03 pattern), assert `protocolVersion > 0`, then one **trivial** prompt round-trip to `end_turn` (cost rule: trivial prompts only; opencode uses the user's configured provider). If session setup fails auth-required, that IS a finding — record it, don't fight it (STEP-25-03 owns the UX).
+- `packages/harness/src/testing/fixtures/opencode/` (NEW) — raw initialize payload + a short redacted session traffic capture via the existing `FrameRecorder` (`testing/fixtures/recorder.ts`), mirroring `fixtures/pi/`. These fixtures are what STEP-25-03's matrix tests assert against.
+- `06_Shared_Knowledge/opencode-acp-capture.md` (NEW vault note, this step's written output) — the opencode analog of the spike report's baseline section: raw initialize, negotiated row, auth behavior observed, `session/load`/`session/resume` reality, whether `session/request_permission` round-trips (the key contrast with Pi's self-approval), MCP passthrough if cheaply observable. This note is STEP-25-04's primary input.
+
+## Key Design Constraints
+
+- **No invented quirks:** do not copy Pi's distrust onto opencode. Overrides/quirks are added only with a measured probe behind them (unearned clamps are the mirror-image failure of silent gaps).
+- srgnt never installs harnesses: the not-installed state renders guidance (description install hint + docsUrl), never an auto-install.
+- `@srgnt/harness` keeps zero Electron imports and zero disk writes; the cache is runtime's.
+- All suites green with opencode absent: the IT is env-gated; unit tests use injected probes/fixtures (see `registry/__fixtures__/hang-probe.mjs` for the probe-failed path).
+- The capability cache is display data, not a source of truth for a *live* session — a connected session always uses its own fresh negotiation; the cache only feeds Settings/matrix rendering between runs.
+
+## Execution Checklist
+
+1. Install opencode; record method + exact version in Implementation Notes.
+2. Contracts: `detectCommand` field + tests; capability-cache file schema.
+3. `opencodeDefinition` + `detectHarness` + registry/detect unit tests (three detection states; workspace-shadow merge order intact).
+4. Extend `NegotiatedCapabilities` (`authMethods`, `sessionList`) + `negotiateCapabilities` tests (drive from the committed pi initialize fixture too — it should now surface `pi_terminal_login` and `sessionList: true`).
+5. Build `capability-cache.ts` + unit tests (round-trip, tolerant decode, atomic write).
+6. Wire desktop main write-through on connect.
+7. Run the gated IT; commit `fixtures/opencode/`; write `opencode-acp-capture.md`.
 
 ## Related Notes
 
 - Step: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01 Add opencode harness definition with runtime capability detection]]
 - Phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]]
+- Architecture: [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009]] (data-not-code invariant; capability-driven UI)
+- Evidence pattern: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report (STEP-22-05)]]
+- Decision: [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]]

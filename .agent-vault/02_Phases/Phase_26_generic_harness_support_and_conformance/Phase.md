@@ -7,7 +7,7 @@ phase_id: PHASE-26
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|PHASE-25 Opencode Integration and Harness Settings]]'
 related_architecture:
@@ -57,7 +57,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 - Depends on [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|PHASE-25 Opencode Integration and Harness Settings]].
 - Must stay aligned with [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]].
-- Requires PHASE-25's lessons-learned note as the requirements input, and its capability matrix/settings surfaces to extend.
+- Requires PHASE-25's lessons-learned note (`06_Shared_Knowledge/cross-harness-lessons-learned.md`, STEP-25-04; carries the REQ-26-xx requirements list) as the requirements input, and its capability matrix/settings surfaces to extend.
 
 ## Acceptance Criteria
 
@@ -114,3 +114,9 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - The conformance runner is the mock-agent scenario suite inverted: same scenarios, real binary under test, findings rendered as a report instead of assertions.
 - Step order: custom editor (01) → conformance runner (02) → registry integration (03) → docs (04). 02 and 03 are parallelizable.
 - Candidate third-party validation targets, all ACP-registry listed: Gemini CLI (production-grade reference agent), claude-code-acp, codex-acp.
+- Refinement pass 2026-07-18 (pre-execution; details live in each step's Execution Brief). This phase sits DOWNSTREAM of a designed information gate: `06_Shared_Knowledge/cross-harness-lessons-learned.md` (STEP-25-04's REQ-26-xx list) does not exist yet. Briefs are junior-deep where shipped code determines the plan (contracts/registry/detect/mock-agent/spike prior art) and carry explicit "expect REQ-26-xx to refine this" markers where the lessons note gates specifics — every step's checklist item 1 is "read the lessons note and reconcile":
+  - STEP-26-01 is a front-end completion: creation UI over the shipped wholesale-shadow registry + STEP-25-02's service/IPC (which deliberately excluded the Add button). REQ-gated: field emphases, delta-patch overrides, per-harness permission-policy defaults (deferred from 25-02). Defaults recorded: `launch.cwd` stays a plain string (no templating); test-launch = detect + one initialize round-trip, later delegating to the 26-02 runner.
+  - STEP-26-02's runner is the mock-agent suite inverted with `pi-spike.integration.test.ts` as the design document; each check maps to an ACP method on `AcpAgentConnection`, MCP passthrough reuses `mcp-echo-server.mjs` verbatim. REQ-gated: final check catalog, report vocabulary, behavioral-probe designs. Defaults recorded: deterministic checks by default with deep probes (permission/MCP, token-costing) opt-in; single request/response IPC (no streaming progress); suggested quirks never auto-applied; report contract `SConformanceReport` in contracts.
+  - STEP-26-03: whether agentclientprotocol.com has a machine-readable feed is UNVERIFIED — executor verifies first; if absent, the committed snapshot IS the catalog. Defaults recorded: snapshot as hand-reviewed committed fixture with a documented refresh procedure (mandatory human diff review — launch commands are arbitrary code execution); no fetch at startup, refresh only on explicit user action (DEC-0017); catalog adds are ordinary `source: 'custom'` definitions, no provenance field in v1.
+  - STEP-26-04: guide at `docs/adding-your-own-harness.md` (name assumption); every command actually run; agent invocations verified against current upstream docs at execution time with tested versions recorded; quirk claims only from measured conformance reports.
+  - Decision needed (non-blocking, defaults recorded in the briefs): cwd templating (default no); per-harness permission-policy defaults (default only-if-REQ); deep-probe opt-in + apply-suggested-quirks button semantics (default prefill-editor, never silent write); conformance progress streaming (default none); catalog remote-merge strategy (default wholesale replace on success) and provenance field (default none); in-product link to the docs guide (default yes).

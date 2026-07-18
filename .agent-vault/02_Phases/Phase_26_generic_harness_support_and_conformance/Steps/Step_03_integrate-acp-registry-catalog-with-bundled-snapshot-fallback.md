@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - STEP-26-01
 related_sessions: []
@@ -32,18 +32,21 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Removes the launch-incantation barrier: pick a known agent from the catalog, get a prefilled `SHarnessDefinition` draft the user reviews in the STEP-26-01 editor and confirms — never auto-trusted, never auto-installed (install hints + docsUrl only).
+- The failure architecture is pre-decided (ARCH-0009: remote catalog unreachable → bundled static snapshot; the aggregator-era `builtinConnectorDefinitions` lesson). The committed, hand-reviewed snapshot is the *primary* path; the network fetch is optional, explicit, and failure-tolerant (DEC-0017 local-first — no fetch at startup, ever).
+- Whether agentclientprotocol.com exposes a machine-readable feed is UNVERIFIED — executor verifies first; if none exists, the snapshot IS the catalog and refresh stays a documented maintainer procedure. Entry metadata expected to be confirmed by REQ-26-xx.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-26-01 merged (the add/confirm flow reuses its editor + create path wholesale).
+- Verify the live feed situation and record it in Implementation Notes before writing fetch code.
+- Read PHASE-20 (the catalog-fallback lesson), DEC-0017, and the lessons note's catalog REQs.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/` — `SCatalogEntry`/`SCatalog` (entries map 1:1 onto `SHarnessDefinition` drafts).
+- `packages/harness/src/registry/catalog/` (new): `snapshot.json` (committed, hand-verified fixture — seed: Gemini CLI, claude-code-acp, codex-acp, opencode, pi), `README.md` (documented refresh procedure with mandatory human diff review), `catalog.ts` (`loadCatalog` with injected fetcher; any failure → snapshot with typed detail).
+- Desktop: `harness:catalog` IPC (fetch in main only, gated on explicit `refresh: true`); renderer "Add from catalog" view feeding the STEP-26-01 editor.
 
 ## Required Reading
 

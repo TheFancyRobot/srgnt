@@ -78,7 +78,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|PHASE-21 Pivot Groundwork and Aggregator Teardown]]
-- Current phase status: planned
+- Current phase status: completed
 - Next phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|PHASE-23 Chat UI v1 Over Ephemeral ACP Sessions]]
 <!-- AGENT-END:phase-linear-context -->
 
@@ -120,4 +120,4 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - The mock agent is deliberately in-scope here, not with the UI: it is the test substrate for every later phase.
 - Validation: `pnpm --filter @srgnt/harness test` + boundary lint (no Electron imports); dev-console round-trip against real Pi recorded in the spike note.
 - Post-gate follow-up (2026-07-10): once the STEP-22-05 gate decision lands, run `/vault:refine` across phases 23–29 to fill their Execution Brief / Validation Plan companions. They are deliberately left as placeholders until then so refinement can incorporate the measured pi-acp findings (permission routing, MCP passthrough, loadSession support) instead of assumptions.
-- STEP-22-05 spike evidence: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (measured pi-acp@0.0.31 permission/MCP/loadSession/fs-terminal behavior) feeding gate decision [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (status: proposed — awaiting human ratification).
+- STEP-22-05 spike evidence: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (measured pi-acp@0.0.31 permission/MCP/loadSession/fs-terminal behavior) feeding gate decision [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (status: accepted — ratified by matthew 2026-07-15; phased hybrid: adopt pinned now, upstream/fork before Phase 27).

@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase|Phas
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on: []
 related_sessions: []
 related_bugs: []
@@ -31,18 +31,20 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Every later step (broker, timeline, tiers, escalation) hangs off the group model built here; getting member specs, channels, and the roster/tabs shell right first makes the rest wiring, not modeling.
+- Mostly composition of shipped machinery: `SSession` already carries `kind`/`parentSessionId`; Phase-24 SessionStore owns JSONL channels; Phase-23 `ChatSessionController` owns the per-member spawn→session/new→pump loop.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- **Phase entry gate resolved first**: DEC-0018 re-opened, Pi bus path decided and recorded (see Execution Brief's ENTRY GATE section — it blocks this step, not just STEP-27-02).
+- Phases 23–26 merged; read `packages/contracts/src/session.ts`, the STEP-24-01 brief (SessionStore layout), `dev-console/session-controller.ts` + STEP-23-01 brief (controller pattern incl. the lazy-ESM harness import), `docs/pi-teams.md` + `.pi/teams.yaml`.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/group.ts` (new: `SGroupMemberSpec`, optional `SSession.members`) + `contracts/src/ipc/`.
+- `packages/runtime/src/sessions/` — extend `paths.ts` + store with `group/{members/<role>/events.jsonl, notes/, bus.jsonl}` layout.
+- `packages/desktop/src/main/chat/` — `GroupSessionController` on the shared Supervisor (handle `<sessionId>:<role>`).
+- Renderer: group creation UI, roster via chat `sidePanelContent` (not `Navigation.tsx`), member tabs hosting existing ChatView; `docs/group-worktrees.md` (new recipe doc + roster warning).
 
 ## Required Reading
 

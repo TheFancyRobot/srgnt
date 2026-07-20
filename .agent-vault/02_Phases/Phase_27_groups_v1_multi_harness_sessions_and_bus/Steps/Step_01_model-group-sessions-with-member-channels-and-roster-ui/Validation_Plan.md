@@ -1,6 +1,30 @@
 # Validation Plan
 
-- Record the direct validation commands, acceptance checks, edge cases, and regression expectations here.
+## Commands
+
+- `pnpm --filter @srgnt/contracts test` — `SGroupMemberSpec` round-trips; bad roles (uppercase, slashes, empty, >32 chars) rejected; old single-session `meta.json` fixtures still decode (`kind` defaults to `'single'`, absent `members` tolerated).
+- `pnpm --filter @srgnt/runtime test` — group path derivation; `createGroupSession` creates `group/{members/,notes/}` skeleton; member channels are isolated (interleaved appends to two roles land only in their own `events.jsonl` with dense per-channel seq).
+- `pnpm --filter @srgnt/desktop test` — `GroupSessionController` unit tests with injected in-process mock connections (two members: spawn, session/new per member, pump fan-out keyed by role, dispose kill-trees both).
+- `pnpm --filter @srgnt/desktop test:e2e` — new `e2e/group.spec.ts` (**must be added to the explicit `test:e2e*` script file lists** — Phase-23 lesson).
+
+## Acceptance Checks
+
+- Create a group with two mock-agent members running *different* scenarios (per-member scenario files via the mock launch spec; see `SRGNT_MOCK_SCENARIO` plumbing from STEP-23-05): both member tabs stream concurrently and independently; the streams do not interleave into each other's views.
+- `~/srgnt-workspace/projects/<id>/sessions/<id>/group/members/<role>/events.jsonl` exists per member and contains that member's raw ACP updates in the standard envelope; `readSessionEvent` decodes every line.
+- Roster shows both members with harness badges + quirk badges; the shared-working-tree warning renders with a working link to `docs/group-worktrees.md`.
+- Restart the app: the group session appears in the session list with a `group` badge; opening it renders both member channels read-only from disk (live reconnect is out of scope until 04/06 wiring — read-only is the pass bar here).
+
+## Edge Cases
+
+- One member's harness binary missing → that member shows the spawn-failure surface; the other member still streams; group session is not torn down.
+- Duplicate role at creation → rejected in the UI with a message, no session dir created.
+- Member crash mid-turn (mock `crash` directive) → per-member error state; sibling member unaffected; supervisor `crashed` event recorded.
+- App quit with two live members → process-tree assertion: zero orphaned agent processes (reuse the Phase-24 quit-cleanup assertion).
+
+## Regression Expectations
+
+- All existing single-session chat E2E and unit suites stay green — group support must not disturb the `kind: 'single'` paths.
+- Session-list and project-switcher suites from Phase 24 unchanged.
 
 ## Related Notes
 

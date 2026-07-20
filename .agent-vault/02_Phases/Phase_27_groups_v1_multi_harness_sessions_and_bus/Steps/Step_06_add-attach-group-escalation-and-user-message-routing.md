@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase|Phas
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - STEP-27-03
 related_sessions: []
@@ -32,18 +32,17 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Makes groups reachable from the ordinary workflow: any single session escalates into a group with explicit, user-edited context carryover. User routing (member/broadcast) completes "the user is the orchestrator".
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-27-03 merged (integrates with 04's delivery when both land). Read the STEP-24-04 brief + implementation — this step *reuses* its handoff template util and `parentSessionId`/`forkedSessionIds` lineage components (recorded assumption: no new contracts fields).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- Renderer: "Attach Group" session action → escalation dialog (member picker from 01 + handoff composer, deterministic prefill from transcript tail, user-editable); group composer target selector (member / All).
+- `GroupSessionController.escalate(...)` — create group with lineage set; handoff enters the bus as the first `from: 'user', to: '*'` event, persisted before member start; parent session untouched otherwise.
+- Routing: user sends are ordinary bus events (`from: 'user'`) delivered per member tier via the 04 path; timeline renders addressing. Decision needed (default yes): handoff auto-sends on "Create & Send".
 
 ## Required Reading
 

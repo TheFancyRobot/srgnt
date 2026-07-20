@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase|Phas
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - STEP-27-03
 related_sessions: []
@@ -32,18 +32,18 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- `group/notes/` is the group's durable shared memory (members write via their own tools, user via NotesView); memsearch adds semantic recall — strictly as an ARCH-0009 optional enhancer, runtime-detected, never load-bearing.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-27-03 merged (parallelizes with 04). Read: DEC-0014 (notes boundary rules), `main/notes.ts` (current NotesView root injection), STEP-25-01 brief (`detect.ts` typed detection states), STEP-27-02 brief (`memory_search` stub + broker delegation seam).
+- Local ground truth: `~/.local/bin/memsearch` (index/watch/search/expand/stats) exists on this machine — treat as one developer's box; the without-memsearch configuration is a first-class test target.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- NotesView scoped-root mode (renderer + `main/notes.ts`) path-guarded to `group/notes/`.
+- `packages/desktop/src/main/services/memsearch.ts` (new; placement assumption) — detection (PATH + fallback dirs incl. `~/.local/bin` — packaged Electron apps miss login-shell PATH — + settings override), `memsearch watch` child lifecycle (kill on dispose/quit, no orphans).
+- Broker `MemorySearchProvider` registration (desktop main) completing the 02 `memory_search` stub; harness never knows memsearch exists.
 
 ## Required Reading
 

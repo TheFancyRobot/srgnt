@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase|Phas
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - STEP-27-01
 related_sessions: []
@@ -32,18 +32,21 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Tier 1 of the bus: structured agent-to-agent messaging that Phase-28 pipelines will build on.
+- **Spike-shaped**: `pi-acp@0.0.31` never forwards `session/new.mcpServers` (DEC-0018 / probe 2), so this step is built and proven against the mock agent (and opencode), with per-member eligibility read from *effective* capabilities — Pi gets tier 1 only if the entry gate delivered upstream/fork.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-27-01 merged; entry-gate outcome recorded in DEC-0018.
+- **Mock-agent prerequisite tasks (real work, first two checklist items):** (a) `MockAgent.newSession` must capture + spawn `mcpServers` (it currently ignores params); (b) new `call_mcp_tool` scenario directive with a minimal MCP client — without both, tier-1 E2E is impossible.
+- New dependency: MCP SDK (default `@modelcontextprotocol/sdk`; verify version).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/harness/src/groups/{broker.ts,socket.ts,bus-server/bin.ts}` (new) — broker emits events, never touches disk (ARCH-0009 boundary); bin = thin socket relay, token-auth hello, reconnect backoff.
+- `packages/harness/src/acp/connection.ts` (`newSession` passes `mcpServers` verbatim) + `capabilities.ts` (effective `mcpServers` = eligibility signal); `registry/builtins.ts` (Pi's clamp).
+- `packages/harness/src/testing/mock-agent/{runner.ts,scenario.ts}` — the prerequisite extensions.
+- `GroupSessionController` (desktop main) — injection via the `require.resolve('@srgnt/harness')` bin-path recipe from `dev-console/session-controller.ts`; packaged-app reachability deferred to Phase 29 (note it).
 
 ## Required Reading
 

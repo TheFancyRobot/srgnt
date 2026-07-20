@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase|Phas
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - STEP-27-02
 related_sessions: []
@@ -32,18 +32,20 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- `bus.jsonl` is to a group what `events.jsonl` is to a session: the durable record — and persist-before-fan-out is the delivery guarantee across broker/socket restarts (ARCH-0009 failure mode).
+- The timeline makes multi-agent work legible; it also feeds the STEP-27-04 mailbox mirror and Phase-28 pipeline traces.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-27-02 merged (broker emitting typed events); STEP-27-01 layout in place.
+- Read the STEP-24-01 brief + `packages/runtime/src/sessions/event-log.ts` — the exact JSONL rules (single-write appends, tolerant tail, seq recovery) this log reuses.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/group.ts` — `SGroupBusEvent` (open-kind, tolerant reader mirroring `readSessionEvent`).
+- `packages/runtime/src/sessions/group-log.ts` (new) — recorded default: factor a generic JSONL core out of `event-log.ts` and reuse it.
+- Desktop main: persist-before-fan-out tap in `GroupSessionController`; Supervisor lifecycle events → `system/*` rows.
+- Renderer: `BusTimeline` tab (history from disk + live append + member/direction filters); v1 interleaving = bus + lifecycle rows only.
 
 ## Required Reading
 

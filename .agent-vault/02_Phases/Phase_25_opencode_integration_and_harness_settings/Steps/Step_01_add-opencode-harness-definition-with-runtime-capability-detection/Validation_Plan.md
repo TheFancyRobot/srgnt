@@ -14,8 +14,8 @@
 - `HarnessRegistry.create().list()` contains `pi` and `opencode`; `effectiveCapabilities('opencode', negotiated)` is a pure passthrough (no overrides), while Pi's still clamps `mcpServers` to false.
 - `detectHarness(opencodeDefinition)` returns `ok` + a parsed version with opencode installed; `not-installed` when it is absent (test via injected probe returning ENOENT — do not depend on machine state in unit tests); `probe-failed`/timeout via the hang-probe fixture. `detectHarness(piDefinition)` probes `pi`, not `npx`.
 - With opencode installed and configured: the gated IT completes `initialize` and one trivial prompt round-trip to `end_turn`; raw initialize payload committed under `packages/harness/src/testing/fixtures/opencode/` (redacted); `06_Shared_Knowledge/opencode-acp-capture.md` exists with the measured row (auth methods, loadSession/resumeSession, permission round-trip observation).
-- `NegotiatedCapabilities` now carries `authMethods` and `sessionList`; decoding the committed **pi** initialize fixture yields `authMethods: [pi_terminal_login…]` and `sessionList: true` (regression-proves the extension against known data).
-- After a successful desktop chat connect, `harness-capabilities.json` exists at the workspace root and its entry for the connected harness matches the live negotiation (manual check: run the app, start a mock session, inspect the file).
+- `NegotiatedCapabilities` now carries `authMethods` and `sessionList`; decoding the committed **pi** initialize fixture yields `authMethods: [pi_terminal_login…]` **with the full method metadata preserved** (`type: "terminal"`, `args: ["--terminal-login"]` — not a lossy id/name projection) and `sessionList: true` (regression-proves the extension against known data).
+- After a successful desktop chat connect, `harness-capabilities.json` exists at the workspace root and its entry for the connected harness matches the live negotiation and carries a `definitionFingerprint` equal to the hash of the current effective definition (manual check: run the app, start a mock session, inspect the file).
 
 ## Edge Cases
 
@@ -23,7 +23,8 @@
 - `opencode --version` output format unknown until install — `parseVersion` takes the first semver-ish token; if output defeats it, fix `parseVersion` with a unit test, don't special-case opencode.
 - Packaged/GUI-launched Electron on macOS gets a login-shell-less PATH — detection may report `not-installed` for a binary the terminal sees. Must degrade to guidance, never crash; note this in the capture note (STEP-25-02's binary-path override is the remedy).
 - Corrupt or version-bumped `harness-capabilities.json` → tolerant decode to empty cache + rewrite on next connect; never a startup failure.
-- Two rapid connects for the same harness → last write wins without a torn file (atomic tmp+rename; concurrency unit test).
+- Two rapid connects for the same harness → the **newest negotiation** wins without a torn file. The concurrency unit test must deliberately complete a stale writer *after* a newer one (out-of-order async completion) and assert the stale write is rejected by the queue's `capturedAt` check — asserting only "file not torn" does not cover this.
+- Definition or override changed after a capture (e.g. `pi` shadowed with a new launch spec) → the cache entry's `definitionFingerprint` no longer matches the effective definition and the store reports the entry as stale/not-yet-measured; it never presents the old negotiation as current.
 
 ## Regression Expectations
 

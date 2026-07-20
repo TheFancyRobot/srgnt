@@ -45,7 +45,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - `packages/desktop/src/renderer/components/chat/ToolCallCard.tsx`, `DiffView.tsx` (new); reducer upsert semantics in `transcriptReducer.ts` (unknown-id updates create placeholder cards).
 - `packages/desktop/src/renderer/components/TerminalPanel.tsx` — extract a reusable ghostty-web surface for terminal embeds; Pi-path fallback renders `rawOutput`/text content as a monospace block.
-- `packages/desktop/src/main/chat/client-services.ts` (new) — `FileSystemPort` path-guarded to session cwd + `TerminalPort` over node-pty (patterns from `packages/desktop/src/main/pty/`); audit events per `fs/*` call.
+- `packages/desktop/src/main/chat/client-services.ts` (new) — `FileSystemPort` path-guarded to session cwd via canonical containment (realpath-based, symlink-safe — see the brief's guard spec, not just lexical prefix checks) + `TerminalPort` over node-pty (patterns from `packages/desktop/src/main/pty/`); audit events per `fs/*` call.
 - `packages/desktop/src/renderer/components/sidepanels/ChatPlanSidePanel.tsx` (new; `NotesSidePanel.tsx` as structure reference) — `plan` updates replace the full entry list.
 
 ## Required Reading

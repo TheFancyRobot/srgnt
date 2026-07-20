@@ -13,6 +13,7 @@
 - Re-opening an existing log continues `seq` from the last valid line (write 5, close, reopen, write 1 → seqs 0..5).
 - Real-Pi fixture lines (copied from `packages/harness/src/testing/fixtures/pi/*.jsonl`) decode through the store's reader — pins the store against genuine adapter traffic, not just self-generated data.
 - Corrupt tail: truncating the final line at *any* byte offset (property test) yields all prior events plus `truncatedTail: true` — never a throw, never a partial event.
+- Reopen → repair → append → read: after a corrupt/partial tail, reopening the store truncates the log at the last valid record's byte offset before the next append; a subsequent `appendEvent` then `readEvents` shows the corrupt line gone, the new event present, `seq` continuous across the boundary (no gap or reuse), and a further reopen reads cleanly without ever hitting the middle-corruption error path.
 - Unknown envelope kinds and unknown extra envelope fields pass through the reader (tolerant-reader invariant); only structural damage (missing seq/ts/kind, wrong types) is rejected.
 - `meta.json` round-trips the contracts `SSession` shape; a crashed write (leftover `meta.json.tmp`) never corrupts the readable `meta.json` (atomic rename).
 - Concurrent `appendEvent` calls on one session serialize — no interleaved/torn lines (assert by parsing every line of the resulting file).

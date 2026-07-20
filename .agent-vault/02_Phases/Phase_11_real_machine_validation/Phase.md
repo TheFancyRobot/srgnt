@@ -15,7 +15,7 @@ related_architecture:
   - '[[06_Shared_Knowledge/release-process|Release Process]]'
   - '[[06_Shared_Knowledge/platform_validation_checklists|Platform Validation Checklists]]'
 related_decisions:
-  - '[[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Packaging, updates, and release channels for desktop v1]]'
+  - '[[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Packaging, updates, and release channels for desktop v1]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -79,7 +79,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Related Decisions
 
 <!-- AGENT-START:phase-related-decisions -->
-- [[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Packaging, updates, and release channels for desktop v1]]
+- [[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Packaging, updates, and release channels for desktop v1]]
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs

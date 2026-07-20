@@ -43,8 +43,8 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Relevant Code Paths
 
 - `packages/runtime/src/sessions/transcript.ts` (new) — pure deterministic `renderTranscript(events, meta)`.
-- `packages/desktop/src/main/chat/` — checkpoint triggers (turn end, 30 s active timer, close, quit) + between-turns-only idle arming.
-- `packages/desktop/src/main/index.ts` — bounded `will-quit` cleanup: best-effort `session/cancel` (2 s budget) → final checkpoint → `supervisor.disposeAll()`.
+- `packages/desktop/src/main/chat/` — checkpoint triggers (turn end, 30 s active timer, close, quit) + between-turns-only idle arming. **Crash-loss bound belongs to `events.jsonl`, not this cadence:** the "lose at most the in-flight chunk" guarantee is a property of the per-event `events.jsonl` append (STEP-24-01), which is the source of truth. `transcript.md` is a *derived cache* that is re-rendered from `events.jsonl` on reopen (see Execution Brief "rebuildable at any time from `events.jsonl` alone") — so a stale or missing 30 s transcript checkpoint after a crash costs nothing: the transcript is regenerated from the durable log. The 30 s cadence only bounds how fresh the on-disk `transcript.md` is for a *live external reader* (memsearch) while the app runs; it is explicitly NOT the crash-recovery bound.
+- `packages/desktop/src/main/index.ts` — bounded `will-quit` cleanup under **one overall deadline** (recorded: 2 s total) covering ALL of best-effort `session/cancel` → final checkpoint → `supervisor.disposeAll()` — not 2 s for cancel alone. Each step gets the *remaining* time within the single budget; if the budget expires, cleanup stops best-effort and quit proceeds (kill-trees are the guaranteed backstop). The quit handler can never hang or be force-terminated with unbounded cleanup outside the deadline.
 - `packages/contracts/src/session.ts` — extend `knownSessionEventKinds` with lifecycle audit kinds (`client/harness_crashed`, `client/harness_reaped`).
 - Store reader (`truncatedTail`) → meta `interrupted` + renderer badge on open after crash.
 

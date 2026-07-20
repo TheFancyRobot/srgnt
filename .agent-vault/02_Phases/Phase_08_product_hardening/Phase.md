@@ -15,7 +15,7 @@ related_architecture:
   - '[[01_Architecture/Integration_Map|Integration Map]]'
 related_decisions:
   - '[[04_Decisions/DEC-0001_use-desktop-first-product-boundary-for-phase-01|DEC-0001 Desktop-first product boundary]]'
-  - '[[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Packaging, updates, and release channels for desktop v1]]'
+  - '[[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Packaging, updates, and release channels for desktop v1]]'
   - '[[04_Decisions/DEC-0012_default-crash-reporting-to-local-only-redacted-logs|DEC-0012 Default crash reporting to local-only redacted logs]]'
 related_bugs: []
 tags:
@@ -78,7 +78,7 @@ Make the desktop app shippable and supportable with packaging, updates, crash ha
 
 <!-- AGENT-START:phase-related-decisions -->
 - [[04_Decisions/DEC-0001_use-desktop-first-product-boundary-for-phase-01|DEC-0001 Desktop-first product boundary]]
-- [[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Packaging, updates, and release channels for desktop v1]]
+- [[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Packaging, updates, and release channels for desktop v1]]
 - [[04_Decisions/DEC-0012_default-crash-reporting-to-local-only-redacted-logs|DEC-0012 Default crash reporting to local-only redacted logs]]
 <!-- AGENT-END:phase-related-decisions -->
 

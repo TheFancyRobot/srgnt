@@ -135,5 +135,5 @@ For Linux release-candidate prep, `pnpm run release:rc:linux` is now the canonic
 
 - [[02_Phases/Phase_08_product_hardening/Phase|PHASE-08 Product Hardening]]
 - [[02_Phases/Phase_08_product_hardening/Steps/Step_01_ship-packaging-update-and-distribution-pipeline|STEP-08-01 Ship Packaging Update And Distribution Pipeline]]
-- [[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Packaging, updates, and release channels for desktop v1]]
+- [[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Packaging, updates, and release channels for desktop v1]]
 - [[06_Shared_Knowledge/platform_validation_checklists|Platform Validation Checklists]]

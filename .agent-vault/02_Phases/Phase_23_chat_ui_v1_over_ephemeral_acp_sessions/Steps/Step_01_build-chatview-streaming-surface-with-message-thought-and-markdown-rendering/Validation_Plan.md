@@ -12,6 +12,7 @@
 - ChatView is registered as a main-section panel and renders in the center panel; existing Notes/Terminal/Settings panels are untouched.
 - A mock-agent turn streams: user message appears immediately on submit; thought chunks accumulate in a collapsible block; agent message chunks accumulate into one message rendered as GFM markdown (headings, lists, fenced code, links, tables).
 - Interleaved sequences (thought → message → tool_call → message, per the spike's measured mix) render in arrival order without dropping or reordering chunks.
+- Reducer unit test for segment boundaries: feeding `agent_message_chunk → tool_call → agent_message_chunk` produces two distinct message segments with the tool-call segment between them (chunks must NOT merge across the intervening `tool_call`); segment logical ids are stable across subsequent appends (same ids before/after more chunks arrive). Same boundary assertion for a thought chunk interleaved between message chunks.
 - Unknown `sessionUpdate` kinds (e.g. `session_info_update`) are silently ignored — no crash, no console error spam.
 - Updates for a different `sessionId` than the active handle are not rendered (the push channel is keyed; see the `sessionIdRef` guard in `DevConsole.tsx`).
 - Panel switch away and back does NOT kill the session or lose transcript state; explicit dispose + app quit kill-tree the agent process (verify with `ps` that no `mock-agent`/`npx` child survives quit).

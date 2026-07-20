@@ -11,7 +11,7 @@ branch: ''
 phase: '[[02_Phases/Phase_08_product_hardening/Phase|Phase 08 product hardening]]'
 related_bugs: []
 related_decisions:
-  - '[[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Packaging, updates, and release channels for desktop v1]]'
+  - '[[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Packaging, updates, and release channels for desktop v1]]'
 created: '2026-03-29'
 updated: '2026-03-29'
 tags:
@@ -94,7 +94,7 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 - `.agent-vault/06_Shared_Knowledge/release-process.md`
 - `.agent-vault/06_Shared_Knowledge/release-qa-checklist.md`
 - `.agent-vault/06_Shared_Knowledge/platform_validation_checklists.md`
-- `.agent-vault/04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1.md`
+- `.agent-vault/04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1.md`
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
@@ -124,7 +124,7 @@ Use one note per meaningful work session in `05_Sessions/`. This note records ch
 ## Decisions Made or Updated
 
 <!-- AGENT-START:session-decisions-made-or-updated -->
-- Accepted [[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Standardize packaging, updates, and release channels for desktop v1]] now that the repo ships the documented `electron-builder`/`electron-updater` path and explicitly keeps publication manual in the near term.
+- Accepted [[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Standardize packaging, updates, and release channels for desktop v1]] now that the repo ships the documented `electron-builder`/`electron-updater` path and explicitly keeps publication manual in the near term.
 <!-- AGENT-END:session-decisions-made-or-updated -->
 
 ## Follow-Up Work

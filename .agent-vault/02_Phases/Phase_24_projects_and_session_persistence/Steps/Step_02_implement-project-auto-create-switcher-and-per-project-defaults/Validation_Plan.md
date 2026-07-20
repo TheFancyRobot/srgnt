@@ -11,7 +11,9 @@
 ## Acceptance Checks
 
 - Starting a session in a directory with no project auto-creates `projects/<id>/project.json` with `name` = dir basename, `rootDir` = resolved path; a second session in the same directory reuses the same project id (stable-id-by-rootDir).
-- `ensureProjectForDir` is idempotent under concurrency (two parallel calls → one project, no torn writes) and across restarts (id is derived, not random).
+- `ensureProjectForDir` is idempotent under concurrency (two parallel calls → one project, no torn writes) and across restarts (id is derived, not random); the per-id lock serializes creation and a concurrent caller only returns after validating the written `project.json` (schema-valid AND `rootDir` matches).
+- Interrupted create recovery: a leftover `project.json.tmp` or a partial/zero-byte `project.json` from a prior crash is repaired or rejected on the next `ensureProjectForDir`, never returned as a valid initialized project.
+- Truncated-hash collision fails closed: when an existing `projects/<id>/project.json` stores a different `rootDir` than the requested (resolved) path, `ensureProjectForDir` returns a `ProjectIdCollision` typed error and does NOT reuse or overwrite the other directory's project.
 - Rename updates `name` (and `updatedAt`), preserves `id` and all sessions; the switcher reflects it immediately.
 - Merge moves all source session directories under the target, unions `additionalDirectories` (including the source `rootDir`), deletes the source project.json; the merged sessions list under the target afterwards. Merge is behind an explicit confirm in the UI.
 - Per-project `defaultHarnessId` is applied when creating a session without an explicit harness choice; `permissionPolicy` entries reach the permission engine's project-policy hook (engine unit test: policy `allow` for a kind short-circuits the prompt; absent kind falls through to ask).
@@ -24,6 +26,7 @@
 - Two directories with the same basename → two projects, distinguishable in the switcher.
 - `rootDir` that no longer exists on disk (deleted checkout) → project still lists; creating a *new* session in it fails with a readable error, not a crash.
 - Merge target == merge source → rejected with a readable error.
+- Crash mid-merge (simulate a failure after some session dirs move but before the source `project.json` is deleted) → on next startup the merge journal is detected and the merge resumes to completion: every source session ends up under the target exactly once, the source project is removed, no session is lost, orphaned, or overwritten.
 - Renaming to an empty/whitespace name → rejected; name length is bounded (recorded: 120 chars) to keep `project.json` and UI sane.
 - Aggregator-era directories in the workspace are never touched (bootstrap additivity invariant — assert the test workspace's extra dirs survive).
 

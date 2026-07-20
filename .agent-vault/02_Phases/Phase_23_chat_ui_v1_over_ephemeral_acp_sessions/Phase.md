@@ -29,7 +29,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 - Define and complete the Chat UI v1 Over Ephemeral ACP Sessions milestone.
 - Ship the core chat surface over a single ephemeral ACP session: streamed markdown, thought blocks, tool-call cards with diff + terminal embeds, and the agent plan panel — all built on the existing shell layout and semantic design tokens (Phase 12 brand work stays canonical).
-- Wire `session/request_permission` round-trips into a default-ask permission UI backed by the permission engine evolved from `runtime/approvals` + `policy`.
+- Wire `session/request_permission` round-trips into a default-ask permission UI backed by a NEW permission engine at `packages/runtime/src/permissions/` (the aggregator-era `runtime/approvals` + `policy` modules are concept references only — see the 2026-07-17 refinement notes below).
 - Deliver the composer with slash commands (`available_commands_update`), session modes, cancellation, and error/crash surfaces — E2E-tested entirely against the mock agent.
 
 ## Why This Phase Exists

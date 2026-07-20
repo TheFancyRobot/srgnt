@@ -23,7 +23,7 @@
 - Out-of-order updates: `completed` before `in_progress`; a late update after turn end (merges quietly, terminal status wins).
 - Diff with missing `oldText` (new-file) and empty `newText` (deletion) render sensibly.
 - Terminal process that never exits → embed keeps streaming; `terminal/kill` covered by a test; releasing a terminal mid-embed does not crash the card.
-- Path guard: `../` traversal, absolute path outside cwd, prefix-collision (`/tmp/proj` vs `/tmp/proj-evil`) all rejected.
+- Path guard: `../` traversal, absolute path outside cwd, prefix-collision (`/tmp/proj` vs `/tmp/proj-evil`), and symlink escape (a symlink under the session root resolving outside it — both reading through it and writing through a symlinked parent directory) all rejected; guard tests assert canonical (realpath) containment, not just lexical prefix checks.
 - Huge tool output (MBs of text) → card body clamped/scrollable, app stays responsive.
 - Card updates arriving while its body is expanded → expansion state survives (stable identity by `toolCallId`).
 

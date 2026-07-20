@@ -34,10 +34,6 @@ _Last refreshed: 2026-07-17._
 - Active phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|PHASE-23 Chat UI v1 Over Ephemeral ACP Sessions]] - status: planned - updated: 2026-07-10
 - Also active: 46 more additional sessions, 65 more additional steps, 1 open critical bug.
 <!-- AGENT-END:current-focus -->
-- Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
-- Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]
-- Active phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|PHASE-07 Terminal Integration Hardening]] - status: partial - updated: 2026-03-29
-- Resume point: Manual E2E validation of approval flow (7 validation steps outlined in Follow-Up Work)
 
 ## Repo Snapshot
 
@@ -90,6 +86,5 @@ _Last refreshed: 2026-07-17._
 
 ## Next Actions
 
-- **Resume point**: [[05_Sessions/2026-03-29-134622-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-134622]] - STEP-07-03 manual E2E validation ongoing
-- Manual E2E validation steps (described in session follow-up work)
+- **Resume point**: begin Phase 23 execution at [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01]]; finish refine of phases 25-29 first.
 - Keep phase and home notes honest whenever implementation status changes.

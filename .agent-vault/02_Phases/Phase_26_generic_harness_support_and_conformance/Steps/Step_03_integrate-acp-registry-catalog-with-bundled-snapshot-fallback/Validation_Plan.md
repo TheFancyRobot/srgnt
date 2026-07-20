@@ -9,7 +9,7 @@
 
 ## Acceptance Checks
 
-- **Offline is the primary path:** with a fetcher that always fails (and in e2e, with no network calls made at all), the catalog view renders every snapshot entry, and the full add flow completes: select entry → editor prefilled → confirm → entry in `harnesses.json` → detection chip renders (`not-installed` + install hint for an uninstalled agent). This exercises the aggregator-era lesson end to end.
+- **Offline is the primary path:** with a fetcher that always fails (and in e2e, with no network calls made at all), the catalog view renders every snapshot entry, and the full add flow completes: select entry → editor prefilled → confirm → entry in `harnesses.json` → detection chip renders (`not-installed` + install hint for an uninstalled agent). The catalog entry's `installHint` must survive into the saved definition (folded into `description`, per the brief) so the not-installed chip still shows it after the catalog view is closed — assert the persisted definition carries the hint, not just the transient catalog card. This exercises the aggregator-era lesson end to end.
 - Added entry is an ordinary custom definition: decodes via `SHarnessDefinition`, `source: 'custom'`, listed by the registry, editable/deletable via STEP-26-01, zero special-casing observable anywhere downstream.
 - **Online (manual, if a feed exists):** explicit Refresh fetches, list updates, source badge flips to remote; killing the network and refreshing again degrades to the snapshot with a non-blocking notice — the view never empties.
 - **Real-agent proof (manual, gated):** Gemini CLI added via the catalog, installed by hand per the install hint, passes the STEP-26-02 conformance runner's deterministic checks — this is the phase acceptance criterion "registry browse/add works … definition then passes the conformance runner".
@@ -20,7 +20,7 @@
 - Malformed remote payload (invalid JSON, schema-invalid entries, empty list) → snapshot served + typed failure detail surfaced as the notice; no partial/mixed list.
 - Remote entry colliding with a built-in id → catalog marks it "built-in"; adding it follows the editor's shadow-warning flow, not a silent override.
 - Snapshot missing/corrupt (simulated broken packaging) → catalog view shows a readable error; the rest of the Harnesses section is completely unaffected.
-- Slow remote (hung fetch) → hard timeout, snapshot remains interactive throughout — the fetch must never block rendering.
+- Slow remote (hung fetch) → the loader's own timeout/abort trips (injected fetcher that *never* resolves, asserted in the unit suite), snapshot is returned with a typed timeout failure, and the view stays interactive throughout — the fetch must never block rendering or hang the fallback.
 - Entry already added (id exists in `harnesses.json`) → catalog shows "configured" state instead of a duplicate add.
 
 ## Regression Expectations

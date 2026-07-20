@@ -9,7 +9,7 @@
 ## Acceptance Checks
 
 - `06_Shared_Knowledge/cross-harness-lessons-learned.md` exists with `note_type: shared_knowledge` frontmatter and covers all eight fixed axes (launch/detection, auth, capability gaps, quirks, permissions, load/resume, MCP passthrough, update-stream shape) with **both** harnesses' measured values on each.
-- Every REQ-26-xx entry has (a) requirement text, (b) an evidence pointer that resolves (fixture path exists / note anchor exists), (c) a PHASE-26 deliverable mapping (editor / conformance runner / catalog / docs). Zero unevidenced REQs inside the list.
+- Every REQ-26-xx entry has (a) requirement text, (b) an evidence pointer that resolves — a fixture path that exists, a capture-note anchor that exists, **or a STEP-25-0x Implementation Notes entry** (the three forms the Execution Brief's content contract permits; all three are valid, none is rejected), (c) a PHASE-26 deliverable mapping (editor / conformance runner / catalog / docs). Only a requirement carrying *none* of the permitted evidence forms is rejected.
 - Wikilinks live in both directions: PHASE-25 phase note → lessons note; PHASE-26 phase note → lessons note; lessons note → spike report + opencode capture note + DEC-0018.
 - The DEC-0018 Phase-27 consequence (MCP-over-`session/new` unavailable for Pi members) is restated with its pointer — Phase 27 planning must not have to rediscover it.
 - Litmus test (the real bar): a reader holding ONLY this note plus the PHASE-26 phase note could draft PHASE-26's step list without opening Phase-25 execution history. If a Phase-26-shaping fact lives only in a step's Implementation Notes, the note is incomplete.

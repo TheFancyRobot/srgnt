@@ -32,7 +32,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- A user-provided definition is a claim; the runner turns it into evidence — per-check pass/fail/not-supported plus *suggested* quirk flags (never auto-applied). It is the "Test this harness" button STEP-25-03 deliberately deferred, and the trust story that lets arbitrary harnesses into the app.
+- A user-provided definition is a claim; the runner turns it into evidence — each check carries one of the canonical statuses `pass | fail | not-supported | skipped` (frozen in the Execution Brief's `SConformanceReport` contract; `not-installed` and `auth-required` are structured `reason` codes on a `skipped` check, never statuses themselves) plus *suggested* quirk flags (never auto-applied). It is the "Test this harness" button STEP-25-03 deliberately deferred, and the trust story that lets arbitrary harnesses into the app.
 - Almost every piece exists as prior art: `AcpAgentConnection` is the probe surface, `pi-spike.integration.test.ts` is a hand-rolled one-harness conformance run (probes 1/2/4 = permission round-trip, MCP passthrough via `mcp-echo-server.mjs`, delegation), `detect.ts` types the pre-flight, and the mock agent is the test substrate. The work is composition + a report contract, not invention.
 - Behavioral probes matter because `initialize` can lie (Pi advertises MCP + permissions that don't round-trip). Expect REQ-26-xx (lessons note) to pin the exact behavioral-probe designs and report vocabulary — mechanism fixed, parameters flexible.
 

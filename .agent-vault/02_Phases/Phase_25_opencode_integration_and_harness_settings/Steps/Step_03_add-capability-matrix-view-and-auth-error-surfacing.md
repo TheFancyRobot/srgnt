@@ -43,10 +43,10 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Relevant Code Paths
 
-- `packages/desktop/src/renderer/components/settings/CapabilityMatrix.tsx` (new) — rows from registry, cells from `{negotiated, effective, quirks, capturedAt}` over IPC; `modes`/`slashCommands` captioned "discovered per session".
+- `packages/desktop/src/renderer/components/settings/CapabilityMatrix.tsx` (new) — rows from registry, cells from `{negotiated, effective, quirks, capturedAt, definitionFingerprint}` over IPC (the STEP-25-01 cache contract, carrying per-field provenance so not-yet-measured is distinct from measured-absent); `modes`/`slashCommands` captioned "discovered per session"; a fingerprint-mismatched row renders as stale/not-yet-measured, not as current.
 - `packages/desktop/src/renderer/components/chat/AuthPanel.tsx` (new) + chat-controller auth-required detection and Retry; terminal-type auth methods treated as external (copyable command + retry), `authenticate(methodId)` only for non-interactive methods.
 - `packages/harness/src/testing/mock-agent/{scenario,runner}.ts` — new `authRequired` scenario directive (today `authenticate` unconditionally returns `{}`) to E2E the flow.
-- Matrix tests assert fixture → rendered-row equivalence against `fixtures/pi/`, `fixtures/opencode/`, and the mock scenario initialize.
+- Matrix tests assert fixture → rendered-row equivalence against `fixtures/pi/`, `fixtures/opencode/`, and the mock scenario initialize — including a fixture carrying a post-initialize session-discovered update (not just an initialize payload) to prove the baseline-vs-discovered provenance renders correctly.
 
 ## Required Reading
 

@@ -5,18 +5,18 @@ contract_version: 1
 title: Active Context
 status: active
 created: YYYY-MM-DD
-updated: '2026-07-17'
+updated: '2026-07-21'
 tags:
   - agent-vault
   - home
   - context
-last_updated: '2026-07-17'
+last_updated: '2026-07-21'
 tests: 'desktop 775, harness 112 (+2 gated), contracts 127 — all green on main'
 coverage: 'pre-pivot metric; re-baseline when Phase 23 UI work starts'
 target: 'suites green per step (ARCH-0009 validation rules)'
 blockers: none
-in_flight: 'Phases 21-22 executed and merged; phases 23-24 refined against DEC-0018; refine of 25-29 in progress; Phase 23 execution not started'
-phase: Phase_23_chat_ui_v1_over_ephemeral_acp_sessions (next up — refined 2026-07-17; PHASE-21/22 completed, DEC-0018 accepted)
+in_flight: 'Phases 21-22 executed and merged; phases 23-29 all refined against DEC-0018 (post-gate); Phase 23 execution not started'
+phase: Phase_23_chat_ui_v1_over_ephemeral_acp_sessions (next up — refined 2026-07-21; PHASE-21/22 completed, DEC-0018 accepted)
 done: 'PHASE-21 (teardown + foundations), PHASE-22 (@srgnt/harness ACP core + Pi spike, DEC-0018 ratified)'
 remaining: 'phases 23-29 (chat UI, persistence, opencode, generic harness, groups, pipelines, release)'
 ---
@@ -28,10 +28,10 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-07-17._
+_Last refreshed: 2026-07-21._
 - Session in progress: [[05_Sessions/2026-07-10-145042-delete-aggregator-packages-ui-ipc-and-cli-surfaces-claude-fable-5-worker|SESSION-2026-07-10-145042 claude-fable-5-worker session for Delete aggregator packages UI IPC and CLI surfaces]] - owner: claude-fable-5-worker - phase: [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]] - updated: 2026-07-10
-- Current step: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01 Build ChatView streaming surface with message thought and markdown rendering]] - status: planned - phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]
-- Active phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|PHASE-23 Chat UI v1 Over Ephemeral ACP Sessions]] - status: planned - updated: 2026-07-10
+- Current step: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Steps/Step_01_build-custom-harness-editor-with-launch-specs-and-capability-overrides|STEP-26-01 Build custom harness editor with launch specs and capability overrides]] - status: planned - phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase 26 generic harness support and conformance]]
+- Active phase: [[02_Phases/Phase_29_polish_packaging_and_release/Phase|PHASE-29 Polish Packaging and Release]] - status: planned - updated: 2026-07-21
 - Also active: 46 more additional sessions, 65 more additional steps, 1 open critical bug.
 <!-- AGENT-END:current-focus -->
 

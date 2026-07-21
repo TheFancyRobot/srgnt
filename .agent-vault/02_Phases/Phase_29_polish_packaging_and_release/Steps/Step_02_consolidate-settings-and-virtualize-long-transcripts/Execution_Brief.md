@@ -1,6 +1,101 @@
 # Execution Brief
 
-- Record why the step exists, prerequisites, likely code paths, and the smallest execution checklist here.
+## Why This Step Exists
+
+Two independent hardening tasks bundled because both are "polish the surfaces phases
+23-28 grew":
+
+1. **Settings consolidation.** Each of phases 23-28 added its own settings surface —
+   harness selection + capability matrix (Phase 25), permission policy (Phase 23),
+   project defaults (Phase 24), group/pipeline defaults (Phase 27/28), plus the
+   existing General/Appearance/Advanced. Left un-consolidated, settings become an
+   incoherent pile of sections. This step gives them one deliberate information
+   architecture before release.
+2. **Long-transcript virtualization.** ChatView (Phase 23) renders every message/
+   tool-call/diff as a DOM node. A long agent session (thousands of tool calls) will
+   render tens of thousands of nodes, blowing scroll performance and memory. The phase
+   acceptance criterion is: a 10k-message transcript scrolls smoothly and loads in
+   acceptable time from JSONL. This must be fixed before shipping.
+
+## What "Done" Looks Like
+
+- Settings render as one coherent surface with a clear section order and no duplicated
+  or orphaned controls. The relocated sections (harnesses, permissions, projects,
+  groups/pipelines, appearance) each still work and persist.
+- ChatView renders long transcripts through windowed virtualization (only visible rows
+  mounted) with STABLE scroll anchoring: appending new messages while scrolled up must
+  not jump the viewport; scroll-to-bottom on new activity still works; jumping to an
+  older message lands correctly.
+- A generated 10k-message fixture session scrolls smoothly (no long-task jank) and its
+  initial load time from JSONL is recorded in the step Outcome with a number.
+
+## Prerequisites
+
+- Phase 23 ChatView and Phase 24 session persistence (`SessionEventLog`,
+  `packages/runtime/src/sessions/transcript.ts`, JSONL event logs) must exist — they
+  are the input this step optimizes. Do not start virtualization before ChatView
+  renders transcripts.
+- Phase 25 harness settings + `CapabilityMatrix`, Phase 23 permission policy UI, and
+  Phase 24 project defaults must exist — they are the sections being consolidated.
+- Depends on STEP-29-01 (onboarding) only for sequencing, not code: settings changes
+  should not regress the first-session walkthrough.
+
+## Relevant Code Paths (shipped today + planned)
+
+- `packages/desktop/src/renderer/components/Settings.tsx` — shipped `SettingsPanel`
+  renders a flat list of `SettingsSection[]` (`Setting` has
+  `type: 'string'|'boolean'|'select'|'path'`, plus `onChange`/`onBrowse`). Theme is
+  special-cased in the `general` section. Consolidation extends THIS model; prefer
+  grouping/ordering sections over rewriting the component.
+- `packages/desktop/src/renderer/components/settings/CapabilityMatrix.tsx` (Phase 25) —
+  harness capability surface; fold into the consolidated harnesses section.
+- `packages/desktop/src/main/services/settings.ts` (Phase 25) + settings IPC in
+  `packages/contracts/src/ipc/contracts.ts` — settings persist to `settings.json`
+  inside the workspace (see onboarding "You're All Set" note). Section relocation is a
+  UI/IA change; do not change the persisted schema unless necessary, and if you do,
+  keep it backward-compatible with existing `settings.json` files.
+- ChatView + transcript rendering (Phase 23 `renderer/components/chat/*`,
+  Phase 24 `runtime/src/sessions/transcript.ts`) — the virtualization target.
+- No virtualization library is in `package.json` today. Adding one (e.g.
+  `@tanstack/react-virtual`) is in scope; a hand-rolled windowing hook is also
+  acceptable. Whichever is chosen, it must handle variable row heights (messages,
+  multi-line tool cards, diffs differ wildly in height) and stable anchoring.
+
+## Smallest Execution Checklist
+
+1. Audit the current settings sections contributed by phases 23-28; define the
+   consolidated order and section titles (one screen, scannable).
+2. Move sections into the consolidated layout without changing their persisted keys;
+   verify each control still round-trips to `settings.json`.
+3. Generate a 10k-message fixture session on disk (JSONL) — a script under
+   `packages/desktop/e2e/` or `packages/runtime` fixtures that writes a realistic mix
+   of user/assistant messages, tool calls, and diffs. Reuse Phase 24's recorder/
+   fixture machinery if available (`packages/harness/src/testing/fixtures/`).
+4. Introduce windowed virtualization in ChatView with variable-height support and
+   stable scroll anchoring. Keep auto-scroll-to-bottom-on-activity behavior.
+5. Measure initial load + scroll performance against the fixture; record numbers.
+6. Update settings E2E to cover each relocated section.
+
+## Integration Touchpoints / Downstream Effects
+
+- STEP-29-01 onboarding references Settings ("adjust the path later from Settings").
+- STEP-29-05's E2E coverage matrix should include the settings-sections E2E and,
+  ideally, a transcript-perf smoke.
+- Virtualization must not break existing ChatView E2E (Phase 23 `chat.spec.ts`) or the
+  arrow-key/large-document behavior guarded by `bug-0013`/`BUG-0014` packaged tests —
+  those exercise CodeMirror in Notes, not ChatView, but confirm no shared regression.
+
+## Assumptions / Decision-Needed
+
+- ASSUMPTION: "acceptable" load time = the fixture opens without a visible multi-second
+  freeze; record the actual number and let the reviewer set a hard budget. No SLA is
+  defined in the phase note.
+- ASSUMPTION: settings persistence schema stays stable; this is an IA/layout change,
+  not a data migration. If a rename is unavoidable, add a backward-compatible read.
+- DECISION-NEEDED: virtualization library vs. hand-rolled hook. Default: prefer a
+  small, well-maintained library (`@tanstack/react-virtual`) for variable-height +
+  anchoring correctness over a bespoke implementation, unless bundle-size review
+  objects. Record the choice.
 
 ## Related Notes
 

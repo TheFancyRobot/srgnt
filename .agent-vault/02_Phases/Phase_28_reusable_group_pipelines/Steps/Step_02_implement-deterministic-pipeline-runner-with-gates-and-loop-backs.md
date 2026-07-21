@@ -32,18 +32,20 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- The heart of the phase: turns a static `SPipeline` into a running multi-agent workflow. **Deterministic and client-side by decision (D12)** — plain code drives stages/transitions/`maxIterations`, no LLM coordinator in the loop. Do not add any "ask a model what to do next" path.
+- Composes Phase-27 machinery: stages address members by role, handoffs ride the member's bus tier (must work with a **tier-2-only Pi member**, no MCP), and run-state changes persist as `SGroupBusEvent`s on the same `bus.jsonl` — making the run rebuildable-from-log for 03 and restart recovery.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-28-01 merged (schema + loader). PHASE-27 merged through STEP-27-04 (broker, `GroupSessionController`, member channels, `bus.jsonl`/`SGroupBusEvent`, three bus tiers, nudge delivery).
+- Read: STEP-27-02 brief (broker event model + harness/disk boundary), STEP-27-03 brief (`appendBusEvent`/`readBusEvents`, persist-before-fan-out, open-kind space), STEP-27-04 brief (tier delivery), `packages/harness/src/testing/mock-agent/{runner.ts,scenario.ts}` (one scripted turn per `prompt()`), ARCH-0009 pipeline flow + restart recovery.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/harness/src/groups/pipeline-runner.ts` (new) — pure deterministic state machine; injected `invokeMember(role, text)` + clock; disk/transport-free; emits `stage_entered`/`stage_completed`/`transition_taken`/`gate_awaiting`/`gate_resolved`/`run_completed`/`run_failed`.
+- `packages/contracts/src/pipeline.ts` (extend) — `system/pipeline_*` kinds in the `SGroupBusEvent` open-kind space (no new log/file).
+- `packages/desktop/src/main/chat/` `PipelineController` (new) — wires `invokeMember` to `GroupSessionController.prompt`, persist-before-advance tap, gate/abort IPC, restart replay from `bus.jsonl`.
+- Loop semantics, completion-condition handling, and interrupted-turn recovery: the Execution Brief.
 
 ## Required Reading
 

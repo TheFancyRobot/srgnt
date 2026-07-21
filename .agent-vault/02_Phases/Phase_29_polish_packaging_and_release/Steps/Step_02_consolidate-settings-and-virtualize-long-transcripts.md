@@ -32,18 +32,18 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Phases 23-28 each grew their own settings surface; left un-consolidated they are an incoherent pile. And ChatView renders every message/tool-call as a DOM node — a long session blows scroll/memory.
+- Consolidates settings IA and makes a 10k-message transcript scroll smoothly before release. Full rationale in the Execution Brief.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- Phase 23 ChatView + Phase 24 persistence (`SessionEventLog`, `runtime/src/sessions/transcript.ts`) must exist — they are the input this optimizes.
+- Phase 25 `CapabilityMatrix`, Phase 23 permission UI, Phase 24 project defaults must exist — they are the sections consolidated. STEP-29-01 merged (sequencing).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/desktop/src/renderer/components/Settings.tsx` (`SettingsPanel`, flat `SettingsSection[]`); `settings/CapabilityMatrix.tsx`; `main/services/settings.ts` (persists to `settings.json`).
+- ChatView + `runtime/src/sessions/transcript.ts` (virtualization target). No virtualization lib present today — adding `@tanstack/react-virtual` or a windowing hook (variable-height + stable anchoring) is in scope.
 
 ## Required Reading
 

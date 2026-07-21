@@ -26,23 +26,25 @@ Use this note for one executable step inside a phase. This note is the source of
 - Outcome: Define GroupTemplate and Pipeline schemas with template files.
 - Parent phase: [[02_Phases/Phase_28_reusable_group_pipelines/Phase|Phase 28 reusable group pipelines]].
 - Exact outcome: GroupTemplate and Pipeline schemas exist in contracts (members with role/harness/model/system-prompt path; stages with prompt templates and completion conditions — stop reason, explicit token, or user gate; transitions with conditions, loop-backs, `maxIterations`), plus a template file loader/validator reading `groups/templates/` (global) and per-project template dirs.
-- Starting files: `packages/contracts/src/` (new group/pipeline schemas); `packages/harness/src/groups/templates/`; fixture templates under test resources.
-- Validate: schema decode tests over valid + malformed fixture templates; loader surfaces actionable validation errors with file/line context.
+- Starting files: `packages/contracts/src/pipeline.ts` (new schemas; export from `index.ts`); `packages/runtime/src/templates/loader.ts` (new — runtime owns disk, not harness); fixture templates under the runtime package's test resources. (Supersedes the earlier `packages/harness/src/groups/templates/` pointer — built-in template *data* lands in STEP-28-04.)
+- Validate: schema decode + tolerance tests; `validateGroupTemplate` semantic checks (dangling refs, unknown placeholders, unreachable `done`); loader surfaces actionable `{ file, message }` errors and skips-not-aborts on a bad file.
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Every later step consumes these types: the runner (02) executes an `SPipeline`, the GroupBoard (03) renders its stages, the built-ins (04) are `SGroupTemplate` instances. Modeling first makes 02–04 wiring, not invention.
+- Productizes this repo's own workflow shapes: `.pi/agents/*.md` frontmatter → template member spec; docs/pi-teams.md loop tokens → completion conditions. The transition-graph shape is intentionally richer than v1 UI needs so a later visual editor is a new front-end, not a schema migration.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- PHASE-27 merged through STEP-27-01: `SGroupMemberSpec` (role slug `^[a-z0-9][a-z0-9-]{0,31}$`) + `SSession.members` exist; the template member spec extends that shape.
+- Read: `packages/contracts/src/session.ts` (tolerant-reader house style to copy exactly); `packages/contracts/src/workspace/layout.ts` (`workspaceDirectories.groupTemplates`); `.pi/agents/*.md` + docs/pi-teams.md (shapes being generalized); ARCH-0009 pipeline data-flow bullet.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/pipeline.ts` (new) — `STemplateMemberSpec`, `SCompletionCondition` (stop_reason/token/user_gate), `STransition` (`to`/`ifOutputContains`/`ifGate`/`maxIterations`, first-match-wins), `SStage`, `SPipeline`, `SGroupTemplate`; tolerant `readGroupTemplate` + semantic `validateGroupTemplate`.
+- `packages/runtime/src/templates/loader.ts` (new) — global `groups/templates/*.json` + per-project `.srgnt/templates/*.json`, project shadows global, `{ templates, errors }`.
+- `packages/contracts/src/session.ts`, `.../workspace/layout.ts` — house style + template dir constant to reuse.
+- Details, full schema shape, placeholder set, and the path-escape guard: the Execution Brief.
 
 ## Required Reading
 

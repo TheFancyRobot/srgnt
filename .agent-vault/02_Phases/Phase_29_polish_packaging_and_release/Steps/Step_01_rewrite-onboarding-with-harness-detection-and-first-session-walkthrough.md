@@ -31,18 +31,18 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Onboarding still reflects the retired aggregator (STEP-21-02 slimmed it to two generic steps); a fresh-machine user has no path to the core ACP feature.
+- Reduces the risk that release ships an app whose first-run experience never mentions harnesses or opens a session. Full rationale in the Execution Brief.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- Blocking (execution, not refinement): Phase 23 chat UI (the "first session") and Phase 25 registry/harness settings must be merged. The vault `depends_on` is empty — confirm both before starting.
+- Read DEC-0018 for the honest-capability copy (Pi self-approves permissions badge; MCP unavailable for Pi; no client fs/terminal mediation).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/desktop/src/renderer/main.tsx` — the REAL onboarding flow (`onboardingFlow` useMemo, ~lines 220-253), not `Onboarding.tsx`'s unused `defaultOnboardingSteps`.
+- `packages/desktop/src/renderer/components/Onboarding.tsx` (`OnboardingWizard`, `secondaryAction`/`note`/`stepIcons` support); `packages/harness/src/registry/detect.ts` (`detectCommand`/`detectPi`, three-state `DetectionResult`); `packages/desktop/e2e/fixtures.ts` (`completeOnboarding` hard-codes heading strings — update in lockstep).
 
 ## Required Reading
 

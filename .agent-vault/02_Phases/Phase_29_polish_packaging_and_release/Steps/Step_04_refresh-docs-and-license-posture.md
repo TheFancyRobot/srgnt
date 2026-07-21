@@ -32,18 +32,17 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Docs were rewritten in STEP-21-05 BEFORE the product existed (README still says `@srgnt/harness` is "planned for Phase 22 and does not exist yet"); after phases 22-28 they are materially stale.
+- LICENSE.md predates the pivot and is unreviewed; shipping publicly under an unreviewed license is a liability. This step makes docs match reality and records a license decision.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- Phases 22-28 feature-complete; STEP-29-01/02/03 merged. Read DEC-0017 (pivot framing) and DEC-0018 (honest-capability copy) so docs describe capabilities without over-claiming.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `README.md` (fix harness "planned/does not exist" + 4→5 package count), `TESTING.md` (commands + coverage matrix, coordinate with STEP-29-05), `AGENTS.md`, site copy at srgnt.app.
+- `LICENSE.md` (BSL 1.1, Licensor "The Fancy Robot, LLC", Change Date 2029-03-29 → MPL 2.0) vs `scripts/build-fedora-rpm.sh` rpm spec `License: UNLICENSED` — reconcile. New decision note goes under `04_Decisions/`, linked from PHASE-29.
 
 ## Required Reading
 

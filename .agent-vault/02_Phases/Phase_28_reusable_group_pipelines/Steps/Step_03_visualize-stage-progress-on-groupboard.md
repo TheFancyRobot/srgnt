@@ -32,18 +32,20 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- A running pipeline is otherwise invisible (N tabs + raw bus events). The GroupBoard shows which stage is active, how many times a stage looped, and which gate is waiting on the user — and it is where gates are approved/rejected.
+- It is a **pure projection of persisted `system/pipeline_*` events** — the rebuildable-from-log invariant (like Phase-24's transcript, Phase-27's bus timeline). No new source of truth; the board is always reconstructable by replay, so it cannot desync from the run.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-28-02 merged (runner emits `system/pipeline_*`; `PipelineController` persists them; gate/abort IPC exists). STEP-28-01's `SPipeline` available so the board renders the full declared stage graph, not only visited stages.
+- Read: STEP-27-03 brief + the resulting `BusTimeline` (replay-then-live pattern), STEP-27-01 roster/`sidePanelContent` registration + STEP-23-03/25-03 badge components, ARCH-0009 renderer surfaces.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- Renderer `pipeline-projection` reducer (new, pure) — `(SGroupBusEvent[], SPipeline) => PipelineViewState`; the whole brain of the step, replay-idempotent.
+- Renderer `GroupBoard.tsx` (new) — stage graph over existing tokens: active highlight, `×N` iteration counters, member/harness badges, gate Approve/Reject wired to STEP-28-02 IPC, stage→member-transcript deep links.
+- Conditional group-session tab (mounts only for groups with a pipeline); reuses the timeline's `bus.jsonl` history + live push channel — no new IPC/main work.
+- Layout stance, tolerant unknown-kind rendering, double-approve guard: the Execution Brief.
 
 ## Required Reading
 

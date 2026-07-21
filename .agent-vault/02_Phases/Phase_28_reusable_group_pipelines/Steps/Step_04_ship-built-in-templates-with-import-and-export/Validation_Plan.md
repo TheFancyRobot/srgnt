@@ -1,6 +1,37 @@
 # Validation Plan
 
-- Record the direct validation commands, acceptance checks, edge cases, and regression expectations here.
+## Commands
+
+- `pnpm --filter @srgnt/runtime test` — built-in templates validate clean; `io.ts` export/import round-trip + malformed-import suites; loader shadowing (builtin < global < project).
+- `pnpm --filter @srgnt/desktop test` — picker list/badge/preview, member→harness mapping gate, import/export UI.
+- `pnpm --filter @srgnt/desktop test:e2e` — scripted multi-mock-agent pipeline E2E (the phase's automated acceptance).
+- `pnpm typecheck && pnpm lint`.
+
+## Acceptance Checks
+
+- Both built-ins (`implement → review → QA → iterate`, `research → implement → test`) load, pass `validateGroupTemplate`, and appear in the picker with a `builtin` badge and a static stage-graph preview.
+- The built-ins encode the pi-teams mapping exactly: QA/test loop-back keys on the real tokens (`ISSUE REPORT`, `QA REVIEW REQUESTED`), `maxIterations` bounds the loop, and `implement → review → QA → iterate` has a `user_gate` before `done`.
+- **Import/export round-trips**: `import(export(t))` equals `t`; export produces canonical, diffable JSON.
+- Malformed import (bad schema, dangling reference, unknown placeholder) is rejected with the actionable `{ field/reference, message }` errors from STEP-28-01 — no partial write.
+- A user can override a built-in by saving a global template with the same `id` (shadowing precedence honored).
+- Instantiation blocks start until every member is mapped to a configured harness; a tier-2-only Pi mapping is accepted and runnable.
+- **E2E (phase acceptance criterion)**: scripted mock-agent pipeline — 3 stages including one loop-back and one user gate — runs green: loop-back fires on the failure token, the gate pauses for and resumes on the scripted approval, the run reaches a terminal state.
+- **Dogfood (phase acceptance criterion)**: a real run of `implement → review → QA → iterate` on an actual srgnt task, with ≥1 tier-2-only Pi member, reaches a terminal state and is written up as a session note linked to this step (loop-back on QA failure and honest `maxIterations`/success termination both demonstrated or explained).
+
+## Edge Cases
+
+- YAML file on import → clear "unsupported format, convert to JSON" message, no half-parse.
+- `id` collision on import into the global dir → refused with "id already exists" (no destructive overwrite); user renames/deletes first.
+- Built-in edited in the UI → read-only; "duplicate to edit" writes a copy to the global dir, original untouched.
+- Export to an unwritable path → surfaced error, no silent failure.
+- A built-in that regressed to invalid (bad edit) → the validate-at-test gate fails the build, not the app at runtime.
+- Empty/missing per-project and global dirs → built-ins still list (they ship with the package).
+
+## Regression Expectations
+
+- STEP-28-01 loader behavior for global/project dirs unchanged; built-ins are an additive lowest-precedence source.
+- The runner (02) and GroupBoard (03) render the built-ins with no template-specific special-casing — they are ordinary `SPipeline`s.
+- No new runtime dependency added (JSON only; no `yaml`).
 
 ## Related Notes
 

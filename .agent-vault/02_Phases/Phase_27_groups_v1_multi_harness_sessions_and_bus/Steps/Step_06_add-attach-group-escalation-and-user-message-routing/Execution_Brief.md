@@ -14,9 +14,9 @@
 
 - Renderer — session menu action "Attach Group" on any `kind: 'single'` session (any status — including read-only reopened sessions; recorded assumption): opens the escalation dialog = member picker from 01 + handoff composer. Handoff prefill: the STEP-24-04 deterministic template over the transcript tail (same util, group flavor: goal, current state, key files touched); user-editable before anything is sent.
 - Lineage — reuse Phase-24 fields exactly (recorded assumption: **no new contracts fields**): group session gets `parentSessionId = <single session id>`; parent's `forkedSessionIds` gains the group session id. Navigation chips both ways (parent shows "escalated to group →", group header shows "← from session"); same components as the fork flow.
-- Handoff delivery (recorded default + explicit Decision-needed flag): on "Create & Send", the handoff text enters the bus as the first event — `from: 'user', to: '*'` — and is delivered per member tier (tier 1: inbox; tier 2: it IS the seed prompt / first digest). Default is auto-send-on-create because the user just composed and confirmed the text in the same dialog; this is *not* the Phase-24 "never auto-sent" fork case, where the summary was machine-prefilled without a compose step. **Decision needed (non-blocking):** if the human prefers a two-step (create group, then send), flip the dialog's primary action; record the choice.
+- Handoff delivery — **settled, not a decision to make during execution.** The canonical bus order for an escalation is fixed: `seq 1` = `system/group_created`, `seq 2` = the handoff as `{ from: 'user', to: '*' }`, and only then do members start. The handoff is therefore the **first user/message event on the bus** — it is not the first *bus record*, and the brief means the former wherever it says "first event". Delivery is per member tier (tier 1: inbox; tier 2: it IS the seed prompt / first digest). Auto-send-on-create is the behavior: the dialog has one primary action, "Create & Send", and pressing it performs the whole sequence above — no two-step create-then-send variant, no setting. This is deliberately unlike the Phase-24 "never auto-sent" fork case, and the difference is the compose step: here the user typed and confirmed the text in the same dialog, so a second confirmation is pure friction. If a future need for staged sending appears, it is a new step, not a toggle bolted onto this one.
 - Composer routing — group composer gains a target selector: a member role or "All members" (default: last-used, initially All; recorded assumption). Routed send = bus event `from: 'user', to: <role>|'*'` (persisted by 03), delivered as a prompt turn to the targeted member(s) through the same per-tier delivery the nudge path uses (04) — user messages are ordinary bus traffic, no parallel channel. The addressed member's tab shows the turn; the timeline shows the user row with correct addressing.
-- `GroupSessionController` — `escalate(singleSessionId, members, handoffText)`: creates the group session via the 01 flow with lineage fields set, appends `system/group_created` + the user handoff broadcast to the bus, then starts members. Ordering matters: persist handoff before member start so a member that spawns slowly still receives it (persist-before-deliver from 03 covers this).
+- `GroupSessionController` — `escalate(singleSessionId, members, handoffText)` executes exactly the canonical order above: create the group session via the 01 flow with lineage fields set → append `system/group_created` (seq 1) → append the user handoff broadcast (seq 2) → start members. Both appends complete before the first member spawns, so a member that spawns slowly still receives the handoff (this rides the awaited persist-before-fan-out contract from 02/03; no member start races the journal).
 
 ## Key Design Constraints (recorded assumptions — junior-safe defaults)
 
@@ -28,10 +28,10 @@
 ## Execution Checklist
 
 1. Build the escalation dialog (member picker + handoff composer with deterministic prefill reusing the 24-04 template util).
-2. Implement `escalate(...)` in the controller with lineage set + handoff-first bus ordering.
+2. Implement `escalate(...)` in the controller with lineage set and the canonical bus ordering (`system/group_created` seq 1, user handoff broadcast seq 2, members started last).
 3. Wire navigation chips both ways off `parentSessionId`/`forkedSessionIds` (reuse fork components).
 4. Add the composer target selector; route user sends onto the bus with per-tier delivery; addressing rendered on the timeline.
-5. E2E per the Validation Plan; record the auto-send decision outcome and any deviations in Implementation Notes.
+5. E2E per the Validation Plan; record any deviations in Implementation Notes (the auto-send question is already settled above — do not reopen it mid-step).
 
 ## Related Notes
 

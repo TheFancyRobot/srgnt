@@ -26,14 +26,14 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Consolidate settings and virtualize long transcripts.
 - Parent phase: [[02_Phases/Phase_29_polish_packaging_and_release/Phase|Phase 29 polish packaging and release]].
-- Exact outcome: Settings information architecture consolidates the surfaces accreted in phases 23–28 (harnesses, permissions, projects, groups, appearance) into one coherent layout; ChatView renders long transcripts through windowed virtualization with stable scroll anchoring so a 10k-message session scrolls smoothly.
-- Starting files: `Settings.tsx` and settings IPC; `chat/ChatView` list rendering; a generated 10k-message fixture session for perf measurement.
+- Exact outcome: Settings information architecture consolidates the surfaces accreted in phases 23–28 (harnesses, permissions, projects, groups, appearance) into one coherent layout; ChatView renders long transcripts through windowed virtualization with stable scroll anchoring so a 10,000-event session (the canonical unit: persisted JSONL records, not rendered rows or user/assistant messages) scrolls smoothly.
+- Starting files: `Settings.tsx` and settings IPC; `chat/ChatView` list rendering; a generated fixture session of exactly 10,000 JSONL events for perf measurement.
 - Validate: perf check against the fixture (scroll + initial load timings recorded in the step outcome); settings E2E covering each relocated section.
 
 ## Why This Step Exists
 
 - Phases 23-28 each grew their own settings surface; left un-consolidated they are an incoherent pile. And ChatView renders every message/tool-call as a DOM node — a long session blows scroll/memory.
-- Consolidates settings IA and makes a 10k-message transcript scroll smoothly before release. Full rationale in the Execution Brief.
+- Consolidates settings IA and makes a 10,000-event transcript scroll smoothly before release. Full rationale in the Execution Brief.
 
 ## Prerequisites
 

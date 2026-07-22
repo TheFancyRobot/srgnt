@@ -2,9 +2,12 @@
 
 ## Primary Acceptance Checks
 
-1. **Perf:** a generated 10k-message fixture session scrolls smoothly and its initial
-   load time from JSONL is recorded (with a number) in the step Outcome. Maps to the
-   phase criterion "10k-message transcript scrolls smoothly (virtualized) and loads in
+1. **Perf:** a generated fixture session of exactly **10,000 persisted JSONL events**
+   (the canonical benchmark unit defined in the Execution Brief — not 10k rendered rows
+   and not 10k user/assistant messages) scrolls smoothly, and its initial load time
+   from JSONL is recorded (with a number) in the step Outcome together with the event
+   count, the rendered-row count it produced, and the fixture composition. Maps to the
+   phase criterion "10k-event transcript scrolls smoothly (virtualized) and loads in
    acceptable time from JSONL."
 2. **Settings:** an E2E covers each relocated section (harnesses, permissions,
    projects, groups/pipelines, appearance) — each renders and its controls persist.
@@ -15,23 +18,27 @@
   test; assert only visible rows mount for a large transcript).
 - E2E: `pnpm --filter @srgnt/desktop test:e2e`.
 - Typecheck: `pnpm --filter @srgnt/desktop typecheck`.
-- Perf measurement: launch the app against the 10k fixture (via `SRGNT_USER_DATA_PATH`
+- Perf measurement: launch the app against the 10k-event fixture (via `SRGNT_USER_DATA_PATH`
   pointing at a prepared workspace, as the e2e fixtures do) and measure with Playwright
   timing / `performance.now()` around initial transcript mount and a scripted scroll.
 
 ## How To Measure Perf (concrete)
 
-- Generate the fixture: a script that writes a session JSONL with ~10k events (mix of
-  user text, assistant text, `tool_call`/`tool_call_update`, and diffs). Reuse Phase 24
-  recorder/fixtures (`packages/harness/src/testing/fixtures/`) if present.
+- Generate the fixture: a script that writes a session JSONL with **exactly 10,000
+  events** (seeded RNG; ~30% user/assistant text, ~55% `tool_call`/`tool_call_update`,
+  ~15% diffs) and asserts its own output line count is 10,000 before finishing. Reuse
+  Phase 24 recorder/fixtures (`packages/harness/src/testing/fixtures/`) if present.
 - Record: (a) time from ChatView mount to first paint of the transcript;
   (b) mounted-DOM-node count while scrolled to the middle (should be a small window,
-  not ~10k); (c) frame health during a scripted fast scroll (no multi-hundred-ms long
-  tasks). Write all three numbers into Outcome.md.
+  not thousands); (c) frame health during a scripted fast scroll (no multi-hundred-ms
+  long tasks); (d) the fixture's event count (10,000), its resulting rendered-row
+  count, and its composition. Write all of these into Outcome.md — reporting a timing
+  without the unit it was measured against is what made this criterion ambiguous in the
+  first place.
 
 ## Manual Checks
 
-- Scroll to the middle of the 10k transcript, then let new messages stream in — the
+- Scroll to the middle of the 10k-event transcript, then let new messages stream in — the
   viewport must NOT jump (stable anchoring). Scroll to bottom, stream messages — it
   should follow.
 - Visit every settings section after consolidation; toggle one control per section and

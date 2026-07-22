@@ -22,11 +22,29 @@ decision.
 - LICENSE.md reviewed for the new product; the outcome (keep BSL 1.1 as-is / adjust
   terms / relicense) is recorded as a NEW decision note under `04_Decisions/` and
   linked from PHASE-29 (Related Decisions).
-- The license mismatch is reconciled: `LICENSE.md` is Business Source License 1.1
-  (Licensor "The Fancy Robot, LLC", Change Date 2029-03-29, Change License MPL 2.0),
-  but `packages/desktop/scripts/build-fedora-rpm.sh`'s rpm spec declares
-  `License: UNLICENSED` (line 73). These must agree; fixing the rpm spec's license
-  string is part of this step (or explicitly deferred with a reason).
+- The license mismatch is reconciled against **one canonical machine-readable value**,
+  not by eyeballing two different representations. `LICENSE.md` is Business Source
+  License 1.1 prose (Licensor "The Fancy Robot, LLC", Change Date 2029-03-29, Change
+  License MPL 2.0); `packages/desktop/scripts/build-fedora-rpm.sh`'s rpm spec declares
+  `License: UNLICENSED` (line 73). Prose and an rpm `License:` tag are different kinds
+  of string and can never be compared directly, so the deterministic rule is:
+  - The new decision note carries a **`canonical_license_id`** field holding exactly
+    one SPDX short identifier. **Default value: `BUSL-1.1`** (the SPDX id for Business
+    Source License 1.1, matching the shipped LICENSE.md). The human license decision's
+    only job on this axis is to confirm that value or replace it with another single
+    SPDX id — it may not leave the field blank or list alternatives.
+  - **Every piece of release metadata derives from that field, verbatim.** Concretely
+    for this step: the rpm spec line becomes `License: <canonical_license_id>` (i.e.
+    `License: BUSL-1.1` under the default), replacing `UNLICENSED`. Any other metadata
+    surface that carries a license string (package manifests, artifact metadata) is
+    listed in the decision note and set to the same value as execution work.
+  - **Validation compares the rpm spec string to the decision note's field**, never to
+    LICENSE.md's prose. LICENSE.md stays the human-readable terms; the decision note is
+    the single machine-checkable source.
+  - Deferring is no longer an option for the rpm string: `UNLICENSED` is affirmatively
+    wrong (it states the software is unlicensed, which contradicts the shipped BSL
+    terms), so it must be corrected in this step even if the broader posture review is
+    still pending — under the default value if the human has not weighed in.
 
 ## Prerequisites
 
@@ -60,8 +78,11 @@ decision.
 2. Fix README's harness "planned/does not exist" claim and the package count/structure.
 3. Update TESTING.md commands + coverage matrix (coordinate with STEP-29-05) and add
    the STEP-29-03 Windows caveats.
-4. Review LICENSE.md for the ACP product; create a decision note recording the outcome
-   and reasoning; link it from PHASE-29. Reconcile the rpm spec `License:` string.
+4. Review LICENSE.md for the ACP product; create a decision note recording the outcome,
+   the reasoning, and a `canonical_license_id` field holding exactly one SPDX id
+   (default `BUSL-1.1`); link it from PHASE-29. Set the rpm spec to
+   `License: <canonical_license_id>` and list every other license-carrying metadata
+   surface in the note so none is missed.
 5. Refresh site copy to match; no new site features.
 
 ## Integration Touchpoints / Downstream Effects
@@ -78,10 +99,13 @@ decision.
   per the phase non-goals.
 - DECISION-NEEDED (owner: human): the actual license posture for public release —
   keep BSL 1.1, adjust the Additional Use Grant, or relicense. This step RECORDS the
-  decision; it does not have authority to choose terms unilaterally. Default action if
-  no human input: document current BSL 1.1 as the reviewed posture, note the
-  rpm-spec `UNLICENSED` mismatch as a bug to fix, and flag "confirm before public
-  release" in the decision note.
+  decision; it does not have authority to choose terms unilaterally. The decision's
+  **required deliverable** is a single `canonical_license_id` SPDX value in the
+  decision note; "keep BSL 1.1" means `BUSL-1.1`. Default action if no human input:
+  document current BSL 1.1 as the reviewed posture with `canonical_license_id:
+  BUSL-1.1`, fix the rpm spec to that value in this step (leaving `UNLICENSED` in
+  place is not an acceptable deferral — it asserts something false), and flag "confirm
+  before public release" in the decision note.
 
 ## Related Notes
 

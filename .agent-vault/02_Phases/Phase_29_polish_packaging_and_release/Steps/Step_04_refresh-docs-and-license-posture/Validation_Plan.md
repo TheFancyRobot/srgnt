@@ -29,9 +29,16 @@
   live.
 - Every command block in TESTING.md maps to a real script in `package.json` /
   `packages/desktop/package.json`.
-- LICENSE.md ↔ rpm spec license string agree (or the mismatch is explicitly recorded
-  as a follow-up bug): `rg "License:" packages/desktop/scripts/build-fedora-rpm.sh`
-  vs the LICENSE.md header.
+- The rpm spec's license string equals the decision note's `canonical_license_id`
+  **exactly** — `rg "^License:" packages/desktop/scripts/build-fedora-rpm.sh` yields
+  `License: <canonical_license_id>` (`License: BUSL-1.1` under the default value), and
+  `UNLICENSED` appears nowhere in the script. Compare against the decision note's
+  field, not against LICENSE.md's prose: an SPDX identifier and a license text are
+  different representations and comparing them is what produced this ambiguity.
+- The decision note exists, is linked from PHASE-29, and carries exactly one
+  `canonical_license_id` value (not a list, not blank) plus the inventory of every
+  release-metadata surface that must carry it; each listed surface is spot-checked
+  against that value.
 - The DEC-0018 honest-capability language (Pi self-approves; MCP unavailable for Pi;
   no client fs/terminal mediation) appears where the docs describe harness capabilities
   — no over-claiming.

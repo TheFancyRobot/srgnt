@@ -33,6 +33,8 @@ Three details make this encodable under the STEP-28-01 schema, and they are the 
 
 This second built-in has no gate: it is the fully automatic loop, and it is here to prove the schema does not *require* a gate stage to terminate.
 
+**The missing `reviewer` stage is deliberate — do not "fix" it by adding one.** `.pi/teams.yaml` describes the `srgnt-team` loop as researcher → executor → **reviewer** → tester, and this template maps only three of those four roles. The reviewer is omitted on purpose: Built-in 2's entire job is to be the *minimal fully automatic* pipeline (no human gate, one loop-back, three stages), and code review is the stage that most wants a human in the loop — that flow is already shipped, gate and all, as Built-in 1. Shipping both with a reviewer would make the two built-ins near-duplicates and leave the user with no example of a short automatic chain. The template's `description` must state this omission in the same words, so a user comparing it against `.pi/teams.yaml` sees a decision rather than a bug. If a reviewer stage is ever wanted here, it is a third built-in, not an edit to this one.
+
 Members carry a short inline `systemPrompt` distilled from the corresponding `.pi/agents/*.md` body (role responsibilities + the structured output token the condition keys on). `harnessId` is left as a **placeholder the picker fills at instantiation** (built-ins ship harness-agnostic — a user maps `implementer`→opencode, `reviewer`→Pi, etc.; a tier-2-only Pi member is a valid mapping and must run).
 
 ## Likely Code Paths
@@ -44,9 +46,9 @@ Members carry a short inline `systemPrompt` distilled from the corresponding `.p
 
 ## Key Design Constraints (recorded assumptions — junior-safe defaults)
 
-- **Canonical format is JSON**; YAML import is deferred (recorded in the phase note — no `yaml` dependency exists in the workspace, and adding one for import-only is out of scope for v1). If a user pastes YAML, the importer reports "unsupported format, convert to JSON" — it does not silently half-parse.
+- **Exactly one interchange format: JSON.** Export writes JSON; import accepts JSON; there is no YAML path anywhere in this phase, and no `yaml` dependency is added (none exists in the workspace today). Treat every earlier "JSON/YAML" phrasing as superseded by this line. A YAML file handed to the importer is rejected with "unsupported format, convert to JSON" — detected by attempting the JSON parse and failing, not by sniffing or half-parsing YAML.
 - Built-ins validate clean through `validateGroupTemplate` as a **test-time gate** (a shipped built-in that fails validation is a build failure, not a runtime surprise).
-- Import never overwrites silently: an `id` collision with an existing global template prompts/΄suffixes (recorded default: refuse with a clear "id already exists" error; the user renames or deletes first) — no destructive import.
+- **Import collision handling is one deterministic behavior: refuse.** An incoming template whose `id` already exists in the target dir is rejected with a single error — `"a template with id '<id>' already exists at <path>; rename the id in the file or delete the existing template first"` — and **nothing is written**. There is no overwrite, no auto-suffixing (`-2`, `-copy`), and no interactive prompt: an import must produce the same result whether it runs from the UI, a test, or a future CLI. Collision is checked against the merged, shadowing-applied template set (built-in + global + project), so importing a template that collides with a *built-in* id is refused too rather than silently shadowing it — overriding a built-in is the deliberate "duplicate to edit" flow, not an accident of import.
 - Export is round-trip-exact: `import(export(t))` yields a template equal to `t` (canonical serialization, no lossy fields).
 - Built-in member `harnessId` is unset/placeholder in the shipped file; instantiation requires the user to resolve every member to a configured harness before the run can start (the picker blocks start on an unmapped member).
 

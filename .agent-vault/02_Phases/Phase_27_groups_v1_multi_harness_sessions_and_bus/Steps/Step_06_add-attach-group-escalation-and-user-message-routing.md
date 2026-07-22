@@ -41,8 +41,8 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Relevant Code Paths
 
 - Renderer: "Attach Group" session action → escalation dialog (member picker from 01 + handoff composer, deterministic prefill from transcript tail, user-editable); group composer target selector (member / All).
-- `GroupSessionController.escalate(...)` — create group with lineage set; handoff enters the bus as the first `from: 'user', to: '*'` event, persisted before member start; parent session untouched otherwise.
-- Routing: user sends are ordinary bus events (`from: 'user'`) delivered per member tier via the 04 path; timeline renders addressing. Decision needed (default yes): handoff auto-sends on "Create & Send".
+- `GroupSessionController.escalate(...)` — create group with lineage set; fixed bus order `system/group_created` (seq 1) then the handoff as the first `from: 'user', to: '*'` event (seq 2), both persisted before member start; parent session untouched otherwise.
+- Routing: user sends are ordinary bus events (`from: 'user'`) delivered per member tier via the 04 path; timeline renders addressing. Settled: the dialog's single primary action "Create & Send" auto-sends the handoff on create — no two-step variant, no setting.
 
 ## Required Reading
 

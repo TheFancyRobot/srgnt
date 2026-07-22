@@ -15,6 +15,19 @@ Without this, "green CI" would not actually prove the shipped product works.
   product's full E2E surface: build, typecheck, unit, and E2E for chat, persistence,
   groups, and pipelines, plus the packaged smoke (which per STEP-29-03 now exercises a
   real harness session).
+- **`pnpm typecheck` is actually part of the gate — adding it is execution work in this
+  step, not an assumption.** The shipped root script is today:
+  `build:icons && pack && test && test:e2e && test:e2e:packaged:linux` — there is **no
+  `pnpm typecheck` anywhere in that chain**, so the gate can go green with type errors
+  in the tree, and any acceptance text claiming typecheck coverage is currently false.
+  Fix it by editing the root `package.json` `release:check:repo` script to insert
+  `pnpm typecheck` **after `pack`** (so workspace packages and their `.d.ts` outputs
+  exist) and **before `pnpm test`** (so type errors fail fast, ahead of the slow E2E
+  legs). Verify the ordering by running the whole chain once in a clean checkout — if
+  typecheck needs build artifacts `pack` does not produce, move it after an explicit
+  `pnpm build` rather than dropping it. Scope note: this step adds **typecheck only**;
+  whether `pnpm lint` should also gate the release is a separate decision and is not
+  silently in scope here.
 - A release checklist document exists (in TESTING.md or `docs/`) covering the full path
   from clean checkout → tag → CI build matrix → published artifacts, including the
   license gate (STEP-29-04 decision note must exist) and the Windows best-effort note.

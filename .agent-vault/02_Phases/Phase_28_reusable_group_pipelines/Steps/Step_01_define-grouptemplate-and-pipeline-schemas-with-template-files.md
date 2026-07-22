@@ -42,7 +42,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Relevant Code Paths
 
 - `packages/contracts/src/pipeline.ts` (new) — `STemplateMemberSpec`, `SCompletionCondition` (stop_reason/token/user_gate), `STransition` (`to`/`kind: advance|loop_back`/`ifOutputContains`/`ifGate`/`ifCompletedBy`/`maxIterations`, first-match-wins), `SStage` (ordered `completionConditions[]`, first-match-wins, total condition last; gate stages carry no member/prompt), `SPipeline`, `SGroupTemplate`; tolerant `readGroupTemplate` + semantic `validateGroupTemplate`.
-- `packages/runtime/src/templates/loader.ts` (new) — global `groups/templates/*.json` + per-project `.srgnt/templates/*.json`, project shadows global, `{ templates, errors }`.
+- `packages/runtime/src/templates/loader.ts` (new) — global `groups/templates/*.json` + per-project `.srgnt/templates/*.json`, project shadows global, `{ templates, errors, warnings }` (warnings = non-fatal, template still loads; e.g. an unsupported `model` hint). The loader passes each file's `sourceDir` into `validateGroupTemplate` and checks `systemPromptPath` containment before reading any prompt file.
 - `packages/contracts/src/session.ts`, `.../workspace/layout.ts` — house style + template dir constant to reuse.
 - Details, full schema shape, placeholder set, and the path-escape guard: the Execution Brief.
 

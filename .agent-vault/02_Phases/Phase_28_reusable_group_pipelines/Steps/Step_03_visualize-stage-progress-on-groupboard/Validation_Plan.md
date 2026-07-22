@@ -22,6 +22,7 @@
 - Interrupted restart: a `stage_entered` with no completion renders as an interrupted/active-but-stalled stage (not "done", not crashed) — matches the runner's honest recovery state.
 - Unknown/newer `system/pipeline_*` kind → benign generic marker, board does not crash.
 - Pipeline-less group session → GroupBoard tab absent; bus timeline + member tabs unaffected.
+- **Mount authority is `system/pipeline_started` alone:** (a) a group whose template declares a pipeline but whose log has no `pipeline_started` → tab absent; (b) a group with a `pipeline_started` in its log whose source template has since been edited to drop the pipeline, or deleted outright → tab still present and rendering the snapshot. Assert both directions; a test that only covers "has pipeline → tab shows" does not cover this finding.
 - Truncated `bus.jsonl` tail (Phase-27 corrupt-tail tolerance) → projection folds the valid prefix; the dropped tail surfaces as an interrupted marker, consistent with the timeline.
 - Double-approve guard: the gate control disables optimistically after a click so a second approve cannot fire before `gate_resolved` arrives.
 - A loop-back that revisits a stage shows the counter incrementing, not duplicate nodes.

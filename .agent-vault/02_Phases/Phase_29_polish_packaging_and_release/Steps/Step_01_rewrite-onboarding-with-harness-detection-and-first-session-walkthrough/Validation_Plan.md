@@ -52,10 +52,24 @@ user in a working first session."
 - Detection is slow (10 s per hung probe): the wizard must stay responsive and show a
   "checking…" state; probes run concurrently, not serially, so worst case is ~10 s
   not N×10 s.
-- No harness at all (not even mock resolvable): walkthrough must still finish and
-  land in the app; the chat session simply isn't pre-opened. Never trap the user.
-- `probe-failed` (binary present, version unreadable): show "installed but couldn't
-  verify" + the PATH hint, treat as usable-with-caveat, not as installed-ok.
+- All real harnesses `not-installed` (the fresh-machine case): install hints render,
+  none of them is offered as a session harness, the mock agent is preselected, and the
+  walkthrough still opens a working session — this is the primary acceptance check
+  above, not a degraded path.
+- `probe-failed` (binary present, version unreadable): rendered as "installed,
+  couldn't verify — use anyway" with the PATH hint; it appears in the walkthrough
+  picker but is **never** preselected (assert the default selection is still the mock
+  agent even when a `probe-failed` harness is the only real one detected). Selecting
+  it proceeds; if the session then fails to start, the Phase-23 spawn-failure surface
+  handles it and the user is still in the app.
+- All harnesses `ok`: the mock agent is *still* the preselection (determinism and no
+  spend); switching to a real harness is an explicit user action. Assert the default,
+  not just that the switch works.
+- Mock agent unresolvable: treated as a **packaging defect**, not a user state — the
+  wizard shows the named "built-in demo agent not found — this build is incomplete"
+  diagnostic, the user can still finish into the app, and the packaged smoke in
+  STEP-29-03 is what must catch this before release. This is the single case where the
+  "working first session" criterion legitimately does not hold.
 
 ## Regression Expectations
 

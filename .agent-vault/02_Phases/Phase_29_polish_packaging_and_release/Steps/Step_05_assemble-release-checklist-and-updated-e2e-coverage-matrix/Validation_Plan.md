@@ -2,9 +2,16 @@
 
 ## Primary Acceptance Checks
 
-1. `release:check:repo` (build, typecheck, unit, expanded chat/persistence/group/
-   pipeline E2E, packaged smoke) passes end to end on CI. Maps to phase criterion
-   "Release checklist passes end to end."
+1. `release:check:repo` passes end to end on CI **and its definition actually contains
+   every stage the acceptance text names**. Assert the script body, not just the exit
+   code: the shipped chain is `build:icons && pack && test && test:e2e &&
+   test:e2e:packaged:linux` with **no `pnpm typecheck`**, so a green run today proves
+   nothing about types. The check is only satisfied once the root `package.json`
+   `release:check:repo` script runs `pnpm typecheck` (inserted after `pack`, before
+   `pnpm test`) — grep the script for `typecheck` as part of this acceptance, and prove
+   the gate bites by confirming a deliberately introduced type error fails the chain
+   before the E2E legs run. Maps to phase criterion "Release checklist passes end to
+   end."
 2. One complete release rehearsal on a tagged RC drives `desktop-release.yml`
    (verify-linux-rc + mac/linux/win matrix) to green with artifacts produced. Every
    matrix leg must be seen *running its build command* — a leg that is green because
@@ -16,8 +23,10 @@
 
 ## Commands
 
-- Repo gate (local, Linux): `pnpm run release:check:repo`
-  (icons → pack → `pnpm test` → `pnpm test:e2e` → `pnpm test:e2e:packaged:linux`).
+- Repo gate (local, Linux): `pnpm run release:check:repo`. Shipped chain today:
+  icons → pack → `pnpm test` → `pnpm test:e2e` → `pnpm test:e2e:packaged:linux`.
+  Required chain after this step: icons → pack → **`pnpm typecheck`** → `pnpm test` →
+  `pnpm test:e2e` → `pnpm test:e2e:packaged:linux`.
 - RC with artifacts (Linux): `pnpm run release:rc:linux`.
 - Full E2E incl. packaged: `pnpm --filter @srgnt/desktop test:e2e:full`.
 - CI rehearsal: push a `v*` tag (or `workflow_dispatch`) to run

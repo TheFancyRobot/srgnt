@@ -41,7 +41,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Relevant Code Paths
 
-- Root `package.json`: `release:check:repo` (icons → pack → test → test:e2e → test:e2e:packaged:linux), `release:artifacts:linux`, `release:rc:linux`. `packages/desktop/package.json` `test:e2e`/`test:e2e:full` — add Phase 23-28 specs (chat/persistence/groups/pipelines).
+- Root `package.json`: `release:check:repo` — shipped today as icons → pack → test → test:e2e → test:e2e:packaged:linux, i.e. **no `pnpm typecheck`**, so the gate can pass with type errors. Adding `pnpm typecheck` (after `pack`, before `pnpm test`) is execution work in this step. Also `release:artifacts:linux`, `release:rc:linux`. `packages/desktop/package.json` `test:e2e`/`test:e2e:full` — add Phase 23-28 specs (chat/persistence/groups/pipelines).
 - `packages/desktop/e2e/` specs; `playwright.config.ts` (`retries: 2` in CI = the PR #14 gfm auto-retry fix); `.github/workflows/desktop-release.yml` (`v*` + `workflow_dispatch` only). Re-audit the 3 baseline failures (app.spec PTY `posix_spawnp`; gfm ATX `.cm-header-*`; bug-0013-visual Linux binary off-Linux).
 
 ## Required Reading

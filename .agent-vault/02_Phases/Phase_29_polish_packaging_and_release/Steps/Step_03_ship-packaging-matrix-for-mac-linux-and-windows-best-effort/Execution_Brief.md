@@ -33,22 +33,47 @@ The current `packaged.spec.ts` does NOT do this — it only asserts the onboardi
 and that `isPackaged === true`. Extending it to open a session is the core work of this
 step.
 
+### Exactly what the automated smoke covers (and what it does not)
+
+Be precise about coverage, because the honest scope is narrower than "the packaged app":
+
+- **Automated, CI-gating: `release/linux-unpacked/srgnt` only.** That is the one binary
+  `test:e2e:packaged:linux` launches. It proves the ESM load path and the bundled bus
+  server inside the electron-builder *unpacked Linux output* — which is the same
+  `app.asar` the AppImage and the rpm wrap, so it is a strong proxy, but it is a proxy.
+- **Not automatically exercised, and no acceptance criterion may claim otherwise:** an
+  extracted/mounted AppImage, an installed rpm, an installed macOS dmg (either arch),
+  and an installed Windows NSIS build. None of these is launched by any test in this
+  step.
+- **Bridging the gap is manual and recorded, not assumed.** The mac dmg install +
+  mock-session smoke is a **required manual check with a recorded result** before
+  release (mac is a shipping target and its asar is built by a different job than the
+  Linux one). AppImage and rpm each get a manual launch-and-open-a-session check
+  recorded once per release. Windows stays best-effort and explicitly ungated.
+- If a future session wants any of these gated, the work is adding a per-target smoke
+  job — not widening the wording of the existing one.
+
 ## What "Done" Looks Like
 
-- macOS: dmg for x64 + arm64 (already configured) builds and the packaged app runs a
-  harness-backed mock session.
+- macOS: dmg for x64 + arm64 (already configured) builds, and the installed dmg runs a
+  harness-backed mock session — verified by the **recorded manual check**, since no
+  automated job launches a mac artifact.
 - Linux: AppImage (configured) + Fedora rpm (`scripts/build-fedora-rpm.sh`) build, and
   the release workflow's Linux leg produces **both** (today it produces only the
   AppImage — see the workflow defects below); the Linux packaged E2E
-  (`test:e2e:packaged:linux`) is extended to exercise a real harness session and is
-  green in CI.
+  (`test:e2e:packaged:linux`) is extended to exercise a real harness session against
+  `release/linux-unpacked/srgnt` and is green in CI. The AppImage and rpm are *built*
+  and *manually* smoked, not covered by that automated run.
 - Windows: NSIS x64 build produced best-effort — which requires the release workflow's
   Windows leg to actually reach `dist:win` (it does not today); stdio/ConPTY/path
   caveats documented in TESTING.md (or a packaging doc). It is NOT gated on a passing
   Windows session smoke (untested on the dev machine).
 - The bundled bus MCP server executable (Phase 27 `packages/harness/src/groups/
-  bus-server/bin.ts`, compiled) is verified present and launchable inside EVERY
-  packaged artifact — see "Bundled bus server" below.
+  bus-server/bin.ts`, compiled) is verified **launchable** in the Linux unpacked build
+  by the automated smoke, and verified **present in the packaged payload** for every
+  other artifact by a static check (list the artifact's `app.asar`/resources and assert
+  the bin path exists). Launchability elsewhere is covered by the recorded manual
+  checks, not claimed by any test — see "Bundled bus server" below.
 
 ## Bundled bus server (do not miss)
 
@@ -106,8 +131,10 @@ path resolves and launches. This interacts with the ESM constraint (the bin is E
 1. Extend `packaged.spec.ts`: after `completeOnboarding`, open a mock-agent session and
    assert a prompt round-trips (proves `import("@srgnt/harness")` works in the packaged
    Node). This is the anti-`ERR_REQUIRE_ESM` guard.
-2. Verify the compiled bus-server bin is present in the packaged artifact and launches;
-   add `asarUnpack`/`extraResources` config if it is not spawnable from inside the asar.
+2. Verify the compiled bus-server bin **launches** in the Linux unpacked build (in the
+   automated smoke) and is **present** in every other artifact's packaged payload (a
+   static listing assertion); add `asarUnpack`/`extraResources` config if it is not
+   spawnable from inside the asar.
 3. Build each target locally where possible: `pnpm --filter @srgnt/desktop dist:mac`
    (mac host), `dist:linux` + `dist:rpm:fedora` (Linux host), `dist:win` (best-effort).
 4. **Fix the Windows dispatch in `.github/workflows/desktop-release.yml`.** The

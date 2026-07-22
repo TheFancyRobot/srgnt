@@ -26,7 +26,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Ship built-in templates with import and export.
 - Parent phase: [[02_Phases/Phase_28_reusable_group_pipelines/Phase|Phase 28 reusable group pipelines]].
-- Exact outcome: two built-in templates ship — `implement → review → QA → iterate` (loop-back on QA failure, `QA REVIEW REQUESTED`-style token convention from docs/pi-teams.md) and `research → implement → test` (the `srgnt-team` loop) — selectable from a template picker; templates import/export as JSON/YAML files with schema validation on import.
+- Exact outcome: two built-in templates ship — `implement → review → QA → iterate` (loop-back on QA failure, `QA REVIEW REQUESTED`-style token convention from docs/pi-teams.md) and `research → implement → test` (the `srgnt-team` loop, minus its reviewer role — a documented, deliberate omission so this built-in stays the minimal fully automatic chain) — selectable from a template picker; templates import/export as **JSON** files (the only supported interchange format in v1) with schema validation on import and refusal on `id` collision.
 - Starting files: `packages/harness/src/groups/templates/` (built-in template data); picker UI in the group-creation flow; import/export in Settings or the picker.
 - Validate: one real dogfood run of implement→review→QA→iterate on an actual srgnt task recorded as a session note; import/export round-trip test; malformed import rejected with actionable errors.
 
@@ -43,7 +43,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Relevant Code Paths
 
 - `packages/runtime/src/templates/builtins/*.json` (new) — the two built-in templates, bundled, read-only in UI, lowest shadowing precedence (`builtin < global < project`).
-- `packages/runtime/src/templates/io.ts` (new) — `exportTemplate` (canonical JSON) + `importTemplate` (decode → `validateGroupTemplate` → write; no partial write, no silent overwrite).
+- `packages/runtime/src/templates/io.ts` (new) — `exportTemplate` (canonical JSON) + `importTemplate` (decode → `validateGroupTemplate` → write; JSON only; no partial write; an `id` collision is always refused with a named error, never overwritten, suffixed, or prompted).
 - Renderer — template picker in STEP-27-01's group-creation flow (`builtin` badge, static stage-graph preview via the STEP-28-03 projection, member→harness mapping form that blocks start until every member is mapped); import/export buttons.
 - Dogfood run + session note (acceptance): the Execution Brief.
 

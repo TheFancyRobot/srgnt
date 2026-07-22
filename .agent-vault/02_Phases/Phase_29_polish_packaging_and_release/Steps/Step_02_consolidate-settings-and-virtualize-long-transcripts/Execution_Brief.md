@@ -14,8 +14,30 @@ Two independent hardening tasks bundled because both are "polish the surfaces ph
 2. **Long-transcript virtualization.** ChatView (Phase 23) renders every message/
    tool-call/diff as a DOM node. A long agent session (thousands of tool calls) will
    render tens of thousands of nodes, blowing scroll performance and memory. The phase
-   acceptance criterion is: a 10k-message transcript scrolls smoothly and loads in
+   acceptance criterion is: a **10k-event** transcript scrolls smoothly and loads in
    acceptable time from JSONL. This must be fixed before shipping.
+
+### The canonical benchmark unit (use this everywhere — fixture, gate, and metrics)
+
+**One unit = one persisted JSONL record in the session's `events.jsonl`.** The gate is
+**10,000 persisted events**, not 10,000 rendered rows and not 10,000 user/assistant
+messages. Reasons: it is the only unit that is directly countable (`wc -l`), it is what
+the loader actually parses on open, and it is what the fixture generator can hit
+exactly. Wherever an older note says "10k messages", read "10k events" — the phase note
+and step note have been updated to match, and no document in this phase should use a
+different unit again.
+
+Two consequences to keep straight when reporting numbers:
+
+- **Rendered rows are fewer than events** and vary with the mix: a `tool_call` plus its
+  `tool_call_update`s coalesce into one card. Report the resulting row count alongside
+  the event count so the two are never confused; do not "top up" the fixture to reach
+  10k rows.
+- **The fixture's composition is fixed** so the 10k is reproducible across machines and
+  reruns: roughly 30% user/assistant text, 55% `tool_call`/`tool_call_update`, 15%
+  diffs, generated from a seeded RNG. Record the exact composition alongside the
+  timings — a 10k-event fixture that is 95% one-line text messages is not the same
+  benchmark.
 
 ## What "Done" Looks Like
 
@@ -26,8 +48,10 @@ Two independent hardening tasks bundled because both are "polish the surfaces ph
   mounted) with STABLE scroll anchoring: appending new messages while scrolled up must
   not jump the viewport; scroll-to-bottom on new activity still works; jumping to an
   older message lands correctly.
-- A generated 10k-message fixture session scrolls smoothly (no long-task jank) and its
-  initial load time from JSONL is recorded in the step Outcome with a number.
+- A generated fixture session of exactly 10,000 persisted JSONL events (the canonical
+  unit above) scrolls smoothly (no long-task jank) and its initial load time from JSONL
+  is recorded in the step Outcome with a number, alongside the event count, the
+  resulting rendered-row count, and the fixture composition.
 
 ## Prerequisites
 
@@ -67,10 +91,12 @@ Two independent hardening tasks bundled because both are "polish the surfaces ph
    consolidated order and section titles (one screen, scannable).
 2. Move sections into the consolidated layout without changing their persisted keys;
    verify each control still round-trips to `settings.json`.
-3. Generate a 10k-message fixture session on disk (JSONL) — a script under
-   `packages/desktop/e2e/` or `packages/runtime` fixtures that writes a realistic mix
-   of user/assistant messages, tool calls, and diffs. Reuse Phase 24's recorder/
-   fixture machinery if available (`packages/harness/src/testing/fixtures/`).
+3. Generate the fixture session on disk (JSONL) at exactly **10,000 events** in the
+   fixed composition above (seeded RNG, so reruns are identical) — a script under
+   `packages/desktop/e2e/` or `packages/runtime` fixtures. Assert the generated line
+   count is 10,000 in the script itself; "approximately 10k" is not the gate. Reuse
+   Phase 24's recorder/fixture machinery if available
+   (`packages/harness/src/testing/fixtures/`).
 4. Introduce windowed virtualization in ChatView with variable-height support and
    stable scroll anchoring. Keep auto-scroll-to-bottom-on-activity behavior.
 5. Measure initial load + scroll performance against the fixture; record numbers.

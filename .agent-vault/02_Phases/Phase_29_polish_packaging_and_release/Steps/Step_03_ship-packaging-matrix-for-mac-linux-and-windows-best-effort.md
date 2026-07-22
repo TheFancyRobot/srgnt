@@ -26,9 +26,9 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Ship packaging matrix for mac linux and windows best-effort.
 - Parent phase: [[02_Phases/Phase_29_polish_packaging_and_release/Phase|Phase 29 polish packaging and release]].
-- Exact outcome: packaged builds ship for macOS (dmg, x64 + arm64) and Linux (AppImage + Fedora rpm) as first-class targets with the packaged E2E smoke updated for the new product; a Windows NSIS build is produced best-effort with stdio/ConPTY/path caveats documented; the bundled bus MCP server executable is verified inside every packaged artifact.
+- Exact outcome: packaged builds ship for macOS (dmg, x64 + arm64) and Linux (AppImage + Fedora rpm) as first-class targets with the packaged E2E smoke updated for the new product; a Windows NSIS build is produced best-effort with stdio/ConPTY/path caveats documented; the bundled bus MCP server executable is spawn-verified in the Linux unpacked build and presence-verified inside every other packaged artifact.
 - Starting files: `packages/desktop/package.json` electron-builder config; `scripts/build-fedora-rpm.sh`; `e2e/packaged.spec.ts`.
-- Validate: `pnpm test:e2e:packaged:linux` green in CI; mac packaged smoke run manually; Windows caveats note committed to docs.
+- Validate: `pnpm test:e2e:packaged:linux` green in CI (covers `release/linux-unpacked/srgnt` only); installed-dmg, extracted-AppImage, and installed-rpm smokes run manually with results recorded; Windows caveats note committed to docs.
 
 ## Why This Step Exists
 

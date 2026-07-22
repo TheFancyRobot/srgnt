@@ -10,20 +10,20 @@
 ## Acceptance Checks
 
 - Both built-ins (`implement → review → QA → iterate`, `research → implement → test`) load, pass `validateGroupTemplate`, and appear in the picker with a `builtin` badge and a static stage-graph preview.
-- The built-ins encode the pi-teams mapping exactly: QA/test loop-back keys on the real tokens (`ISSUE REPORT`, `QA REVIEW REQUESTED`), `maxIterations: 3` bounds every `kind: 'loop_back'` edge, and `implement → review → QA → iterate` reaches `done` through a declared `approve` gate stage.
+- The built-ins encode the mapping tables in the Execution Brief exactly, stage for stage: QA/test loop-back keys on the real tokens (`ISSUE REPORT`, `QA REVIEW REQUESTED`), `maxIterations: 3` bounds every `kind: 'loop_back'` edge, and `implement → review → QA → iterate` reaches `done` through a declared `approve` gate stage. "Exactly" means against those tables, not against `.pi/teams.yaml` role-for-role — Built-in 2 has **three** stages (`research`, `implement`, `test`) and deliberately omits the `srgnt-team` reviewer role. Assert Built-in 2's stage set is exactly those three, and that its `description` states the omission, so the divergence stays an intentional, documented choice rather than drift.
 - **The flagship is representable with no schema strain**: both built-ins load through the unmodified STEP-28-01 reader + `validateGroupTemplate`; every stage's `completionConditions` ends in a total condition (`stop_reason`/`user_gate`); every `transition.to` resolves to a stage id or `'done'` (no transition points at a bare completion condition).
 - **A passing QA turn never re-prompts**: drive the flagship with a scripted QA turn that ends `end_turn` carrying neither `ISSUE REPORT` nor `QA REVIEW REQUESTED` — the trailing `stop_reason` condition completes the stage on the first turn and the run advances to the gate. A regression here (token-only completion) fails every successful run, so assert the turn count, not just the outcome.
 - **Import/export round-trips**: `import(export(t))` equals `t`; export produces canonical, diffable JSON.
 - Malformed import (bad schema, dangling reference, unknown placeholder) is rejected with the actionable `{ field/reference, message }` errors from STEP-28-01 — no partial write.
-- A user can override a built-in by saving a global template with the same `id` (shadowing precedence honored).
+- A user can override a built-in via "duplicate to edit", which saves a global template with the same `id` (shadowing precedence honored) — this is the sanctioned override path; import remains refusal-only.
 - Instantiation blocks start until every member is mapped to a configured harness; a tier-2-only Pi mapping is accepted and runnable.
 - **E2E (phase acceptance criterion)**: scripted mock-agent pipeline — 3 stages including one loop-back and one user gate — runs green: loop-back fires on the failure token, the gate pauses for and resumes on the scripted approval, the run reaches a terminal state.
 - **Dogfood (phase acceptance criterion)**: a real run of `implement → review → QA → iterate` on an actual srgnt task, with ≥1 tier-2-only Pi member, reaches a terminal state and is written up as a session note linked to this step (loop-back on QA failure and honest `maxIterations`/success termination both demonstrated or explained).
 
 ## Edge Cases
 
-- YAML file on import → clear "unsupported format, convert to JSON" message, no half-parse.
-- `id` collision on import into the global dir → refused with "id already exists" (no destructive overwrite); user renames/deletes first.
+- YAML file on import → rejected with the "unsupported format, convert to JSON" message (JSON is the only supported interchange format in v1); no half-parse, and no `yaml` parser is reachable from the import path.
+- `id` collision on import → **always refused**, never overwritten, suffixed, or prompted: the error names the colliding id and the path of the existing template, and the target dir is byte-identical afterwards (assert no file written). Cover collisions against a global template *and* against a built-in id. The legitimate way to shadow a built-in is the "duplicate to edit" action, which is a separate path and is asserted separately below.
 - Built-in edited in the UI → read-only; "duplicate to edit" writes a copy to the global dir, original untouched.
 - Export to an unwritable path → surfaced error, no silent failure.
 - A built-in that regressed to invalid (bad edit) → the validate-at-test gate fails the build, not the app at runtime.

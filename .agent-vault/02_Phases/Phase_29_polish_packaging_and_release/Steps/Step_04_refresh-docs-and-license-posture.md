@@ -42,7 +42,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Relevant Code Paths
 
 - `README.md` (fix harness "planned/does not exist" + 4→5 package count), `TESTING.md` (commands + coverage matrix, coordinate with STEP-29-05), `AGENTS.md`, site copy at srgnt.app.
-- `LICENSE.md` (BSL 1.1, Licensor "The Fancy Robot, LLC", Change Date 2029-03-29 → MPL 2.0) vs `scripts/build-fedora-rpm.sh` rpm spec `License: UNLICENSED` — reconcile. New decision note goes under `04_Decisions/`, linked from PHASE-29.
+- `LICENSE.md` (BSL 1.1, Licensor "The Fancy Robot, LLC", Change Date 2029-03-29 → MPL 2.0) vs `scripts/build-fedora-rpm.sh` rpm spec `License: UNLICENSED` — reconcile via **one canonical SPDX value**. The new decision note (under `04_Decisions/`, linked from PHASE-29) records `canonical_license_id` — a single SPDX id, default `BUSL-1.1` — the human decision confirms or replaces that one value, and the rpm spec is set to `License: <canonical_license_id>`. Validation compares the rpm string to the decision note's field, never to LICENSE.md prose. Owner of the value: the human license decision; owner of propagating it: this step.
 
 ## Required Reading
 

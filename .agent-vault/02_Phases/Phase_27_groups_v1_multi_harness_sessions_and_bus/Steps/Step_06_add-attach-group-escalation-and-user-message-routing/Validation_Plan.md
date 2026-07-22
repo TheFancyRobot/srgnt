@@ -7,7 +7,8 @@
 
 ## Acceptance Checks
 
-- **Escalation E2E (the step's headline):** run a mock single session, choose "Attach Group", pick two mock members, edit the prefilled handoff, create — the group session exists with `parentSessionId` set; both member scenarios assert the handoff text arrived (`expect_prompt` `contains` a distinctive handoff phrase for tier-2 delivery; `call_mcp_tool group_inbox` for a tier-1 member); the bus timeline's first user row is the handoff broadcast.
+- **Escalation E2E (the step's headline):** run a mock single session, choose "Attach Group", pick two mock members, edit the prefilled handoff, create — the group session exists with `parentSessionId` set; both member scenarios assert the handoff text arrived (`expect_prompt` `contains` a distinctive handoff phrase for tier-2 delivery; `call_mcp_tool group_inbox` for a tier-1 member); and `bus.jsonl` shows the canonical order — `seq 1` = `system/group_created`, `seq 2` = the handoff `{ from: 'user', to: '*' }` (the first user row on the timeline), with both records already on disk before the first member-start event.
+- Auto-send is unconditional: the dialog exposes exactly one primary action ("Create & Send"); there is no create-without-send path to assert, and the members receive the handoff without any further user action.
 - Lineage navigation: parent session shows the "escalated" chip linking to the group; the group header chip navigates back to the parent; both survive an app restart (fields are persisted meta).
 - Routed vs broadcast: user sends "only for reviewer" targeted at one member → exactly that member's scenario receives it (`expect_prompt`), the other member's assertions prove non-receipt; a broadcast reaches both; the timeline rows show `user → reviewer` and `user → *` addressing correctly.
 - Handoff prefill is deterministic: same transcript tail → byte-identical prefill (no LLM, no timestamps inside the template body).

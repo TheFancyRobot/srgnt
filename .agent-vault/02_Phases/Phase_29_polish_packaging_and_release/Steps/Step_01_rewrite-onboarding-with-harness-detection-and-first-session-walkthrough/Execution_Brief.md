@@ -23,8 +23,41 @@ rehearsal) assumes onboarding lands the user in a working session.
   install `pi`, how to install opencode) instead of a dead end. Detection must never
   block completion — a user with only the mock agent "installed" can still finish.
 - A first-session walkthrough hands the user into a working chat session (built in
-  Phase 23) using the best available harness, defaulting to the deterministic mock
-  agent when no real harness is present (no spend, deterministic for E2E).
+  Phase 23) under the single fallback contract below — there is exactly one rule for
+  which harness runs that session, and it holds for every combination of detection
+  results.
+
+### The onboarding fallback contract (one contract, no per-state improvisation)
+
+Detection produces one `DetectionResult` per registry-known harness. Selectability
+and default selection are derived from those states by these rules, and nothing else:
+
+| Detection state | Offered in the walkthrough picker? | Auto-selected? |
+| --- | --- | --- |
+| `ok` (real harness) | yes | no — opt-in only |
+| `probe-failed` | yes, labelled "installed, couldn't verify — use anyway" | never |
+| `not-installed` | no (install hint only) | never |
+| mock agent | always, labelled "built-in demo agent" | **yes — always the default** |
+
+- **The bundled mock agent is always the default selection**, even when a real harness
+  detects `ok`. That is what makes the first session deterministic, offline, and
+  spend-free, and it is what the fresh-profile E2E asserts. "Best available harness"
+  is not the rule; the mock is not a last-resort fallback, it is the preselection, and
+  a detected real harness is a one-click switch the user makes deliberately.
+- **`probe-failed` is selectable but never automatic.** The binary exists, so refusing
+  it outright would be wrong; the version is unknown, so silently defaulting to it
+  would be dishonest. It sits in the picker with the caveat label, and choosing it
+  proceeds normally — a session that then fails to start surfaces the Phase-23
+  spawn-failure surface, not an onboarding dead end.
+- **Nothing about detection can block finishing.** Every state — including all real
+  harnesses `not-installed`, or all of them `probe-failed` — still reaches a working
+  first session, because the mock agent ships inside the app and needs no PATH.
+- **The mock agent is therefore never "missing" on a healthy install.** If it fails to
+  resolve, that is a packaging defect, not a user state: surface a named diagnostic
+  ("built-in demo agent not found — this build is incomplete"), let the user finish
+  into the app anyway, and treat it as a STEP-29-03 packaging bug. This is the only
+  path on which the "working first session" acceptance criterion does not hold, and it
+  means the build is broken.
 - Honest-capability framing per DEC-0018 is surfaced where a real harness is chosen:
   for Pi, show the informational self-approving-permissions trust badge and the
   "MCP unavailable / no client fs/terminal mediation" quirks — these are the
@@ -81,9 +114,11 @@ rehearsal) assumes onboarding lands the user in a working session.
    per-harness state rows (ok/probe-failed/not-installed) with install hints. Add its
    `stepIcons` entry. `requiresAction: false` — never block completion on a missing
    harness.
-4. Insert a `first-session` walkthrough step that opens a ChatView session against
-   the best available harness (mock when none real). Surface the DEC-0018 Pi trust
-   badge / quirks when Pi is the chosen harness.
+4. Insert a `first-session` walkthrough step that opens a ChatView session under the
+   fallback contract above: mock preselected always, `ok` harnesses offered as an
+   opt-in switch, `probe-failed` offered with the caveat label, `not-installed`
+   excluded. Surface the DEC-0018 Pi trust badge / quirks when Pi is the chosen
+   harness.
 5. Update the e2e fixtures and packaged smoke IN LOCKSTEP (see Validation Plan) —
    the heading strings are asserted verbatim.
 6. Keep the change minimal: extend the existing wizard/step model, do not invent a
@@ -104,9 +139,11 @@ rehearsal) assumes onboarding lands the user in a working session.
 
 ## Assumptions / Decision-Needed
 
-- ASSUMPTION: the "first session" uses the mock agent by default so fresh-machine
-  E2E is deterministic and spend-free; a real harness is used only if detected and
-  the user opts in. (Matches the dev-console default in STEP-22-05.)
+- SETTLED (see the fallback contract above, not an open assumption): the "first
+  session" always preselects the mock agent so fresh-machine E2E is deterministic and
+  spend-free; a detected real harness is used only when the user opts in, and
+  `probe-failed` harnesses are selectable but never preselected. (Matches the
+  dev-console default in STEP-22-05.)
 - ASSUMPTION: detection covers only registry-known harnesses (pi, opencode, mock),
   not arbitrary PATH scanning.
 - DECISION-NEEDED: the vault `depends_on` for STEP-29-01 is empty, but Phase 23

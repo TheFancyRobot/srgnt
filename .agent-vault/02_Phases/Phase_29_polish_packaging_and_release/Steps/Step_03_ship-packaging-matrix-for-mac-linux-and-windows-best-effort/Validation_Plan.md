@@ -2,12 +2,17 @@
 
 ## Primary Acceptance Checks
 
-1. **Packaged harness session (the anti-ERR_REQUIRE_ESM guard):** the packaged app,
-   launched from the built artifact, opens a mock-agent session and a prompt
-   round-trips to a response. Build/typecheck success is NOT sufficient — this must run
-   against the packaged binary's bundled Node. Maps to phase criterion "mac + linux
-   packaged builds pass the packaged E2E smoke."
-2. **Bundled bus server present + launchable** inside every packaged artifact.
+1. **Packaged harness session (the anti-ERR_REQUIRE_ESM guard), scoped to what actually
+   runs:** `release/linux-unpacked/srgnt` — the single binary `test:e2e:packaged:linux`
+   launches — opens a mock-agent session and a prompt round-trips to a response.
+   Build/typecheck success is NOT sufficient; this must run against the packaged
+   binary's bundled Node. This check does **not** cover an extracted AppImage, an
+   installed rpm, an installed dmg, or an installed NSIS build; those are item 5.
+   Maps to the phase criterion "mac + linux packaged builds pass the packaged E2E
+   smoke" with that scope made explicit.
+2. **Bundled bus server:** launchable in the Linux unpacked build (spawned by the
+   automated smoke), and *present* in every other artifact's packaged payload by a
+   static listing check. Do not assert launchability where nothing launches it.
 3. **Windows build produced** with caveats documented (not session-gated). Concretely:
    a `workflow_dispatch` (or tag) run of `desktop-release.yml` shows the Windows leg
    **executing its build command** — the job log contains the `dist:win` /
@@ -22,6 +27,14 @@
    If the decision recorded in Implementation Notes is instead "rpm is built
    out-of-band", this check is dropped **and** STEP-29-05's artifact check is narrowed
    to match in the same change — the two must never disagree about what CI produces.
+5. **Per-artifact manual smokes, recorded with results** (this is what keeps item 1's
+   narrow scope honest instead of hand-waved): installed macOS dmg (**required** before
+   release — mac is a shipping target with no automated artifact launch), extracted
+   AppImage, and installed rpm each launched once, onboarding completed, one mock
+   session round-tripped. Record pass/fail plus the artifact filename in Implementation
+   Notes. Windows NSIS is best-effort and explicitly ungated. A missing record counts
+   as not done — "the packaged app works" may only be claimed for artifacts with a
+   result recorded here or covered by item 1.
 
 ## Commands
 
@@ -41,8 +54,13 @@
 
 ## What The Packaged Session Smoke Must Assert (concrete)
 
-- Launch `release/linux-unpacked/srgnt` (Linux) / the mac app via
-  `electron.launch({ executablePath })` as `packaged.spec.ts` already does.
+Scope note: this is the **Linux unpacked** smoke and nothing else. It launches
+`release/linux-unpacked/srgnt`; it does not extract an AppImage, install an rpm, mount a
+dmg, or run an NSIS installer. The mac/AppImage/rpm equivalents are the recorded manual
+checks (Primary Acceptance Check 5).
+
+- Launch `release/linux-unpacked/srgnt` via `electron.launch({ executablePath })` as
+  `packaged.spec.ts` already does (the spec self-skips off Linux).
 - `completeOnboarding(page)` to reach the app.
 - Open a mock-agent chat session, send a prompt, and assert an agent response appears
   (this is the line that exercises `Function('return import("@srgnt/harness")')()` in
@@ -50,12 +68,18 @@
 - Assert no `ERR_REQUIRE_ESM` / uncaught main-process error surfaced (check the
   Electron app logs / a renderer error boundary).
 - Resolve the bus-server bin path and spawn it once (or assert a group session's broker
-  starts) to prove the bundled executable is packaged and runnable.
+  starts) to prove the bundled executable is packaged and runnable **in this artifact**.
+  For the other targets, assert only that the bin path exists in the packaged payload.
 
 ## Manual Checks
 
-- macOS: install the dmg (both arches if possible), launch, run the mock session smoke
-  manually. Record `isPackaged: true` and that a session round-trips.
+- macOS (**required, not optional** — it is the only coverage a mac artifact gets):
+  install the dmg (both arches if possible), launch, run the mock session smoke
+  manually. Record `isPackaged: true`, that a session round-trips, and the artifact
+  filename.
+- Linux AppImage and rpm: extract/install, launch, complete onboarding, round-trip one
+  mock session. Record results — the automated smoke runs against `linux-unpacked`, so
+  these two artifacts are otherwise unverified.
 - Windows (if a host is available): install the NSIS build, note whether stdio agent
   spawning / node-pty / ConPTY works; record findings verbatim into the caveats doc.
   A failure here is expected/allowed — it must be documented, not fixed.

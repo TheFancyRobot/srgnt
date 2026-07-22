@@ -3,6 +3,7 @@
 ## Commands
 
 - `pnpm --filter @srgnt/contracts test` — `SGroupMemberSpec` round-trips; bad roles (uppercase, slashes, empty, >32 chars) rejected; old single-session `meta.json` fixtures still decode (`kind` defaults to `'single'`, absent `members` tolerated).
+- `pnpm --filter @srgnt/contracts test` (invariant cases) — decoding `SSession` **rejects** every shape that violates the `kind`/`members` rule, each with a message naming the field: `kind: 'single'` carrying a non-empty `members`; `kind: 'single'` carrying `members: []`; `kind: 'group'` with `members` absent; `kind: 'group'` with `members: []`; `kind: 'group'` with exactly one member; `kind: 'group'` with two members sharing a `role`. The two-member group is the positive control and must decode.
 - `pnpm --filter @srgnt/runtime test` — group path derivation; `createGroupSession` creates `group/{members/,notes/}` skeleton; member channels are isolated (interleaved appends to two roles land only in their own `events.jsonl` with dense per-channel seq).
 - `pnpm --filter @srgnt/desktop test` — `GroupSessionController` unit tests with injected in-process mock connections (two members: spawn, session/new per member, pump fan-out keyed by role, dispose kill-trees both).
 - `pnpm --filter @srgnt/desktop test:e2e` — new `e2e/group.spec.ts` (**must be added to the explicit `test:e2e*` script file lists** — Phase-23 lesson).

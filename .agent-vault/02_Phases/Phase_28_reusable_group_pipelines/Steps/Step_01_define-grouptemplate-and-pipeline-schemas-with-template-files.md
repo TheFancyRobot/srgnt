@@ -25,7 +25,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Define GroupTemplate and Pipeline schemas with template files.
 - Parent phase: [[02_Phases/Phase_28_reusable_group_pipelines/Phase|Phase 28 reusable group pipelines]].
-- Exact outcome: GroupTemplate and Pipeline schemas exist in contracts (members with role/harness/model/system-prompt path; stages with prompt templates and completion conditions — stop reason, explicit token, or user gate; transitions with conditions, loop-backs, `maxIterations`), plus a template file loader/validator reading `groups/templates/` (global) and per-project template dirs.
+- Exact outcome: GroupTemplate and Pipeline schemas exist in contracts (members with role/harness/model/system-prompt path; stages with prompt templates and an ordered, first-match-wins list of completion conditions — stop reason, explicit token, or user gate — with user gates modeled as their own memberless gate stages; transitions with conditions, explicit `advance`/`loop_back` kinds, `maxIterations`), plus a template file loader/validator reading `groups/templates/` (global) and per-project template dirs. The flagship `implement → review → QA → iterate` template (STEP-28-04) must be expressible as written.
 - Starting files: `packages/contracts/src/pipeline.ts` (new schemas; export from `index.ts`); `packages/runtime/src/templates/loader.ts` (new — runtime owns disk, not harness); fixture templates under the runtime package's test resources. (Supersedes the earlier `packages/harness/src/groups/templates/` pointer — built-in template *data* lands in STEP-28-04.)
 - Validate: schema decode + tolerance tests; `validateGroupTemplate` semantic checks (dangling refs, unknown placeholders, unreachable `done`); loader surfaces actionable `{ file, message }` errors and skips-not-aborts on a bad file.
 
@@ -41,7 +41,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Relevant Code Paths
 
-- `packages/contracts/src/pipeline.ts` (new) — `STemplateMemberSpec`, `SCompletionCondition` (stop_reason/token/user_gate), `STransition` (`to`/`ifOutputContains`/`ifGate`/`maxIterations`, first-match-wins), `SStage`, `SPipeline`, `SGroupTemplate`; tolerant `readGroupTemplate` + semantic `validateGroupTemplate`.
+- `packages/contracts/src/pipeline.ts` (new) — `STemplateMemberSpec`, `SCompletionCondition` (stop_reason/token/user_gate), `STransition` (`to`/`kind: advance|loop_back`/`ifOutputContains`/`ifGate`/`ifCompletedBy`/`maxIterations`, first-match-wins), `SStage` (ordered `completionConditions[]`, first-match-wins, total condition last; gate stages carry no member/prompt), `SPipeline`, `SGroupTemplate`; tolerant `readGroupTemplate` + semantic `validateGroupTemplate`.
 - `packages/runtime/src/templates/loader.ts` (new) — global `groups/templates/*.json` + per-project `.srgnt/templates/*.json`, project shadows global, `{ templates, errors }`.
 - `packages/contracts/src/session.ts`, `.../workspace/layout.ts` — house style + template dir constant to reuse.
 - Details, full schema shape, placeholder set, and the path-escape guard: the Execution Brief.

@@ -10,6 +10,8 @@
 
 - The board renders the **full declared pipeline** on open (pending stages greyed), then reflects the live run: active stage highlighted, completed stages marked, `×N` iteration counters on looped stages.
 - **Projection is a pure fold**: replaying the same `SGroupBusEvent[]` twice yields identical view state (asserted directly). Rebuild-from-disk after a reload shows the same board with no live stream (history alone suffices).
+- **The graph comes from the log, not the template file**: the reducer is fed only events; the rendered stage graph is the `pipeline_started` snapshot. Mutating (or deleting) the source template between the run and the render changes nothing on the board.
+- **Multiple runs in one group**: a log containing two runs renders the selected `runId` only — iteration counters and gate state never merge across runs, and the default selection is the most recent run.
 - A `gate_awaiting` run shows the gate stage with an Approve / Reject control; clicking Approve/Reject calls the STEP-28-02 gate IPC and the board advances on the resulting `gate_resolved` + `transition_taken` events.
 - A `pipeline_failed { reason: 'max_iterations_exhausted' }` run shows the failed stage and the reason; a `pipeline_completed` run shows terminal success.
 - Each stage node deep-links into that stage's member transcript at the turn the stage ran.

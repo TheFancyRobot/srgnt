@@ -10,7 +10,9 @@
 ## Acceptance Checks
 
 - Both built-ins (`implement → review → QA → iterate`, `research → implement → test`) load, pass `validateGroupTemplate`, and appear in the picker with a `builtin` badge and a static stage-graph preview.
-- The built-ins encode the pi-teams mapping exactly: QA/test loop-back keys on the real tokens (`ISSUE REPORT`, `QA REVIEW REQUESTED`), `maxIterations` bounds the loop, and `implement → review → QA → iterate` has a `user_gate` before `done`.
+- The built-ins encode the pi-teams mapping exactly: QA/test loop-back keys on the real tokens (`ISSUE REPORT`, `QA REVIEW REQUESTED`), `maxIterations: 3` bounds every `kind: 'loop_back'` edge, and `implement → review → QA → iterate` reaches `done` through a declared `approve` gate stage.
+- **The flagship is representable with no schema strain**: both built-ins load through the unmodified STEP-28-01 reader + `validateGroupTemplate`; every stage's `completionConditions` ends in a total condition (`stop_reason`/`user_gate`); every `transition.to` resolves to a stage id or `'done'` (no transition points at a bare completion condition).
+- **A passing QA turn never re-prompts**: drive the flagship with a scripted QA turn that ends `end_turn` carrying neither `ISSUE REPORT` nor `QA REVIEW REQUESTED` — the trailing `stop_reason` condition completes the stage on the first turn and the run advances to the gate. A regression here (token-only completion) fails every successful run, so assert the turn count, not just the outcome.
 - **Import/export round-trips**: `import(export(t))` equals `t`; export produces canonical, diffable JSON.
 - Malformed import (bad schema, dangling reference, unknown placeholder) is rejected with the actionable `{ field/reference, message }` errors from STEP-28-01 — no partial write.
 - A user can override a built-in by saving a global template with the same `id` (shadowing precedence honored).

@@ -10,12 +10,16 @@
 ## Acceptance Checks
 
 - **Linear flow**: a 3-stage pipeline with `stop_reason` completions runs entry→…→`done`, emitting one `stage_entered`/`stage_completed` pair per stage and exactly one `pipeline_completed`.
-- **Token condition**: a stage with `{ type: 'token', token: 'QA REVIEW REQUESTED' }` completes only when the scripted turn's final message contains the token; a turn without it re-prompts up to the cap, then fails with a named reason.
-- **Loop-back within budget**: QA stage `ifOutputContains` loops back to implement; iteration counter increments; the run still terminates.
+- **Ordered completion conditions**: a stage declaring `[{ token: 'ISSUE REPORT' }, { stop_reason }]` completes on the token when the scripted turn contains it (recording `completedBy = token`) and on end-of-turn when it does not (recording `completedBy = stop_reason`) — one turn each way, no re-prompt in either case. A stage with a token condition and *no* total fallback (a hand-written fixture that bypassed STEP-28-01's validator) re-prompts up to the cap and then fails with a named reason.
+- **`ifCompletedBy` routing**: the same stage routes to different targets depending on which condition matched, driven only by the recorded `completedBy`.
+- **Loop-back within budget**: QA stage `ifOutputContains` takes its `kind: 'loop_back'` edge to implement; iteration counter increments; the run still terminates.
 - **Loop-back exhaustion**: force repeated QA failure — at `maxIterations` the runner takes the fallback transition or emits `pipeline_failed { reason: 'max_iterations_exhausted' }`. It never loops forever (the headline honesty guarantee).
 - **User gate**: a `user_gate` stage emits `gate_awaiting` and suspends; `resumeGate(runId, stageId, 'approve')` advances via the approve transition, `'reject'` via the reject transition; `abortRun` ends cleanly with `pipeline_failed { reason: 'aborted' }`.
 - **Tier-2-only member**: a member with `capabilityOverrides: { mcpServers: false }` (Pi's shipped clamp) participates as a stage — its handoff arrives as a nudge/prompt preamble, its output is read back, and the pipeline completes. No path assumes tier 1.
-- **Rebuildable-from-log**: after a completed run, replaying `bus.jsonl` alone reconstructs the exact stage sequence and iteration counts (feeds STEP-28-03).
+- **Rebuildable-from-log**: after a completed run, replaying `bus.jsonl` alone reconstructs the exact stage sequence, iteration counts, per-stage `completedBy`, and the rendered input of every stage (feeds STEP-28-03). "Alone" is literal — the reconstruction must not touch `groups/templates/`.
+- **Reconstruct after a template edit** (the invariant that makes the log authoritative): run a pipeline to completion, then edit the source template on disk (rename a stage, drop the loop-back, change a token) — or delete the file outright — and replay. The reconstruction still yields the *original* pipeline definition, stage sequence, and gate prompt from the run's `pipeline_started` snapshot, and the UI reports the run's `templateDigest` as differing from the current file rather than silently showing the new shape.
+- **Two runs in one group**: start, complete, and start a second run in the same group; replay separates them by `runId`, with no cross-contamination of iteration counters or pending gates, and a pending gate on run B resumes correctly while run A stays terminal.
+- **Kickoff task and inputs survive**: `{{task}}` resolves from the persisted `kickoffTask`, and every `stage_entered.renderedInput` matches the prompt text actually handed to `invokeMember` (assert on the recorded string, not just that the field exists).
 
 ## Edge Cases
 

@@ -8,7 +8,20 @@
    against the packaged binary's bundled Node. Maps to phase criterion "mac + linux
    packaged builds pass the packaged E2E smoke."
 2. **Bundled bus server present + launchable** inside every packaged artifact.
-3. **Windows build produced** with caveats documented (not session-gated).
+3. **Windows build produced** with caveats documented (not session-gated). Concretely:
+   a `workflow_dispatch` (or tag) run of `desktop-release.yml` shows the Windows leg
+   **executing its build command** — the job log contains the `dist:win` /
+   `electron-builder --win` invocation and the step exits 0. A green-because-skipped or
+   a shell parse error (`case` / `esac` reported as an unrecognized token by `pwsh`) is
+   a failure of this check, not a Windows caveat. Verifiable before a run by inspecting
+   the step: it either declares `shell: bash` or is a per-platform step with no POSIX
+   syntax in a default-shell block.
+4. **Linux leg uploads the rpm as well as the AppImage.** The same workflow run's
+   `desktop-release-linux` artifact contains an `*.rpm` and an `*.AppImage`, with
+   `rpmbuild` installed in the job and `dist:rpm:fedora` running after `dist:linux`.
+   If the decision recorded in Implementation Notes is instead "rpm is built
+   out-of-band", this check is dropped **and** STEP-29-05's artifact check is narrowed
+   to match in the same change — the two must never disagree about what CI produces.
 
 ## Commands
 
@@ -22,6 +35,9 @@
   - win: `pnpm --filter @srgnt/desktop dist:win` (NSIS x64) — best-effort.
 - CI: `.github/workflows/desktop-release.yml` on a `v*` tag or `workflow_dispatch`
   runs `verify-linux-rc` (`release:check:repo` under xvfb) then the build matrix.
+  Use a `workflow_dispatch` run (no tag needed) to prove the Windows and Linux legs
+  above before the STEP-29-05 tagged rehearsal — do not discover a broken matrix leg
+  during the rehearsal.
 
 ## What The Packaged Session Smoke Must Assert (concrete)
 
@@ -55,6 +71,13 @@
   packaged app only.
 - rpm build fails "Missing generated icons" — run `build:icons` first (the script does
   this, but confirm in a clean checkout).
+- rpm build fails in CI with `rpmbuild: command not found` — `ubuntu-latest` has no rpm
+  toolchain; it must be installed in the Linux leg (`sudo apt-get install -y rpm`)
+  before `dist:rpm:fedora`, and the script needs `release/linux-unpacked/` to already
+  exist, so it runs *after* `dist:linux`, never instead of it.
+- A shell fix that "works" because the step silently no-ops (e.g. an `if:` guard that
+  never matches on Windows) — assert the build command appears in the job log, not just
+  that the job is green.
 - Windows path handling in HarnessDefinitions (backslashes, spaces) breaking agent
   spawn — document, do not block.
 

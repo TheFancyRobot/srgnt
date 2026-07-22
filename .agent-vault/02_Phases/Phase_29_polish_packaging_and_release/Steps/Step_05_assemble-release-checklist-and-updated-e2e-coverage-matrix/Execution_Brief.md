@@ -20,7 +20,13 @@ Without this, "green CI" would not actually prove the shipped product works.
   license gate (STEP-29-04 decision note must exist) and the Windows best-effort note.
 - One complete end-to-end release REHEARSAL passes: a tagged RC drives
   `.github/workflows/desktop-release.yml` through `verify-linux-rc` and the mac/linux/
-  win build matrix, producing artifacts.
+  win build matrix, producing artifacts. The artifact set this rehearsal is allowed to
+  claim is exactly what the workflow builds — the Linux leg only produces an rpm if
+  STEP-29-03 added `rpmbuild` + `dist:rpm:fedora` to it (today it runs `dist:linux`
+  alone, i.e. AppImage only), and the Windows leg only produces an installer once
+  STEP-29-03 fixed its shell dispatch. Read STEP-29-03's Implementation Notes first and
+  write the checklist against what CI actually does; anything built out-of-band is
+  listed as a manual step, not silently expected from the workflow.
 - The three known baseline E2E failures are re-audited (fixed or explicitly accepted
   with a recorded reason) so the gate reflects a true pass, not a "known-3-fail" pass.
 
@@ -36,7 +42,11 @@ Without this, "green CI" would not actually prove the shipped product works.
   - `release:check:repo` = `build:icons && pack && test && test:e2e &&
     test:e2e:packaged:linux` — the repo-side gate. This is what CI's `verify-linux-rc`
     job runs under xvfb.
-  - `release:artifacts:linux` = `dist:linux && dist:rpm:fedora`.
+  - `release:artifacts:linux` = `dist:linux && dist:rpm:fedora`. NOTE: this local script
+    is the **only** shipped caller of `dist:rpm:fedora` — the release workflow's Linux
+    leg runs `dist:linux` on its own, so an unmodified workflow uploads no rpm.
+    STEP-29-03 owns closing that gap (or recording the rpm as out-of-band); this step
+    only reports whichever is true.
   - `release:rc:linux` = `release:check:repo && release:artifacts:linux`.
   - `test:e2e` currently = desktop `test:e2e` = `app.spec.ts`, `gfm-compliance.spec.ts`,
     `ui-coverage-matrix.spec.ts`, `bug-0013-visual.spec.ts`. **The new specs

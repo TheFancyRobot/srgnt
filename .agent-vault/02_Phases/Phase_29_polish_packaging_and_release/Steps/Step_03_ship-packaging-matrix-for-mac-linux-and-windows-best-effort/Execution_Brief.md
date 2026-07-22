@@ -37,12 +37,15 @@ step.
 
 - macOS: dmg for x64 + arm64 (already configured) builds and the packaged app runs a
   harness-backed mock session.
-- Linux: AppImage (configured) + Fedora rpm (`scripts/build-fedora-rpm.sh`) build; the
-  Linux packaged E2E (`test:e2e:packaged:linux`) is extended to exercise a real
-  harness session and is green in CI.
-- Windows: NSIS x64 build produced best-effort; stdio/ConPTY/path caveats documented
-  in TESTING.md (or a packaging doc). It is NOT gated on a passing Windows session
-  smoke (untested on the dev machine).
+- Linux: AppImage (configured) + Fedora rpm (`scripts/build-fedora-rpm.sh`) build, and
+  the release workflow's Linux leg produces **both** (today it produces only the
+  AppImage — see the workflow defects below); the Linux packaged E2E
+  (`test:e2e:packaged:linux`) is extended to exercise a real harness session and is
+  green in CI.
+- Windows: NSIS x64 build produced best-effort — which requires the release workflow's
+  Windows leg to actually reach `dist:win` (it does not today); stdio/ConPTY/path
+  caveats documented in TESTING.md (or a packaging doc). It is NOT gated on a passing
+  Windows session smoke (untested on the dev machine).
 - The bundled bus MCP server executable (Phase 27 `packages/harness/src/groups/
   bus-server/bin.ts`, compiled) is verified present and launchable inside EVERY
   packaged artifact — see "Bundled bus server" below.
@@ -84,6 +87,18 @@ path resolves and launches. This interacts with the ESM constraint (the bin is E
   **Do NOT re-add `pull_request` or push-to-`main` triggers.** Note the matrix still
   has `if: github.event_name != 'pull_request'` guards left over from the old trigger
   set — harmless but can be simplified since PR no longer triggers this workflow.
+  Two **real defects** in the "Build release artifacts" step are this step's work to
+  fix (see the checklist):
+  - **The Windows leg cannot run today.** That step dispatches with a POSIX
+    `case ${{ matrix.platform }} in … esac` block and no `shell:` key. GitHub's default
+    shell on `windows-latest` is `pwsh`, which cannot parse `case … esac`, so the
+    Windows job fails *before* it ever invokes `dist:win`. The "CI produces the Windows
+    build" assumption below is false until this is fixed.
+  - **The Linux leg never builds the rpm.** It runs only
+    `pnpm --filter @srgnt/desktop dist:linux` (= `electron-builder --linux` → AppImage).
+    `dist:rpm:fedora` (`scripts/build-fedora-rpm.sh`) is invoked only by the local
+    `release:artifacts:linux` script, so nothing under `packages/desktop/release` that
+    CI uploads is ever an rpm. STEP-29-05's artifact check expects one.
 - `packages/harness/src/groups/bus-server/bin.ts` (Phase 27) — the bundled executable.
 
 ## Smallest Execution Checklist
@@ -95,10 +110,27 @@ path resolves and launches. This interacts with the ESM constraint (the bin is E
    add `asarUnpack`/`extraResources` config if it is not spawnable from inside the asar.
 3. Build each target locally where possible: `pnpm --filter @srgnt/desktop dist:mac`
    (mac host), `dist:linux` + `dist:rpm:fedora` (Linux host), `dist:win` (best-effort).
-4. Document Windows caveats (stdio agent spawning, ConPTY/node-pty behavior, path
+4. **Fix the Windows dispatch in `.github/workflows/desktop-release.yml`.** The
+   "Build release artifacts" step's `case … esac` block is POSIX shell running under
+   `pwsh` on `windows-latest`. Either add `shell: bash` to that step (Git Bash ships on
+   the Windows runner — the one-line fix) or replace the block with three
+   `if: matrix.platform == '…'` steps each running its own `dist:*` script (the more
+   readable fix, and it removes the shell question entirely). Prefer the per-platform
+   steps. Until this lands, "CI produces the Windows build" is aspirational.
+5. **Add the rpm to the Linux leg of the same workflow**, so the artifact set CI
+   uploads matches what STEP-29-05 checks: install the toolchain the script needs
+   (`sudo apt-get install -y rpm` alongside the existing Linux desktop deps — the
+   runner has no `rpmbuild` by default) and run `dist:rpm:fedora` after `dist:linux`
+   on the Linux platform only. Order matters: `build-fedora-rpm.sh` stages
+   `release/linux-unpacked/`, which `dist:linux` produces. If the rpm build proves
+   unreliable on `ubuntu-latest`, do not leave it half-wired — make it non-blocking
+   (`continue-on-error`) **and** say so in the release checklist so STEP-29-05 can
+   scope its artifact check to "rpm built out-of-band on a Fedora host" instead.
+   Record whichever way it goes in Implementation Notes; STEP-29-05 must agree.
+6. Document Windows caveats (stdio agent spawning, ConPTY/node-pty behavior, path
    handling in HarnessDefinitions) in TESTING.md; do not gate release on Windows.
-5. Do NOT touch the release-workflow triggers except optional cleanup of the now-dead
-   `!= 'pull_request'` guards.
+7. Do NOT touch the release-workflow triggers except optional cleanup of the now-dead
+   `!= 'pull_request'` guards. Steps 4-5 change the *job body*, never the trigger set.
 
 ## Assumptions / Decision-Needed
 
@@ -106,7 +138,10 @@ path resolves and launches. This interacts with the ESM constraint (the bin is E
   no external binary) — that is sufficient to prove the ESM load path in the packaged
   Node. A real Pi/opencode packaged session is a manual, non-gating check.
 - ASSUMPTION: Windows stays best-effort/untested on the dev machine (darwin); its
-  build is produced by the CI matrix but not session-smoked.
+  build is produced by the CI matrix but not session-smoked. This holds only after
+  checklist item 4 — the Windows leg's `case … esac` dispatch currently fails under
+  `pwsh` before `dist:win` runs, so "CI produces it" is something this step must make
+  true, not something it may assume.
 - DECISION-NEEDED: whether the bus-server bin ships via `asarUnpack` (kept in asar but
   unpacked for spawn) or `extraResources`. Default: `asarUnpack` for the harness bin
   path, verified by the packaged launch check. Record the outcome.

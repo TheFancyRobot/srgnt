@@ -14,21 +14,24 @@
 
 **Built-in 1 — `implement → review → QA → iterate`** (origin: `docs/pi-teams.md` `review-team`/`bugfix`/`qa` flow):
 
-| Pipeline stage | `.pi` role → `STemplateMemberSpec` | completion condition | transitions |
+| Pipeline stage | `.pi` role → `STemplateMemberSpec` | `completionConditions` (ordered, first match wins) | transitions (ordered, first match wins) |
 | --- | --- | --- | --- |
-| `implement` | `executor-1` → member `implementer` | `stop_reason` (`end_turn`) | → `review` |
-| `review` | `reviewer` (codex) → member `reviewer` | `token` = `REVIEW COMPLETE` (reviewer.md's literal output header) | `ifOutputContains: 'Ready for testing: no'` → `implement`; else → `qa` |
-| `qa` | `tester` → member `qa` | `token` = `QA REVIEW REQUESTED` for a failure handoff (docs/pi-teams.md convention), else `stop_reason` on pass | `ifOutputContains: 'ISSUE REPORT'` (tester.md failure header) → `implement` with `maxIterations` (default 3); else → `user_gate` "Approve completed work?" → `done` |
+| `implement` | `executor-1` → member `implementer` | `[{ stop_reason }]` | `advance` → `review` |
+| `review` | `reviewer` (codex) → member `reviewer` | `[{ token: 'REVIEW COMPLETE' }, { stop_reason }]` — the reviewer.md output header, with end-of-turn as the total fallback so a reviewer that stops without the header still completes | `ifOutputContains: 'Ready for testing: no'` → `loop_back` `implement` (`maxIterations: 3`); else `advance` → `qa` |
+| `qa` | `tester` → member `qa` | `[{ token: 'ISSUE REPORT' }, { token: 'QA REVIEW REQUESTED' }, { stop_reason }]` — the two docs/pi-teams.md handoff headers first, end-of-turn last so a **clean pass never re-prompts** | `ifOutputContains: 'ISSUE REPORT'` (tester.md failure header) → `loop_back` `implement` (`maxIterations: 3`); else `advance` → `approve` |
+| `approve` | *gate stage — no member, no prompt* | `[{ user_gate, prompt: 'Approve completed work?' }]` | `ifGate: 'approve'` → `done`; `ifGate: 'reject'` → `loop_back` `implement` (`maxIterations: 3`) |
 
-The `user_gate` before `done` is the human judgment call docs/pi-teams.md leaves to the operator ("keep one orchestrator active"); the loop-back + `maxIterations` is the "loop until 100% pass" convention made terminating.
+Three details make this encodable under the STEP-28-01 schema, and they are the reason that schema takes an ordered `completionConditions` **array** with a mandatory total last condition: (a) the QA stage genuinely finishes two ways, so it declares the failure tokens *and* a `stop_reason` fallback — with a lone `token` condition every successful QA turn without the token would be re-prompted and eventually failed; (b) the human gate is a **declared stage** (`approve`), not a transition target invented out of a completion condition, so every `transition.to` still resolves to a stage id or `'done'`; (c) loop-backs are labelled `kind: 'loop_back'` and carry `maxIterations`, which is the "loop until 100% pass" convention made terminating. The gate itself is the human judgment call docs/pi-teams.md leaves to the operator ("keep one orchestrator active").
 
 **Built-in 2 — `research → implement → test`** (origin: `.pi/teams.yaml` `srgnt-team`, "Loop: researcher → executor → reviewer → tester until 100% pass"):
 
-| Pipeline stage | `.pi` role → member | completion condition | transitions |
+| Pipeline stage | `.pi` role → member | `completionConditions` (ordered, first match wins) | transitions (ordered, first match wins) |
 | --- | --- | --- | --- |
-| `research` | `researcher` → member `researcher` | `token` = `RESEARCH BRIEF` (researcher.md output header) | → `implement` |
-| `implement` | `executor-1` → member `implementer` | `stop_reason` | → `test` |
-| `test` | `tester` → member `tester` | `token` = `ISSUE REPORT` (fail) or `stop_reason` (pass) | `ifOutputContains: 'ISSUE REPORT'` → `implement` with `maxIterations` (default 3); else → `done` |
+| `research` | `researcher` → member `researcher` | `[{ token: 'RESEARCH BRIEF' }, { stop_reason }]` (researcher.md output header + total fallback) | `advance` → `implement` |
+| `implement` | `executor-1` → member `implementer` | `[{ stop_reason }]` | `advance` → `test` |
+| `test` | `tester` → member `tester` | `[{ token: 'ISSUE REPORT' }, { stop_reason }]` — fail header first, pass last | `ifOutputContains: 'ISSUE REPORT'` → `loop_back` `implement` (`maxIterations: 3`); else `advance` → `done` |
+
+This second built-in has no gate: it is the fully automatic loop, and it is here to prove the schema does not *require* a gate stage to terminate.
 
 Members carry a short inline `systemPrompt` distilled from the corresponding `.pi/agents/*.md` body (role responsibilities + the structured output token the condition keys on). `harnessId` is left as a **placeholder the picker fills at instantiation** (built-ins ship harness-agnostic — a user maps `implementer`→opencode, `reviewer`→Pi, etc.; a tier-2-only Pi member is a valid mapping and must run).
 
@@ -49,7 +52,7 @@ Members carry a short inline `systemPrompt` distilled from the corresponding `.p
 
 ## Execution Checklist
 
-1. Author the two built-in `*.json` templates under `packages/runtime/src/templates/builtins/` with the mapping above encoded (stages, conditions, tokens, `maxIterations`, inline `systemPrompt`s, placeholder `harnessId`); a test asserts both pass `validateGroupTemplate`.
+1. Author the two built-in `*.json` templates under `packages/runtime/src/templates/builtins/` with the mapping above encoded exactly — ordered `completionConditions` arrays (total condition last), the standalone `approve` gate stage, `kind`-labelled transitions with `maxIterations: 3` on every loop-back, inline `systemPrompt`s, placeholder `harnessId`; a test asserts both pass `validateGroupTemplate`. If either built-in needs a field STEP-28-01 does not define, stop and fix the schema in 01 rather than bending the template — the two briefs describe the same files and must agree.
 2. Extend the loader to surface built-ins as a third, lowest-precedence source; shadowing test (global copy overrides a built-in by `id`).
 3. Implement `io.ts` export/import with canonical JSON + validation-on-import; round-trip and malformed-import tests.
 4. Build the picker (list + `builtin` badge + static stage-graph preview + member→harness mapping form) and import/export UI; component tests incl. blocked-start on unmapped member.

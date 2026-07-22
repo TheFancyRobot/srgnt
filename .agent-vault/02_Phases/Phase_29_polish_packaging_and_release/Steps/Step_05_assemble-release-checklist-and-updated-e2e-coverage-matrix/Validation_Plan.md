@@ -6,7 +6,11 @@
    pipeline E2E, packaged smoke) passes end to end on CI. Maps to phase criterion
    "Release checklist passes end to end."
 2. One complete release rehearsal on a tagged RC drives `desktop-release.yml`
-   (verify-linux-rc + mac/linux/win matrix) to green with artifacts produced.
+   (verify-linux-rc + mac/linux/win matrix) to green with artifacts produced. Every
+   matrix leg must be seen *running its build command* — a leg that is green because
+   its shell choked before `dist:*`, or because a guard skipped it, does not count
+   (STEP-29-03 fixes the Windows leg's POSIX-`case`-under-`pwsh` dispatch; verify it
+   here rather than assuming).
 3. The three baseline E2E failures are re-audited: each is either fixed or has a
    recorded acceptance reason — no silent known-failures in the gate.
 
@@ -38,9 +42,19 @@ Confirm each is actually referenced by the `test:e2e` / `test:e2e:full` scripts 
   confirm each documented step works (this validates STEP-29-04's checklist too).
 - Confirm the license gate: the STEP-29-04 license decision note exists and is linked
   from PHASE-29 before the rehearsal is called complete.
-- Inspect produced artifacts: dmg (x64+arm64), AppImage, rpm, and the best-effort
-  Windows NSIS all appear in `packages/desktop/release` / the workflow's uploaded
-  artifacts.
+- Inspect produced artifacts. Two lists, deliberately separated — the rehearsal can
+  only assert what the workflow actually runs (STEP-29-03 owns making these match):
+  - From the workflow's uploaded artifacts: dmg (x64 + arm64) from the mac leg,
+    AppImage **and rpm** from the Linux leg, and the best-effort Windows NSIS. The rpm
+    and the Windows installer are both contingent on STEP-29-03's workflow fixes
+    (the Linux leg gained `rpmbuild` + `dist:rpm:fedora`; the Windows leg's build
+    command now runs under a shell that can parse it). If STEP-29-03 recorded the
+    other outcome — rpm built out-of-band on a Fedora host — then drop the rpm from
+    this list, state that in the release checklist, and verify the out-of-band rpm as
+    a manual step below instead. Read STEP-29-03's Implementation Notes before
+    running the rehearsal so this check matches reality rather than intent.
+  - From a local `release:artifacts:linux` run (Fedora/rpmbuild host): the rpm, if and
+    only if it is out-of-band per the above.
 
 ## Edge Cases / Failure Modes
 

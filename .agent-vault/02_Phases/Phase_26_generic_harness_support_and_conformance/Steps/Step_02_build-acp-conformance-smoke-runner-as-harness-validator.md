@@ -26,7 +26,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Build ACP conformance smoke-runner as harness validator.
 - Parent phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase 26 generic harness support and conformance]].
-- Exact outcome: a conformance smoke-runner spawns any configured harness and executes a scripted probe (initialize negotiation, session/new, trivial prompt turn, permission behavior, cancel, teardown), producing a readable capability/behavior report with suggested quirk flags — surfaced in Settings as "Test this harness" and exportable as JSON.
+- Exact outcome: a conformance smoke-runner spawns any configured harness and executes a scripted probe (initialize negotiation, session/new, trivial prompt turn, permission behavior, cancel, teardown), producing a readable capability/behavior report with suggested quirk flags — surfaced in Settings as "Test this harness" and exportable as JSON. The same engine backs STEP-26-01's "Test launch" button via a `mode: 'launch'` run (checks 1–2 only, spawn always attempted so `spawn-failed` and `initialize-timeout` stay distinguishable) — see the Execution Brief's shared test-launch contract.
 - Starting files: `packages/harness/src/testing/` (invert the mock-agent scenario suite); `packages/harness/src/registry/` quirks model; Settings UI hook-in.
 - Validate: runner against the mock agent reports full pass; against real Pi reports the known adapter gaps (permissions/MCP) matching the Phase 22 spike findings.
 

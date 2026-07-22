@@ -15,7 +15,7 @@
 - Invalid specs produce actionable, field-anchored errors at save time (empty id, non-slug id, empty command, command containing spaces, malformed env key) — the save is rejected before any file write; `harnesses.json` on disk never becomes schema-invalid via the UI.
 - Id collision with a built-in: warning copy shown pre-save, entry saves as a wholesale shadow, card gains the overridden badge, Reset restores the built-in (existing 25-02 behavior unchanged).
 - Delete removes a custom entry from file + registry + list; delete is not offered for built-ins.
-- Test-launch: against the mock agent reports agent name/version + protocol; against a nonexistent binary reports the spawn failure distinctly from an initialize timeout.
+- Test-launch (assert the reason codes, not just the copy): against the mock agent → ok, with agent name/version + protocol; against a **nonexistent binary** → `spawn-failed` (never `not-installed` as the outcome — detection is advisory and must ride along as context only, proving the spawn was actually attempted); against the `hang-probe.mjs` fixture as the launch command → `initialize-timeout`; against a binary that starts and exits or speaks non-ACP → `initialize-failed`. The three failures must be distinguishable in the result payload, and identical to what STEP-26-02's `mode: 'launch'` run returns for the same definitions (assert the same vocabulary once that runner lands — one engine, one set of codes).
 - Capability override tri-state round-trips: "trust negotiation" writes *no* field (absent, not `false`) — verify the serialized JSON, not just the UI state.
 
 ## Edge Cases

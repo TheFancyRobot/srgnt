@@ -2,7 +2,7 @@
 
 ## Commands
 
-- `pnpm --filter @srgnt/contracts test` — `harness:capabilities` (or extended `harness:list`) schema.
+- `pnpm --filter @srgnt/contracts test` — the `harness:capabilities` response schema (the single decided shape: `entries[]` with `harnessId`, `state`, `negotiated`, `effective`, `quirks`, `authMethods`, `provenance`, optional `agentVersion`/`capturedAt`/`definitionFingerprint`) and the `SAuthMethod` normalizer. Assert `harness:list`'s shape is unchanged by this step — capabilities live on exactly one channel.
 - `pnpm --filter @srgnt/harness test` — mock-agent `authRequired` directive suite.
 - `pnpm --filter @srgnt/desktop test` — `CapabilityMatrix` + `AuthPanel` component tests; chat controller auth-required handling.
 - `pnpm --filter @srgnt/desktop test:e2e` — auth-flow spec (added to the explicit `test:e2e*` file lists — STEP-23-05 gotcha).
@@ -18,7 +18,8 @@
   - A row whose cached `definitionFingerprint` no longer matches the current effective definition renders stale/not-yet-measured with the "re-connect to refresh" hint, not as a current row.
 - Rows come from registry + cache data only — adding a fake definition in `harnesses.json` (test workspace) produces a new row with zero component changes (test proves the no-hardcoding constraint).
 - `capturedAt` + agent version render per measured row.
-- Auth: with the mock `authRequired` scenario, starting a session renders the AuthPanel (methods listed with name/description, docsUrl link, copyable command for terminal-type) instead of a raw error toast; Retry after the scenario's auth gate opens yields a working session; the event log contains the auth failure + retry audit events.
+- Auth-method payload is normalized and data-driven, asserted before the UI: the `SAuthMethod` normalizer maps the committed **pi** fixture's `pi_terminal_login` (`type: "terminal"`, `args: ["--terminal-login"]`) to `kind: 'external-command'` with `command` reconstructed from the fixture's own fields — assert the rendered command string is derived from the fixture, and that mutating the fixture's `args` changes it (proving nothing is hardcoded); a fixture method with no command/type maps to `rpc-authenticate`; an unrecognized method maps to `docs-only`. The same normalized array must appear in both the live negotiation and the cached entry for that harness (compare the two payloads field for field).
+- Auth: with the mock `authRequired` scenario, starting a session renders the AuthPanel (methods listed with name/description, docsUrl link) instead of a raw error toast, and the affordance is chosen by `kind` alone — `external-command` renders the copyable command and calls no RPC; `rpc-authenticate` invokes `authenticate(methodId)` and renders no command; `docs-only` renders instructions + docs link only. Retry after the scenario's auth gate opens yields a working session; the event log contains the auth failure + retry audit events.
 - No credential input fields exist anywhere in the panel (constraint check).
 
 ## Edge Cases

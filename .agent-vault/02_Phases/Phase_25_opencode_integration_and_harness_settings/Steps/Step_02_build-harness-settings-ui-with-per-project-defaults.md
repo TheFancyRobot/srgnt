@@ -26,7 +26,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Build harness settings UI with per-project defaults.
 - Parent phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]].
-- Exact outcome: Settings gains a harness section — list configured harnesses, override binary path and env per harness, choose the per-project default harness — persisted to workspace (`harnesses.json` overrides + `settings.json`/`project.json` defaults) and applied on next spawn.
+- Exact outcome: Settings gains a harness section — list configured harnesses, override binary path and env per harness, choose the per-project default harness — persisted to workspace (`harnesses.json` overrides + `settings.json`/`project.json` defaults) and applied on next spawn. Env values are `${env:NAME}` references or non-sensitive literals; the service refuses to persist secret-shaped literals (brief has the mechanism).
 - Starting files: `packages/desktop/src/renderer/components/Settings.tsx`; `packages/harness/src/registry/` (definition merge with user overrides); project defaults from STEP-24-02.
 - Validate: settings persistence tests; changing a binary path takes effect on next session spawn (integration test with two fake binaries).
 
@@ -34,7 +34,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - `harnesses.json` + registry shadowing (last-write-wins wholesale replace) already exist but are hand-edit-only; this step makes them user-operable and gives detection's `not-installed`/`probe-failed` states their remedy (binary-path override — critical because packaged macOS Electron lacks the login-shell PATH).
 - Per-project default harness turns the two-harness reality into a sticky preference: STEP-24-02's `defaultHarnessId` storage + `project:set-defaults` IPC get an editing surface.
-- Note the honest consequence of wholesale-shadow overrides: an overridden built-in stops tracking future built-in changes until reset — the UI must badge it (brief has the recorded default + alternative).
+- Note the honest consequence of wholesale-shadow overrides: an overridden built-in stops tracking future built-in changes until reset — the UI must badge it (brief has the recorded default + alternative). The same wholesale semantics make a *partial* save destructive: this step edits only binary path and env, but the saved record REPLACES the definition, so anything the editor did not carry (`capabilityOverrides`, `quirks`, `detectCommand`, `source`) would be silently dropped and would change detection and capability-safety behavior. The save must therefore round-trip the FULL definition it was given (or merge field-by-field over it) — see the brief's override semantics and the regression check in the validation plan.
 
 ## Prerequisites
 
@@ -79,7 +79,7 @@ Use this note for one executable step inside a phase. This note is the source of
 <!-- AGENT-START:step-agent-managed-snapshot -->
 - Status: planned
 - Current owner: 
-- Last touched: 2026-07-10
+- Last touched: 2026-07-17
 - Next action: Read [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults/Validation_Plan|Validation Plan]].
 <!-- AGENT-END:step-agent-managed-snapshot -->
 

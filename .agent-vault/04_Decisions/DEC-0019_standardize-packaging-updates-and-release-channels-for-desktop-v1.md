@@ -8,7 +8,7 @@ status: accepted
 decided_on: '2026-03-22'
 owner: ''
 created: '2026-03-22'
-updated: '2026-03-22'
+updated: '2026-07-20'
 supersedes: []
 superseded_by: []
 related_notes:
@@ -91,4 +91,5 @@ Seed the Phase 08 release-tooling choice now so packaging and update work starts
 <!-- AGENT-START:decision-change-log -->
 - 2026-03-22 - Created as `proposed`.
 - 2026-03-29 - Accepted after Phase 08 shipped the `electron-builder`/`electron-updater` path, generated release icon assets, and documented the near-term manual GitHub Release publication flow.
+- 2026-07-20 - Renumbered from DEC-0011 to DEC-0019 (duplicate id; the SimpleQueryEngine record keeps DEC-0011). Note renamed and the provenance line added at the top; decision content unchanged.
 <!-- AGENT-END:decision-change-log -->

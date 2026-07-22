@@ -26,7 +26,7 @@ Use this note for one executable step inside a phase. This note is the source of
 - Outcome: Add opencode harness definition with runtime capability detection.
 - Parent phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]].
 - Exact outcome: opencode is a built-in HarnessDefinition (`opencode acp`) with PATH/binary detection and version probing; capabilities come exclusively from runtime observation — the live `initialize` response as baseline, session-discovered fields merged in — and are persisted as last-negotiated for UI display, establishing the runtime-detection rule for all harnesses.
-- Starting files: `packages/harness/src/registry/` (beside the Pi definition); prerequisite: install opencode locally (`opencode` was not on PATH as of 2026-07-10).
+- Starting files: `packages/harness/src/registry/` (beside the Pi definition); prerequisite: install opencode locally — it is not on this machine's PATH (see "Why This Step Exists" for the dated verification).
 - Validate: with opencode installed, a session completes a real prompt round-trip; capability matrix data matches the `initialize` payload captured in fixtures.
 
 ## Why This Step Exists
@@ -82,7 +82,7 @@ Use this note for one executable step inside a phase. This note is the source of
 <!-- AGENT-START:step-agent-managed-snapshot -->
 - Status: planned
 - Current owner: 
-- Last touched: 2026-07-10
+- Last touched: 2026-07-17
 - Next action: Read [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection/Validation_Plan|Validation Plan]].
 <!-- AGENT-END:step-agent-managed-snapshot -->
 

@@ -5,20 +5,20 @@ contract_version: 1
 title: Active Context
 status: active
 created: YYYY-MM-DD
-updated: '2026-07-10'
+updated: '2026-07-17'
 tags:
   - agent-vault
   - home
   - context
-last_updated: '2026-07-10'
-tests: 1684/1684 passing, 0 failures (vault note had 641 - corrected by tester)
-coverage: 95.11% (statements + lines)
-target: 95%+ coverage — ACHIEVED
+last_updated: '2026-07-17'
+tests: 'desktop 775, harness 112 (+2 gated), contracts 127 — all green on main'
+coverage: 'pre-pivot metric; re-baseline when Phase 23 UI work starts'
+target: 'suites green per step (ARCH-0009 validation rules)'
 blockers: none
-in_flight: 'ACP pivot planned: phases 21-29 created; execution not started'
-phase: Phase_21_pivot_groundwork_and_aggregator_teardown (planned — pivot committed 2026-07-10, DEC-0017)
-done: Titlebar 100%, pty-service 99.36%, crash.ts 96.41%, ConnectorStatus ~97%, SlashCommands 95.09%, notes.ts IPC ~95%, NotesView 93.15%, TerminalPanel 92.45%, Onboarding 96.08%, TodaySidePanel 100% (isolation)
-remaining: notes.ts 87.06%, SlashCommandsExtension.ts 91.69%, NotesView.tsx 93.15%, SidePanel.tsx 92.75%
+in_flight: 'Phases 21-22 executed and merged; phases 23-24 refined against DEC-0018; refine of 25-29 in progress; Phase 23 execution not started'
+phase: Phase_23_chat_ui_v1_over_ephemeral_acp_sessions (next up — refined 2026-07-17; PHASE-21/22 completed, DEC-0018 accepted)
+done: 'PHASE-21 (teardown + foundations), PHASE-22 (@srgnt/harness ACP core + Pi spike, DEC-0018 ratified)'
+remaining: 'phases 23-29 (chat UI, persistence, opencode, generic harness, groups, pipelines, release)'
 ---
 
 # Active Context
@@ -28,16 +28,12 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-07-15._
+_Last refreshed: 2026-07-17._
 - Session in progress: [[05_Sessions/2026-07-10-145042-delete-aggregator-packages-ui-ipc-and-cli-surfaces-claude-fable-5-worker|SESSION-2026-07-10-145042 claude-fable-5-worker session for Delete aggregator packages UI IPC and CLI surfaces]] - owner: claude-fable-5-worker - phase: [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]] - updated: 2026-07-10
 - Current step: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01 Build ChatView streaming surface with message thought and markdown rendering]] - status: planned - phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]
-- Active phase: [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|PHASE-22 ACP Core Package and Pi Integration Spike]] - status: planned - updated: 2026-07-15
+- Active phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|PHASE-23 Chat UI v1 Over Ephemeral ACP Sessions]] - status: planned - updated: 2026-07-10
 - Also active: 46 more additional sessions, 65 more additional steps, 1 open critical bug.
 <!-- AGENT-END:current-focus -->
-- Session in progress: [[05_Sessions/2026-03-29-154243-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-154243 Session for Harden Previews Approvals And Run Logs]] - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]] - status: in-progress - updated: 2026-03-29
-- Current step: [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_03_harden-previews-approvals-and-run-logs|STEP-07-03 Harden Previews Approvals And Run Logs]] - status: in-progress - phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]
-- Active phase: [[02_Phases/Phase_07_terminal_integration_hardening/Phase|PHASE-07 Terminal Integration Hardening]] - status: partial - updated: 2026-03-29
-- Resume point: Manual E2E validation of approval flow (7 validation steps outlined in Follow-Up Work)
 
 ## Repo Snapshot
 
@@ -90,6 +86,5 @@ _Last refreshed: 2026-07-15._
 
 ## Next Actions
 
-- **Resume point**: [[05_Sessions/2026-03-29-134622-harden-previews-approvals-and-run-logs|SESSION-2026-03-29-134622]] - STEP-07-03 manual E2E validation ongoing
-- Manual E2E validation steps (described in session follow-up work)
+- **Resume point**: begin Phase 23 execution at [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01]]; finish refine of phases 25-29 first.
 - Keep phase and home notes honest whenever implementation status changes.

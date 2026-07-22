@@ -7,14 +7,14 @@ phase_id: PHASE-23
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - '[[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|PHASE-22 ACP Core Package and Pi Integration Spike]]'
 related_architecture:
   - '[[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009 ACP Command Center Target Architecture]]'
 related_decisions:
   - '[[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017 Pivot srgnt from data aggregator to ACP coding-agent command center]]'
-  - '[[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy (STEP-22-05 spike gate — proposed)]]'
+  - '[[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy (accepted 2026-07-15: adopt pinned pi-acp@0.0.31 for phases 23-24)]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -29,7 +29,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 - Define and complete the Chat UI v1 Over Ephemeral ACP Sessions milestone.
 - Ship the core chat surface over a single ephemeral ACP session: streamed markdown, thought blocks, tool-call cards with diff + terminal embeds, and the agent plan panel — all built on the existing shell layout and semantic design tokens (Phase 12 brand work stays canonical).
-- Wire `session/request_permission` round-trips into a default-ask permission UI backed by the permission engine evolved from `runtime/approvals` + `policy`.
+- Wire `session/request_permission` round-trips into a default-ask permission UI backed by a NEW permission engine at `packages/runtime/src/permissions/` (the aggregator-era `runtime/approvals` + `policy` modules are concept references only — see the 2026-07-17 refinement notes below).
 - Deliver the composer with slash commands (`available_commands_update`), session modes, cancellation, and error/crash surfaces — E2E-tested entirely against the mock agent.
 
 ## Why This Phase Exists
@@ -93,7 +93,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Related Decisions
 
 <!-- AGENT-START:phase-related-decisions -->
-- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy]] (STEP-22-05 spike gate, proposed) — Pi permission/MCP/fs-terminal constraints this phase's chat UI must honor.
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy]] (ACCEPTED 2026-07-15: adopt pinned `pi-acp@0.0.31` for phases 23–24) — Pi permission/MCP/fs-terminal constraints this phase's chat UI must honor.
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs
@@ -121,4 +121,11 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - Reuse map: markdown rendering ← notes-view machinery; diffs ← CodeMirror; terminal embeds ← ghostty-web/pty stack; permission UI patterns ← old approvals UX; layout ← existing three-panel shell and semantic tokens (Phase 12 brand work).
 - All E2E in this phase runs against the mock agent — deterministic, no network, no LLM cost; real-Pi checks stay manual until Phase 24 stabilizes lifecycle.
 - Validation: `pnpm --filter @srgnt/desktop test`, `test:e2e` chat specs, plus manual real-Pi conversation smoke.
-- Pi behavior constraints for the chat UI come from the STEP-22-05 spike: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] + [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (proposed). Key UI consequences: Pi self-approves permissions (informational trust badge, not a client gate); MCP injection unavailable for Pi; no client fs/terminal delegation (render tool cards from `tool_call` content); `session/load` works, `session/resume` does not.
+- Pi behavior constraints for the chat UI come from the STEP-22-05 spike: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] + [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (ACCEPTED 2026-07-15). Key UI consequences: Pi self-approves permissions (informational trust badge, not a client gate); MCP injection unavailable for Pi; no client fs/terminal delegation (render tool cards from `tool_call` content); `session/load` works, `session/resume` does not.
+- Refinement pass 2026-07-17 (post-DEC-0018 reconciliation) — recorded scope decisions and assumptions, all detailed in the step Execution Briefs:
+  - STEP-23-03 re-scoped: real permission round-trips for harnesses that send them (mock agent now; opencode in Phase 25) PLUS a quirk-driven "self-approving" trust badge for Pi; the engine is a NEW `packages/runtime/src/permissions/` module (the aggregator-era `approvals`/`policy` code is concept-reference only).
+  - Client `fs`/`terminal` services v1 are assigned to STEP-23-02; `fs/write_text_file` must not be exposed until STEP-23-03's engine gates it.
+  - Any new main-process consumer of `@srgnt/harness` must copy the dev-console's lazy-ESM `Function('return import(...)')` pattern (desktop main is CommonJS).
+  - Markdown: no standalone MD→HTML renderer exists in the repo; default is a read-only CodeMirror EditorView reusing the notes GFM stack (fallback to a small renderer dep allowed, record in Implementation Notes). `@codemirror/merge` must be added for diffs.
+  - E2E needs per-test mock scenarios: `SRGNT_MOCK_SCENARIO` env override on the chat controller's mock launch path; `e2e/chat.spec.ts` must be added to the explicit `test:e2e*` script file lists.
+  - Decision needed (non-blocking, default recorded in STEP-23-03 brief): session-scoped `allow_always` memory key — default `(sessionId, toolCall.kind)`.

@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Pha
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-25-01
 related_sessions: []
@@ -32,18 +32,23 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Makes the capability-driven-degradation invariant human-legible: the matrix explains *why* a feature is off per harness — yes / no / clamped-by-override (Pi's `mcpServers`) / forced / **not yet measured** — from persisted last-negotiated data plus quirks, never harness-id switches.
+- Pi's row is known ground truth (spike: loadSession true, resume false, mcpServers clamped, self-approving permissions, no fs/terminal delegation); opencode's row comes from its STEP-25-01 capture — rendering both from the same data path proves nothing is hardcoded.
+- Auth becomes real this phase (opencode needs a configured provider; pi-acp advertises `pi_terminal_login`): auth failures must render actionable guidance panels with docs links, not raw JSON-RPC errors.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-25-01 merged (capability cache + `authMethods` on the model + opencode fixtures). Can run in parallel with STEP-25-02; if 02 is unmerged, land the matrix as its own settings section.
+- Executor must verify the exact auth-required error shape in `@agentclientprotocol/sdk` 1.2.1 before wiring detection (record in Implementation Notes; STEP-25-04 input).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/ipc/contracts.ts` — **`harness:capabilities`**, the one capability channel (decided in the brief; `harness:list` stays the settings/editor channel and is NOT extended for this). Single response shape: per-harness `{harnessId, state, negotiated, effective, quirks, authMethods, provenance, agentVersion?, capturedAt?, definitionFingerprint?}`.
+- `packages/desktop/src/renderer/components/settings/CapabilityMatrix.tsx` (new) — rows from registry, cells from the `harness:capabilities` payload (STEP-25-01 cache fields passed through unchanged, carrying per-field provenance so not-yet-measured is distinct from measured-absent); `modes`/`slashCommands` captioned "discovered per session"; a fingerprint-mismatched row renders as stale/not-yet-measured, not as current.
+- `packages/contracts/src/harness.ts` — **the generic auth-method payload, defined before any UI consumes it**: a normalized `SAuthMethod` (`{id, name, description?, kind: 'external-command' | 'rpc-authenticate' | 'docs-only', command?: {command, args, env}, instructions?}`) derived by a pure function from the raw SDK method metadata that STEP-25-01 preserves, carried in both the cached and live capability data. `kind` is what the panel branches on — never the harness id, never a string match on the method name.
+- `packages/desktop/src/renderer/components/chat/AuthPanel.tsx` (new) + chat-controller auth-required detection and Retry; the panel is a pure renderer of `SAuthMethod`: `external-command` → copyable command + retry, `rpc-authenticate` → call `authenticate(methodId)`, `docs-only` → instructions + `docsUrl`.
+- `packages/harness/src/testing/mock-agent/{scenario,runner}.ts` — new `authRequired` scenario directive (today `authenticate` unconditionally returns `{}`) to E2E the flow.
+- Matrix tests assert fixture → rendered-row equivalence against `fixtures/pi/`, `fixtures/opencode/`, and the mock scenario initialize — including a fixture carrying a post-initialize session-discovered update (not just an initialize payload) to prove the baseline-vs-discovered provenance renders correctly.
 
 ## Required Reading
 
@@ -51,6 +56,8 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (capability-driven degradation invariant)
+- [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (expected Pi row; `pi_terminal_login`)
+- [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03]] (quirk-driven TrustBadge pattern this step extends)
 
 ## Execution Prompt
 

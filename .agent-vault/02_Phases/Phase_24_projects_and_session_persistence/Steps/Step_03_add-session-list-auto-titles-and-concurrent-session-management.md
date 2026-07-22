@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 pro
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-24-01
 related_sessions: []
@@ -32,25 +32,27 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Makes sessions plural, named, and persistent-by-default — the visible payoff of 01/02, and the surface resume (04) and lifecycle cleanup (05) plug into.
+- Forces the main-process session service into its final shape: per-session IPC routing and persistence taps replace Phase 23's single-ephemeral-session assumption; the STEP-23-03 in-memory audit stream becomes a real disk sink here.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-24-01 merged; STEP-24-02 API-stable (list is grouped by project). 02 and 03 can overlap after 01 per the phase note.
+- Read the Phase-23 `ChatSessionController` and `packages/harness/src/supervisor/` — the Supervisor already supports many handles, `markActivity`, `disposeAll`; design guidance in the brief: move to ONE shared Supervisor (handle id = srgnt session id).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/desktop/src/main/chat/` — session service: routing map srgnt-sessionId → connection state; persistence taps (`client/prompt`, `acp/session_update`, `client/stop`, permission kinds); auto-title derivation on first prompt.
+- `packages/contracts/src/ipc/contracts.ts` — `chat:session:list`/`chat:session:open` + status push carrying `{sessionId, status}`.
+- `packages/desktop/src/renderer/components/chat/SessionList.tsx` (new, chat panel side-panel content) + per-session transcript state keyed by session id; persisted events replay through the SAME `transcriptReducer` as live updates.
+- `packages/contracts/src/session.ts` `SSessionStatus` — persisted status vocabulary (renderer-only states like `connecting` are never written to meta).
 
 ## Required Reading
 
 - [[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]
 - [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_03_add-session-list-auto-titles-and-concurrent-session-management/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_03_add-session-list-auto-titles-and-concurrent-session-management/Validation_Plan|Validation Plan]]
-- [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]]
+- [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (supervisor invariants; capability-driven UI)
 
 ## Execution Prompt
 

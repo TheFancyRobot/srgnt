@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 pro
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-24-01
 related_sessions: []
@@ -32,25 +32,29 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Projects are the organizing entity of the product surface: the session list (03), resume flows (04), and the permission engine's project-policy hook (stubbed in STEP-23-03) all key off the project entity and its `project.json` defaults.
+- "Project = directory" with a stable derived id is what lets sessions from any harness coexist in one project and survive renames — the identity rule is the risk being retired here.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-24-01 merged (SessionStore defines the `projects/<id>/sessions/<id>/` path layer).
+- STEP-23-03's `packages/runtime/src/permissions/` engine shipped with a project-policy stub that always falls through — this step fills it.
+- Renderer orientation: `Navigation.tsx` is the `AppLayout` shell; the switcher's real home is the chat panel's `sidePanelContent` (see `defaultPanels` in `renderer/main.tsx`) — corrected from this note's original starting-files line.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/contracts/src/project.ts` — `SProject` (add optional `permissionPolicy`; `defaultHarnessId` already exists).
+- `packages/runtime/src/projects/` (new) — `ProjectStore`: `ensureProjectForDir` (auto-create, id = truncated sha256 of resolved rootDir), rename, merge, defaults; atomic `project.json` writes.
+- `packages/contracts/src/ipc/contracts.ts` + `packages/desktop/src/main/` — `project:*` channels + a projects service following the `services/` module pattern, re-rooted via `WorkspaceService` hooks.
+- `packages/desktop/src/renderer/components/chat/ProjectSwitcher.tsx` (new) in the chat panel side-panel content.
 
 ## Required Reading
 
 - [[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]
 - [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults/Validation_Plan|Validation Plan]]
-- [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (workspace v2 layout)
+- [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (workspace v2 layout; fs path-guard rule)
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (per-project defaults can lean on `session/load` config + `session/set_mode` for Pi)
 
 ## Execution Prompt
 

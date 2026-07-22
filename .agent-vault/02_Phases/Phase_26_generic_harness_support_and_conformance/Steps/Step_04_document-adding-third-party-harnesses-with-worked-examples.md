@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - STEP-26-02
   - STEP-26-03
@@ -33,18 +33,20 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- The docs are the phase's proof-of-generality: a third party following the guide from "I have an ACP agent" to "it has a capability-matrix row" without insider knowledge is what makes bring-your-own real. The guide is grounded in the shipped flow: install yourself → add (catalog / editor / hand-edit `harnesses.json`) → detect → conformance run → matrix row.
+- The three worked examples double as the phase's manual proof runs (Gemini CLI through a full session; claude-code-acp and codex-acp at least through conformance reports).
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-26-02 and STEP-26-03 merged; the three agents installable locally; provider credentials for at least Gemini CLI.
+- Verify each agent's exact ACP invocation from its *current* docs at execution time — never from memory or from this note; record tested versions (the `PI_ACP_VERSION` discipline applied to prose).
+- Read the lessons note (its comparison axes structure each worked example's quirks section) and the Outcome notes of steps 01–03 (document what shipped, not what was planned).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `docs/adding-your-own-harness.md` (new; beside `docs/flagship-workflow-walkthrough.md` for house style) + a `README.md` pointer.
+- Optional in-product "Learn more" link from the Add-harness flow (recorded default: yes).
+- Evidence inputs: the STEP-26-02 conformance reports per agent; `packages/contracts/src/harness.ts` for the field-by-field concepts section.
 
 ## Required Reading
 
@@ -76,7 +78,7 @@ Use this note for one executable step inside a phase. This note is the source of
 <!-- AGENT-START:step-agent-managed-snapshot -->
 - Status: planned
 - Current owner: 
-- Last touched: 2026-07-10
+- Last touched: 2026-07-18
 - Next action: Read [[02_Phases/Phase_26_generic_harness_support_and_conformance/Steps/Step_04_document-adding-third-party-harnesses-with-worked-examples/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_26_generic_harness_support_and_conformance/Steps/Step_04_document-adding-third-party-harnesses-with-worked-examples/Validation_Plan|Validation Plan]].
 <!-- AGENT-END:step-agent-managed-snapshot -->
 

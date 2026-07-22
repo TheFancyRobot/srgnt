@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-23-02
   - STEP-23-03
@@ -34,18 +34,20 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Locks the whole Phase-23 surface behind deterministic, zero-cost E2E: the mock agent runs as a real child process through Supervisor + `AcpAgentConnection`, so these specs exercise the full stack (spawn → ACP → IPC → renderer) without network, LLM spend, or a `pi` install. Real-Pi checks stay manual this phase.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- Steps 01–04 merged.
+- Read `packages/desktop/e2e/fixtures.ts` (launch fixture, `getElectronLaunchEnv`, `completeOnboarding`) and the mock scenario schema — the directive list is the E2E vocabulary.
+- Scenario injection seam (recorded design requirement): the chat controller's mock launch path must honor a per-test scenario override (default: `SRGNT_MOCK_SCENARIO=/abs/path.json` env var) — the dev console's hardcoded demo scenario is not enough.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/desktop/e2e/chat.spec.ts` (new) — seven behaviors: streaming, tool-card lifecycle incl. failure, permission allow/deny, cancel mid-stream, crash recovery, slash menu, mode switching; agent-side assertions via `expect_prompt`/`expectOutcome`/`expectOptionId`.
+- `packages/desktop/src/main/chat/` — scenario-injection seam (unit-tested).
+- **Gotcha:** `packages/desktop/package.json` `test:e2e*` scripts enumerate spec files explicitly — `e2e/chat.spec.ts` must be added or it never runs.
+- `.github/workflows/` — verify the Desktop E2E job picks up the new spec (it calls `test:e2e`).
 
 ## Required Reading
 

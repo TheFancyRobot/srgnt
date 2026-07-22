@@ -7,13 +7,14 @@ phase_id: PHASE-25
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|PHASE-24 Projects and Session Persistence]]'
 related_architecture:
   - '[[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009 ACP Command Center Target Architecture]]'
 related_decisions:
   - '[[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017 Pivot srgnt from data aggregator to ACP coding-agent command center]]'
+  - '[[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy (accepted 2026-07-15: adopt pinned pi-acp@0.0.31 for phases 23-24)]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -59,7 +60,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - Depends on [[02_Phases/Phase_24_projects_and_session_persistence/Phase|PHASE-24 Projects and Session Persistence]].
 - Must stay aligned with [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (capability-driven UI invariant).
 - Requires PHASE-24's per-project defaults and persistence (harness settings write into project/workspace stores).
-- Prerequisite tooling: opencode installed locally (not on PATH as of 2026-07-10).
+- Prerequisite tooling: opencode installed locally by the executor (re-verified NOT on PATH 2026-07-17; STEP-25-01 treats installation as a real precondition — srgnt the product only detects and guides).
 
 ## Acceptance Criteria
 
@@ -90,7 +91,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Related Decisions
 
 <!-- AGENT-START:phase-related-decisions -->
-- None yet.
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy]] (ACCEPTED 2026-07-15) — sets the Pi contrast this phase measures opencode against: Pi's measured row (loadSession true, resume false, mcpServers clamped, self-approving permissions) is the known half of the capability matrix; the revisit trigger (native `--mode acp` / Phase 27) is a lessons-learned data point.
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs
@@ -116,3 +117,12 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - This phase is deliberately small: its real product is the *pattern* — second-harness reality check + the lessons-learned note that turns anecdotes into Phase 26 requirements.
 - Step order: opencode definition + detection (01) → settings UI (02) and capability matrix + auth surfacing (03) in parallel → lessons-learned note (04, last).
 - Validation: side-by-side Pi + opencode sessions in one project; capability matrix cross-checked against each harness's `initialize` response; fixtures for opencode traffic added to contract tests.
+- Refinement pass 2026-07-17 (post-DEC-0018 reconciliation) — grounded facts, recorded assumptions, and open decisions; details live in each step's Execution Brief:
+  - `which opencode` re-verified empty on this machine (2026-07-17). STEP-25-01 treats install as an executor precondition (default `npm i -g opencode-ai`, method + exact version recorded) and renders the product-side reality through `registry/detect.ts`'s typed `ok`/`probe-failed`/`not-installed` states. srgnt never installs (non-goal intact).
+  - Capability capture copies the STEP-22-03 pattern: gated `opencode.integration.test.ts` behind `SRGNT_IT_OPENCODE=1` (mirrors `SRGNT_IT_PI=1`), fixtures under `testing/fixtures/opencode/`, findings written to a new `06_Shared_Knowledge/opencode-acp-capture.md` that feeds STEP-25-04. opencode starts with zero quirks/overrides — earned only from measured probes (deliberate contrast with Pi's research-pre-declared quirks).
+  - Grounded model gaps to close in STEP-25-01: `NegotiatedCapabilities` lacks `authMethods` and `sessionList` (both observed in the pi spike); `SHarnessDefinition` lacks a `detectCommand` field (Pi launches `npx` but detects `pi` — currently hardcoded in `detectPi`).
+  - Capabilities persistence (matrix data source): new runtime capability cache writing workspace `harness-capabilities.json` (assumption — separate file beside `harnesses.json`, not inside the `SDesktopSettings`-schema'd `settings.json`); desktop main writes through after each successful connect; cache is display data only, never a live-session source of truth.
+  - Settings overrides ride the shipped registry semantics: workspace `harnesses.json` entries shadow built-ins wholesale (last-write-wins) — UI writes a full edited copy, "Reset to built-in" deletes it, shadowed built-ins get an "overridden" badge (they stop tracking built-in updates, e.g. a `PI_ACP_VERSION` bump, until reset).
+  - Auth v1 scope (assumption): terminal-type auth methods (pi `pi_terminal_login`, opencode's login flow) are external — AuthPanel shows a copyable command + docs link + Retry; `authenticate(methodId)` is called only for non-interactive methods; srgnt never collects credentials in its own UI. Executor must verify the SDK 1.2.1 auth-required error shape before wiring detection. Mock agent gains an `authRequired` scenario directive for E2E.
+  - Decision needed (non-blocking, defaults recorded in the briefs): capability-cache file name/placement (default `harness-capabilities.json` at workspace root); override mechanics (default wholesale-shadow per current registry, delta-patch deferred to Phase 26 if lessons demand it); per-harness permission policy defaults (default DEFER to Phase 26 — per-project `permissionPolicy` from STEP-24-02 stays the only relaxation surface this phase).
+  - STEP-25-04's note is named `06_Shared_Knowledge/cross-harness-lessons-learned.md` (assumption) with fixed comparison axes for BOTH harnesses — launch/install+detection, auth surfacing, capability gaps, quirks needed, permission behavior, session load/resume, MCP passthrough, update-stream shape — distilled into evidence-cited REQ-26-xx entries mapped to PHASE-26 deliverables (editor / conformance runner / catalog / docs).

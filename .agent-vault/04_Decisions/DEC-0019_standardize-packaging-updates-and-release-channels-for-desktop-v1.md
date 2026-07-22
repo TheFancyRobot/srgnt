@@ -3,12 +3,12 @@ note_type: decision
 template_version: 2
 contract_version: 1
 title: Standardize packaging, updates, and release channels for desktop v1
-decision_id: DEC-0011
+decision_id: DEC-0019
 status: accepted
 decided_on: '2026-03-22'
 owner: ''
 created: '2026-03-22'
-updated: '2026-03-22'
+updated: '2026-07-20'
 supersedes: []
 superseded_by: []
 related_notes:
@@ -24,7 +24,9 @@ tags:
   - decision
 ---
 
-# DEC-0011 - Standardize packaging, updates, and release channels for desktop v1
+# DEC-0019 - Standardize packaging, updates, and release channels for desktop v1
+
+> Renumbered from DEC-0011 on 2026-07-20: two decision notes were created with the DEC-0011 id; [[04_Decisions/DEC-0011_dec-0011-use-simplequeryengine-over-in-memory-canonicalstore-for-v1-query-index|DEC-0011 SimpleQueryEngine]] keeps the original id. Older session notes may still reference this record as DEC-0011.
 
 Seed the Phase 08 release-tooling choice now so packaging and update work starts from an explicit default instead of step-local assumptions. Later hardening notes already point strongly toward the Electron-builder path; this proposal captures that as a proposed ADR.
 
@@ -89,4 +91,5 @@ Seed the Phase 08 release-tooling choice now so packaging and update work starts
 <!-- AGENT-START:decision-change-log -->
 - 2026-03-22 - Created as `proposed`.
 - 2026-03-29 - Accepted after Phase 08 shipped the `electron-builder`/`electron-updater` path, generated release icon assets, and documented the near-term manual GitHub Release publication flow.
+- 2026-07-20 - Renumbered from DEC-0011 to DEC-0019 (duplicate id; the SimpleQueryEngine record keeps DEC-0011). Note renamed and the provenance line added at the top; decision content unchanged.
 <!-- AGENT-END:decision-change-log -->

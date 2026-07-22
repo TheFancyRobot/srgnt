@@ -106,7 +106,7 @@ Package the framing output into durable artifacts that later execution phases ca
 - [[04_Decisions/DEC-0008_define-file-backed-record-contract-for-canonical-workspace-data|DEC-0008]] seeded as `proposed` for canonical file-backed record lifecycle rules.
 - [[04_Decisions/DEC-0009_freeze-renderer-stack-and-routing-contract-for-desktop-v1|DEC-0009]] seeded as `proposed` for the renderer stack and v1 route contract.
 - [[04_Decisions/DEC-0010_use-shared-microsoft-auth-boundary-with-main-process-secret-storage|DEC-0010]] seeded as `proposed` for the shared Microsoft auth boundary.
-- [[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011]] seeded as `proposed` for packaging, updates, and release channels.
+- [[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019]] seeded as `proposed` for packaging, updates, and release channels.
 - [[04_Decisions/DEC-0012_default-crash-reporting-to-local-only-redacted-logs|DEC-0012]] seeded as `proposed` for local-only redacted crash reporting.
 
 **Follow-up closure (2026-03-22 third pass):**

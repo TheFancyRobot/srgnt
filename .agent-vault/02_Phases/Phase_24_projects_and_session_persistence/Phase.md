@@ -7,13 +7,14 @@ phase_id: PHASE-24
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|PHASE-23 Chat UI v1 Over Ephemeral ACP Sessions]]'
 related_architecture:
   - '[[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009 ACP Command Center Target Architecture]]'
 related_decisions:
   - '[[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017 Pivot srgnt from data aggregator to ACP coding-agent command center]]'
+  - '[[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy (accepted 2026-07-15: adopt pinned pi-acp@0.0.31 for phases 23-24)]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -91,7 +92,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Related Decisions
 
 <!-- AGENT-START:phase-related-decisions -->
-- None yet.
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy]] (ACCEPTED 2026-07-15) — for pinned `pi-acp@0.0.31`, `session/load` works (resume-by-replay IS the Pi path) and `session/resume` is unsupported (-32601); per-project defaults can use `session/load` config + `session/set_mode` for Pi model/thinking selection.
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs
@@ -119,3 +120,13 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - Step order: SessionStore (01) → projects (02) → session list/concurrency (03) → resume/fork (04) → transcript + lifecycle cleanup (05). 02 and 03 can overlap after 01.
 - Resume honesty is a product stance: no silent re-priming; fork-with-handoff is explicit and linked (`parentSessionId`).
 - Validation: store round-trip property tests (fast-check), crash-mid-turn E2E (kill agent process, restart app, verify transcript), quit-cleanup process-tree assertion.
+- Refinement pass 2026-07-17 (post-DEC-0018 reconciliation) — grounded facts, recorded assumptions, and open decisions; details live in each step's Execution Brief:
+  - Measured Pi resume reality (spike probe 3): `session/load` works and returns rich config/models/modes; `session/resume` → -32601. Resume branch order is data-driven off `NegotiatedCapabilities` (`resumeSession` → `loadSession` → read-only+fork) — never keyed on harness id.
+  - `fast-check` is NOT yet a `@srgnt/runtime` devDependency (it is in contracts/harness/desktop) — STEP-24-01 adds it. Runtime is CJS pure Node, so desktop main imports persistence directly (no lazy-ESM; that pattern is only for `@srgnt/harness`).
+  - The envelope + tolerant reader already exist in `packages/contracts/src/session.ts` and are fixture-pinned (STEP-22-04); STEP-24-01 builds only the disk layer. `FrameRecorder` is the writer's prior art; real-Pi fixture lines (`packages/harness/src/testing/fixtures/pi/*.jsonl`) become runtime reader test corpus (copied, not cross-imported).
+  - `MockAgent.loadSession` is currently a NO-OP (no replay) — STEP-24-04 must extend the mock (scenario `loadReplay` directives) to E2E the load-capable variant.
+  - The Supervisor already ships the idle-reap mechanism (`idleTimeoutMs`, `markActivity`, `reaped` events) — STEP-24-05 wires policy only. Design guidance: one shared Supervisor for all chat sessions (handle id = srgnt session id) so quit is one `disposeAll()`.
+  - Recorded assumptions (defaults an executor takes unless overridden): project id = truncated sha256 of `path.resolve(rootDir)` (stable-id-by-rootDir, no realpath); auto-title = first line of first prompt, ≤60 chars, no LLM; handoff summary = deterministic template, pre-filled and user-editable, never auto-sent; idle timeout 10 min constant (settings exposure deferred to Phase 25); checkpoint cadence = turn end + 30 s while active + close/quit; renderer-only statuses (`connecting`, `awaiting_permission`) never persisted to meta.
+  - Small contracts additions this phase: `SProject.permissionPolicy` (STEP-24-02), `SSession.forkedSessionIds` (STEP-24-04, lineage both ways), lifecycle kinds added to `knownSessionEventKinds` (STEP-24-05).
+  - Decision needed (non-blocking, defaults recorded in the briefs): project merge semantics (default: move session dirs, union `additionalDirectories` incl. source rootDir, delete source); load-replay reconciliation strictness (default: local log stays canonical, mismatch → audit event + notice, never replaces local render); idle-timeout value/configurability.
+  - Correction: the switcher/session-list UI home is the chat panel's `sidePanelContent` (registered in `renderer/main.tsx`), not `Navigation.tsx` (that file is the `AppLayout` shell).

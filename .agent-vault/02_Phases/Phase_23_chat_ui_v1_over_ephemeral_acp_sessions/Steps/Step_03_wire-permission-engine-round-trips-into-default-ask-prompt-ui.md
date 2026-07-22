@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-17'
 depends_on:
   - STEP-23-01
 related_sessions: []
@@ -26,24 +26,29 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Wire permission engine round-trips into default-ask prompt UI.
 - Parent phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]].
-- Exact outcome: `session/request_permission` blocks in a main-process permission engine (evolved from `runtime/approvals` + `policy`) that answers automatically only per explicit policy; default is ask-everything — the renderer shows a permission prompt (tool kind, affected paths/commands, allow/reject × once/always), decisions flow back over IPC, "always" answers are remembered per session, and every decision is emitted as an audit event.
-- Starting files: `packages/runtime/src/{approvals,policy}` (evolve in place); new IPC contract in `packages/contracts/src/ipc/`; renderer `chat/PermissionPrompt` (new).
-- Validate: unit tests for policy resolution order (session-remembered → project policy → default-ask); E2E allow and deny paths against a mock-agent permission scenario; audit events visible in the update stream.
+- Exact outcome (re-scoped after the STEP-22-05 spike + DEC-0018 acceptance): **for harnesses that send `session/request_permission`** (the mock agent does; opencode will in Phase 25), the request blocks in a main-process permission engine with default ask-everything — the renderer shows a permission prompt (tool kind, affected paths/commands, allow/reject × once/always), decisions flow back over IPC, "always" answers are remembered per session, and every decision is emitted as an audit event. **For harnesses that never send it** (Pi: spike probe 1 measured 0 round-trips; pi-acp self-approves in-process), the session header shows an honest per-harness "self-approving" trust badge driven by the definition's `permission-routing-gaps` quirk — informational copy only, never implying srgnt gates that agent.
+- Starting files: `packages/runtime/src/permissions/` (NEW engine module — the aggregator-era `runtime/src/{approvals,policy}` carry the concepts, not reusable code; leave them untouched); new IPC contract in `packages/contracts/src/ipc/`; renderer `chat/PermissionPrompt.tsx` + `chat/TrustBadge.tsx` (new); the chat controller's `PermissionPort` implementation.
+- Validate: unit tests for resolution order (session-remembered → project-policy stub → default-ask); in-process + E2E allow and deny paths against a mock-agent `request_permission` scenario (asserting agent-side `expectOutcome`/`expectOptionId`); audit events (`client/permission_request`/`client/permission_decision`) visible in the in-memory event stream; Pi session shows the badge and never prompts.
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Permissions-default-ask is an ARCH-0009 invariant and the product's trust story — including being honest when a harness gives us no gate at all (Pi). The spike falsified this step's original single-path framing; the reconciled scope is real round-trips for compliant harnesses PLUS a quirk-driven self-approving badge for Pi.
+- The engine built here is the seam Phase 24 project policy and Phase 25 opencode permissions plug into.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-23-01 merged. STEP-23-02 coordinates (fs-write gating) but blocks in neither order.
+- Read DEC-0018 "Consequences" (this step's honest-UI copy is named there) and spike probe 1.
+- Read `PermissionPort` in `packages/harness/src/acp/connection.ts` and the dev console's `autoApprovePermission` placeholder it replaces for chat sessions (dev console keeps auto-approve).
+- Decision needed (recorded, non-blocking — default in the brief): the memory key for `allow_always` within a session; ACP defines none. Default: `(sessionId, toolCall.kind)`.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/runtime/src/permissions/` (new, pure, no ACP/Electron imports — runtime never speaks ACP); old `approvals`/`policy` modules stay untouched.
+- `packages/desktop/src/main/chat/` — `PermissionPort` implementation, pending-request map, cancel wiring, audit events (`knownSessionEventKinds` already has the two kinds in `packages/contracts/src/session.ts`).
+- `packages/contracts/src/ipc/contracts.ts` — `chat:permission:request` (push) + `chat:permission:respond`; preload mirror.
+- `packages/desktop/src/renderer/components/chat/PermissionPrompt.tsx` + `TrustBadge.tsx`; quirks arrive via the STEP-23-01 `chat:session:new` response.
+- Mock substrate: `request_permission` directive in `packages/harness/src/testing/mock-agent/scenario.ts` (`expectOutcome`/`expectOptionId` assert agent-side receipt).
 
 ## Required Reading
 
@@ -51,6 +56,8 @@ Use this note for one executable step inside a phase. This note is the source of
 - [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui/Execution_Brief|Execution Brief]]
 - [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui/Validation_Plan|Validation Plan]]
 - [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (permission data flow + default-ask invariant)
+- [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy]] (accepted; Consequences section)
+- [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (probe 1: permissions never round-trip for Pi)
 
 ## Execution Prompt
 

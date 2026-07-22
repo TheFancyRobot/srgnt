@@ -14,7 +14,7 @@ related_decisions:
   - '[[04_Decisions/DEC-0008_define-file-backed-record-contract-for-canonical-workspace-data|DEC-0008 Define file-backed record contract for canonical workspace data]]'
   - '[[04_Decisions/DEC-0009_freeze-renderer-stack-and-routing-contract-for-desktop-v1|DEC-0009 Freeze renderer stack and routing contract for desktop v1]]'
   - '[[04_Decisions/DEC-0010_use-shared-microsoft-auth-boundary-with-main-process-secret-storage|DEC-0010 Use shared Microsoft auth boundary with main-process secret storage]]'
-  - '[[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Standardize packaging, updates, and release channels for desktop v1]]'
+  - '[[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Standardize packaging, updates, and release channels for desktop v1]]'
   - '[[04_Decisions/DEC-0012_default-crash-reporting-to-local-only-redacted-logs|DEC-0012 Default crash reporting to local-only redacted logs]]'
 created: '2026-03-22'
 updated: '2026-03-22'
@@ -60,7 +60,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - `.agent-vault/04_Decisions/DEC-0008_define-file-backed-record-contract-for-canonical-workspace-data.md`
 - `.agent-vault/04_Decisions/DEC-0009_freeze-renderer-stack-and-routing-contract-for-desktop-v1.md`
 - `.agent-vault/04_Decisions/DEC-0010_use-shared-microsoft-auth-boundary-with-main-process-secret-storage.md`
-- `.agent-vault/04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1.md`
+- `.agent-vault/04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1.md`
 - `.agent-vault/04_Decisions/DEC-0012_default-crash-reporting-to-local-only-redacted-logs.md`
 - `.agent-vault/02_Phases/Phase_00_product_framing_lock/Steps/Step_03_publish-one-pager-adr-backlog-and-roadmap-inputs.md`
 - `.agent-vault/00_Home/Decisions_Index.md`
@@ -87,7 +87,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Created [[04_Decisions/DEC-0008_define-file-backed-record-contract-for-canonical-workspace-data|DEC-0008 Define file-backed record contract for canonical workspace data]] as `proposed`.
 - Created [[04_Decisions/DEC-0009_freeze-renderer-stack-and-routing-contract-for-desktop-v1|DEC-0009 Freeze renderer stack and routing contract for desktop v1]] as `proposed`.
 - Created [[04_Decisions/DEC-0010_use-shared-microsoft-auth-boundary-with-main-process-secret-storage|DEC-0010 Use shared Microsoft auth boundary with main-process secret storage]] as `proposed`.
-- Created [[04_Decisions/DEC-0011_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0011 Standardize packaging, updates, and release channels for desktop v1]] as `proposed`.
+- Created [[04_Decisions/DEC-0019_standardize-packaging-updates-and-release-channels-for-desktop-v1|DEC-0019 Standardize packaging, updates, and release channels for desktop v1]] as `proposed`.
 - Created [[04_Decisions/DEC-0012_default-crash-reporting-to-local-only-redacted-logs|DEC-0012 Default crash reporting to local-only redacted logs]] as `proposed`.
 <!-- AGENT-END:session-decisions-made-or-updated -->
 

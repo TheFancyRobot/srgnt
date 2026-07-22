@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: ACP Core Package and Pi Integration Spike
 phase_id: PHASE-22
-status: planned
+status: completed
 owner: ''
 created: '2026-07-10'
 updated: '2026-07-15'
@@ -64,21 +64,21 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 ## Acceptance Criteria
 
-- [ ] Scope is concrete and linked to the right durable notes.
-- [ ] Step notes exist for the first executable work units.
-- [ ] Validation and documentation expectations are explicit.
-- [ ] `@srgnt/harness` builds standalone with no Electron imports (enforced by lint/dep-cruise check) and passes unit tests.
-- [ ] Mock ACP agent supports scripted scenarios covering streaming, tool calls + updates, permission round-trips, terminal use, plan updates, crash mid-turn, and malformed JSON-RPC.
-- [ ] Fixture-based contract tests decode recorded real-Pi traffic; tolerant-reader behavior is pinned.
-- [ ] Supervisor demonstrates lazy spawn, health detection, kill-tree on stop/quit, and crash surfacing under test.
-- [ ] Dev console (flag-gated) completes a real Pi round-trip: initialize → session/new → prompt → streamed updates → cancel.
-- [ ] Spike report exists as a vault note with measured pi-acp findings (permissions, MCP passthrough, loadSession) and the decision gate is recorded as a vault decision (adopt / fork / contribute).
+- [x] Scope is concrete and linked to the right durable notes.
+- [x] Step notes exist for the first executable work units.
+- [x] Validation and documentation expectations are explicit.
+- [x] `@srgnt/harness` builds standalone with no Electron imports (enforced by lint/dep-cruise check) and passes unit tests.
+- [x] Mock ACP agent supports scripted scenarios covering streaming, tool calls + updates, permission round-trips, terminal use, plan updates, crash mid-turn, and malformed JSON-RPC.
+- [x] Fixture-based contract tests decode recorded real-Pi traffic; tolerant-reader behavior is pinned.
+- [x] Supervisor demonstrates lazy spawn, health detection, kill-tree on stop/quit, and crash surfacing under test.
+- [x] Dev console (flag-gated) completes a real Pi round-trip: initialize → session/new → prompt → streamed updates → cancel.
+- [x] Spike report exists as a vault note with measured pi-acp findings (permissions, MCP passthrough, loadSession) and the decision gate is recorded as a vault decision (adopt / fork / contribute).
 
 ## Linear Context
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|PHASE-21 Pivot Groundwork and Aggregator Teardown]]
-- Current phase status: planned
+- Current phase status: completed
 - Next phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|PHASE-23 Chat UI v1 Over Ephemeral ACP Sessions]]
 <!-- AGENT-END:phase-linear-context -->
 
@@ -103,11 +103,11 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream|STEP-22-01 Scaffold packages/harness with ACP SDK wrapper and typed update stream]]
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_02_implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle|STEP-22-02 Implement harness supervisor with lazy spawn health and kill-tree lifecycle]]
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_03_implement-harness-registry-with-built-in-pi-definition-and-capability-model|STEP-22-03 Implement harness registry with built-in Pi definition and capability model]]
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_04_build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests|STEP-22-04 Build scriptable mock ACP agent and recorded-traffic fixture tests]]
-- [ ] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_05_ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate|STEP-22-05 Ship flag-gated dev console and run the Pi adapter spike with decision gate]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream|STEP-22-01 Scaffold packages/harness with ACP SDK wrapper and typed update stream]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_02_implement-harness-supervisor-with-lazy-spawn-health-and-kill-tree-lifecycle|STEP-22-02 Implement harness supervisor with lazy spawn health and kill-tree lifecycle]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_03_implement-harness-registry-with-built-in-pi-definition-and-capability-model|STEP-22-03 Implement harness registry with built-in Pi definition and capability model]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_04_build-scriptable-mock-acp-agent-and-recorded-traffic-fixture-tests|STEP-22-04 Build scriptable mock ACP agent and recorded-traffic fixture tests]]
+- [x] [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_05_ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate|STEP-22-05 Ship flag-gated dev console and run the Pi adapter spike with decision gate]]
 <!-- AGENT-END:phase-steps -->
 
 ## Notes
@@ -120,4 +120,4 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - The mock agent is deliberately in-scope here, not with the UI: it is the test substrate for every later phase.
 - Validation: `pnpm --filter @srgnt/harness test` + boundary lint (no Electron imports); dev-console round-trip against real Pi recorded in the spike note.
 - Post-gate follow-up (2026-07-10): once the STEP-22-05 gate decision lands, run `/vault:refine` across phases 23–29 to fill their Execution Brief / Validation Plan companions. They are deliberately left as placeholders until then so refinement can incorporate the measured pi-acp findings (permission routing, MCP passthrough, loadSession support) instead of assumptions.
-- STEP-22-05 spike evidence: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (measured pi-acp@0.0.31 permission/MCP/loadSession/fs-terminal behavior) feeding gate decision [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (status: proposed — awaiting human ratification).
+- STEP-22-05 spike evidence: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]] (measured pi-acp@0.0.31 permission/MCP/loadSession/fs-terminal behavior) feeding gate decision [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018]] (status: accepted — ratified by matthew 2026-07-15; phased hybrid: adopt pinned now, upstream/fork before Phase 27).

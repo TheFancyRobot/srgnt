@@ -26,24 +26,24 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Ship packaging matrix for mac linux and windows best-effort.
 - Parent phase: [[02_Phases/Phase_29_polish_packaging_and_release/Phase|Phase 29 polish packaging and release]].
-- Exact outcome: packaged builds ship for macOS (dmg, x64 + arm64) and Linux (AppImage + Fedora rpm) as first-class targets with the packaged E2E smoke updated for the new product; a Windows NSIS build is produced best-effort with stdio/ConPTY/path caveats documented; the bundled bus MCP server executable is verified inside every packaged artifact.
+- Exact outcome: packaged builds ship for macOS (dmg, x64 + arm64) and Linux (AppImage + Fedora rpm) as first-class targets with the packaged E2E smoke updated for the new product; a Windows NSIS build is produced best-effort with stdio/ConPTY/path caveats documented; the bundled bus MCP server executable is spawn-verified in the Linux unpacked build and presence-verified inside every other packaged artifact.
 - Starting files: `packages/desktop/package.json` electron-builder config; `scripts/build-fedora-rpm.sh`; `e2e/packaged.spec.ts`.
-- Validate: `pnpm test:e2e:packaged:linux` green in CI; mac packaged smoke run manually; Windows caveats note committed to docs.
+- Validate: `pnpm test:e2e:packaged:linux` green in CI (covers `release/linux-unpacked/srgnt` only); installed-dmg, extracted-AppImage, and installed-rpm smokes run manually with results recorded; Windows caveats note committed to docs.
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- The app can't ship until packaged artifacts actually RUN the harness features, not just boot. `@srgnt/harness` is ESM-only and desktop-main is CommonJS; the packaged Electron's bundled Node can `ERR_REQUIRE_ESM` where dev does not — and tsc/build success never catches it.
+- Turns "it builds" into "the packaged app runs a real session." The packaged smoke MUST open a harness-backed session (see Execution Brief, "The Critical Packaging Constraint").
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- Phases 23-28 feature-complete; STEP-29-02 merged. Toolchains: rpmbuild (Fedora rpm), macOS host (dmg), optional Windows host (session smoke only).
+- Release workflow triggers are `v*` + `workflow_dispatch` ONLY — do NOT re-add PR/push-to-main triggers.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/desktop/package.json` `build` block (electron-builder: mac dmg x64+arm64, linux AppImage, win nsis) + `dist:*`/`pack` scripts; `scripts/build-fedora-rpm.sh` (rpm spec says `License: UNLICENSED` — flag to STEP-29-04).
+- `packages/desktop/e2e/packaged.spec.ts` (extend to drive a session); `Function('return import("@srgnt/harness")')()` in `main/dev-console/session-controller.ts`; `harness/src/groups/bus-server/bin.ts` (bundled bin — verify asar/asarUnpack); `.github/workflows/desktop-release.yml`.
 
 ## Required Reading
 

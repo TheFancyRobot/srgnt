@@ -32,18 +32,17 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- This is the phase (and project) exit gate: releasable = `release:check:repo` green across the updated coverage matrix. The existing gate only covers pre-pivot specs.
+- Ensures "green CI" actually proves the shipped product (chat/persistence/groups/pipelines + packaged harness session) works, not just the old shell.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-29-01..04 merged; in particular STEP-29-03's packaged harness-session smoke is the linchpin of the packaged gate. Phases 23-28 E2E specs must exist to wire in.
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- Root `package.json`: `release:check:repo` — shipped today as icons → pack → test → test:e2e → test:e2e:packaged:linux, i.e. **no `pnpm typecheck`**, so the gate can pass with type errors. Adding `pnpm typecheck` (after `pack`, before `pnpm test`) is execution work in this step. Also `release:artifacts:linux`, `release:rc:linux`. `packages/desktop/package.json` `test:e2e`/`test:e2e:full` — add Phase 23-28 specs (chat/persistence/groups/pipelines).
+- `packages/desktop/e2e/` specs; `playwright.config.ts` (`retries: 2` in CI = the PR #14 gfm auto-retry fix); `.github/workflows/desktop-release.yml` (`v*` + `workflow_dispatch` only). Re-audit the 3 baseline failures (app.spec PTY `posix_spawnp`; gfm ATX `.cm-header-*`; bug-0013-visual Linux binary off-Linux).
 
 ## Required Reading
 

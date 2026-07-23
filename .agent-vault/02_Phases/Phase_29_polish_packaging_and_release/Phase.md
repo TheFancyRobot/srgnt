@@ -7,7 +7,7 @@ phase_id: PHASE-29
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-21'
 depends_on:
   - '[[02_Phases/Phase_28_reusable_group_pipelines/Phase|PHASE-28 Reusable Group Pipelines]]'
 related_architecture:
@@ -44,7 +44,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - Performance: long-transcript virtualization in ChatView; event-log read paths measured against large sessions.
 - Packaging matrix: mac (dmg x64+arm64) and linux (AppImage + rpm) first-class; Windows best-effort with known stdio/pty caveats documented.
 - Docs refresh: README, TESTING.md, website copy; LICENSE posture review before any public release.
-- Release checklist: `release:check:repo` equivalent updated for the new E2E coverage matrix (chat, persistence, groups, pipelines).
+- Release checklist: `release:check:repo` equivalent updated for the new E2E coverage matrix (chat, persistence, groups, pipelines) **and extended to actually run `pnpm typecheck`** — the shipped script omits it, so today's gate can pass with type errors (STEP-29-05 execution work).
 - Stretch: semantic search over transcripts + notes via the parked runtime subsystem; the bundled model returns to `extraResources` only with this feature.
 
 ## Non-Goals
@@ -67,8 +67,8 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - [ ] Step notes exist for the first executable work units.
 - [ ] Validation and documentation expectations are explicit.
 - [ ] Fresh-machine onboarding: detects installed harnesses, guides install for missing ones, creates workspace, and lands the user in a working first session.
-- [ ] 10k-message transcript scrolls smoothly (virtualized) and loads in acceptable time from JSONL.
-- [ ] mac + linux packaged builds pass the packaged E2E smoke; Windows build produced with documented caveats.
+- [ ] 10,000-**event** transcript scrolls smoothly (virtualized) and loads in acceptable time from JSONL. The unit is persisted JSONL records in `events.jsonl` — not rendered rows, not user/assistant messages — and the STEP-29-02 fixture, gate, and recorded metrics all use it.
+- [ ] Linux `release/linux-unpacked/srgnt` passes the automated packaged E2E smoke (mock session round-trip); the installed mac dmg, the extracted AppImage, and the installed rpm each pass the recorded manual smoke; Windows build produced with documented caveats. No automated job launches a mac, AppImage, rpm, or NSIS artifact — do not claim otherwise.
 - [ ] Release checklist (build, typecheck, unit, E2E, packaged smoke across the new coverage matrix) passes end to end.
 - [ ] Docs (README, TESTING, site copy) describe the shipped product; LICENSE posture reviewed and recorded as a decision.
 - [ ] If the stretch ships: transcript/notes semantic search behind a working UI with the model re-bundled; otherwise the model stays unbundled.
@@ -119,3 +119,9 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - LICENSE.md predates the pivot; review before any public release and record the outcome as a decision note.
 - Step order: onboarding (01) → settings + perf (02) → packaging (03) → docs (04) → release checklist (05); stretch runs opportunistically.
 - Exit = releasable: `release:check:repo` pipeline green across the updated coverage matrix.
+- Refinement pass 2026-07-21 (all 10 step companions filled to junior-executable depth; details live in each step's Execution Brief / Validation Plan):
+  - **STEP-29-01 real blockers** are Phase 23 (chat/first-session) and Phase 25 (registry/harness settings), though the vault `depends_on` is empty — confirm both merged before execution. The REAL onboarding flow is inline in `main.tsx` (`onboardingFlow` useMemo), not `Onboarding.tsx`'s unused `defaultOnboardingSteps`; e2e `fixtures.ts` `completeOnboarding` hard-codes heading strings and MUST be updated in lockstep with any step rename.
+  - **STEP-29-03 critical constraint (encoded):** `@srgnt/harness` is ESM-only and desktop-main is CommonJS; the packaged Electron's bundled Node can `ERR_REQUIRE_ESM` where dev does not, and tsc/build success never catches it. The packaged smoke MUST open a real harness-backed (mock) session, not just assert onboarding renders (current `packaged.spec.ts` only does the latter). Bundled bus-server bin (`harness/src/groups/bus-server/bin.ts`) must be verified **spawnable** in the Linux unpacked build (the only artifact any test launches) and **present** in every other artifact's packaged payload via a static listing check. Release workflow triggers stay `v*` + `workflow_dispatch` ONLY — do not re-add PR/push-to-main. **Two shipped defects in `desktop-release.yml`'s build step are STEP-29-03 execution work** (job body only, never the triggers): its `case … esac` dispatch is POSIX shell with no `shell:` key, so the Windows leg dies under `pwsh` before reaching `dist:win`; and the Linux leg runs `dist:linux` (AppImage) alone — `dist:rpm:fedora` is only ever called by the local `release:artifacts:linux` script, so CI uploads no rpm. Fix both (per-platform steps + `rpmbuild` install and an rpm build after `dist:linux`), or record the rpm as out-of-band; STEP-29-05's rehearsal artifact check must match whichever holds.
+  - **STEP-29-04 license:** LICENSE.md is BSL 1.1 (Licensor "The Fancy Robot, LLC", Change Date 2029-03-29 → MPL 2.0) but `build-fedora-rpm.sh`'s rpm spec declares `License: UNLICENSED` — reconcile. Actual public-release license posture is a human decision this step RECORDS (default: document current BSL 1.1 + flag "confirm before public release"). README still stale-claims harness is "planned for Phase 22 and does not exist yet".
+  - **STEP-29-05:** re-audit the three carried baseline E2E failures (app.spec PTY `posix_spawnp`; gfm ATX `.cm-header-*` — mitigated by PR #14 auto-retry `retries: 2`; bug-0013-visual Linux-only binary off-Linux) — fix or record acceptance; no silent known-failures in the gate. Add Phase 23-28 specs (chat/persistence/groups/pipelines) to `test:e2e`/`test:e2e:full`.
+  - Decisions-needed recorded across the briefs (non-blocking for refinement): STEP-29-02 virtualization lib vs. hand-rolled (default: `@tanstack/react-virtual`); STEP-29-03 bus-bin `asarUnpack` vs `extraResources` (default: `asarUnpack`); STEP-29-04 public license posture (human owner); STEP-29-05 fix-vs-accept per baseline failure.

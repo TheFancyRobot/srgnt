@@ -26,24 +26,26 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Ship built-in templates with import and export.
 - Parent phase: [[02_Phases/Phase_28_reusable_group_pipelines/Phase|Phase 28 reusable group pipelines]].
-- Exact outcome: two built-in templates ship — `implement → review → QA → iterate` (loop-back on QA failure, `QA REVIEW REQUESTED`-style token convention from docs/pi-teams.md) and `research → implement → test` (the `srgnt-team` loop) — selectable from a template picker; templates import/export as JSON/YAML files with schema validation on import.
+- Exact outcome: two built-in templates ship — `implement → review → QA → iterate` (loop-back on QA failure, `QA REVIEW REQUESTED`-style token convention from docs/pi-teams.md) and `research → implement → test` (the `srgnt-team` loop, minus its reviewer role — a documented, deliberate omission so this built-in stays the minimal fully automatic chain) — selectable from a template picker; templates import/export as **JSON** files (the only supported interchange format in v1) with schema validation on import and refusal on `id` collision.
 - Starting files: `packages/harness/src/groups/templates/` (built-in template data); picker UI in the group-creation flow; import/export in Settings or the picker.
 - Validate: one real dogfood run of implement→review→QA→iterate on an actual srgnt task recorded as a session note; import/export round-trip test; malformed import rejected with actionable errors.
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Templates + runner are inert without ready-made pipelines to pick and run. This ships the two flagship built-ins and file-based import/export — the phase's payoff and the substrate for its dogfood acceptance run.
+- The built-ins are not invented: they generalize this repo's own pi-team loops harness-agnostically. `docs/pi-teams.md` + `.pi/teams.yaml` are the **origin** of `implement → review → QA → iterate`; encoding them proves the schema (01) + runner (02) productize the workflow srgnt was built with. The concrete role→member and token→condition mapping is tabulated in the Execution Brief and cited in the template descriptions.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-28-02 merged (runner + gate IPC). STEP-28-01 merged (built-ins must validate clean through `validateGroupTemplate`). STEP-28-03 recommended so the dogfood run is observable (03/04 parallelize after 02).
+- Read: `docs/pi-teams.md` + `.pi/teams.yaml` + `.pi/agents/*.md` (roles + structured output tokens — the mapping source: `RESEARCH BRIEF`, `REVIEW COMPLETE`, `ISSUE REPORT`, `QA REVIEW REQUESTED`); the STEP-28-01 brief (template format, inline `systemPrompt` vs `systemPromptPath`, placeholder set).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/runtime/src/templates/builtins/*.json` (new) — the two built-in templates, bundled, read-only in UI, lowest shadowing precedence (`builtin < global < project`).
+- `packages/runtime/src/templates/io.ts` (new) — `exportTemplate` (canonical JSON) + `importTemplate` (decode → `validateGroupTemplate` → write; JSON only; no partial write; an `id` collision is always refused with a named error, never overwritten, suffixed, or prompted).
+- Renderer — template picker in STEP-27-01's group-creation flow (`builtin` badge, static stage-graph preview via the STEP-28-03 projection, member→harness mapping form that blocks start until every member is mapped); import/export buttons.
+- Dogfood run + session note (acceptance): the Execution Brief.
 
 ## Required Reading
 

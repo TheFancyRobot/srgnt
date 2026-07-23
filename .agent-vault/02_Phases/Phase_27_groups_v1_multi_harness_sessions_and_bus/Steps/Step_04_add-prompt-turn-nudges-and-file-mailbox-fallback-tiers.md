@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase|Phas
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-10'
+updated: '2026-07-18'
 depends_on:
   - STEP-27-03
 related_sessions: []
@@ -32,18 +32,18 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Why This Step Exists
 
-- Explain why this step matters to the parent phase.
-- Call out the risk reduced, capability added, or knowledge gained.
+- Tiers 2/3 make the bus universal — and under the entry gate's conservative outcome **this is the only way Pi members participate at all** (spike: MCP injection never arrives, but prompt text flows fine). Mirrors the proven pi-teams nudge UX.
 
 ## Prerequisites
 
-- List the notes, approvals, tooling, branch state, or prior steps required before starting.
-- Include blocking commands or setup steps if they are easy to forget.
+- STEP-27-03 merged. Read: spike report probe 2 + implications; `docs/pi-teams.md`; `supervisor/types.ts` (`SupervisorClock` injected-clock seam for debounce tests); STEP-24-05 brief (derived-file rules `mailbox.md` copies).
 
 ## Relevant Code Paths
 
-- List the most likely files, directories, packages, tests, commands, or docs to inspect.
-- Include only the paths that help a new engineer get oriented quickly.
+- `packages/harness/src/groups/nudges.ts` (new) — `NudgeScheduler`: pending digests, 2 s debounce, injected clock; emits `nudge-ready`, delivery is the controller's job.
+- `GroupSessionController` — `nudgePolicy` `'auto'` (prompt idle members, never interrupt an in-flight turn) vs `'on-next-prompt'`; fenced `[srgnt group bus]` digest with tier-appropriate reply instruction.
+- Tier derivation: effective capabilities + hello-state → roster badges (quirk-badge pattern from 23-03/25-03); Pi's `mcp-passthrough-gaps` clamp lands it on tier 2 automatically, nothing keyed on harness id.
+- `packages/runtime/src/sessions/mailbox.ts` (new) — `group/notes/mailbox.md` mirror: append live, atomic regen from `bus.jsonl` on open, never source of truth. Tier-2/3 E2E needs NO new mock directives (`expect_prompt` + `read_file`).
 
 ## Required Reading
 

@@ -24,6 +24,13 @@ import {
   SSemanticSearchSearchResponse,
   SSemanticSearchStatusRequest,
   SSemanticSearchStatusResponse,
+  ipcChannels,
+  SChatSessionNewRequest,
+  SChatSessionNewResponse,
+  SChatSessionPromptRequest,
+  SChatSessionPromptResponse,
+  SChatSessionRef,
+  SChatSessionUpdateEvent,
 } from './contracts.js';
 
 describe('IPC Channel', () => {
@@ -357,6 +364,103 @@ describe('Semantic Search IPC', () => {
     });
     it('rejects invalid status state', () => {
       expect(() => parseSync(SSemanticSearchStatusResponse, { state: 'invalid' })).toThrow();
+    });
+  });
+});
+
+describe('Chat session IPC (PHASE-23)', () => {
+  it('registers the chat channels as valid IPC channels', () => {
+    for (const channel of [
+      ipcChannels.chatSessionNew,
+      ipcChannels.chatSessionPrompt,
+      ipcChannels.chatSessionCancel,
+      ipcChannels.chatSessionDispose,
+      ipcChannels.chatSessionUpdate,
+    ]) {
+      expect(() => parseSync(SIpcChannel, channel)).not.toThrow();
+    }
+  });
+
+  it('keeps the chat channels distinct from the dev-console ones', () => {
+    expect(ipcChannels.chatSessionNew).not.toBe(ipcChannels.devSessionNew);
+    expect(ipcChannels.chatSessionUpdate).toBe('chat:session:update');
+  });
+
+  describe('new session', () => {
+    it('accepts both targets', () => {
+      expect(parseSync(SChatSessionNewRequest, { target: 'mock' }).target).toBe('mock');
+      expect(parseSync(SChatSessionNewRequest, { target: 'pi' }).target).toBe('pi');
+    });
+
+    it('rejects an unknown target', () => {
+      expect(() => parseSync(SChatSessionNewRequest, { target: 'bogus' })).toThrow();
+    });
+
+    it('carries harness identity and quirks to the renderer', () => {
+      const parsed = parseSync(SChatSessionNewResponse, {
+        sessionId: 'chat-pi-1',
+        target: 'pi',
+        harnessId: 'pi',
+        harnessName: 'Pi',
+        quirks: ['adapter-mediated', 'permission-routing-gaps'],
+        capabilities: { protocolVersion: 1, loadSession: false },
+      });
+      expect(parsed.harnessId).toBe('pi');
+      expect(parsed.harnessName).toBe('Pi');
+      expect(parsed.quirks).toEqual(['adapter-mediated', 'permission-routing-gaps']);
+      expect(parsed.capabilities.protocolVersion).toBe(1);
+    });
+
+    it('accepts an empty quirks array (the mock declares none)', () => {
+      const parsed = parseSync(SChatSessionNewResponse, {
+        sessionId: 'chat-mock-1',
+        target: 'mock',
+        harnessId: 'mock',
+        harnessName: 'Mock Agent',
+        quirks: [],
+        capabilities: {},
+      });
+      expect(parsed.quirks).toEqual([]);
+    });
+
+    it('rejects a response missing harness identity', () => {
+      expect(() =>
+        parseSync(SChatSessionNewResponse, {
+          sessionId: 'chat-mock-1',
+          target: 'mock',
+          quirks: [],
+          capabilities: {},
+        }),
+      ).toThrow();
+    });
+  });
+
+  describe('prompt, cancel, dispose, and update frames', () => {
+    it('validates a prompt round trip', () => {
+      expect(parseSync(SChatSessionPromptRequest, { sessionId: 'chat-mock-1', text: 'hi' }).text).toBe('hi');
+      expect(parseSync(SChatSessionPromptResponse, { stopReason: 'end_turn' }).stopReason).toBe('end_turn');
+    });
+
+    it('rejects a prompt request with a non-string body', () => {
+      expect(() => parseSync(SChatSessionPromptRequest, { sessionId: 'chat-mock-1', text: 42 })).toThrow();
+    });
+
+    it('validates a session ref', () => {
+      expect(parseSync(SChatSessionRef, { sessionId: 'chat-mock-1' }).sessionId).toBe('chat-mock-1');
+      expect(() => parseSync(SChatSessionRef, {})).toThrow();
+    });
+
+    it('keeps the streamed update payload opaque but the handle typed', () => {
+      const parsed = parseSync(SChatSessionUpdateEvent, {
+        sessionId: 'chat-mock-1',
+        update: { sessionId: 'acp-1', update: { sessionUpdate: 'agent_message_chunk' } },
+      });
+      expect(parsed.sessionId).toBe('chat-mock-1');
+      expect(parsed.update).toBeTypeOf('object');
+    });
+
+    it('rejects an update frame without a handle', () => {
+      expect(() => parseSync(SChatSessionUpdateEvent, { update: {} })).toThrow();
     });
   });
 });

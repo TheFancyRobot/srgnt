@@ -30,6 +30,7 @@ import { createSemanticSearchService } from './services/semantic-search.js';
 import { registerCrashHandlers } from './services/crash.js';
 import { registerShellHandlers } from './services/shell.js';
 import { registerDevConsoleHandlers } from './dev-console/index.js';
+import { registerChatHandlers } from './chat/index.js';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const forceLocalRenderer = process.env.SRGNT_E2E === '1';
@@ -115,8 +116,19 @@ const disposeDevConsole = registerDevConsoleHandlers({
   getWindow: () => windowManager.getWindow(),
   getCwd: () => workspace.getRoot() || undefined,
 });
+
+// Product chat surface over ephemeral ACP sessions (PHASE-23). Always
+// registered, but the harness-backed controller (and any agent process) is only
+// constructed once the user actually opens a session.
+const disposeChat = registerChatHandlers({
+  getWindow: () => windowManager.getWindow(),
+  getCwd: () => workspace.getRoot() || undefined,
+});
+
 app.on('will-quit', () => {
   void disposeDevConsole();
+  // Kill-tree every live chat session so no agent process outlives the app.
+  void disposeChat();
 });
 
 // ---------------------------------------------------------------------------

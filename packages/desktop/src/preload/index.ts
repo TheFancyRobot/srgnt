@@ -55,6 +55,11 @@ const ipcChannels = {
   devSessionCancel: 'dev:session:cancel',
   devSessionDispose: 'dev:session:dispose',
   devSessionUpdate: 'dev:session:update',
+  chatSessionNew: 'chat:session:new',
+  chatSessionPrompt: 'chat:session:prompt',
+  chatSessionCancel: 'chat:session:cancel',
+  chatSessionDispose: 'chat:session:dispose',
+  chatSessionUpdate: 'chat:session:update',
 } as const;
 
 const api = {
@@ -197,6 +202,30 @@ const api = {
     const handler = (_event: Electron.IpcRendererEvent, payload: { sessionId: string; update: unknown }) => callback(payload);
     ipcRenderer.on(ipcChannels.devSessionUpdate, handler);
     return () => ipcRenderer.removeListener(ipcChannels.devSessionUpdate, handler);
+  },
+
+  // Product chat surface over ephemeral ACP sessions (PHASE-23). Always
+  // available — unlike the dev console these are not flag-gated.
+  chatSessionNew: (
+    target: 'mock' | 'pi',
+  ): Promise<{
+    sessionId: string;
+    target: 'mock' | 'pi';
+    harnessId: string;
+    harnessName: string;
+    quirks: readonly string[];
+    capabilities: Record<string, unknown>;
+  }> => ipcRenderer.invoke(ipcChannels.chatSessionNew, { target }),
+  chatSessionPrompt: (sessionId: string, text: string): Promise<{ stopReason: string }> =>
+    ipcRenderer.invoke(ipcChannels.chatSessionPrompt, { sessionId, text }),
+  chatSessionCancel: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.chatSessionCancel, { sessionId }),
+  chatSessionDispose: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.chatSessionDispose, { sessionId }),
+  onChatSessionUpdate: (callback: (event: { sessionId: string; update: unknown }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: { sessionId: string; update: unknown }) => callback(payload);
+    ipcRenderer.on(ipcChannels.chatSessionUpdate, handler);
+    return () => ipcRenderer.removeListener(ipcChannels.chatSessionUpdate, handler);
   },
 
   platform: process.platform,

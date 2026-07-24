@@ -3,12 +3,12 @@ note_type: decision
 template_version: 2
 contract_version: 1
 title: Keep semantic search IPC high-level and hide internal paths
-decision_id: DEC-0016
+decision_id: DEC-0020
 status: proposed
 decided_on: '2026-04-14'
 owner: ''
 created: '2026-04-14'
-updated: '2026-04-14'
+updated: '2026-07-23'
 supersedes: []
 superseded_by: []
 related_notes:
@@ -18,7 +18,9 @@ tags:
   - decision
 ---
 
-# DEC-0016 - Keep semantic search IPC high-level and hide internal paths
+# DEC-0020 - Keep semantic search IPC high-level and hide internal paths
+
+> Renumbered from DEC-0016 on 2026-07-23: two decision notes were created with the DEC-0016 id; [[04_Decisions/DEC-0016_isolate-third-party-connector-packages-outside-electron-main-process|DEC-0016 connector isolation]] (accepted, and referenced from 11 notes) keeps the original id. Older notes may still reference this record as DEC-0016.
 
 Use one note per durable choice in \`04_Decisions/\`. This note is the source of truth for one decision and its supersession history. A good decision note explains not only what was chosen, but why other reasonable options were not chosen. Link each decision to the phase, bug, or architecture note that made the choice necessary; use [[07_Templates/Phase_Template|Phase Template]], [[07_Templates/Bug_Template|Bug Template]], and [[07_Templates/Architecture_Template|Architecture Template]] as the companion records.
 
@@ -63,5 +65,6 @@ Use one note per durable choice in \`04_Decisions/\`. This note is the source of
 ## Change Log
 
 <!-- AGENT-START:decision-change-log -->
+- 2026-07-23 - Renumbered from DEC-0016 to DEC-0020 (duplicate id; the connector-isolation record keeps DEC-0016). Note renamed and the provenance line added at the top; decision content unchanged.
 - 2026-04-14 - Created as `proposed`.
 <!-- AGENT-END:decision-change-log -->

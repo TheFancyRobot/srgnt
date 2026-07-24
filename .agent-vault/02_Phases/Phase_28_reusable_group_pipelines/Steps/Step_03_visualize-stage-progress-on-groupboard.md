@@ -42,7 +42,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Relevant Code Paths
 
-- Renderer `pipeline-projection` reducer (new, pure) — `(SGroupBusEvent[], SPipeline) => PipelineViewState`; the whole brain of the step, replay-idempotent.
+- Renderer `pipeline-projection` reducer (new, pure) — `(SGroupBusEvent[], runId?) => PipelineViewState`; events **only**, with the `SPipeline` taken from that run's `system/pipeline_started` snapshot in the log (never the mutable template file). The whole brain of the step, replay-idempotent.
 - Renderer `GroupBoard.tsx` (new) — stage graph over existing tokens: active highlight, `×N` iteration counters, member/harness badges, gate Approve/Reject wired to STEP-28-02 IPC, stage→member-transcript deep links.
 - Conditional group-session tab (mounts iff the group's `bus.jsonl` contains a `system/pipeline_started` event — never off the template or any mutable session field); reuses the timeline's `bus.jsonl` history + live push channel — no new IPC/main work.
 - Layout stance, tolerant unknown-kind rendering, double-approve guard: the Execution Brief.

@@ -31,7 +31,7 @@ Use this note as the directory for decision records in \`04_Decisions/\`.
 ## Decision Log
 
 <!-- AGENT-START:decisions-index -->
-_Last rebuilt: 2026-07-22._
+_Last rebuilt: 2026-07-24._
 
 - Notes indexed: 20
 - Status summary: accepted (17), proposed (3)
@@ -55,7 +55,7 @@ _Last rebuilt: 2026-07-22._
 | DEC-0006 | [PHASE-09 and PHASE-10 produce architecture docs plus production scaffolding](../04_Decisions/DEC-0006_phase-08-and-phase-09-produce-architecture-docs-plus-production-scaffolding.md) | accepted | 2026-03-21 | 2026-03-22 | - |
 | DEC-0007 | [Use Dataview query engine over markdown files as local data layer](../04_Decisions/DEC-0007_use-dataview-query-engine-over-markdown-files-as-local-data-layer.md) | accepted | 2026-03-21 | 2026-03-22 | - |
 | DEC-0001 | [Use Desktop-First Product Boundary For Phase 01](../04_Decisions/DEC-0001_use-desktop-first-product-boundary-for-phase-01.md) | accepted | 2026-03-21 | 2026-03-21 | - |
-| DEC-0016 | [Keep semantic search IPC high-level and hide internal paths](../04_Decisions/DEC-0016_keep-semantic-search-ipc-high-level-and-hide-internal-paths.md) | proposed | 2026-04-14 | 2026-04-14 | - |
+| DEC-0020 | [Keep semantic search IPC high-level and hide internal paths](../04_Decisions/DEC-0020_keep-semantic-search-ipc-high-level-and-hide-internal-paths.md) | proposed | 2026-04-14 | 2026-07-23 | - |
 | DEC-0009 | [Freeze renderer stack and routing contract for desktop v1](../04_Decisions/DEC-0009_freeze-renderer-stack-and-routing-contract-for-desktop-v1.md) | proposed | 2026-03-22 | 2026-03-22 | - |
 | DEC-0010 | [Use shared Microsoft auth boundary with main-process secret storage](../04_Decisions/DEC-0010_use-shared-microsoft-auth-boundary-with-main-process-secret-storage.md) | proposed | 2026-03-22 | 2026-03-22 | - |
 <!-- AGENT-END:decisions-index -->

@@ -28,7 +28,7 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-07-22._
+_Last refreshed: 2026-07-24._
 - Session in progress: [[05_Sessions/2026-07-10-145042-delete-aggregator-packages-ui-ipc-and-cli-surfaces-claude-fable-5-worker|SESSION-2026-07-10-145042 claude-fable-5-worker session for Delete aggregator packages UI IPC and CLI surfaces]] - owner: claude-fable-5-worker - phase: [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]] - updated: 2026-07-10
 - Current step: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Steps/Step_01_build-custom-harness-editor-with-launch-specs-and-capability-overrides|STEP-26-01 Build custom harness editor with launch specs and capability overrides]] - status: planned - phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase 26 generic harness support and conformance]]
 - Active phase: [[02_Phases/Phase_29_polish_packaging_and_release/Phase|PHASE-29 Polish Packaging and Release]] - status: planned - updated: 2026-07-21

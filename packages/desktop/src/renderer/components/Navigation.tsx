@@ -6,10 +6,17 @@ import { useLayout } from './LayoutContext.js';
 
 export interface AppLayoutProps {
   children: React.ReactNode;
+  /** Main content fills its area with no max-width or padding (terminal, chat). */
   fullBleed?: boolean;
+  /**
+   * Overrides the side panel's visibility. Full-bleed panels hide it by default
+   * (the terminal wants the whole width), but chat is full-bleed *and* wants its
+   * plan panel, so it opts back in. Leave unset to keep the default.
+   */
+  showSidePanel?: boolean;
 }
 
-export function AppLayout({ children, fullBleed = false }: AppLayoutProps): React.ReactElement {
+export function AppLayout({ children, fullBleed = false, showSidePanel }: AppLayoutProps): React.ReactElement {
   const { activePanel, setActivePanel, panels } = useLayout();
   const activityBarItems = React.useMemo(
     () => panels.map((panel) => ({
@@ -32,7 +39,7 @@ export function AppLayout({ children, fullBleed = false }: AppLayoutProps): Reac
           activeId={activePanel}
           onNavigate={setActivePanel}
         />
-        {!fullBleed && ActiveSidePanelContent && (
+        {(showSidePanel ?? !fullBleed) && ActiveSidePanelContent && (
           <SidePanel>
             <ActiveSidePanelContent />
           </SidePanel>

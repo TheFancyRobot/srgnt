@@ -24,6 +24,7 @@ export interface ChatWiring {
   /** Overrides controller construction (tests). */
   readonly createController?: (options: {
     onUpdate: (event: { sessionId: string; update: unknown }) => void;
+    onTerminalOutput: (event: { sessionId: string; terminalId: string; chunk: string }) => void;
     getCwd?: () => string | undefined;
   }) => ChatSessionController;
 }
@@ -40,7 +41,9 @@ export interface ChatWiring {
 export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
   const controllerOptions = {
     onUpdate: (event: { sessionId: string; update: unknown }) =>
-      pushUpdate(wiring, event.sessionId, event.update),
+      push(wiring, ipcChannels.chatSessionUpdate, event),
+    onTerminalOutput: (event: { sessionId: string; terminalId: string; chunk: string }) =>
+      push(wiring, ipcChannels.chatTerminalOutput, event),
     ...(wiring.getCwd !== undefined ? { getCwd: wiring.getCwd } : {}),
   };
 
@@ -87,8 +90,8 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
   };
 }
 
-function pushUpdate(wiring: ChatWiring, sessionId: string, update: unknown): void {
+function push(wiring: ChatWiring, channel: string, payload: unknown): void {
   const window = wiring.getWindow();
   if (window === null || window.isDestroyed()) return;
-  window.webContents.send(ipcChannels.chatSessionUpdate, { sessionId, update });
+  window.webContents.send(channel, payload);
 }

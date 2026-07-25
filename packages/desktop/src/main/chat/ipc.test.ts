@@ -119,4 +119,35 @@ describe('registerChatHandlers', () => {
     expect(capturedOnUpdate).toBeDefined();
     expect(() => capturedOnUpdate!({ sessionId: 'chat-x-1', update: {} })).not.toThrow();
   });
+
+  it('pushes session updates and client-terminal output on their own channels', async () => {
+    const sent: { channel: string; payload: unknown }[] = [];
+    let options: Parameters<NonNullable<Parameters<typeof registerChatHandlers>[0]['createController']>>[0] | undefined;
+    registerChatHandlers({
+      getWindow: () =>
+        ({
+          isDestroyed: () => false,
+          webContents: { send: (channel: string, payload: unknown) => sent.push({ channel, payload }) },
+        }) as never,
+      createController: (received) => {
+        options = received;
+        return fakeController() as unknown as ChatSessionController;
+      },
+    });
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
+
+    options!.onUpdate({ sessionId: 'chat-x-1', update: { sessionUpdate: 'tool_call' } });
+    options!.onTerminalOutput({ sessionId: 'chat-x-1', terminalId: 'chat-term-1', chunk: 'out\r\n' });
+
+    expect(sent).toEqual([
+      {
+        channel: ipcChannels.chatSessionUpdate,
+        payload: { sessionId: 'chat-x-1', update: { sessionUpdate: 'tool_call' } },
+      },
+      {
+        channel: ipcChannels.chatTerminalOutput,
+        payload: { sessionId: 'chat-x-1', terminalId: 'chat-term-1', chunk: 'out\r\n' },
+      },
+    ]);
+  });
 });

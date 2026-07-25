@@ -32,6 +32,53 @@ interface SegmentBase {
   readonly kind: SegmentKind;
 }
 
+// ─── Tool-call value types (STEP-23-02) ───
+
+/** ACP tool-call lifecycle. `completed`/`failed` are terminal. */
+export const TOOL_CALL_STATUSES = ['pending', 'in_progress', 'completed', 'failed'] as const;
+export type ToolCallStatus = (typeof TOOL_CALL_STATUSES)[number];
+
+const TERMINAL_STATUSES: readonly ToolCallStatus[] = ['completed', 'failed'];
+
+/** Every ACP tool kind (protocol v1). Unknown kinds normalize to `other`. */
+export const TOOL_KINDS = [
+  'read',
+  'edit',
+  'delete',
+  'move',
+  'search',
+  'execute',
+  'think',
+  'fetch',
+  'switch_mode',
+  'other',
+] as const;
+export type ToolKind = (typeof TOOL_KINDS)[number];
+
+/** A file the call touched. `line` is 1-based when the agent supplies one. */
+export interface ToolCallLocation {
+  readonly path: string;
+  readonly line: number | null;
+}
+
+/**
+ * One parsed tool-call content block. The three ACP shapes we render are text,
+ * `diff`, and `terminal`; anything else is preserved verbatim as `unsupported`
+ * so the card can say "we received something we don't render" instead of
+ * silently dropping evidence of agent activity (ARCH-0009 tolerant reader).
+ */
+export type ToolCallContent =
+  | { readonly type: 'text'; readonly text: string }
+  | {
+      readonly type: 'diff';
+      readonly path: string;
+      /** `null` for a new file — there is no previous revision. */
+      readonly oldText: string | null;
+      readonly newText: string;
+    }
+  | { readonly type: 'terminal'; readonly terminalId: string }
+  | { readonly type: 'unsupported'; readonly raw: unknown };
+
 /** A run of text chunks from one speaker. `open` while more chunks may append. */
 export interface TextSegment extends SegmentBase {
   readonly kind: 'user_message' | 'agent_message' | 'thought';
@@ -40,16 +87,20 @@ export interface TextSegment extends SegmentBase {
 }
 
 /**
- * A tool call. STEP-23-02 owns the rich card (diffs, terminal embeds); this step
- * stores the raw fields and renders a minimal placeholder so ordering is right.
+ * A tool call, folded from its opening `tool_call` frame plus every
+ * `tool_call_update` that follows (24 updates for one file write is the measured
+ * Pi cadence — see the STEP-22-05 spike). Identity is `toolCallId`; the segment
+ * keeps its position and `id` across every merge so the card never jumps.
  */
 export interface ToolCallSegment extends SegmentBase {
   readonly kind: 'tool_call';
   readonly toolCallId: string;
   readonly title: string;
-  readonly status: string;
-  readonly toolKind: string | null;
-  readonly content: unknown;
+  readonly status: ToolCallStatus;
+  readonly toolKind: ToolKind;
+  /** Parsed content blocks. Replaced wholesale by any update that carries them. */
+  readonly content: readonly ToolCallContent[];
+  readonly locations: readonly ToolCallLocation[];
   readonly rawInput: unknown;
   readonly rawOutput: unknown;
 }
@@ -124,6 +175,98 @@ function chunkText(body: Record<string, unknown>): string | null {
   return typeof text === 'string' ? text : null;
 }
 
+// ─── Tool-call parsing (STEP-23-02) ───
+
+function asToolCallStatus(value: unknown): ToolCallStatus | null {
+  return typeof value === 'string' && (TOOL_CALL_STATUSES as readonly string[]).includes(value)
+    ? (value as ToolCallStatus)
+    : null;
+}
+
+function asToolKind(value: unknown): ToolKind {
+  // Unknown kinds are not an error: the protocol may grow kinds we predate, and
+  // `other` is exactly the bucket the spec provides for them.
+  return typeof value === 'string' && (TOOL_KINDS as readonly string[]).includes(value)
+    ? (value as ToolKind)
+    : 'other';
+}
+
+/**
+ * Parses one tool-call content block. ACP wraps ordinary content in
+ * `{ type: 'content', content: <ContentBlock> }`, but adapters in the wild also
+ * emit the bare content block, so both are accepted. Anything unrecognized is
+ * kept as `unsupported` rather than dropped.
+ */
+function parseContentBlock(raw: unknown): ToolCallContent {
+  if (!isRecord(raw)) return { type: 'unsupported', raw };
+  switch (raw['type']) {
+    case 'content': {
+      const inner = raw['content'];
+      if (isRecord(inner) && inner['type'] === 'text' && typeof inner['text'] === 'string') {
+        return { type: 'text', text: inner['text'] };
+      }
+      return { type: 'unsupported', raw };
+    }
+    case 'text':
+      return typeof raw['text'] === 'string'
+        ? { type: 'text', text: raw['text'] }
+        : { type: 'unsupported', raw };
+    case 'diff': {
+      const path = raw['path'];
+      const newText = raw['newText'];
+      // A diff with no `newText` is not renderable as a diff; keep it visible as
+      // an unsupported block instead of pretending the file became empty.
+      if (typeof path !== 'string' || typeof newText !== 'string') {
+        return { type: 'unsupported', raw };
+      }
+      return {
+        type: 'diff',
+        path,
+        oldText: typeof raw['oldText'] === 'string' ? raw['oldText'] : null,
+        newText,
+      };
+    }
+    case 'terminal': {
+      const terminalId = raw['terminalId'];
+      return typeof terminalId === 'string'
+        ? { type: 'terminal', terminalId }
+        : { type: 'unsupported', raw };
+    }
+    default:
+      return { type: 'unsupported', raw };
+  }
+}
+
+function parseContent(value: unknown): readonly ToolCallContent[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.map(parseContentBlock);
+}
+
+function parseLocations(value: unknown): readonly ToolCallLocation[] | null {
+  if (!Array.isArray(value)) return null;
+  const locations: ToolCallLocation[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const path = entry['path'];
+    if (typeof path !== 'string' || path === '') continue;
+    const line = entry['line'];
+    locations.push({ path, line: typeof line === 'number' && Number.isFinite(line) ? line : null });
+  }
+  return locations;
+}
+
+/**
+ * Terminal status wins. A late frame that arrives after the turn ended — or an
+ * out-of-order `in_progress` behind a `completed` — must not walk a finished
+ * call backwards into a spinner that never resolves. Terminal→terminal
+ * transitions (`completed` → `failed`) still apply: that is new information.
+ */
+function mergeStatus(existing: ToolCallStatus, incoming: ToolCallStatus | null): ToolCallStatus {
+  if (incoming === null) return existing;
+  if (TERMINAL_STATUSES.includes(existing) && !TERMINAL_STATUSES.includes(incoming)) return existing;
+  return incoming;
+}
+
 function closeTrailing(segments: readonly Segment[]): readonly Segment[] {
   const last = segments[segments.length - 1];
   if (last === undefined || last.kind === 'tool_call' || !last.open) return segments;
@@ -162,9 +305,10 @@ function applyToolCall(state: TranscriptState, body: Record<string, unknown>): T
     kind: 'tool_call',
     toolCallId,
     title: typeof body['title'] === 'string' ? body['title'] : toolCallId,
-    status: typeof body['status'] === 'string' ? body['status'] : 'pending',
-    toolKind: typeof body['kind'] === 'string' ? body['kind'] : null,
-    content: body['content'] ?? null,
+    status: asToolCallStatus(body['status']) ?? 'pending',
+    toolKind: asToolKind(body['kind']),
+    content: parseContent(body['content']) ?? [],
+    locations: parseLocations(body['locations']) ?? [],
     rawInput: body['rawInput'] ?? null,
     rawOutput: body['rawOutput'] ?? null,
   };
@@ -191,9 +335,15 @@ function applyToolCallUpdate(state: TranscriptState, body: Record<string, unknow
   const existing = state.segments[index] as ToolCallSegment;
   const merged: ToolCallSegment = {
     ...existing,
-    status: typeof body['status'] === 'string' ? body['status'] : existing.status,
+    status: mergeStatus(existing.status, asToolCallStatus(body['status'])),
     title: typeof body['title'] === 'string' ? body['title'] : existing.title,
-    content: body['content'] ?? existing.content,
+    // Per spec an update carries the FULL content list, so a present list
+    // replaces rather than appends; an absent one leaves what we already have.
+    content: parseContent(body['content']) ?? existing.content,
+    locations: parseLocations(body['locations']) ?? existing.locations,
+    // `kind` is normally set once, but an adapter that only learns the kind
+    // mid-call must be able to correct it.
+    toolKind: typeof body['kind'] === 'string' ? asToolKind(body['kind']) : existing.toolKind,
     rawInput: body['rawInput'] ?? existing.rawInput,
     rawOutput: body['rawOutput'] ?? existing.rawOutput,
   };

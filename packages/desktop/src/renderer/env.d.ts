@@ -121,6 +121,9 @@ export interface SrgntAPI {
   chatSessionCancel(sessionId: string): Promise<void>;
   chatSessionDispose(sessionId: string): Promise<void>;
   onChatSessionUpdate(callback: (event: { sessionId: string; update: unknown }) => void): () => void;
+  onChatTerminalOutput(
+    callback: (event: { sessionId: string; terminalId: string; chunk: string }) => void,
+  ): () => void;
 
   platform: string;
 }

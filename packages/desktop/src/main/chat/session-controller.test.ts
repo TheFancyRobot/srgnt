@@ -1,11 +1,17 @@
 /**
  * @vitest-environment node
  */
-import type { ChatSessionUpdateEvent } from '@srgnt/contracts';
-import { connectMockAgent, type Scenario } from '@srgnt/harness/testing';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { ChatSessionUpdateEvent, ChatTerminalOutputEvent } from '@srgnt/contracts';
+import type { ClientPorts } from '@srgnt/harness';
+import { connectMockAgent, readScenario, type Scenario } from '@srgnt/harness/testing';
 import { Effect } from 'effect';
-import { describe, expect, it } from 'vitest';
-import { ChatSessionController, type ChatConnectFn } from './session-controller.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createChatClientServices, type TerminalSpawn } from './client-services.js';
+import { ChatSessionController, MOCK_DEMO_SCENARIO, type ChatConnectFn } from './session-controller.js';
 
 /**
  * The chat controller drives real `@srgnt/harness` wrapper sessions. Here we
@@ -146,5 +152,170 @@ describe('ChatSessionController (mock target, in-process)', () => {
   it('prompt on an unknown handle throws', async () => {
     const controller = new ChatSessionController({ connect: mockConnect, onUpdate: () => {} });
     await expect(controller.prompt('nope', 'hi')).rejects.toThrow(/no chat session/i);
+  });
+});
+
+describe('built-in mock demo scenario', () => {
+  it('validates against the mock agent scenario schema', () => {
+    // The scenario is serialized to JSON and handed to the mock bin, which fails
+    // fast on an invalid one. Without this test a typo in a directive would only
+    // show up as a chat session that dies the moment a user clicks Start.
+    const result = readScenario(JSON.parse(JSON.stringify(MOCK_DEMO_SCENARIO)));
+    expect(result.success ? null : result.error).toBeNull();
+  });
+
+  it('covers every card variant this step renders', () => {
+    const types = MOCK_DEMO_SCENARIO.directives.map((directive) => directive.type);
+    expect(types).toContain('plan');
+    expect(types).toContain('use_terminal');
+    const contents = MOCK_DEMO_SCENARIO.directives.flatMap((directive) =>
+      'content' in directive ? (directive.content as readonly { type: string }[]) : [],
+    );
+    expect(contents.map((block) => block.type)).toEqual(
+      expect.arrayContaining(['content', 'diff', 'terminal']),
+    );
+  });
+});
+
+describe('ChatSessionController — client services (STEP-23-02)', () => {
+  /**
+   * A `TerminalSpawn` over plain `child_process`. The production backend is
+   * node-pty; this keeps the end-to-end directive test free of a native addon
+   * (node-pty's `posix_spawnp` is not available in every CI sandbox) while still
+   * running a real process through the real `TerminalPort`.
+   */
+  const childProcessSpawn: TerminalSpawn = (options) => {
+    const child = spawn(options.command, [...options.args], { cwd: options.cwd, env: { ...options.env } });
+    return {
+      onData: (listener) => {
+        child.stdout.on('data', (buffer: Buffer) => listener(buffer.toString('utf8')));
+        child.stderr.on('data', (buffer: Buffer) => listener(buffer.toString('utf8')));
+      },
+      onExit: (listener) => {
+        child.on('close', (code, signal) => listener({ exitCode: code, signal: signal ?? null }));
+      },
+      kill: () => void child.kill(),
+    };
+  };
+
+  /** Connects the mock agent with exactly the ports the controller built. */
+  const portsAwareConnect =
+    (scenario: Scenario): ChatConnectFn =>
+    async (_target, ports) => {
+      const { connection } = await connectMockAgent(scenario, { ports });
+      return {
+        connection,
+        harness: { id: 'mock', name: 'Mock Agent', quirks: [] },
+        cleanup: async () => connection.close(),
+      };
+    };
+
+  const scenarioWith = (directives: Scenario['directives']): Scenario => ({
+    ...demoScenario,
+    directives,
+  });
+
+  let cwd: string;
+
+  beforeEach(() => {
+    cwd = realpathSync(mkdtempSync(join(tmpdir(), 'srgnt-chat-cwd-')));
+  });
+
+  afterEach(() => {
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  it('serves the mock agent read_file from the session cwd', async () => {
+    writeFileSync(join(cwd, 'note.txt'), 'from the session cwd');
+    const scenario = scenarioWith([
+      { type: 'read_file', path: join(cwd, 'note.txt'), expectContentContains: 'from the session cwd' },
+    ]);
+    const controller = new ChatSessionController({
+      connect: portsAwareConnect(scenario),
+      onUpdate: () => {},
+      getCwd: () => cwd,
+    });
+    const session = await controller.newSession('mock');
+    // The mock records a scenario assertion failure rather than throwing, so a
+    // clean `end_turn` is the proof the read actually returned the content.
+    await expect(controller.prompt(session.sessionId, 'go')).resolves.toEqual({ stopReason: 'end_turn' });
+    await controller.dispose(session.sessionId);
+  });
+
+  it('runs use_terminal end to end and streams output out for the renderer embed', async () => {
+    const scenario = scenarioWith([
+      { type: 'use_terminal', command: 'echo', args: ['embedded-output'], expectOutputContains: 'embedded-output' },
+    ]);
+    const streamed: ChatTerminalOutputEvent[] = [];
+    const controller = new ChatSessionController({
+      connect: portsAwareConnect(scenario),
+      onUpdate: () => {},
+      onTerminalOutput: (event) => streamed.push(event),
+      getCwd: () => cwd,
+      createClientServices: (options) => createChatClientServices({ ...options, spawn: childProcessSpawn }),
+    });
+    const session = await controller.newSession('mock');
+    await expect(controller.prompt(session.sessionId, 'run it')).resolves.toEqual({ stopReason: 'end_turn' });
+
+    expect(streamed.length).toBeGreaterThan(0);
+    expect(streamed.every((event) => event.sessionId === session.sessionId)).toBe(true);
+    expect(streamed.map((event) => event.chunk).join('')).toContain('embedded-output');
+    // Every chunk is tagged with the terminal id the card embeds on.
+    expect(new Set(streamed.map((event) => event.terminalId)).size).toBe(1);
+    await controller.dispose(session.sessionId);
+  });
+
+  it('advertises fs read but NOT fs write before the permission engine lands', async () => {
+    let captured: ClientPorts | undefined;
+    const capturingConnect: ChatConnectFn = async (_target, ports) => {
+      captured = ports;
+      const { connection } = await connectMockAgent(demoScenario, { ports });
+      return {
+        connection,
+        harness: { id: 'mock', name: 'Mock Agent', quirks: [] },
+        cleanup: async () => connection.close(),
+      };
+    };
+    const controller = new ChatSessionController({
+      connect: capturingConnect,
+      onUpdate: () => {},
+      getCwd: () => cwd,
+    });
+    const session = await controller.newSession('mock');
+    expect(captured?.fs?.readTextFile).toBeTypeOf('function');
+    expect(captured?.fs?.writeTextFile).toBeUndefined();
+    expect(captured?.terminal).toBeDefined();
+    await controller.dispose(session.sessionId);
+  });
+
+  it('kills client terminals on dispose (the supervisor kill-tree cannot reach them)', async () => {
+    let killed = 0;
+    const neverExits: TerminalSpawn = () => ({
+      onData: () => {},
+      onExit: () => {},
+      kill: () => {
+        killed += 1;
+      },
+    });
+    let captured: ClientPorts | undefined;
+    const controller = new ChatSessionController({
+      connect: async (_target, ports) => {
+        captured = ports;
+        const { connection } = await connectMockAgent(demoScenario, { ports });
+        return {
+          connection,
+          harness: { id: 'mock', name: 'Mock Agent', quirks: [] },
+          cleanup: async () => connection.close(),
+        };
+      },
+      onUpdate: () => {},
+      getCwd: () => cwd,
+      createClientServices: (options) => createChatClientServices({ ...options, spawn: neverExits }),
+    });
+    const session = await controller.newSession('mock');
+    // A long-running command the agent never released: dispose must reap it.
+    await captured?.terminal?.createTerminal({ sessionId: 'mock-session-1', command: 'sleep', args: ['600'] });
+    await controller.dispose(session.sessionId);
+    expect(killed).toBe(1);
   });
 });

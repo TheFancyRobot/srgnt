@@ -1,17 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { LaunchContext } from '@srgnt/contracts';
 import { TerminalIpc, runSafe, runUnsafe } from '../effects/terminal-ipc.js';
-
-type GhosttyModule = typeof import('ghostty-web');
-type GhosttyInstance = InstanceType<GhosttyModule['Ghostty']>;
-type GhosttyTerminal = InstanceType<GhosttyModule['Terminal']>;
-type GhosttyFitAddon = InstanceType<GhosttyModule['FitAddon']>;
-
-interface GhosttyRuntime {
-  ghostty: GhosttyInstance;
-  Terminal: GhosttyModule['Terminal'];
-  FitAddon: GhosttyModule['FitAddon'];
-}
+// The ghostty runtime loader and palette moved to `terminal/ghostty.ts` in
+// STEP-23-02 so chat tool cards can embed a terminal surface without pulling in
+// this panel's tabs and pty IPC. Behavior here is unchanged.
+import {
+  ensureGhosttyRuntime,
+  ghosttyFontFamily,
+  ghosttyTheme,
+  type GhosttyFitAddon,
+  type GhosttyModule,
+  type GhosttyTerminal,
+} from './terminal/ghostty.js';
 
 interface ApprovalPreviewState {
   approvalId: string;
@@ -28,23 +28,6 @@ export interface TabInfo {
   launchContext?: LaunchContext | null;
   approvalPending: ApprovalPreviewState | null;
   denied: boolean;
-}
-
-let ghosttyRuntimeReady: Promise<GhosttyRuntime> | null = null;
-
-function ensureGhosttyRuntime(): Promise<GhosttyRuntime> {
-  if (!ghosttyRuntimeReady) {
-    ghosttyRuntimeReady = Promise.all([
-      import('ghostty-web'),
-      import('ghostty-web/ghostty-vt.wasm?url'),
-    ]).then(async ([ghosttyModule, ghosttyWasm]) => ({
-      ghostty: await ghosttyModule.Ghostty.load(ghosttyWasm.default),
-      Terminal: ghosttyModule.Terminal,
-      FitAddon: ghosttyModule.FitAddon,
-    }));
-  }
-
-  return ghosttyRuntimeReady;
 }
 
 function ApprovalPreview({
@@ -154,29 +137,8 @@ function TerminalTabContent({
           ghostty,
           cursorBlink: true,
           fontSize: 13,
-          fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Fira Code', monospace",
-          theme: {
-            background: '#131318',
-            foreground: '#e2e0db',
-            cursor: '#b794f6',
-            selectionBackground: '#2a2a34',
-            black: '#0c0c10',
-            brightBlack: '#3a3a46',
-            red: '#ec8e84',
-            brightRed: '#f0a49c',
-            green: '#7bb88e',
-            brightGreen: '#96cca5',
-            yellow: '#e0b45e',
-            brightYellow: '#e8c87a',
-            blue: '#85acc6',
-            brightBlue: '#9ec0d6',
-            magenta: '#b794f6',
-            brightMagenta: '#c4a5f8',
-            cyan: '#00B7FF',
-            brightCyan: '#5ccfff',
-            white: '#e2e0db',
-            brightWhite: '#f0efec',
-          },
+          fontFamily: ghosttyFontFamily,
+          theme: { ...ghosttyTheme },
           rows: 24,
           cols: 80,
         });

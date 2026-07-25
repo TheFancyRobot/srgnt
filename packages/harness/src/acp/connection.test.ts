@@ -266,6 +266,18 @@ describe('AcpAgentConnection.connect', () => {
     });
   });
 
+  it('advertises a read-only fs when the port omits writeTextFile', async () => {
+    // PHASE-23 ships client fs before the permission engine that gates writes,
+    // so the write capability must be advertisable off independently.
+    const { agent } = await connectInProcess(
+      {},
+      { ports: { permission: permissionPort, fs: { readTextFile: () => Promise.resolve({ content: '' }) } } },
+    );
+    expect(agent.lastInitializeRequest?.clientCapabilities).toMatchObject({
+      fs: { readTextFile: true, writeTextFile: false },
+    });
+  });
+
   it('applies capabilityOverrides on top of negotiation', async () => {
     const { connection } = await connectInProcess(
       {},

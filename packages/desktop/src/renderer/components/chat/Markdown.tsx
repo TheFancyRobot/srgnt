@@ -40,7 +40,10 @@ function isSafeHref(url: string): boolean {
 /** Opens external links through the main process; never navigates the renderer. */
 function handleLinkClick(event: React.MouseEvent<HTMLAnchorElement>, url: string): void {
   event.preventDefault();
-  window.srgnt?.openExternal(url).catch(() => {
+  // Both the object and the method are optional: a renderer without the full
+  // bridge (older preload, harness-less test render) must degrade to a dead
+  // link, not a TypeError thrown out of an event handler.
+  void window.srgnt?.openExternal?.(url)?.catch(() => {
     /* the main process logs the failure; a dead link must not break the chat */
   });
 }
@@ -67,9 +70,17 @@ const MARK_NODES = new Set([
   'CodeMark',
   'CodeInfo',
   'TableDelimiter',
-  'URL',
   'LinkTitle',
 ]);
+
+/**
+ * `URL` is syntax only *inside* a link or image, where it is the target rather
+ * than the label. A GFM autolink (`visit https://example.com now`) parses as a
+ * bare `URL` node directly under the paragraph with no `Autolink` wrapper, so
+ * treating `URL` as a mark everywhere silently deletes the link text from the
+ * rendered message.
+ */
+const LABEL_MARK_NODES = new Set([...MARK_NODES, 'URL']);
 
 function childrenOf(node: SyntaxNode): SyntaxNode[] {
   const result: SyntaxNode[] = [];
@@ -85,7 +96,7 @@ function textOf(source: string, node: SyntaxNode): string {
 
 /** Concatenates a node's source minus its syntax marks (used for code + labels). */
 function textWithoutMarks(source: string, node: SyntaxNode): string {
-  const children = childrenOf(node).filter((child) => MARK_NODES.has(child.name));
+  const children = childrenOf(node).filter((child) => LABEL_MARK_NODES.has(child.name));
   if (children.length === 0) return textOf(source, node);
   let result = '';
   let cursor = node.from;
@@ -100,7 +111,12 @@ function textWithoutMarks(source: string, node: SyntaxNode): string {
  * Renders a node's inline content: recurses into child nodes and emits the raw
  * source that falls in the gaps between them, so plain text is never lost.
  */
-function renderInline(source: string, node: SyntaxNode, keyPrefix: string): React.ReactNode[] {
+function renderInline(
+  source: string,
+  node: SyntaxNode,
+  keyPrefix: string,
+  marks: ReadonlySet<string> = MARK_NODES,
+): React.ReactNode[] {
   const out: React.ReactNode[] = [];
   let cursor = node.from;
   let index = 0;
@@ -110,7 +126,7 @@ function renderInline(source: string, node: SyntaxNode, keyPrefix: string): Reac
       out.push(source.slice(cursor, child.from));
     }
     cursor = Math.max(cursor, child.to);
-    if (!MARK_NODES.has(child.name)) {
+    if (!marks.has(child.name)) {
       out.push(renderInlineNode(source, child, `${keyPrefix}-${index}`));
     }
     index += 1;
@@ -142,7 +158,8 @@ function renderInlineNode(source: string, node: SyntaxNode, key: string): React.
       const urlNode = childrenOf(node).find((child) => child.name === 'URL');
       const raw = urlNode !== undefined ? textOf(source, urlNode) : textWithoutMarks(source, node);
       const href = raw.replace(/^<|>$/g, '').trim();
-      const label = node.name === 'Link' ? renderInline(source, node, key) : href;
+      // A link's own label must not re-render its target as a nested link.
+      const label = node.name === 'Link' ? renderInline(source, node, key, LABEL_MARK_NODES) : href;
       if (!isSafeHref(href)) {
         // An unsupported scheme (javascript:, file:, …) renders as inert text.
         return <span key={key}>{label}</span>;

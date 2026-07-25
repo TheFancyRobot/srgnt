@@ -96,6 +96,36 @@ describe('Markdown — GFM inline coverage', () => {
     expect(openExternal).toHaveBeenCalledWith('https://example.com/page');
   });
 
+  it('renders a bare GFM autolink without losing its text', () => {
+    // The autolink extension emits a bare `URL` node straight under the
+    // paragraph — no `Autolink` wrapper. Treating `URL` as a syntax mark
+    // everywhere deleted the address from the message body entirely.
+    const container = renderMd('visit https://example.com/docs now\n');
+    const link = screen.getByRole('link', { name: 'https://example.com/docs' });
+    expect(link).toHaveAttribute('href', 'https://example.com/docs');
+    expect(container.textContent).toBe('visit https://example.com/docs now');
+  });
+
+  it('renders an angle-bracket autolink as a link', () => {
+    renderMd('<https://example.com/x>\n');
+    expect(screen.getByRole('link', { name: 'https://example.com/x' })).toHaveAttribute(
+      'href',
+      'https://example.com/x',
+    );
+  });
+
+  it('keeps a link target out of its own label', () => {
+    const container = renderMd('[docs](https://example.com/page)\n');
+    expect(container.querySelectorAll('a')).toHaveLength(1);
+    expect(container.textContent).toBe('docs');
+  });
+
+  it('does not throw when the renderer has no openExternal bridge', () => {
+    (window as unknown as { srgnt: unknown }).srgnt = {};
+    renderMd('[docs](https://example.com/page)\n');
+    expect(() => fireEvent.click(screen.getByRole('link', { name: 'docs' }))).not.toThrow();
+  });
+
   it('renders an unsafe link scheme as inert text, not an anchor', () => {
     const container = renderMd('[click](javascript:alert(1))\n');
     expect(container.querySelector('a')).toBeNull();

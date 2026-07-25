@@ -83,10 +83,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-opus-5 (fresh execution worker)
+- Last touched: 2026-07-24
+- Next action: None for this step. Continue at [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel|STEP-23-02]], which consumes the tool-call segments this step's reducer already stores.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

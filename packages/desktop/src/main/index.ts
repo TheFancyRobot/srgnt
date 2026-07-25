@@ -125,10 +125,29 @@ const disposeChat = registerChatHandlers({
   getCwd: () => workspace.getRoot() || undefined,
 });
 
-app.on('will-quit', () => {
-  void disposeDevConsole();
-  // Kill-tree every live chat session so no agent process outlives the app.
-  void disposeChat();
+// Agent teardown must COMPLETE before the app exits, so it hangs off
+// `before-quit` with the quit deferred rather than off `will-quit`, which does
+// not await anything it starts. Harness children are spawned detached: if one
+// ignores SIGTERM, the supervisor's delayed SIGKILL escalation has to still be
+// running when it fires, or the process tree is orphaned. The guard lets the
+// re-issued quit through so this is not a loop (and never `app.exit()`, which
+// skips the quit hooks entirely).
+let teardownComplete = false;
+
+app.on('before-quit', (event) => {
+  if (teardownComplete) return;
+  event.preventDefault();
+  void (async () => {
+    try {
+      // allSettled: one failing teardown must not strand the other's processes.
+      await Promise.allSettled([disposeDevConsole(), disposeChat()]);
+    } catch (error) {
+      console.error('[main] agent teardown failed during quit:', error);
+    } finally {
+      teardownComplete = true;
+      app.quit();
+    }
+  })();
 });
 
 // ---------------------------------------------------------------------------

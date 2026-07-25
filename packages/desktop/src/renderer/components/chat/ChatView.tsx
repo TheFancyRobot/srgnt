@@ -41,7 +41,10 @@ export function ChatView(): React.ReactElement {
   const [draft, setDraft] = React.useState('');
 
   const hasSession = session !== null;
-  const busy = status === 'prompting';
+  const cancelling = status === 'cancelling';
+  // A cancelled turn is still a turn in flight — see the note in
+  // ChatSessionContext.cancel. Send stays disabled until the prompt settles.
+  const busy = status === 'prompting' || cancelling;
   const connecting = status === 'connecting';
   const canSend = hasSession && !busy && draft.trim() !== '';
 
@@ -56,7 +59,10 @@ export function ChatView(): React.ReactElement {
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Enter sends, Shift+Enter is a newline — the convention every agent chat
       // uses. STEP-23-04 owns the full keymap.
-      if (event.key === 'Enter' && !event.shiftKey) {
+      //
+      // `isComposing` guards IME input: for CJK users the first Enter commits
+      // the candidate word, and sending there would ship a half-typed draft.
+      if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
         event.preventDefault();
         handleSend();
       }
@@ -119,9 +125,9 @@ export function ChatView(): React.ReactElement {
                 data-testid="chat-cancel"
                 className="chat-button"
                 onClick={() => void cancel()}
-                disabled={!busy}
+                disabled={!busy || cancelling}
               >
-                Stop
+                {cancelling ? 'Stopping…' : 'Stop'}
               </button>
               <button
                 type="button"

@@ -23,7 +23,7 @@ import {
 
 export type ChatTarget = 'mock' | 'pi';
 
-export type ChatStatus = 'idle' | 'connecting' | 'ready' | 'prompting' | 'error';
+export type ChatStatus = 'idle' | 'connecting' | 'ready' | 'prompting' | 'cancelling' | 'error';
 
 export interface ChatSessionInfo {
   readonly sessionId: string;
@@ -162,9 +162,15 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const cancel = React.useCallback(async () => {
     const current = sessionIdRef.current;
     if (current === null) return;
+    // `session/cancel` is a notification, not a turn ender: the outstanding
+    // prompt stays unresolved until the agent finishes winding down. Returning
+    // to `ready` here would re-enable Send and let a second prompt run
+    // concurrently with the cancelled turn on the same ACP session, interleaving
+    // its updates. The turn stays busy until the prompt promise itself settles
+    // in `sendPrompt`, which is the only signal that the agent is actually done.
+    setStatus((previous) => (previous === 'prompting' ? 'cancelling' : previous));
     try {
       await window.srgnt.chatSessionCancel(current);
-      setStatus('ready');
     } catch (cause) {
       setStatus('error');
       setError(messageOf(cause));

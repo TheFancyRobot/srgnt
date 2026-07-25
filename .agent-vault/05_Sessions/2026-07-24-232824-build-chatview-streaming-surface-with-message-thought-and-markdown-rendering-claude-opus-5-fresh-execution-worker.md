@@ -58,6 +58,13 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - 23:50 - Renderer: pure `transcriptReducer` (27 tests), `Markdown.tsx` via `@lezer/markdown`+GFM (19 tests), `ChatSessionProvider` with rAF-batched update flush, `ChatView`/`MessageList`/`ThoughtBlock`, panel + icon registration, token-only CSS. 17 view tests green.
 - 23:55 - Full validation sweep: desktop 850/850, root typecheck clean, desktop build clean (CJS/ESM boundary verified in emitted output), harness 112/112, e2e 70 passed / 2 documented pre-existing baseline failures.
 - 00:00 - Real-path smoke via a throwaway Playwright spec (deleted after the run): spawned mock agent streamed a full turn into the panel, markdown rendered, session survived a panel switch, dispose cleaned up, no orphaned agent process.
+- 2026-07-24 (orchestrator, post-review) - Addressed PR #21 review (Codex + CodeRabbit), 7 findings, all verified against the code first:
+  - **Bare GFM autolinks were dropped.** `MARK_NODES` in `chat/Markdown.tsx` listed `URL`, but the GFM autolink extension emits a bare `URL` node directly under `Paragraph` (verified by parsing with the installed `@lezer/markdown`) — so `visit https://example.com now` rendered as `visit  now`. Split the set: `MARK_NODES` for rendering, `LABEL_MARK_NODES` (adds `URL`) for `textWithoutMarks` and link labels, so image alt text and link labels still strip the target.
+  - **Cancel released the turn too early.** `session/cancel` is only a notification; the outstanding prompt stays unresolved while the agent winds down. Added a `cancelling` status so Send stays disabled until the prompt promise settles — previously a second prompt could run concurrently on the same ACP session.
+  - **Quit did not await teardown.** Moved agent teardown from `will-quit` (which awaits nothing) to a guarded `before-quit` that defers the quit, awaits both disposers, then re-quits. Detached harness children need the supervisor's delayed SIGKILL escalation to still be running, or the process tree is orphaned.
+  - Enter no longer submits mid-IME-composition; `openExternal` is optional-called so a renderer without the full bridge gets a dead link, not a `TypeError`; `.chat-md-paragraph` no longer sets `white-space: pre-wrap`, which was rendering GFM soft line breaks (agents hard-wrap at ~80 cols) as visible ragged breaks.
+  - Vault: this step's Agent-Managed Snapshot set to completed and the Active Context resume point advanced to STEP-23-02.
+- Skipped, with reason: CodeRabbit's docstring-coverage gate (28.89% vs an 80% threshold). The threshold is the bot's default, not a repo convention — these modules carry substantial header and inline commentary already, and the uncommented remainder is single-purpose React components.
 
 ## Findings
 
@@ -116,6 +123,7 @@ All commands run in the foreground on 2026-07-24; results below are observed, no
 - Manual/automated smoke of the REAL IPC path (every unit test stubs `window.srgnt`, so this was the only check covering preload -> main -> Supervisor -> spawned mock-agent process -> renderer): a throwaway Playwright spec `e2e/tmp-chat-smoke.spec.ts` was run and then deleted (STEP-23-05 owns the committed chat e2e). PASS in 4.5s, asserting: Chat button visible in the activity-bar main section; panel renders; `Start session` spawns a real mock agent; user message appears on submit; thought block renders; tool-call card renders; exactly 2 agent messages (the scenario's `message -> tool_call -> message`, proving chunks did NOT merge across the tool call on the real stream); markdown really rendered (`<h2>Plan</h2>` in the first message, `<table>` in the second); session and transcript survived switching to Notes and back; explicit dispose returned the panel to the no-session state.
 - Post-run `ps aux | grep -iE "mock-agent|pi-acp"` - no rows, so no agent process outlived the app.
 - NOT run: a real `pi` session (the `pi` CLI is not installed on this host) and a human eyeball of light/dark themes. Theme correctness is enforced structurally instead: chat components carry no inline colors, all chat CSS uses `--color-surface-*` / `--color-text-*` / `--color-border-*` / `--color-srgnt-*` tokens, and `Markdown.test.tsx` asserts the rendered markup contains no hex or `rgb()` literals.
+- Post-review re-run (2026-07-24): `pnpm --filter @srgnt/desktop test` - 856 passed / 48 files (6 new regression tests: bare autolink, angle-bracket autolink, link label excludes its target, missing `openExternal` bridge, cancel keeps the turn busy until the prompt settles, IME Enter does not submit). `typecheck` clean, `build` clean.
 
 ## Bugs Encountered
 
@@ -139,6 +147,7 @@ All commands run in the foreground on 2026-07-24; results below are observed, no
 - [ ] **STEP-23-04** owns the real composer; the current one is minimal by design (Enter sends, Shift+Enter newlines, send disabled while a turn is in flight). `TranscriptState.availableCommands` and `currentModeId` are already captured for it.
 - [ ] **STEP-23-05** owns committed mock-agent chat e2e coverage and scenario injection; the fixed demo scenario currently lives inline in `mockLaunchSpec()` in `main/chat/session-controller.ts` and should move behind that injection point.
 - [ ] Unverified on this host: a real `pi`-target session (the `pi` CLI is not installed) and a human light/dark eyeball pass. Both are cheap to do on a dev machine that has `pi`.
+- [ ] Vault-wide: every completed step's `Agent-Managed Snapshot` block still reads `Status: planned` (STEP-22-05 included) — `vault_refresh` does not regenerate it. Backfill in a vault-only pass rather than per step PR.
 
 ## Completion Summary
 

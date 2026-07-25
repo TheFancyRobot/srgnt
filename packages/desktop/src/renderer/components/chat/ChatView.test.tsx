@@ -210,7 +210,68 @@ describe('ChatView — streaming a turn', () => {
   });
 });
 
+describe('ChatView — cancelling a turn', () => {
+  /** A prompt that stays unresolved until the test releases it, like a real turn. */
+  function deferredPrompt(): { harness: Harness; settle: () => void } {
+    let release: () => void = () => {};
+    const pending = new Promise<{ stopReason: string }>((resolve) => {
+      release = () => resolve({ stopReason: 'cancelled' });
+    });
+    return {
+      harness: installSrgntStub({ chatSessionPrompt: vi.fn(async () => pending) }),
+      settle: () => release(),
+    };
+  }
+
+  it('stays busy after Stop until the cancelled prompt actually settles', async () => {
+    const { harness: stub, settle } = deferredPrompt();
+    harness = stub;
+    renderChat();
+    await startSession();
+    fireEvent.change(screen.getByTestId('chat-input'), { target: { value: 'long job' } });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('chat-send'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('chat-cancel'));
+    });
+    expect(harness.api.chatSessionCancel).toHaveBeenCalledWith('chat-mock-1');
+
+    // `session/cancel` is only a notification. Re-enabling Send here would let a
+    // second prompt race the winding-down turn on the same ACP session.
+    fireEvent.change(screen.getByTestId('chat-input'), { target: { value: 'second prompt' } });
+    expect(screen.getByTestId('chat-send')).toBeDisabled();
+    expect(screen.getByTestId('chat-cancel')).toBeDisabled();
+    expect(screen.getByTestId('chat-cancel')).toHaveTextContent('Stopping…');
+    expect(harness.api.chatSessionPrompt).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      settle();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(screen.getByTestId('chat-send')).toBeEnabled());
+  });
+});
+
 describe('ChatView — robustness', () => {
+  it('does not send on the Enter that commits an IME composition', async () => {
+    renderChat();
+    await startSession();
+    const input = screen.getByTestId('chat-input');
+    fireEvent.change(input, { target: { value: '日本' } });
+    // React reads `isComposing` off the native event.
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    expect(harness.api.chatSessionPrompt).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+    expect(harness.api.chatSessionPrompt).toHaveBeenCalledWith('chat-mock-1', '日本');
+  });
+
+
   it('ignores unknown sessionUpdate kinds without crashing or logging errors', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     renderChat();

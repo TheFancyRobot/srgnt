@@ -1859,8 +1859,14 @@
 .chat-md-h5,
 .chat-md-h6 { font-size: 13px; }
 
+/*
+ * Deliberately NOT `white-space: pre-wrap`: agents hard-wrap prose at ~80
+ * columns and GFM treats those newlines as soft (spaces). Preserving them would
+ * render every paragraph ragged. Plain-text bubbles (.chat-message-plain,
+ * .chat-thought-text) still need pre-wrap — they are not parsed markdown.
+ */
 .chat-md-paragraph {
-  white-space: pre-wrap;
+  white-space: normal;
 }
 
 .chat-md-list {

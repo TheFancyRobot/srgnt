@@ -5,17 +5,17 @@ contract_version: 1
 title: Active Context
 status: active
 created: YYYY-MM-DD
-updated: '2026-07-21'
+updated: '2026-07-24'
 tags:
   - agent-vault
   - home
   - context
-last_updated: '2026-07-21'
-tests: 'desktop 775, harness 112 (+2 gated), contracts 127 — all green on main'
-coverage: 'pre-pivot metric; re-baseline when Phase 23 UI work starts'
+last_updated: '2026-07-24'
+tests: 'desktop 856, harness 112 (+2 gated), contracts 139 — green on the STEP-23-01 branch'
+coverage: 'pre-pivot metric; re-baseline once the Phase 23 chat surface is complete'
 target: 'suites green per step (ARCH-0009 validation rules)'
 blockers: none
-in_flight: 'Phases 21-22 executed and merged; refined plans for phases 23-26 merged; refined plans for phases 27-29 in review on PR #18; no phase after 22 has started execution'
+in_flight: 'Phases 21-22 executed and merged; refined plans for phases 23-29 merged; Phase 23 execution started — STEP-23-01 completed and in review on PR #21, STEP-23-02 next'
 phase: Phase_23_chat_ui_v1_over_ephemeral_acp_sessions (authoritative next EXECUTION phase — refined 2026-07-21; PHASE-21/22 completed, DEC-0018 accepted)
 done: 'PHASE-21 (teardown + foundations), PHASE-22 (@srgnt/harness ACP core + Pi spike, DEC-0018 ratified)'
 remaining: 'phases 23-29 (chat UI, persistence, opencode, generic harness, groups, pipelines, release)'
@@ -88,6 +88,7 @@ _Last refreshed: 2026-07-24._
 
 ## Next Actions
 
-- **Resume point (single source of truth)**: begin Phase 23 execution at [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01]]. Refine is finished for phases 23-29; the phase 27-29 refinements are still in review on PR #18, which does not block starting Phase 23.
+- **Resume point (single source of truth)**: continue Phase 23 execution at [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel|STEP-23-02]] once STEP-23-01's PR is merged. [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01]] is completed (chat panel, IPC, transcript reducer, GFM rendering) and in review. Refine is finished for phases 23-29.
+- Carry-forward into STEP-23-03: `autoApprovePermission` in `packages/desktop/src/main/chat/session-controller.ts` is a temporary placeholder that auto-allows; the real round-trip replaces it.
 - Do not treat STEP-26-01 or PHASE-29 as work in progress. They appear in the generated Current Objective block because they are the newest planned notes, not because anything is executing there.
 - Keep phase and home notes honest whenever implementation status changes.

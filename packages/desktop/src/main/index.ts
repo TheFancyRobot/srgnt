@@ -30,6 +30,7 @@ import { createSemanticSearchService } from './services/semantic-search.js';
 import { registerCrashHandlers } from './services/crash.js';
 import { registerShellHandlers } from './services/shell.js';
 import { registerDevConsoleHandlers } from './dev-console/index.js';
+import { registerChatHandlers } from './chat/index.js';
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const forceLocalRenderer = process.env.SRGNT_E2E === '1';
@@ -115,8 +116,47 @@ const disposeDevConsole = registerDevConsoleHandlers({
   getWindow: () => windowManager.getWindow(),
   getCwd: () => workspace.getRoot() || undefined,
 });
-app.on('will-quit', () => {
-  void disposeDevConsole();
+
+// Product chat surface over ephemeral ACP sessions (PHASE-23). Always
+// registered, but the harness-backed controller (and any agent process) is only
+// constructed once the user actually opens a session.
+const disposeChat = registerChatHandlers({
+  getWindow: () => windowManager.getWindow(),
+  getCwd: () => workspace.getRoot() || undefined,
+});
+
+// Agent teardown must COMPLETE before the app exits, so it hangs off
+// `before-quit` with the quit deferred rather than off `will-quit`, which does
+// not await anything it starts. Harness children are spawned detached: if one
+// ignores SIGTERM, the supervisor's delayed SIGKILL escalation has to still be
+// running when it fires, or the process tree is orphaned. The guard lets the
+// re-issued quit through so this is not a loop (and never `app.exit()`, which
+// skips the quit hooks entirely).
+let teardownComplete = false;
+
+app.on('before-quit', (event) => {
+  if (teardownComplete) return;
+  event.preventDefault();
+  void (async () => {
+    try {
+      // allSettled: one failing teardown must not strand the other's processes.
+      // It also never rejects, so a failed disposer has to be read off the
+      // results — a silently swallowed one would leave an orphaned process tree
+      // with nothing in the log to explain it.
+      const results = await Promise.allSettled([disposeDevConsole(), disposeChat()]);
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          console.error('[main] agent teardown failed during quit:', result.reason);
+        }
+      }
+    } catch (error) {
+      // Only reachable if a disposer throws synchronously, before it returns.
+      console.error('[main] agent teardown threw during quit:', error);
+    } finally {
+      teardownComplete = true;
+      app.quit();
+    }
+  })();
 });
 
 // ---------------------------------------------------------------------------

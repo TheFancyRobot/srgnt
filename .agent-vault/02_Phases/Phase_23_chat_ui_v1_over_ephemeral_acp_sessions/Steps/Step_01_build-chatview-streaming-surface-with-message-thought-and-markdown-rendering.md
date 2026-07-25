@@ -5,16 +5,21 @@ contract_version: 1
 title: Build ChatView streaming surface with message thought and markdown rendering
 step_id: STEP-23-01
 phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]'
-status: planned
+status: completed
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-07-24'
 depends_on: []
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-24-232824-build-chatview-streaming-surface-with-message-thought-and-markdown-rendering-claude-opus-5-fresh-execution-worker|SESSION-2026-07-24-232824 claude-opus-5 (fresh execution worker) session for Build ChatView streaming surface with message thought and markdown rendering]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-24-232824
+active_session_id: 05_Sessions/2026-07-24-232824-build-chatview-streaming-surface-with-message-thought-and-markdown-rendering-claude-opus-5-fresh-execution-worker
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01 Build ChatView streaming surface with message thought and markdown rendering]].
 ---
 
 # Step 01 - Build ChatView streaming surface with message thought and markdown rendering
@@ -78,16 +83,17 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-opus-5 (fresh execution worker)
+- Last touched: 2026-07-24
+- Next action: None for this step. Continue at [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel|STEP-23-02]], which consumes the tool-call segments this step's reducer already stores.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
 - Capture facts learned during execution.
 - Prefer short bullets with file paths, commands, and observed behavior.
+- Durable findings from execution live in [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering/Implementation_Notes|Implementation Notes]]: the lezer-tree markdown decision (instead of a read-only `EditorView`), the reducer's segment-closing rules, why session state sits above the panel switch, the always-registered-but-lazy chat IPC, the temporary permission placeholder, and the stale-`@srgnt/contracts`-dist gotcha.
 
 ## Human Notes
 
@@ -96,10 +102,14 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-24 - [[05_Sessions/2026-07-24-232824-build-chatview-streaming-surface-with-message-thought-and-markdown-rendering-claude-opus-5-fresh-execution-worker|SESSION-2026-07-24-232824 claude-opus-5 (fresh execution worker) session for Build ChatView streaming surface with message thought and markdown rendering]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
 - Record the final result, the validation performed, and any follow-up required.
 - If the step is blocked, say exactly what is blocking it.
+- COMPLETED 2026-07-24. The Chat panel is registered in the activity bar's main section and renders a live ephemeral ACP session: user messages appear on submit, thought chunks accumulate into a collapsible block, agent message chunks accumulate into one GFM-rendered message, and tool calls appear in arrival order between message segments. Full detail in [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering/Outcome|Outcome]].
+- Validation: contracts 139/139; desktop 850/850 (75 new tests here); root typecheck clean; desktop build clean with the CJS/ESM boundary verified in the emitted output; harness 112 passed / 2 skipped; e2e 70 passed / 2 documented pre-existing baseline failures; plus a real spawned-mock-agent smoke run covering the full preload -> main -> harness -> renderer path.
+- Deviation from the brief, deliberate and recorded: markdown renders from the `@lezer/markdown` GFM tree rather than a read-only CodeMirror `EditorView` — same parser as the notes stack, no new dependency, and no CodeMirror instance per streamed message.
+- Carry-forward for STEP-23-03: `autoApprovePermission` in `packages/desktop/src/main/chat/session-controller.ts` is a temporary placeholder that must be replaced with the real permission round-trip.

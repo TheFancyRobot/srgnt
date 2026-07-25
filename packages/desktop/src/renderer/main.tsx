@@ -15,6 +15,8 @@ import { NotesSidePanel } from './components/sidepanels/NotesSidePanel.js';
 import { SettingsSidePanel } from './components/sidepanels/SettingsSidePanel.js';
 import { NotesProvider } from './components/notes/NotesContext.js';
 import { DevConsoleGate } from './components/DevConsole.js';
+import { ChatView } from './components/chat/ChatView.js';
+import { ChatSessionProvider } from './components/chat/ChatSessionContext.js';
 
 const LazyTerminalPanel = React.lazy(async () => {
   const module = await import('./components/TerminalPanel.js');
@@ -42,6 +44,7 @@ const initialUpdateStatus: UpdateCheckResponse = {
 };
 
 const defaultPanels: PanelDefinition[] = [
+  { id: 'chat', icon: navIcons['chat']!, label: 'Chat', section: 'main', order: 0 },
   { id: 'notes', icon: navIcons['notes']!, label: 'Notes', section: 'main', order: 1, sidePanelContent: NotesSidePanel },
   { id: 'settings', icon: navIcons['settings']!, label: 'Settings', section: 'system', order: 2, sidePanelContent: SettingsSidePanel },
   { id: 'terminal', icon: navIcons['terminal']!, label: 'Terminal', section: 'utility', order: 3 },
@@ -382,6 +385,8 @@ function AppContent({
 
   const renderContent = () => {
     switch (activePanel) {
+      case 'chat':
+        return <ChatView />;
       case 'terminal':
         return (
           <React.Suspense fallback={<TerminalLoadingState />}>
@@ -419,14 +424,22 @@ function AppContent({
   };
 
   const layout = (
-    <AppLayout fullBleed={activePanel === 'terminal'}>
+    <AppLayout fullBleed={activePanel === 'terminal' || activePanel === 'chat'}>
       {renderContent()}
     </AppLayout>
   );
 
-  return activePanel === 'terminal' || activePanel === 'settings'
-    ? layout
-    : <NotesProvider>{layout}</NotesProvider>;
+  const panel =
+    activePanel === 'terminal' || activePanel === 'settings' || activePanel === 'chat'
+      ? layout
+      : <NotesProvider>{layout}</NotesProvider>;
+
+  // ChatSessionProvider sits ABOVE the panel switch so an open ACP session and
+  // its transcript survive navigating to Notes/Terminal and back. Unmounting the
+  // session state on panel switch would strand a live agent process in the main
+  // process with no handle left to dispose it (see DevConsoleGate's keep-mounted
+  // comment for the same trap).
+  return <ChatSessionProvider>{panel}</ChatSessionProvider>;
 }
 
 function SettingsUtilityPanel({

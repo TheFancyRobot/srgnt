@@ -108,6 +108,20 @@ export interface SrgntAPI {
   devSessionDispose(sessionId: string): Promise<void>;
   onDevSessionUpdate(callback: (event: { sessionId: string; update: unknown }) => void): () => void;
 
+  // Product chat surface over ephemeral ACP sessions (PHASE-23)
+  chatSessionNew(target: 'mock' | 'pi'): Promise<{
+    sessionId: string;
+    target: 'mock' | 'pi';
+    harnessId: string;
+    harnessName: string;
+    quirks: readonly string[];
+    capabilities: Record<string, unknown>;
+  }>;
+  chatSessionPrompt(sessionId: string, text: string): Promise<{ stopReason: string }>;
+  chatSessionCancel(sessionId: string): Promise<void>;
+  chatSessionDispose(sessionId: string): Promise<void>;
+  onChatSessionUpdate(callback: (event: { sessionId: string; update: unknown }) => void): () => void;
+
   platform: string;
 }
 

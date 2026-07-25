@@ -49,6 +49,15 @@ export const ipcChannels = {
   devSessionDispose: 'dev:session:dispose',
   // Main→renderer push channel for streamed session/update frames.
   devSessionUpdate: 'dev:session:update',
+  // Product chat surface over ephemeral ACP sessions (PHASE-23). Unlike the
+  // dev console these are always registered — this is the shipped product path.
+  // See packages/desktop/src/main/chat.
+  chatSessionNew: 'chat:session:new',
+  chatSessionPrompt: 'chat:session:prompt',
+  chatSessionCancel: 'chat:session:cancel',
+  chatSessionDispose: 'chat:session:dispose',
+  // Main→renderer push channel for streamed session/update frames.
+  chatSessionUpdate: 'chat:session:update',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -470,3 +479,61 @@ export const SDevSessionUpdateEvent = Schema.Struct({
   update: Schema.Unknown,
 });
 export type DevSessionUpdateEvent = Schema.Schema.Type<typeof SDevSessionUpdateEvent>;
+
+// Chat IPC types (PHASE-23). The product-facing sibling of the dev-console
+// block above: same ephemeral raw-ACP shape, but always registered and carrying
+// the harness identity the renderer needs for trust/capability UI. Capabilities
+// and `session/update` payloads still cross the wire as opaque JSON — their
+// authoritative shapes live in @srgnt/harness, which desktop-main owns.
+
+/** Which harness the chat surface drives: the deterministic mock, or real Pi. */
+export const SChatTarget = Schema.Literal('mock', 'pi');
+export type ChatTarget = Schema.Schema.Type<typeof SChatTarget>;
+
+export const SChatSessionNewRequest = Schema.Struct({
+  target: SChatTarget,
+});
+export type ChatSessionNewRequest = Schema.Schema.Type<typeof SChatSessionNewRequest>;
+
+export const SChatSessionNewResponse = Schema.Struct({
+  /** Opaque chat-local handle (NOT the ACP session id). */
+  sessionId: Schema.String,
+  target: SChatTarget,
+  /** Harness identity, mirrored from the `HarnessDefinition` that was launched. */
+  harnessId: Schema.String,
+  harnessName: Schema.String,
+  /**
+   * Declared harness quirks (e.g. `adapter-mediated`). STEP-23-03's trust badge
+   * and later capability-driven UI read these, so they must reach the renderer
+   * at session open rather than being re-derived there.
+   */
+  quirks: Schema.Array(Schema.String),
+  /** Negotiated ACP capabilities (opaque; shape owned by @srgnt/harness). */
+  capabilities: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+});
+export type ChatSessionNewResponse = Schema.Schema.Type<typeof SChatSessionNewResponse>;
+
+export const SChatSessionPromptRequest = Schema.Struct({
+  sessionId: Schema.String,
+  text: Schema.String,
+});
+export type ChatSessionPromptRequest = Schema.Schema.Type<typeof SChatSessionPromptRequest>;
+
+export const SChatSessionPromptResponse = Schema.Struct({
+  stopReason: Schema.String,
+});
+export type ChatSessionPromptResponse = Schema.Schema.Type<typeof SChatSessionPromptResponse>;
+
+export const SChatSessionRef = Schema.Struct({
+  sessionId: Schema.String,
+});
+export type ChatSessionRef = Schema.Schema.Type<typeof SChatSessionRef>;
+
+/** One streamed frame pushed main→renderer over `chat:session:update`. */
+export const SChatSessionUpdateEvent = Schema.Struct({
+  /** The chat-local handle the frame belongs to; the renderer filters on it. */
+  sessionId: Schema.String,
+  /** ACP `session/update` notification payload, opaque to the renderer. */
+  update: Schema.Unknown,
+});
+export type ChatSessionUpdateEvent = Schema.Schema.Type<typeof SChatSessionUpdateEvent>;

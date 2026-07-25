@@ -140,9 +140,18 @@ app.on('before-quit', (event) => {
   void (async () => {
     try {
       // allSettled: one failing teardown must not strand the other's processes.
-      await Promise.allSettled([disposeDevConsole(), disposeChat()]);
+      // It also never rejects, so a failed disposer has to be read off the
+      // results — a silently swallowed one would leave an orphaned process tree
+      // with nothing in the log to explain it.
+      const results = await Promise.allSettled([disposeDevConsole(), disposeChat()]);
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          console.error('[main] agent teardown failed during quit:', result.reason);
+        }
+      }
     } catch (error) {
-      console.error('[main] agent teardown failed during quit:', error);
+      // Only reachable if a disposer throws synchronously, before it returns.
+      console.error('[main] agent teardown threw during quit:', error);
     } finally {
       teardownComplete = true;
       app.quit();

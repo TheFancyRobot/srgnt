@@ -35,6 +35,8 @@ export type ClientServiceErrorCode =
   | 'path_outside_session'
   /** Read failed for an ordinary filesystem reason (missing file, permissions). */
   | 'read_failed'
+  /** Write passed authorization but failed at the filesystem layer. */
+  | 'write_failed'
   /** The injected authorizer (STEP-23-03's permission engine) refused the write. */
   | 'write_not_authorized'
   /** A terminal id the client does not know (already released, or never created). */
@@ -91,7 +93,18 @@ async function canonicalize(target: string): Promise<string> {
     try {
       const real = await realpath(current);
       return missing.length === 0 ? real : join(real, ...missing.reverse());
-    } catch {
+    } catch (cause) {
+      // Only "it isn't there" justifies walking up. EACCES/EIO/ELOOP mean the
+      // path could not be canonicalized at all, and continuing would hand the
+      // containment check a reconstructed path the filesystem never confirmed —
+      // fail closed instead.
+      const code = (cause as NodeJS.ErrnoException).code;
+      if (code !== 'ENOENT' && code !== 'ENOTDIR') {
+        throw new ClientServiceError(
+          'path_outside_session',
+          `Refused: could not resolve '${target}' (${code ?? 'unknown error'})`,
+        );
+      }
       const parent = dirname(current);
       // Filesystem root itself did not resolve — nothing left to walk up to.
       if (parent === current) return target;
@@ -198,8 +211,16 @@ const pipeSpawn: TerminalSpawn = (options) => {
       child.stderr?.on('data', forward);
     },
     onExit: (listener) => {
-      child.on('close', (exitCode, signal) => listener({ exitCode, signal: signal ?? null }));
-      child.on('error', () => listener({ exitCode: null, signal: null }));
+      // A failed spawn emits both 'error' and 'close'; the bookkeeping upstream
+      // assumes one completion, so deliver exactly once.
+      let settled = false;
+      const settle = (exit: TerminalExit): void => {
+        if (settled) return;
+        settled = true;
+        listener(exit);
+      };
+      child.on('close', (exitCode, signal) => settle({ exitCode, signal: signal ?? null }));
+      child.on('error', () => settle({ exitCode: null, signal: null }));
     },
     kill: () => void child.kill(),
   };
@@ -224,8 +245,33 @@ export const nodePtyTerminalSpawn: TerminalSpawn = (options) => {
   }
 };
 
+/**
+ * Environment handed to an agent-spawned command. An allowlist, not
+ * `process.env`: the main process holds tokens, API keys, and whatever the
+ * launching shell exported, and a command the agent chose has no claim on any of
+ * it. These are the variables a command needs to *work* — anything else the
+ * agent wants it must name explicitly via `params.env`.
+ */
+const INHERITED_ENV = ['PATH', 'HOME', 'SHELL', 'USER', 'LOGNAME', 'LANG', 'LC_ALL', 'TMPDIR', 'TZ', 'TERM'];
+
 /** Default retained-output cap per terminal (1 MiB) when the agent names none. */
 const DEFAULT_OUTPUT_BYTE_LIMIT = 1024 * 1024;
+
+/**
+ * Keeps the last `byteLimit` **UTF-8 bytes** of `text`, cut at a character
+ * boundary. `outputByteLimit` is a byte budget in the ACP schema, and
+ * `String.length` counts UTF-16 code units — so a naive slice hands the agent an
+ * oversized response for any non-ASCII output.
+ */
+function truncateTail(text: string, byteLimit: number): string {
+  const bytes = Buffer.from(text, 'utf8');
+  if (bytes.length <= byteLimit) return text;
+  // Slicing mid-sequence decodes to leading U+FFFDs; drop those partial bytes.
+  return bytes
+    .subarray(bytes.length - byteLimit)
+    .toString('utf8')
+    .replace(/^�+/, '');
+}
 
 interface TerminalRecord {
   readonly id: string;
@@ -299,6 +345,8 @@ export function createChatClientServices(options: ChatClientServicesOptions): Ch
       try {
         content = await readFile(target, 'utf8');
       } catch (cause) {
+        // A failed access is the interesting audit record, not the boring one.
+        audit('client/fs_denied', { operation: 'fs/read_text_file', path: target, reason: 'read_failed' });
         throw new ClientServiceError(
           'read_failed',
           `Could not read '${params.path}': ${cause instanceof Error ? cause.message : String(cause)}`,
@@ -325,7 +373,15 @@ export function createChatClientServices(options: ChatClientServicesOptions): Ch
         audit('client/fs_denied', { operation: 'fs/write_text_file', path: target, reason: 'not_authorized' });
         throw new ClientServiceError('write_not_authorized', `Refused: write to '${params.path}' was not authorized`);
       }
-      await writeFile(target, params.content, 'utf8');
+      try {
+        await writeFile(target, params.content, 'utf8');
+      } catch (cause) {
+        audit('client/fs_denied', { operation: 'fs/write_text_file', path: target, reason: 'write_failed' });
+        throw new ClientServiceError(
+          'write_failed',
+          `Could not write '${params.path}': ${cause instanceof Error ? cause.message : String(cause)}`,
+        );
+      }
       audit('client/fs_write_text_file', { path: target, bytes: params.content.length });
     };
   }
@@ -345,7 +401,8 @@ export function createChatClientServices(options: ChatClientServicesOptions): Ch
       const cwd = await guardPath(params.cwd ?? options.sessionRoot, 'terminal/create');
       const id = `chat-term-${++terminalCounter}`;
       const env: Record<string, string> = {};
-      for (const [key, value] of Object.entries(process.env)) {
+      for (const key of INHERITED_ENV) {
+        const value = process.env[key];
         if (value !== undefined) env[key] = value;
       }
       for (const variable of params.env ?? []) env[variable.name] = variable.value;
@@ -365,12 +422,10 @@ export function createChatClientServices(options: ChatClientServicesOptions): Ch
       terminals.set(id, record);
 
       record.process.onData((chunk) => {
-        record.output += chunk;
-        if (record.output.length > record.byteLimit) {
-          // Keep the tail: the end of a command's output is what a user reads.
-          record.output = record.output.slice(record.output.length - record.byteLimit);
-          record.truncated = true;
-        }
+        // Keep the tail: the end of a command's output is what a user reads.
+        const combined = record.output + chunk;
+        record.output = truncateTail(combined, record.byteLimit);
+        if (record.output !== combined) record.truncated = true;
         options.onTerminalOutput?.(id, chunk);
       });
       record.process.onExit((exit) => {

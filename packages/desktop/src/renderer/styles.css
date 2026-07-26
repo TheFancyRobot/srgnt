@@ -1939,6 +1939,18 @@
   font-size: 11px;
 }
 
+/* Shown only when the merge view fails to construct — the edit still has to be readable. */
+.chat-diff-fallback {
+  max-height: 340px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  color: var(--color-text-secondary);
+}
+
 .chat-terminal-surface {
   border-radius: 6px;
   overflow: hidden;

@@ -1,7 +1,7 @@
 /**
  * @vitest-environment node
  */
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ClientServiceError,
   createChatClientServices,
+  nodePtyTerminalSpawn,
   type ChatClientServices,
   type TerminalExit,
   type TerminalProcess,
@@ -111,6 +112,35 @@ describe('client fs port — reads inside the session', () => {
     await expect(services().fs.readTextFile({ ...session, path: 'missing.txt' })).rejects.toMatchObject({
       code: 'read_failed',
     });
+  });
+});
+
+describe('client fs port — failures are audited', () => {
+  it('audits a read that clears containment but fails on disk', async () => {
+    const events: { kind: string; payload: Record<string, unknown> }[] = [];
+    const svc = services({ onAudit: (event) => events.push(event) });
+    await expect(svc.fs.readTextFile({ ...session, path: 'missing.txt' })).rejects.toMatchObject({
+      code: 'read_failed',
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ kind: 'client/fs_denied', payload: { reason: 'read_failed' } });
+  });
+
+  // Root bypasses the mode bits, so the read would succeed and invert the test.
+  it.skipIf(process.getuid?.() === 0)('fails closed when a path cannot be canonicalized', async () => {
+    const locked = join(root, 'locked');
+    mkdirSync(locked);
+    chmodSync(locked, 0o000);
+    try {
+      const svc = services();
+      // EACCES, not ENOENT: walking up and reconstructing the path would hand
+      // the containment check something the filesystem never confirmed.
+      await expect(svc.fs.readTextFile({ ...session, path: 'locked/inner.txt' })).rejects.toMatchObject({
+        code: 'path_outside_session',
+      });
+    } finally {
+      chmodSync(locked, 0o700);
+    }
   });
 });
 
@@ -266,6 +296,43 @@ describe('client terminal port', () => {
     expect(output.truncated).toBe(true);
   });
 
+  it('measures the byte limit in UTF-8 bytes, not UTF-16 code units', async () => {
+    const { spawn, terminals } = fakeSpawner();
+    const svc = services({ spawn });
+    const { terminalId } = await svc.terminal.createTerminal({
+      ...session,
+      command: 'yes',
+      outputByteLimit: 8,
+    });
+    // Six 3-byte characters = 18 bytes but only 6 UTF-16 units, so a
+    // length-based cap would keep all of it and blow the advertised budget.
+    terminals[0]?.emit('日本語日本語');
+    const { output, truncated } = await svc.terminal.terminalOutput({ ...session, terminalId });
+    expect(truncated).toBe(true);
+    expect(Buffer.byteLength(output)).toBeLessThanOrEqual(8);
+    // Cut at a character boundary: no partial sequences, no replacement chars.
+    expect(output).toBe('本語');
+  });
+
+  it('hands the spawned command an allowlisted environment, not the main process one', async () => {
+    const { spawn, terminals } = fakeSpawner();
+    process.env.SRGNT_TEST_FAKE_SECRET = 'do-not-leak';
+    try {
+      const svc = services({ spawn });
+      await svc.terminal.createTerminal({
+        ...session,
+        command: 'env',
+        env: [{ name: 'EXPLICIT', value: 'yes' }],
+      });
+      const env = terminals[0]!.options.env;
+      expect(env.SRGNT_TEST_FAKE_SECRET).toBeUndefined();
+      expect(env.EXPLICIT).toBe('yes');
+      expect(env.PATH).toBe(process.env.PATH);
+    } finally {
+      delete process.env.SRGNT_TEST_FAKE_SECRET;
+    }
+  });
+
   it('kills a process that never exits, and release kills it too', async () => {
     const { spawn, terminals } = fakeSpawner();
     const svc = services({ spawn });
@@ -318,6 +385,22 @@ describe('client terminal port', () => {
     const output = await svc.terminal.terminalOutput({ ...session, terminalId });
     expect(output.output).toContain('hello-from-client-terminal');
     await svc.terminal.releaseTerminal({ ...session, terminalId });
+  });
+
+  it('delivers exactly one exit when the command cannot be spawned', async () => {
+    // Both 'error' and 'close' fire for a failed spawn; the record's waiters are
+    // spliced on first delivery, so a second one would resolve nothing and leave
+    // the terminal state inconsistent.
+    const exits: TerminalExit[] = [];
+    const child = nodePtyTerminalSpawn({
+      command: join(root, 'definitely-not-a-binary'),
+      args: [],
+      cwd: root,
+      env: {},
+    });
+    child.onExit((exit) => exits.push(exit));
+    await new Promise((done) => setTimeout(done, 250));
+    expect(exits).toHaveLength(1);
   });
 
   it('disposeAll kills every live terminal', async () => {

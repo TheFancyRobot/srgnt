@@ -30,6 +30,7 @@ export interface DiffViewProps {
 
 export function DiffView({ path, oldText, newText }: DiffViewProps): React.ReactElement {
   const hostRef = React.useRef<HTMLDivElement | null>(null);
+  const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
     const host = hostRef.current;
@@ -55,7 +56,9 @@ export function DiffView({ path, oldText, newText }: DiffViewProps): React.React
       });
     } catch {
       // A diff that fails to render must not take the whole card (and with it
-      // every other piece of tool evidence) down with it.
+      // every other piece of tool evidence) down with it — but it must not
+      // silently hide the edit either: fall back to plain text below.
+      setFailed(true);
       return;
     }
     return () => view.destroy();
@@ -72,7 +75,13 @@ export function DiffView({ path, oldText, newText }: DiffViewProps): React.React
         </span>
         <span className="chat-diff-summary">{summary}</span>
       </figcaption>
-      <div ref={hostRef} className="chat-diff-body" data-testid="chat-diff-body" />
+      {failed ? (
+        <pre className="chat-diff-fallback" data-testid="chat-diff-fallback">
+          {oldText !== null ? `--- before\n${oldText}\n\n+++ after\n${newText}` : newText}
+        </pre>
+      ) : (
+        <div ref={hostRef} className="chat-diff-body" data-testid="chat-diff-body" />
+      )}
     </figure>
   );
 }

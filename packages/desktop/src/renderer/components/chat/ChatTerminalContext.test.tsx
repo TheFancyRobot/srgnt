@@ -154,6 +154,18 @@ describe('terminal embeds in tool cards', () => {
     expect(surface.textContent).not.toContain('\u001B[32m');
   });
 
+  it('caps what it keeps per terminal so a verbose command cannot grow forever', async () => {
+    await startSession();
+    await harness.pushUpdate(terminalCall('chat-term-cap'));
+    await openDetails();
+    // Main truncates its own buffer but still forwards every chunk, so the
+    // renderer needs its own bound or a long build eats renderer memory.
+    await harness.pushOutput('chat-term-cap', `${'x'.repeat(1024 * 1024)}TAIL-MARKER`);
+    const surface = screen.getByTestId('chat-terminal-fallback');
+    expect(surface.textContent!.length).toBeLessThanOrEqual(1024 * 1024);
+    expect(surface).toHaveTextContent('TAIL-MARKER');
+  });
+
   it('ignores output belonging to a different chat session', async () => {
     await startSession();
     await harness.pushUpdate(terminalCall('chat-term-3'));

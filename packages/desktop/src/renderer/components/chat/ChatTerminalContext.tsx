@@ -16,6 +16,14 @@ import React from 'react';
 
 export type ChatTerminalOutputs = Readonly<Record<string, string>>;
 
+/**
+ * Per-terminal cap on what the renderer keeps. Main truncates its own retained
+ * buffer but still forwards every chunk, so without this a verbose build grows
+ * renderer memory without bound. Matches main's default 1 MiB budget; measured
+ * in characters rather than bytes, which is the cheap side of the same bound.
+ */
+const OUTPUT_CHAR_CAP = 1024 * 1024;
+
 const ChatTerminalContext = React.createContext<ChatTerminalOutputs>({});
 
 /** rAF when available (real app), a timer otherwise (jsdom/tests). */
@@ -57,7 +65,9 @@ export function ChatTerminalProvider({
     setOutputs((previous) => {
       const next = { ...previous };
       for (const [terminalId, chunk] of batch) {
-        next[terminalId] = (next[terminalId] ?? '') + chunk;
+        const combined = (next[terminalId] ?? '') + chunk;
+        next[terminalId] =
+          combined.length > OUTPUT_CHAR_CAP ? combined.slice(combined.length - OUTPUT_CHAR_CAP) : combined;
       }
       return next;
     });

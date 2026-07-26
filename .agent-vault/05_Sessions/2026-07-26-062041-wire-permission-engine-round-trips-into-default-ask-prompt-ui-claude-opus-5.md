@@ -18,14 +18,14 @@ tags:
   - session
 context:
   context_id: SESSION-2026-07-26-062041
-  status: active
+  status: complete
   updated_at: '2026-07-26T06:20:41.161Z'
   current_focus:
     summary: Advance [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round-trips into default-ask prompt UI]].
     target: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round-trips into default-ask prompt UI]]'
   resume_target:
     type: step
-    target: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round-trips into default-ask prompt UI]]'
+    target: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces|STEP-23-04 Build composer with slash commands modes cancel and error surfaces]]'
     section: Context Handoff
   last_action:
     type: saved
@@ -84,7 +84,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- See the itemized list below; post-review rounds also touched `packages/runtime/src/permissions/engine.ts` (JSON-encoded memory keys, all-paths scope), `packages/desktop/src/main/chat/permissions.ts` (correlation id, throwing-push guard), and `packages/desktop/src/renderer/components/chat/ChatSessionContext.tsx` (startup prompt buffering).
 <!-- AGENT-END:session-changed-paths -->
 - `packages/runtime/src/permissions/engine.ts` (new) — pure ACP-shaped permission engine.
 - `packages/runtime/src/permissions/index.ts` (new), `packages/runtime/src/permissions/engine.test.ts` (new).
@@ -106,9 +106,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: `pnpm --filter @srgnt/runtime test` / `@srgnt/contracts` / `@srgnt/desktop` / `@srgnt/harness`, plus `pnpm -r lint`
+- Result: PASS — runtime 300, contracts 148, desktop 989 (995 after the review rounds), harness 13 + 2 gated, lint clean.
+- Notes: itemized per-command results below; the post-review re-runs are recorded at the end of this section.
 <!-- AGENT-END:session-validation-run -->
 - Command: `pnpm --filter @srgnt/runtime test` — Result: PASS (14 files, 300 tests).
 - Command: `pnpm --filter @srgnt/contracts test` — Result: PASS (7 files, 148 tests; was 140).
@@ -133,7 +133,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round-trips into default-ask prompt UI]].
+- [x] STEP-23-03 is complete; continue at [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces|STEP-23-04 Build composer with slash commands modes cancel and error surfaces]].
 <!-- AGENT-END:session-follow-up-work -->
 - [ ] STEP-23-04: when turn-cancel UI lands, confirm the composer's cancel path reaches `ChatSessionController.cancel` (it already releases pending prompts) and that the prompt visibly dismisses in the app, not only in tests.
 - [ ] STEP-23-05: extend the mock's `request_permission` directive with `kind` and `locations` so path/command scoping is E2E-testable, and note that real spawned-process E2E cannot run under vitest (see Findings).

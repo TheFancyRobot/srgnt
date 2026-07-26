@@ -125,8 +125,8 @@ export function createChatPermissionHost(options: ChatPermissionHostOptions): Ch
   const ask = (
     request: NormalizedPermissionRequest,
     options_: readonly { optionId: string; name: string; kind: string }[],
+    requestId: string,
   ): Promise<string | undefined> => {
-    const requestId = `${options.sessionId}-perm-${++counter}`;
     const optionKinds = new Map(options_.map((option) => [option.optionId, option.kind]));
     return new Promise<string | undefined>((resolve) => {
       const timer = setTimeout(() => {
@@ -143,15 +143,24 @@ export function createChatPermissionHost(options: ChatPermissionHostOptions): Ch
       timer.unref?.();
       pending.set(requestId, { resolve, timer, request, optionKinds });
 
-      const delivered = options.onRequest({
-        sessionId: options.sessionId,
-        requestId,
-        kind: request.kind,
-        title: request.title,
-        paths: [...(request.paths ?? [])],
-        ...(request.command !== undefined ? { command: request.command } : {}),
-        options: options_.map((option) => ({ ...option })),
-      });
+      let delivered = false;
+      try {
+        delivered = options.onRequest({
+          sessionId: options.sessionId,
+          requestId,
+          kind: request.kind,
+          title: request.title,
+          paths: [...(request.paths ?? [])],
+          ...(request.command !== undefined ? { command: request.command } : {}),
+          options: options_.map((option) => ({ ...option })),
+        });
+      } catch (cause) {
+        // A throw here (window destroyed between the isDestroyed check and the
+        // send) must be undelivered, not an escaping executor throw: that would
+        // reject the promise while the map entry and its 10-minute timer lived
+        // on, and `settle` would no longer be the single exit.
+        console.warn('[chat] permission prompt could not be delivered:', cause);
+      }
       // No window to ask through: fail closed immediately instead of leaving the
       // agent blocked for the full deadline on a prompt nobody will ever see.
       if (!delivered && settle(requestId, undefined) !== undefined) {
@@ -173,7 +182,13 @@ export function createChatPermissionHost(options: ChatPermissionHostOptions): Ch
     request: NormalizedPermissionRequest,
     options_: readonly { optionId: string; name: string; kind: string }[],
   ): Promise<string | undefined> => {
+    // Allocated before the request audit so both records carry it: with several
+    // prompts in flight the stream can interleave (request A, request B,
+    // decision B, decision A), and without a shared id the trail cannot say
+    // which decision answered which request.
+    const requestId = `${options.sessionId}-perm-${++counter}`;
     options.onAudit('client/permission_request', {
+      requestId,
       kind: request.kind,
       title: request.title,
       paths: [...(request.paths ?? [])],
@@ -191,6 +206,7 @@ export function createChatPermissionHost(options: ChatPermissionHostOptions): Ch
         options_.find((option) => option.kind === `${resolution}_once`) ??
         options_.find((option) => option.kind.startsWith(resolution));
       options.onAudit('client/permission_decision', {
+        requestId,
         outcome: match !== undefined ? 'selected' : 'cancelled',
         optionId: match?.optionId,
         decision: resolution,
@@ -203,11 +219,11 @@ export function createChatPermissionHost(options: ChatPermissionHostOptions): Ch
     // Degenerate agent: nothing to choose from, so there is nothing to ask.
     if (options_.length === 0) {
       console.warn('[chat] permission request had no options; answering cancelled');
-      options.onAudit('client/permission_decision', { outcome: 'cancelled', reason: 'no_options' });
+      options.onAudit('client/permission_decision', { requestId, outcome: 'cancelled', reason: 'no_options' });
       return undefined;
     }
 
-    const optionId = await ask(request, options_);
+    const optionId = await ask(request, options_, requestId);
     return optionId;
   };
 

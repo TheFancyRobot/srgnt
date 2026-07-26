@@ -83,8 +83,11 @@ const PATH_KINDS = new Set(['read', 'edit', 'delete', 'move']);
  */
 export function deriveScope(request: NormalizedPermissionRequest): string {
   if (PATH_KINDS.has(request.kind)) {
-    const path = request.paths?.[0];
-    if (path !== undefined && path !== '') return `path:${path}`;
+    // EVERY path, not just the first. Keying `[a.ts, b.ts]` on `a.ts` alone
+    // would let a later `[a.ts, secret.ts]` match a remembered `allow_always`
+    // and touch a file the user never saw. Sorted so order is not significant.
+    const paths = (request.paths ?? []).filter((path) => path !== '');
+    if (paths.length > 0) return `path:${JSON.stringify([...paths].sort())}`;
   }
   if (request.kind === 'execute') {
     // The program token only. `git status` and `git push` share a scope, which
@@ -98,16 +101,23 @@ export function deriveScope(request: NormalizedPermissionRequest): string {
 }
 
 /**
- * `|` separates the two halves. `kind` is a closed enum of plain words, so it
- * can never contain the separator and the key stays unambiguous — and unlike a
- * control character it leaves this file readable to git, grep, and diffs.
+ * Keys are JSON-encoded pairs, never concatenated strings.
+ *
+ * `kind`, `title`, `paths`, and `command` are all agent-supplied — and the agent
+ * is exactly who this engine defends against — so any single-character separator
+ * can be forged. With `${kind}|${scope}`, an agent can make two semantically
+ * different requests collide: `kind: 'edit', paths: ['a|title:x']` and
+ * `kind: 'edit|path:a', title: 'x'` both produce `edit|path:a|title:x`, so an
+ * `allow_always` recorded for the first silently authorizes the second.
+ * `JSON.stringify` escapes the payload, so no forged value can cross the
+ * boundary between the two halves.
  */
 function scopeKey(request: NormalizedPermissionRequest): string {
-  return `${request.kind}|${deriveScope(request)}`;
+  return JSON.stringify([request.kind, deriveScope(request)]);
 }
 
 function kindKey(request: NormalizedPermissionRequest): string {
-  return `${request.kind}|*`;
+  return JSON.stringify([request.kind, '*']);
 }
 
 /**

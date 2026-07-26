@@ -38,6 +38,21 @@ describe('permission engine resolution order', () => {
     expect(engine.resolve(request({ paths: ['/work/b.ts'] }))).toBe('ask');
   });
 
+  it('an allow_always on several paths does not cover a superset containing one of them', () => {
+    const engine = createPermissionEngine();
+    engine.remember(request({ paths: ['/work/a.ts', '/work/b.ts'] }), 'allow');
+    expect(engine.resolve(request({ paths: ['/work/a.ts', '/work/secret.ts'] }))).toBe('ask');
+    expect(engine.resolve(request({ paths: ['/work/a.ts'] }))).toBe('ask');
+  });
+
+  it('cannot be tricked by agent-supplied strings that forge a key separator', () => {
+    // The agent controls `kind`, `title`, and `paths`, so a concatenated key is
+    // forgeable: these two requests collided under `${kind}|${scope}`.
+    const engine = createPermissionEngine();
+    engine.remember(request({ kind: 'edit', paths: ['a|title:x'] }), 'allow');
+    expect(engine.resolve(request({ kind: 'edit|path:a', title: 'x', paths: [] }))).toBe('ask');
+  });
+
   it('a different command program of the same execute kind still prompts', () => {
     const engine = createPermissionEngine();
     engine.remember(request({ kind: 'execute', command: 'git status', title: 'Run git' }), 'allow');
@@ -86,8 +101,16 @@ describe('permission engine resolution order', () => {
 describe('scope derivation', () => {
   it('keys path-ish kinds on the affected path', () => {
     for (const kind of ['read', 'edit', 'delete', 'move']) {
-      expect(deriveScope(request({ kind, paths: ['/work/x.ts'] }))).toBe('path:/work/x.ts');
+      expect(deriveScope(request({ kind, paths: ['/work/x.ts'] }))).toBe('path:["/work/x.ts"]');
     }
+  });
+
+  it('keys on every affected path, order-insensitively', () => {
+    const both = deriveScope(request({ kind: 'edit', paths: ['/work/a.ts', '/work/b.ts'] }));
+    expect(deriveScope(request({ kind: 'edit', paths: ['/work/b.ts', '/work/a.ts'] }))).toBe(both);
+    // The load-bearing part: adding a path the user never saw is a new scope.
+    expect(deriveScope(request({ kind: 'edit', paths: ['/work/a.ts', '/work/secret.ts'] }))).not.toBe(both);
+    expect(deriveScope(request({ kind: 'edit', paths: ['/work/a.ts'] }))).not.toBe(both);
   });
 
   it('keys execute on the program token, not the whole command line', () => {

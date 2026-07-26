@@ -473,6 +473,46 @@ describe('ChatView permission round-trip (STEP-23-03)', () => {
     expect(screen.queryByTestId('chat-permission-prompt')).toBeNull();
   });
 
+  it('keeps a prompt that arrives before session/new returns its handle', async () => {
+    // An agent may ask during initialize/session-new. Main counts that push as
+    // delivered, so dropping it would block the agent for the whole deadline.
+    let releaseNewSession: (() => void) | undefined;
+    harness = installSrgntStub({
+      chatSessionNew: vi.fn(async (target: 'mock' | 'pi') => {
+        await new Promise<void>((resolve) => {
+          releaseNewSession = resolve;
+        });
+        return {
+          sessionId: 'chat-mock-1',
+          target,
+          harnessId: target,
+          harnessName: 'Mock Agent',
+          quirks: [],
+          capabilities: { protocolVersion: 1 },
+        };
+      }),
+    });
+    renderChat();
+    fireEvent.click(screen.getByTestId('chat-new-session'));
+    await harness.askPermission(askEdit('req-early'));
+    expect(screen.queryByTestId('chat-permission-prompt')).toBeNull();
+
+    await act(async () => {
+      releaseNewSession?.();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(screen.getByTestId('chat-permission-prompt')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('chat-permission-option-a1'));
+    expect(harness.api.chatPermissionRespond).toHaveBeenCalledWith('chat-mock-1', 'req-early', 'a1');
+  });
+
+  it('drops an early prompt belonging to a session that never started', async () => {
+    renderChat();
+    await harness.askPermission(askEdit('req-orphan'), 'chat-mock-OTHER');
+    await startSession();
+    expect(screen.queryByTestId('chat-permission-prompt')).toBeNull();
+  });
+
   it('queues a second prompt without dropping the first', async () => {
     renderChat();
     await startSession();

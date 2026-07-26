@@ -34,7 +34,7 @@ interface Harness {
   readonly audit: { kind: PermissionAuditKind; payload: Record<string, unknown> }[];
 }
 
-function makeHost(overrides: { deliver?: boolean; deadlineMs?: number } = {}): Harness {
+function makeHost(overrides: { deliver?: boolean; deadlineMs?: number; throwOnPush?: boolean } = {}): Harness {
   const pushed: ChatPermissionRequestEvent[] = [];
   const closed: { requestId: string; reason: string }[] = [];
   const audit: { kind: PermissionAuditKind; payload: Record<string, unknown> }[] = [];
@@ -42,6 +42,7 @@ function makeHost(overrides: { deliver?: boolean; deadlineMs?: number } = {}): H
     sessionId: 'chat-mock-1',
     onRequest: (event) => {
       pushed.push(event);
+      if (overrides.throwOnPush === true) throw new Error('Object has been destroyed');
       return overrides.deliver ?? true;
     },
     onClose: (requestId, reason) => closed.push({ requestId, reason }),
@@ -73,6 +74,44 @@ describe('chat permission host (pending map)', () => {
     host.respond(pushed[0]!.requestId, 'yes');
     await expect(pending).resolves.toEqual({ outcome: { outcome: 'selected', optionId: 'yes' } });
     expect(host.pendingCount).toBe(0);
+  });
+
+  it('treats a throwing push as undeliverable instead of leaking the pending entry', async () => {
+    // `webContents.send` can throw if the window is destroyed between the
+    // isDestroyed() check and the send. An executor throw would reject the
+    // promise while the map entry and its deadline timer lived on.
+    const { host, audit } = makeHost({ throwOnPush: true });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(ask(host)).resolves.toEqual({ outcome: { outcome: 'cancelled' } });
+    expect(host.pendingCount).toBe(0);
+    expect(audit.at(-1)).toMatchObject({
+      kind: 'client/permission_decision',
+      payload: { outcome: 'cancelled', reason: 'no_renderer' },
+    });
+    warn.mockRestore();
+  });
+
+  it('correlates the request and decision audit records by requestId', async () => {
+    const { host, pushed, audit } = makeHost();
+    const first = ask(host, { toolCallId: 't1', locations: [{ path: '/w/a.ts' }] });
+    const second = ask(host, { toolCallId: 't2', locations: [{ path: '/w/b.ts' }] });
+
+    // Answer them out of order: without a shared id the interleaved stream
+    // cannot say which decision belongs to which request.
+    host.respond(pushed[1]!.requestId, 'yes');
+    host.respond(pushed[0]!.requestId, 'no');
+    await Promise.all([first, second]);
+
+    const requests = audit.filter((entry) => entry.kind === 'client/permission_request');
+    const decisions = audit.filter((entry) => entry.kind === 'client/permission_decision');
+    expect(requests.map((entry) => entry.payload.requestId)).toEqual([
+      pushed[0]!.requestId,
+      pushed[1]!.requestId,
+    ]);
+    expect(decisions.map((entry) => entry.payload.requestId)).toEqual([
+      pushed[1]!.requestId,
+      pushed[0]!.requestId,
+    ]);
   });
 
   it('a rejection maps to the reject option, never to a silent cancelled', async () => {

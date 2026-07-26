@@ -393,7 +393,8 @@ export function supervisorEventToStatus(
  * `undefined` — which the renderer reads as "no mode selector at all" rather
  * than as an empty broken dropdown.
  */
-function readModes(response: unknown): ChatSessionModes | undefined {
+/** Exported for tests: the agent controls this payload, so it is parsed defensively. */
+export function readModes(response: unknown): ChatSessionModes | undefined {
   const modes = (response as { modes?: unknown })?.modes;
   if (typeof modes !== 'object' || modes === null) return undefined;
   const { currentModeId, availableModes } = modes as {
@@ -406,7 +407,12 @@ function readModes(response: unknown): ChatSessionModes | undefined {
     if (typeof id !== 'string' || id === '') return [];
     return [{ id, name: typeof name === 'string' && name !== '' ? name : id }];
   });
-  return parsed.length > 0 ? { currentModeId, availableModes: parsed } : undefined;
+  if (parsed.length === 0) return undefined;
+  // An agent that names a current mode outside its own list would leave the
+  // renderer's controlled <select> with no matching option, rendering blank.
+  // Fall back to the first advertised mode rather than showing nothing.
+  const current = parsed.some((mode) => mode.id === currentModeId) ? currentModeId : parsed[0]!.id;
+  return { currentModeId: current, availableModes: parsed };
 }
 
 function toError(cause: unknown): Error {

@@ -296,6 +296,21 @@ describe('Composer — session modes', () => {
     );
   });
 
+  it('disables the selector when the preload has no set-mode bridge', async () => {
+    // `chatSessionSetMode` is optional in the bridge types, and `setMode` is a
+    // guarded no-op without it — an enabled control would silently do nothing.
+    harness = installSrgntStub({ chatSessionSetMode: undefined }, {
+      currentModeId: 'low',
+      availableModes: [
+        { id: 'low', name: 'Low' },
+        { id: 'high', name: 'High' },
+      ],
+    });
+    renderChat();
+    await startSession();
+    expect(screen.getByTestId('chat-mode-select')).toBeDisabled();
+  });
+
   it('follows an agent-initiated current_mode_update without user action', async () => {
     harness = installSrgntStub({}, {
       currentModeId: 'low',
@@ -447,6 +462,10 @@ describe('Composer — crash and recovery', () => {
 
     await waitFor(() => expect(screen.getByTestId('chat-error')).toHaveTextContent('TurnFailed'));
     expect((screen.getByTestId('chat-input') as HTMLTextAreaElement).value).toBe('expensive prompt');
+    // The draft comes back for a retry, so the entry that never ran has to be
+    // marked — otherwise the retry reads as the user saying it twice.
+    expect(screen.getByTestId('chat-message-user')).toHaveAttribute('data-failed', 'true');
+    expect(screen.getByTestId('chat-message-failed')).toBeInTheDocument();
   });
 
   it('recovers with a fresh session (dispose first, so nothing is orphaned)', async () => {
@@ -476,6 +495,39 @@ describe('Composer — crash and recovery', () => {
     await startSession();
     await harness.pushStatus(crash, 'chat-mock-OLD');
     expect(screen.queryByTestId('chat-agent-down')).toBeNull();
+  });
+
+  it('shows a crash that lands before session/new returns the handle', async () => {
+    // The agent can die between answering session/new and `chatSessionNew`
+    // resolving here. Dropping that status installs a dead session with a
+    // working composer and no banner — the one state the crash surface exists
+    // to prevent.
+    let release: (() => void) | undefined;
+    harness = installSrgntStub({
+      chatSessionNew: vi.fn(async (target: 'mock' | 'pi') => {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        return {
+          sessionId: 'chat-mock-1',
+          target,
+          harnessId: target,
+          harnessName: 'Mock Agent',
+          quirks: [],
+          capabilities: { protocolVersion: 1 },
+        };
+      }),
+    });
+    renderChat();
+    fireEvent.click(screen.getByTestId('chat-new-session'));
+    await harness.pushStatus(crash);
+    await act(async () => {
+      release?.();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(screen.getByTestId('chat-agent-down')).toHaveTextContent('exited with code 7'));
+    expect(screen.getByTestId('chat-send')).toBeDisabled();
   });
 });
 

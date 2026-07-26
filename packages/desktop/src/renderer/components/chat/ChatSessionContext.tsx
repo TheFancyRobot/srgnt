@@ -78,6 +78,8 @@ export interface ChatSessionContextValue {
   /** Resolves `true` when the turn ran; `false` when it failed (draft is kept). */
   readonly sendPrompt: (text: string) => Promise<boolean>;
   readonly setMode: (modeId: string) => Promise<void>;
+  /** False when the preload predates `chat:session:set-mode`: no usable selector. */
+  readonly canSetMode: boolean;
   readonly cancel: () => Promise<void>;
   readonly dispose: () => Promise<void>;
   readonly respondToPermission: (requestId: string, optionId: string | undefined) => void;
@@ -121,6 +123,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
    * so discarding it would block the agent for the full permission deadline.
    */
   const earlyPermissions = React.useRef<{ sessionId: string; request: PendingPermission }[]>([]);
+  /** Same race for process lifecycle: last status seen per not-yet-adopted handle. */
+  const earlyStatuses = React.useRef<Record<string, ChatAgentStatus>>({});
 
   React.useEffect(() => {
     sessionIdRef.current = session?.sessionId ?? null;
@@ -200,8 +204,14 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   React.useEffect(() => {
     if (typeof window.srgnt?.onChatSessionStatus !== 'function') return;
     return window.srgnt.onChatSessionStatus((event) => {
-      if (event.sessionId !== sessionIdRef.current) return;
-      const { sessionId: _sessionId, ...status } = event;
+      const { sessionId, ...status } = event;
+      if (sessionId !== sessionIdRef.current) {
+        // An agent can die between answering session/new and `chatSessionNew`
+        // resolving here. Dropping that status would install an already-dead
+        // session with a working composer and no recovery banner.
+        earlyStatuses.current = { ...earlyStatuses.current, [sessionId]: status };
+        return;
+      }
       setAgentStatus(status);
     });
   }, []);
@@ -230,7 +240,11 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
         .map((entry) => entry.request);
       earlyPermissions.current = [];
       setPermissions(held);
-      setAgentStatus(null);
+      // A status that arrived before the handle was known still describes THIS
+      // process — adopt it so a startup crash surfaces instead of vanishing.
+      const heldStatus = earlyStatuses.current[result.sessionId] ?? null;
+      earlyStatuses.current = {};
+      setAgentStatus(heldStatus);
       setLastStopReason(null);
       setSession({
         sessionId: result.sessionId,
@@ -269,6 +283,9 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       } catch (cause) {
         setStatus('error');
         setError(messageOf(cause));
+        // The composer hands this text back for a retry, so the entry that never
+        // ran has to be distinguishable from the one that will.
+        dispatch({ type: 'prompt_failed' });
       } finally {
         // Whether the turn ended, failed, or was interrupted, no more chunks
         // belong to the trailing run — a later turn must start a fresh bubble.
@@ -346,6 +363,9 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       transcript,
       permissions,
       currentModeId: transcript.currentModeId ?? session?.modes?.currentModeId ?? null,
+      // The preload bridge is optional in the types, so the selector must not
+      // offer a switch that `setMode` would silently swallow.
+      canSetMode: typeof window.srgnt?.chatSessionSetMode === 'function',
       agentStatus,
       lastStopReason,
       newSession,

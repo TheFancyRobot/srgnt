@@ -18,6 +18,7 @@ import { createChatClientServices, type TerminalSpawn } from './client-services.
 import {
   ChatSessionController,
   MOCK_DEMO_SCENARIO,
+  readModes,
   supervisorEventToStatus,
   type ChatConnectFn,
 } from './session-controller.js';
@@ -194,6 +195,20 @@ describe('ChatSessionController — session modes (STEP-23-04)', () => {
     expect(session.modes?.currentModeId).toBe('low');
     expect(session.modes?.availableModes.map((mode) => mode.id)).toEqual(['low', 'high', 'xhigh']);
     await controller.dispose(session.sessionId);
+  });
+
+  it('keeps currentModeId inside availableModes even when the agent contradicts itself', () => {
+    // The renderer uses this as a controlled <select> value; an id with no
+    // matching <option> renders blank, which reads as "no mode" rather than
+    // "the agent is confused".
+    expect(
+      readModes({ modes: { currentModeId: 'ghost', availableModes: [{ id: 'low' }, { id: 'high' }] } }),
+    ).toEqual({ currentModeId: 'low', availableModes: [{ id: 'low', name: 'low' }, { id: 'high', name: 'high' }] });
+    // A consistent payload is untouched.
+    expect(
+      readModes({ modes: { currentModeId: 'high', availableModes: [{ id: 'low' }, { id: 'high' }] } })
+        ?.currentModeId,
+    ).toBe('high');
   });
 
   it('omits modes entirely when the agent advertises none', async () => {

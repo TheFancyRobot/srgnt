@@ -1794,6 +1794,17 @@
   color: var(--color-text-tertiary);
 }
 
+.chat-message-failed {
+  margin-left: 8px;
+  color: var(--color-error-500);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.chat-message[data-failed='true'] .chat-message-plain {
+  opacity: 0.65;
+}
+
 .chat-message-plain {
   white-space: pre-wrap;
   font-size: 13px;

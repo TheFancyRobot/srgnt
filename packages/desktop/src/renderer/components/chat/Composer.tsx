@@ -66,6 +66,7 @@ export function Composer(): React.ReactElement {
     status,
     transcript,
     currentModeId,
+    canSetMode,
     agentStatus,
     lastStopReason,
     newSession,
@@ -287,7 +288,7 @@ export function Composer(): React.ReactElement {
               data-testid="chat-mode-select"
               aria-label="Session mode"
               value={currentModeId ?? session.modes.currentModeId}
-              disabled={busy || agentDead}
+              disabled={busy || agentDead || !canSetMode}
               onChange={(event) => void setMode(event.target.value)}
             >
               {session.modes.availableModes.map((mode) => (

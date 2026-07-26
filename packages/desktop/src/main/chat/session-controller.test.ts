@@ -225,6 +225,26 @@ describe('ChatSessionController — client services (STEP-23-02)', () => {
     rmSync(cwd, { recursive: true, force: true });
   });
 
+  it('confines a workspace-less session to its own scratch dir, not the shared temp root', async () => {
+    // The cwd is the containment boundary for fs/* and terminal/*, so falling
+    // back to `tmpdir()` itself would expose every other process's temp files.
+    const roots: string[] = [];
+    const controller = new ChatSessionController({
+      connect: portsAwareConnect(scenarioWith([])),
+      onUpdate: () => {},
+      getCwd: () => undefined,
+      createClientServices: (options) => {
+        roots.push(options.sessionRoot);
+        return createChatClientServices(options);
+      },
+    });
+    const session = await controller.newSession('mock');
+    expect(roots[0]).not.toBe(tmpdir());
+    expect(realpathSync(roots[0]!).startsWith(realpathSync(tmpdir()))).toBe(true);
+    await controller.dispose(session.sessionId);
+    rmSync(roots[0]!, { recursive: true, force: true });
+  });
+
   it('serves the mock agent read_file from the session cwd', async () => {
     writeFileSync(join(cwd, 'note.txt'), 'from the session cwd');
     const scenario = scenarioWith([

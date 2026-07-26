@@ -26,7 +26,7 @@ Every command below was run in the foreground and passed as stated.
 | `npx playwright test e2e/ui-coverage-matrix.spec.ts` | PASS — 27 passed (regression guard for the ghostty extraction + side-panel change) |
 | `npx playwright test e2e/app.spec.ts` | 14 passed, 1 **pre-existing** failure — see below |
 
-Every acceptance check in the Validation Plan has a test behind it, including the four required path-guard cases and the symlink-escape variants.
+Every *automated* acceptance check in the Validation Plan has a test behind it, including the four required path-guard cases and the symlink-escape variants. The manual checks — the `pnpm dev` visual pass and a real-Pi turn — are unverified; see Known gaps.
 
 **Manual mock run** was performed headlessly against the built `dist/main` driving the real spawned mock bin: `stopReason end_turn`, 15 frames, content block types `["content","diff","terminal"]`, 2 plan updates, and one terminal chunk `"checks passed\n"` on `chat-term-1`.
 

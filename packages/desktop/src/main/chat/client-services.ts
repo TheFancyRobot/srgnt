@@ -106,8 +106,12 @@ async function canonicalize(target: string): Promise<string> {
         );
       }
       const parent = dirname(current);
-      // Filesystem root itself did not resolve — nothing left to walk up to.
-      if (parent === current) return target;
+      // Filesystem root itself did not resolve — nothing left to walk up to, and
+      // returning the lexical path would check containment against something the
+      // filesystem never confirmed. Same fail-closed rule as above.
+      if (parent === current) {
+        throw new ClientServiceError('path_outside_session', `Refused: could not resolve '${target}'`);
+      }
       missing.push(basename(current));
       current = parent;
     }

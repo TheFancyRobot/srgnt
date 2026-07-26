@@ -70,7 +70,20 @@ describe('DiffView', () => {
     const fallback = screen.getByTestId('chat-diff-fallback');
     expect(fallback).toHaveTextContent('was here');
     expect(fallback).toHaveTextContent('is here now');
-    expect(screen.queryByTestId('chat-diff-body')).toBeNull();
+    expect(screen.getByTestId('chat-diff-body')).toHaveAttribute('hidden');
+  });
+
+  it('recovers the rich diff when a later update renders successfully', () => {
+    // Cards reuse the same DiffView across tool_call_updates, so a one-off
+    // failure must not downgrade the block for the rest of its life.
+    merge.broken = true;
+    const { rerender } = render(<DiffView path="/w/a.ts" oldText={'a\n'} newText={'b\n'} />);
+    expect(screen.getByTestId('chat-diff-fallback')).toBeInTheDocument();
+
+    merge.broken = false;
+    rerender(<DiffView path="/w/a.ts" oldText={'a\n'} newText={'c\n'} />);
+    expect(screen.queryByTestId('chat-diff-fallback')).toBeNull();
+    expect(body().querySelector('.cm-editor')).not.toBeNull();
   });
 
   it('handles a large file without collapsing the whole card', () => {

@@ -85,6 +85,10 @@ function services(overrides: Partial<Parameters<typeof createChatClientServices>
 
 const session = { sessionId: 'acp-1' } as const;
 
+/** `desktop-release.yml` runs this suite on windows-latest too. */
+const IS_WINDOWS = process.platform === 'win32';
+const POSIX_ONLY_SKIP = IS_WINDOWS || process.getuid?.() === 0;
+
 describe('client fs port — reads inside the session', () => {
   it('reads a file inside the session cwd and audits the call', () => {
     const audited: string[] = [];
@@ -126,8 +130,9 @@ describe('client fs port — failures are audited', () => {
     expect(events[0]).toMatchObject({ kind: 'client/fs_denied', payload: { reason: 'read_failed' } });
   });
 
-  // Root bypasses the mode bits, so the read would succeed and invert the test.
-  it.skipIf(process.getuid?.() === 0)('fails closed when a path cannot be canonicalized', async () => {
+  // Root bypasses the mode bits and Windows ignores them outright — either way
+  // the read would succeed and the test would silently invert.
+  it.skipIf(POSIX_ONLY_SKIP)('fails closed when a path cannot be canonicalized', async () => {
     const locked = join(root, 'locked');
     mkdirSync(locked);
     chmodSync(locked, 0o000);
@@ -374,11 +379,13 @@ describe('client terminal port', () => {
     // shipped default actually executes something. node-pty's `posix_spawnp`
     // fails on some machines, which is exactly why the backend falls back to
     // plain pipes — either path must produce the command's output.
+    // `process.execPath` rather than `/bin/echo`: desktop-release.yml runs this
+    // suite on windows-latest, where there is no /bin.
     const svc = createChatClientServices({ sessionRoot: root });
     const { terminalId } = await svc.terminal.createTerminal({
       ...session,
-      command: '/bin/echo',
-      args: ['hello-from-client-terminal'],
+      command: process.execPath,
+      args: ['-e', 'process.stdout.write("hello-from-client-terminal")'],
     });
     const exit = await svc.terminal.waitForTerminalExit({ ...session, terminalId });
     expect(exit.exitCode).toBe(0);

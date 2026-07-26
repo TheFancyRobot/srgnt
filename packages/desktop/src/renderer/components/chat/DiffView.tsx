@@ -37,6 +37,9 @@ export function DiffView({ path, oldText, newText }: DiffViewProps): React.React
     if (host === null) return;
     let view: EditorView;
     try {
+      // Cleared on every attempt: a block that failed once must be able to
+      // render normally when the next tool_call_update replaces its content.
+      setFailed(false);
       view = new EditorView({
         parent: host,
         state: EditorState.create({
@@ -75,13 +78,17 @@ export function DiffView({ path, oldText, newText }: DiffViewProps): React.React
         </span>
         <span className="chat-diff-summary">{summary}</span>
       </figcaption>
-      {failed ? (
+      {failed && (
         <pre className="chat-diff-fallback" data-testid="chat-diff-fallback">
           {oldText !== null ? `--- before\n${oldText}\n\n+++ after\n${newText}` : newText}
         </pre>
-      ) : (
-        <div ref={hostRef} className="chat-diff-body" data-testid="chat-diff-body" />
       )}
+      {/*
+        Always mounted, even while the fallback shows: unmounting it would null
+        `hostRef` and the effect could never re-attach, permanently downgrading
+        this block for every later update.
+      */}
+      <div ref={hostRef} className="chat-diff-body" data-testid="chat-diff-body" hidden={failed} />
     </figure>
   );
 }

@@ -25,7 +25,7 @@ context:
     target: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel|STEP-23-02 Render tool-call cards with diff and terminal embeds and plan panel]]'
   resume_target:
     type: step
-    target: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel|STEP-23-02 Render tool-call cards with diff and terminal embeds and plan panel]]'
+    target: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round trips into default ask prompt UI]]'
     section: Context Handoff
   last_action:
     type: saved
@@ -118,6 +118,7 @@ Modified:
 - `packages/desktop/src/renderer/main.tsx` — chat panel registers `ChatPlanSidePanel`
 - `packages/desktop/src/renderer/styles.css` — card, diff, terminal-embed and plan-entry styles
 - `packages/desktop/package.json`, `pnpm-lock.yaml` — `@codemirror/merge@^6.12.2`
+- Post-review (PR #22, two rounds): `main/chat/client-services.ts` (env allowlist, byte-accurate `truncateTail`, fail-closed `canonicalize`, audit on fs failure, single-delivery pipe exit), `main/chat/session-controller.ts` (per-session `mkdtemp` fallback cwd), `renderer/components/chat/ChatTerminalContext.tsx` (per-terminal cap), `renderer/components/chat/DiffView.tsx` (plain-text fallback that retries), `renderer/components/sidepanels/ChatPlanSidePanel.tsx` (`role="img"` on the status glyph), `renderer/styles.css`, plus tests in `client-services.test.ts`, `session-controller.test.ts`, `DiffView.test.tsx`, `ChatTerminalContext.test.tsx`.
 
 ## Validation Run
 
@@ -137,6 +138,7 @@ All commands run in the foreground on this branch; results are what was observed
 - `npx playwright test e2e/ui-coverage-matrix.spec.ts` — PASS, 27 passed (the regression guard for the ghostty extraction and the side-panel change).
 - `npx playwright test e2e/app.spec.ts` — 14 passed, **1 pre-existing environmental failure**: `exercises preload APIs for persistence, PTY launch, and renderer security` fails with `posix_spawnp failed` from `terminal:launch-with-context`. Confirmed unrelated: a bare `node -e "require('node-pty').spawn(...)"` fails identically on this machine, the failure reproduces with the sandbox disabled, and no file under `src/main/pty/` or `src/main/terminal/` was touched.
 - Manual mock run — done headlessly against the built `dist/main` with the real `defaultChatConnect` (spawns the mock bin): `stopReason end_turn`, 15 frames, content block types `["content","diff","terminal"]`, 2 plan updates, 1 terminal chunk `"checks passed\n"` on `chat-term-1`. The GUI `pnpm dev` pass and the real-Pi turn were NOT run (see Findings).
+- Post-review re-runs (PR #22): after round 1 — desktop 946 passed / 54 files; after round 2 (CodeRabbit) — **desktop 948 passed / 54 files**, typecheck clean, build clean. New coverage: UTF-8 byte truncation, env allowlist, fail-closed canonicalization, audited fs failure, exactly-once pipe exit, renderer output cap, diff fallback + recovery, workspace-less session confined to its own scratch dir.
 
 ## Bugs Encountered
 
@@ -153,7 +155,7 @@ All commands run in the foreground on this branch; results are what was observed
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel|STEP-23-02 Render tool-call cards with diff and terminal embeds and plan panel]].
+- [x] STEP-23-02 is complete; continue at [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round trips into default ask prompt UI]].
 <!-- AGENT-END:session-follow-up-work -->
 - [ ] **STEP-23-03**: inject the permission engine as `createChatClientServices({ authorizeWrite })` in `ChatSessionController.newSession`. That single line is all that is needed to turn `fs/write_text_file` on; the guard, audit events, and typed refusal are already in place and tested.
 - [ ] **STEP-23-03**: decide whether `client/fs_read_text_file` / `client/fs_write_text_file` / `client/fs_denied` should join `knownSessionEventKinds` in `packages/contracts/src/session.ts` when the audit surface is formalized.

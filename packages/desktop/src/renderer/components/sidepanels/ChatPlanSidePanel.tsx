@@ -87,7 +87,9 @@ export function ChatPlanSidePanel(): React.ReactElement {
               data-status={entry.status}
               data-priority={entry.priority}
             >
-              <span className="chat-plan-entry-status" aria-label={STATUS_LABELS[entry.status]}>
+              {/* role="img": without it most screen readers ignore aria-label on a
+                  generic span and announce the raw glyph instead of the status. */}
+              <span className="chat-plan-entry-status" role="img" aria-label={STATUS_LABELS[entry.status]}>
                 {entry.status === 'completed' ? '✓' : entry.status === 'in_progress' ? '▸' : '○'}
               </span>
               <span className="chat-plan-entry-content">{entry.content}</span>

@@ -302,7 +302,12 @@ export class ChatSessionController {
     const handle = `chat-${target}-${++this.counter}`;
     // The cwd must be known *before* connecting: client services are confined to
     // it, and their presence is what `initialize` advertises as capabilities.
-    const cwd = this.options.getCwd?.() ?? tmpdir();
+    //
+    // With no workspace, the fallback is a fresh scratch directory rather than
+    // `tmpdir()` itself — the cwd IS the containment boundary for `fs/*` and
+    // `terminal/*`, and the shared system temp holds every other process's
+    // temp files, including short-lived credential and token files.
+    const cwd = this.options.getCwd?.() ?? mkdtempSync(join(tmpdir(), 'srgnt-chat-session-'));
     const services = (this.options.createClientServices ?? createChatClientServices)({
       sessionRoot: cwd,
       onTerminalOutput: (terminalId, chunk) =>

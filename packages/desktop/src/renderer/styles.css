@@ -2109,6 +2109,132 @@
   opacity: 0.6;
 }
 
+/* --- Composer: slash menu, modes, stop reasons, crash surface (STEP-23-04) -- */
+
+.chat-composer-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Anchors the slash popover, which is positioned above the input. */
+.chat-composer-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.chat-slash-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 5;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-surface-primary);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
+}
+
+.chat-slash-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.chat-slash-item.is-active {
+  background: var(--color-surface-tertiary);
+}
+
+.chat-slash-name {
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  color: var(--color-text-primary);
+}
+
+.chat-slash-description {
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-mode-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-mode-select-caption {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-tertiary);
+}
+
+.chat-stop-notice {
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  border-top: 1px solid var(--color-border-muted);
+}
+
+.chat-stop-notice[data-reason='refusal'],
+.chat-stop-notice[data-reason='max_tokens'],
+.chat-stop-notice[data-reason='max_turn_requests'] {
+  color: var(--color-warning-600);
+}
+
+.chat-agent-down {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 16px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-danger-500, var(--color-border-strong));
+  background: var(--color-surface-secondary);
+}
+
+.chat-agent-down-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-agent-down-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.chat-agent-down-message {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.chat-agent-down-stderr {
+  width: 100%;
+  margin: 0;
+  max-height: 140px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--color-surface-tertiary);
+  border: 1px solid var(--color-border-muted);
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+
 /* --- Rendered markdown inside an agent message ---------------------------- */
 
 .chat-markdown {

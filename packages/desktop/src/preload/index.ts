@@ -59,7 +59,9 @@ const ipcChannels = {
   chatSessionPrompt: 'chat:session:prompt',
   chatSessionCancel: 'chat:session:cancel',
   chatSessionDispose: 'chat:session:dispose',
+  chatSessionSetMode: 'chat:session:set-mode',
   chatSessionUpdate: 'chat:session:update',
+  chatSessionStatus: 'chat:session:status',
   chatTerminalOutput: 'chat:terminal:output',
   chatPermissionRequest: 'chat:permission:request',
   chatPermissionRespond: 'chat:permission:respond',
@@ -219,6 +221,8 @@ const api = {
     harnessName: string;
     quirks: readonly string[];
     capabilities: Record<string, unknown>;
+    /** Absent when the agent advertises no session modes → no mode selector. */
+    modes?: { currentModeId: string; availableModes: readonly { id: string; name: string }[] };
   }> => ipcRenderer.invoke(ipcChannels.chatSessionNew, { target }),
   chatSessionPrompt: (sessionId: string, text: string): Promise<{ stopReason: string }> =>
     ipcRenderer.invoke(ipcChannels.chatSessionPrompt, { sessionId, text }),
@@ -226,10 +230,42 @@ const api = {
     ipcRenderer.invoke(ipcChannels.chatSessionCancel, { sessionId }),
   chatSessionDispose: (sessionId: string): Promise<void> =>
     ipcRenderer.invoke(ipcChannels.chatSessionDispose, { sessionId }),
+  /** `session/set_mode`. Rejects when `modeId` is not one the agent advertised. */
+  chatSessionSetMode: (
+    sessionId: string,
+    modeId: string,
+  ): Promise<{ ok: true; currentModeId: string }> =>
+    ipcRenderer.invoke(ipcChannels.chatSessionSetMode, { sessionId, modeId }),
   onChatSessionUpdate: (callback: (event: { sessionId: string; update: unknown }) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, payload: { sessionId: string; update: unknown }) => callback(payload);
     ipcRenderer.on(ipcChannels.chatSessionUpdate, handler);
     return () => ipcRenderer.removeListener(ipcChannels.chatSessionUpdate, handler);
+  },
+  /**
+   * Agent *process* lifecycle (STEP-23-04), not ACP frames: this is how a crash
+   * reaches the UI at all. `crashed`/`gave-up` carry the stderr tail.
+   */
+  onChatSessionStatus: (
+    callback: (event: {
+      sessionId: string;
+      status: 'spawning' | 'ready' | 'crashed' | 'gave-up' | 'exited';
+      stderrTail?: string;
+      exitCode?: number | null;
+      message?: string;
+    }) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: {
+        sessionId: string;
+        status: 'spawning' | 'ready' | 'crashed' | 'gave-up' | 'exited';
+        stderrTail?: string;
+        exitCode?: number | null;
+        message?: string;
+      },
+    ) => callback(payload);
+    ipcRenderer.on(ipcChannels.chatSessionStatus, handler);
+    return () => ipcRenderer.removeListener(ipcChannels.chatSessionStatus, handler);
   },
   /** Output of terminals the agent created through the client `terminal/*` services. */
   onChatTerminalOutput: (

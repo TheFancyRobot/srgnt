@@ -33,6 +33,9 @@ import {
   SChatSessionPromptRequest,
   SChatSessionPromptResponse,
   SChatSessionRef,
+  SChatSessionSetModeRequest,
+  SChatSessionSetModeResponse,
+  SChatSessionStatusEvent,
   SChatSessionUpdateEvent,
   SChatTerminalOutputEvent,
 } from './contracts.js';
@@ -446,6 +449,108 @@ describe('Chat session IPC (PHASE-23)', () => {
           quirks: [],
           capabilities: {},
         }),
+      ).toThrow();
+    });
+
+    it('carries advertised session modes when the agent has them', () => {
+      const parsed = parseSync(SChatSessionNewResponse, {
+        sessionId: 'chat-pi-1',
+        target: 'pi',
+        harnessId: 'pi',
+        harnessName: 'Pi',
+        quirks: [],
+        capabilities: {},
+        modes: {
+          currentModeId: 'high',
+          availableModes: [
+            { id: 'low', name: 'Low' },
+            { id: 'high', name: 'High' },
+          ],
+        },
+      });
+      expect(parsed.modes?.currentModeId).toBe('high');
+      expect(parsed.modes?.availableModes).toHaveLength(2);
+    });
+
+    it('treats absent modes as "no mode selector", not an error', () => {
+      const parsed = parseSync(SChatSessionNewResponse, {
+        sessionId: 'chat-mock-1',
+        target: 'mock',
+        harnessId: 'mock',
+        harnessName: 'Mock Agent',
+        quirks: [],
+        capabilities: {},
+      });
+      expect(parsed.modes).toBeUndefined();
+    });
+
+    it('rejects a malformed modes block rather than half-rendering it', () => {
+      expect(() =>
+        parseSync(SChatSessionNewResponse, {
+          sessionId: 'chat-pi-1',
+          target: 'pi',
+          harnessId: 'pi',
+          harnessName: 'Pi',
+          quirks: [],
+          capabilities: {},
+          modes: { currentModeId: 'high', availableModes: [{ id: 'high' }] },
+        }),
+      ).toThrow();
+    });
+  });
+
+  describe('set-mode round trip (STEP-23-04)', () => {
+    it('validates a set-mode request', () => {
+      const parsed = parseSync(SChatSessionSetModeRequest, { sessionId: 'chat-pi-1', modeId: 'xhigh' });
+      expect(parsed.modeId).toBe('xhigh');
+    });
+
+    it('rejects a set-mode request missing the session handle or the mode', () => {
+      expect(() => parseSync(SChatSessionSetModeRequest, { modeId: 'xhigh' })).toThrow();
+      expect(() => parseSync(SChatSessionSetModeRequest, { sessionId: 'chat-pi-1' })).toThrow();
+      expect(() => parseSync(SChatSessionSetModeRequest, { sessionId: 'chat-pi-1', modeId: 7 })).toThrow();
+    });
+
+    it('echoes the mode the agent settled on', () => {
+      const parsed = parseSync(SChatSessionSetModeResponse, { ok: true, currentModeId: 'xhigh' });
+      expect(parsed.currentModeId).toBe('xhigh');
+    });
+
+    it('rejects a set-mode response that is not an acknowledgement', () => {
+      expect(() => parseSync(SChatSessionSetModeResponse, { ok: false, currentModeId: 'xhigh' })).toThrow();
+      expect(() => parseSync(SChatSessionSetModeResponse, { ok: true })).toThrow();
+    });
+  });
+
+  describe('agent status push (STEP-23-04)', () => {
+    it('carries a crash with its stderr tail and exit code', () => {
+      const parsed = parseSync(SChatSessionStatusEvent, {
+        sessionId: 'chat-pi-1',
+        status: 'crashed',
+        stderrTail: 'Error: boom\n',
+        exitCode: 7,
+        message: 'Agent process exited with code 7',
+      });
+      expect(parsed.status).toBe('crashed');
+      expect(parsed.stderrTail).toBe('Error: boom\n');
+      expect(parsed.exitCode).toBe(7);
+    });
+
+    it('accepts a null exit code (killed by a signal)', () => {
+      expect(
+        parseSync(SChatSessionStatusEvent, { sessionId: 'chat-pi-1', status: 'gave-up', exitCode: null }).exitCode,
+      ).toBeNull();
+    });
+
+    it('accepts a bare lifecycle transition with no diagnostics', () => {
+      expect(parseSync(SChatSessionStatusEvent, { sessionId: 'chat-mock-1', status: 'ready' }).status).toBe('ready');
+    });
+
+    it('rejects an unknown status, a missing handle, and a mistyped tail', () => {
+      expect(() => parseSync(SChatSessionStatusEvent, { sessionId: 'chat-pi-1', status: 'reaped' })).toThrow();
+      expect(() => parseSync(SChatSessionStatusEvent, { status: 'crashed' })).toThrow();
+      expect(() =>
+        parseSync(SChatSessionStatusEvent, { sessionId: 'chat-pi-1', status: 'crashed', stderrTail: 12 }),
       ).toThrow();
     });
   });

@@ -5,13 +5,22 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatSessionUpdateEvent, ChatTerminalOutputEvent } from '@srgnt/contracts';
-import type { ClientPorts } from '@srgnt/harness';
+import type {
+  ChatSessionStatusEvent,
+  ChatSessionUpdateEvent,
+  ChatTerminalOutputEvent,
+} from '@srgnt/contracts';
+import type { ClientPorts, SupervisorEvent } from '@srgnt/harness';
 import { connectMockAgent, readScenario, type Scenario } from '@srgnt/harness/testing';
 import { Effect } from 'effect';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createChatClientServices, type TerminalSpawn } from './client-services.js';
-import { ChatSessionController, MOCK_DEMO_SCENARIO, type ChatConnectFn } from './session-controller.js';
+import {
+  ChatSessionController,
+  MOCK_DEMO_SCENARIO,
+  supervisorEventToStatus,
+  type ChatConnectFn,
+} from './session-controller.js';
 
 /**
  * The chat controller drives real `@srgnt/harness` wrapper sessions. Here we
@@ -155,6 +164,234 @@ describe('ChatSessionController (mock target, in-process)', () => {
   });
 });
 
+// ─── Session modes (STEP-23-04) ───
+
+/** A connector over a scenario, so a test can vary directives and modes. */
+function connectorFor(scenario: Scenario): ChatConnectFn {
+  return async () => {
+    const { connection } = await connectMockAgent(scenario);
+    return {
+      connection,
+      harness: { id: 'mock', name: 'Mock Agent', quirks: [] },
+      cleanup: async () => connection.close(),
+    };
+  };
+}
+
+function withScenario(overrides: Partial<Scenario>): Scenario {
+  return { ...demoScenario, ...overrides };
+}
+
+describe('ChatSessionController — session modes (STEP-23-04)', () => {
+  const modedScenario = withScenario({
+    initialize: { ...demoScenario.initialize, modes: ['low', 'high', 'xhigh'] },
+    directives: [],
+  });
+
+  it('mirrors advertised modes to the renderer at session open', async () => {
+    const controller = new ChatSessionController({ connect: connectorFor(modedScenario), onUpdate: () => {} });
+    const session = await controller.newSession('mock');
+    expect(session.modes?.currentModeId).toBe('low');
+    expect(session.modes?.availableModes.map((mode) => mode.id)).toEqual(['low', 'high', 'xhigh']);
+    await controller.dispose(session.sessionId);
+  });
+
+  it('omits modes entirely when the agent advertises none', async () => {
+    const controller = new ChatSessionController({ connect: mockConnect, onUpdate: () => {} });
+    const session = await controller.newSession('mock');
+    // Absent, not empty: the renderer keys "show a selector at all" off this.
+    expect(session.modes).toBeUndefined();
+    await controller.dispose(session.sessionId);
+  });
+
+  it('switches to an advertised mode and echoes what the agent settled on', async () => {
+    const updates: ChatSessionUpdateEvent[] = [];
+    const controller = new ChatSessionController({
+      connect: connectorFor(modedScenario),
+      onUpdate: (event) => updates.push(event),
+    });
+    const session = await controller.newSession('mock');
+    await expect(controller.setMode(session.sessionId, 'xhigh')).resolves.toEqual({
+      ok: true,
+      currentModeId: 'xhigh',
+    });
+    await tick();
+    const kinds = updates.map(
+      (event) => (event.update as { update?: { sessionUpdate?: string } }).update?.sessionUpdate,
+    );
+    expect(kinds).toContain('current_mode_update');
+    await controller.dispose(session.sessionId);
+  });
+
+  it('rejects an unadvertised mode BEFORE any ACP call', async () => {
+    let setModeCalls = 0;
+    const spyingConnect: ChatConnectFn = async () => {
+      const { connection } = await connectMockAgent(modedScenario);
+      const original = connection.setMode.bind(connection);
+      (connection as unknown as { setMode: typeof connection.setMode }).setMode = (params) => {
+        setModeCalls += 1;
+        return original(params);
+      };
+      return {
+        connection,
+        harness: { id: 'mock', name: 'Mock Agent', quirks: [] },
+        cleanup: async () => connection.close(),
+      };
+    };
+    const controller = new ChatSessionController({ connect: spyingConnect, onUpdate: () => {} });
+    const session = await controller.newSession('mock');
+    await expect(controller.setMode(session.sessionId, 'turbo')).rejects.toThrow(/unknown session mode/i);
+    expect(setModeCalls).toBe(0);
+    await controller.dispose(session.sessionId);
+  });
+
+  it('rejects any set-mode on an agent that advertised no modes', async () => {
+    const controller = new ChatSessionController({ connect: mockConnect, onUpdate: () => {} });
+    const session = await controller.newSession('mock');
+    await expect(controller.setMode(session.sessionId, 'high')).rejects.toThrow(/unknown session mode/i);
+    await controller.dispose(session.sessionId);
+  });
+});
+
+// ─── Cancel and crash (STEP-23-04) ───
+
+describe('ChatSessionController — cancel and crash surfaces (STEP-23-04)', () => {
+  it('cancel mid-stream ends the turn as cancelled and leaves the session usable', async () => {
+    // `expect_cancel` blocks the turn until `session/cancel` arrives, so the
+    // sequencing here is the real one, not a simulated race.
+    const controller = new ChatSessionController({
+      connect: connectorFor(
+        withScenario({
+          directives: [
+            { type: 'emit_chunks', channel: 'agent', chunks: ['working'], delayMs: 0 },
+            { type: 'expect_cancel', timeoutMs: 2000 },
+          ],
+        }),
+      ),
+      onUpdate: () => {},
+    });
+    const session = await controller.newSession('mock');
+
+    const turn = controller.prompt(session.sessionId, 'long job');
+    await tick();
+    await controller.cancel(session.sessionId);
+    expect((await turn).stopReason).toBe('cancelled');
+
+    // The SAME session must accept the next prompt — cancel is not a dispose.
+    expect(controller.has(session.sessionId)).toBe(true);
+    expect((await controller.prompt(session.sessionId, 'again')).stopReason).toBeDefined();
+    await controller.dispose(session.sessionId);
+  });
+
+  it('a crashing turn fails the prompt without leaking the session handle', async () => {
+    const controller = new ChatSessionController({
+      connect: connectorFor(
+        withScenario({
+          directives: [
+            { type: 'emit_chunks', channel: 'agent', chunks: ['half'], delayMs: 0 },
+            { type: 'crash', exitCode: 7 },
+          ],
+        }),
+      ),
+      onUpdate: () => {},
+    });
+    const session = await controller.newSession('mock');
+    await expect(controller.prompt(session.sessionId, 'go')).rejects.toThrow();
+    // Still tracked, so dispose can still kill-tree it — the renderer's
+    // "New session" affordance depends on this.
+    expect(controller.has(session.sessionId)).toBe(true);
+    await controller.dispose(session.sessionId);
+    expect(controller.sessionCount).toBe(0);
+  });
+
+  it('pushes supervisor lifecycle to the renderer and releases pending prompts on death', async () => {
+    let emit: ((event: SupervisorEvent) => void) | undefined;
+    const supervisedConnect: ChatConnectFn = async () => {
+      const { connection } = await connectMockAgent(demoScenario);
+      return {
+        connection,
+        harness: { id: 'mock', name: 'Mock Agent', quirks: [] },
+        onSupervisorEvent: (listener) => {
+          emit = listener;
+          return () => {
+            emit = undefined;
+          };
+        },
+        cleanup: async () => connection.close(),
+      };
+    };
+    const statuses: ChatSessionStatusEvent[] = [];
+    const controller = new ChatSessionController({
+      connect: supervisedConnect,
+      onUpdate: () => {},
+      onStatus: (event) => statuses.push(event),
+    });
+    const session = await controller.newSession('mock');
+
+    emit?.({
+      kind: 'crashed',
+      id: 'chat-mock',
+      info: { code: 7, signal: null, reaped: false, crashed: true, stderrTail: 'Error: boom\n' },
+    });
+    emit?.({ kind: 'gave-up', id: 'chat-mock', restarts: 3 });
+
+    expect(statuses.map((event) => event.status)).toEqual(['crashed', 'gave-up']);
+    expect(statuses[0]!.sessionId).toBe(session.sessionId);
+    expect(statuses[0]!.stderrTail).toBe('Error: boom\n');
+    expect(statuses[0]!.exitCode).toBe(7);
+    // `gave-up` carries no ExitInfo of its own; the tail is threaded from the
+    // crash that exhausted the restart budget.
+    expect(statuses[1]!.stderrTail).toBe('Error: boom\n');
+    // Auditable: the crash is in the session's own event stream, not just the UI.
+    expect(controller.sessionEvents(session.sessionId).map((event) => event.kind)).toContain(
+      'client/agent_status',
+    );
+
+    // Disposal must unsubscribe, or a reap would push status for a session the
+    // renderer has already forgotten.
+    const before = statuses.length;
+    await controller.dispose(session.sessionId);
+    emit?.({ kind: 'ready', id: 'chat-mock', pid: 1 });
+    expect(statuses).toHaveLength(before);
+  });
+
+  describe('supervisorEventToStatus', () => {
+    const info = { code: 0, signal: null, reaped: false, crashed: false, stderrTail: '' } as const;
+
+    it('maps a signal death to a signal message', () => {
+      const status = supervisorEventToStatus('s1', {
+        kind: 'crashed',
+        id: 'h',
+        info: { ...info, code: null, signal: 'SIGSEGV', crashed: true, stderrTail: 'tail' },
+      }, '');
+      expect(status).toMatchObject({ status: 'crashed', exitCode: null });
+      expect(status?.message).toMatch(/SIGSEGV/);
+    });
+
+    it('surfaces a clean self-exit as a dead session, not a crash', () => {
+      expect(supervisorEventToStatus('s1', { kind: 'exited', id: 'h', info }, '')).toMatchObject({
+        status: 'exited',
+        exitCode: 0,
+      });
+    });
+
+    it('never pushes a reap — that is our own teardown, not a failure', () => {
+      expect(supervisorEventToStatus('s1', { kind: 'reaped', id: 'h', reason: 'dispose' }, '')).toBeNull();
+    });
+
+    it('omits the stderr tail on gave-up when no crash tail was captured', () => {
+      const status = supervisorEventToStatus('s1', { kind: 'gave-up', id: 'h', restarts: 3 }, '');
+      expect(status?.stderrTail).toBeUndefined();
+      expect(status?.message).toMatch(/3 attempts/);
+    });
+
+    it('reports spawn/ready transitions verbatim', () => {
+      expect(supervisorEventToStatus('s1', { kind: 'spawning', id: 'h' }, '')?.status).toBe('spawning');
+      expect(supervisorEventToStatus('s1', { kind: 'ready', id: 'h', pid: 42 }, '')?.status).toBe('ready');
+    });
+  });
+});
+
 describe('built-in mock demo scenario', () => {
   it('validates against the mock agent scenario schema', () => {
     // The scenario is serialized to JSON and handed to the mock bin, which fails
@@ -168,6 +405,10 @@ describe('built-in mock demo scenario', () => {
     const types = MOCK_DEMO_SCENARIO.directives.map((directive) => directive.type);
     expect(types).toContain('plan');
     expect(types).toContain('use_terminal');
+    // Composer surfaces (STEP-23-04): without these two the slash menu and the
+    // mode selector are unreachable in a manual `pnpm dev` run.
+    expect(types).toContain('advertise_commands');
+    expect(MOCK_DEMO_SCENARIO.initialize.modes.length).toBeGreaterThan(0);
     // The manual `pnpm dev` path for the permission prompt: Pi never sends this,
     // so without it the prompt is unreachable by hand.
     expect(types).toContain('request_permission');

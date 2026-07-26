@@ -4,15 +4,18 @@ import { join } from 'node:path';
 import type {
   ChatPermissionCloseEvent,
   ChatPermissionRequestEvent,
+  ChatSessionModes,
   ChatSessionNewResponse,
   ChatSessionPromptResponse,
+  ChatSessionSetModeResponse,
+  ChatSessionStatusEvent,
   ChatSessionUpdateEvent,
   ChatTarget,
   ChatTerminalOutputEvent,
   LaunchSpec,
   SessionEvent,
 } from '@srgnt/contracts';
-import type { AcpAgentConnection, ClientPorts } from '@srgnt/harness';
+import type { AcpAgentConnection, ClientPorts, SupervisorEvent } from '@srgnt/harness';
 import { Effect } from 'effect';
 import { createChatClientServices, type ChatClientServices } from './client-services.js';
 import { createChatPermissionHost, type ChatPermissionHost } from './permissions.js';
@@ -64,6 +67,17 @@ export interface ChatConnection {
   readonly connection: AcpAgentConnection;
   readonly harness: ChatHarnessIdentity;
   readonly cleanup: () => Promise<void>;
+  /**
+   * Subscribes to the supervisor's process lifecycle for this session, so the
+   * controller can push a crash surface to the renderer (STEP-23-04). Optional:
+   * an in-process test connection has no supervised process at all.
+   *
+   * Subscription happens *after* `connect` resolved, so the `spawning`/`ready`
+   * pair of the initial launch is deliberately not observed — by then the
+   * renderer already knows the session opened. What matters here is what comes
+   * later: `crashed`, `gave-up`, `exited`.
+   */
+  readonly onSupervisorEvent?: (listener: (event: SupervisorEvent) => void) => () => void;
 }
 
 /**
@@ -103,7 +117,22 @@ export const MOCK_DEMO_SCENARIO = {
   name: 'chat-demo',
   sessionId: 'mock-chat-session',
   stopReason: 'end_turn',
+  // Advertised session modes, so the composer's mode selector (STEP-23-04) is
+  // reachable by hand. These mirror Pi's thinking levels — the spike measured
+  // that Pi exposes exactly this as ACP session modes.
+  initialize: { modes: ['off', 'low', 'medium', 'high', 'xhigh'] },
   directives: [
+    // Advertised first so the slash menu has something in it before the user
+    // types. Pi advertises mid-session, which this also exercises: the menu is
+    // populated by a `session/update`, never by hardcoded UI.
+    {
+      type: 'advertise_commands',
+      commands: [
+        { name: 'review', description: 'Review the working tree' },
+        { name: 'test', description: 'Run the test suite' },
+        { name: 'explain', description: 'Explain the current file' },
+      ],
+    },
     {
       type: 'emit_chunks',
       channel: 'thought',
@@ -248,6 +277,9 @@ export const defaultChatConnect: ChatConnectFn = async (target, ports) => {
   return {
     connection,
     harness,
+    onSupervisorEvent: (listener) =>
+      // The supervisor is per-session (one handle), so no id filtering is needed.
+      supervisor.onEvent(listener),
     cleanup: async () => {
       connection.close();
       await supervisor.dispose(handleId);
@@ -264,6 +296,14 @@ interface SessionState {
   readonly permissions: ChatPermissionHost;
   /** In-memory audit stream. Phase 24 swaps the sink for events.jsonl. */
   readonly events: SessionEvent[];
+  /**
+   * Mode ids the agent advertised at `session/new`. Empty when it advertised
+   * none, which also means "reject every set-mode" — an agent with no modes has
+   * no mode to switch to.
+   */
+  readonly modeIds: ReadonlySet<string>;
+  /** Unsubscribes the supervisor listener on dispose. */
+  readonly unsubscribeStatus: () => void;
 }
 
 export interface ChatSessionControllerOptions {
@@ -273,6 +313,8 @@ export interface ChatSessionControllerOptions {
   readonly onUpdate: (event: ChatSessionUpdateEvent) => void;
   /** Receives output chunks from client-created terminals, keyed by chat handle. */
   readonly onTerminalOutput?: (event: ChatTerminalOutputEvent) => void;
+  /** Receives agent *process* lifecycle transitions (the crash surface). */
+  readonly onStatus?: (event: ChatSessionStatusEvent) => void;
   /**
    * Pushes a permission prompt to the renderer. MUST return `false` when there
    * is no live window — an undeliverable prompt is answered `cancelled` rather
@@ -287,6 +329,84 @@ export interface ChatSessionControllerOptions {
   readonly createClientServices?: typeof createChatClientServices;
   /** Permission prompt deadline. Injected in tests. */
   readonly permissionDeadlineMs?: number;
+}
+
+/**
+ * Maps one `SupervisorEvent` onto the renderer-facing status push
+ * (STEP-23-04). Exported for direct unit testing — the crash surface is the
+ * hardest path to reproduce by hand, so its mapping must be provable without a
+ * dying process.
+ *
+ * `reaped` is not in the union we push: it means *we* killed the process (End
+ * session / idle reap), which the renderer already knows about and must never
+ * see as a failure banner.
+ *
+ * `gave-up` carries no `ExitInfo` of its own — it always follows the `crashed`
+ * event that exhausted the restart budget — so the caller threads the last
+ * crash's stderr tail through `lastStderrTail`.
+ */
+export function supervisorEventToStatus(
+  sessionId: string,
+  event: SupervisorEvent,
+  lastStderrTail: string,
+): ChatSessionStatusEvent | null {
+  switch (event.kind) {
+    case 'spawning':
+      return { sessionId, status: 'spawning' };
+    case 'ready':
+      return { sessionId, status: 'ready' };
+    case 'crashed':
+      return {
+        sessionId,
+        status: 'crashed',
+        stderrTail: event.info.stderrTail,
+        exitCode: event.info.code,
+        message:
+          event.info.signal !== null
+            ? `Agent process died on ${event.info.signal}`
+            : `Agent process exited with code ${String(event.info.code)}`,
+      };
+    case 'gave-up':
+      return {
+        sessionId,
+        status: 'gave-up',
+        ...(lastStderrTail !== '' ? { stderrTail: lastStderrTail } : {}),
+        message: `Agent kept crashing and was not restarted (${event.restarts} attempts)`,
+      };
+    case 'exited':
+      // Only a *clean* self-exit reaches here: the supervisor routes reaped and
+      // crashed exits to their own events.
+      return {
+        sessionId,
+        status: 'exited',
+        exitCode: event.info.code,
+        message: 'Agent process exited',
+      };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Reads the `modes` block off a `session/new` response, tolerantly (ARCH-0009):
+ * an agent that advertises nothing, or advertises something malformed, yields
+ * `undefined` — which the renderer reads as "no mode selector at all" rather
+ * than as an empty broken dropdown.
+ */
+function readModes(response: unknown): ChatSessionModes | undefined {
+  const modes = (response as { modes?: unknown })?.modes;
+  if (typeof modes !== 'object' || modes === null) return undefined;
+  const { currentModeId, availableModes } = modes as {
+    currentModeId?: unknown;
+    availableModes?: unknown;
+  };
+  if (typeof currentModeId !== 'string' || !Array.isArray(availableModes)) return undefined;
+  const parsed = availableModes.flatMap((mode) => {
+    const { id, name } = (mode ?? {}) as { id?: unknown; name?: unknown };
+    if (typeof id !== 'string' || id === '') return [];
+    return [{ id, name: typeof name === 'string' && name !== '' ? name : id }];
+  });
+  return parsed.length > 0 ? { currentModeId, availableModes: parsed } : undefined;
 }
 
 function toError(cause: unknown): Error {
@@ -355,17 +475,37 @@ export class ChatSessionController {
       // method only appears when there is something to authorize the write.
       authorizeWrite: (path) => permissions.authorizeWrite(path),
     });
-    const { connection, harness, cleanup } = await this.connect(target, {
+    const { connection, harness, cleanup, onSupervisorEvent } = await this.connect(target, {
       permission: permissions.port,
       fs: services.fs,
       terminal: services.terminal,
     });
     protocolVersion = Number(connection.capabilities.protocolVersion ?? 0);
+    // `gave-up` reports only a restart count, so the tail of the crash that
+    // exhausted the budget is remembered here and threaded into it.
+    let lastStderrTail = '';
+    const unsubscribeStatus =
+      onSupervisorEvent?.((event) => {
+        if (event.kind === 'crashed') lastStderrTail = event.info.stderrTail;
+        const status = supervisorEventToStatus(handle, event, lastStderrTail);
+        if (status === null) return;
+        append('client/agent_status', { ...status });
+        this.options.onStatus?.(status);
+        // A dead agent cannot answer anything it is still blocked on. Releasing
+        // here (rather than waiting for dispose) is what keeps a crash from
+        // leaving a permission prompt on screen with nobody listening.
+        if (status.status !== 'spawning' && status.status !== 'ready') {
+          permissions.cancelAll('cancelled');
+        }
+      }) ?? (() => {});
     let acpSessionId: string;
+    let modes: ChatSessionModes | undefined;
     try {
       const result = await Effect.runPromise(connection.newSession({ cwd, mcpServers: [] }));
       acpSessionId = result.sessionId;
+      modes = readModes(result);
     } catch (cause) {
+      unsubscribeStatus();
       // The connection is live but unusable — tear the process down here so a
       // failed `session/new` (e.g. Pi missing → SpawnFailed) can never leak a
       // supervised child with no handle to dispose it by.
@@ -382,7 +522,17 @@ export class ChatSessionController {
         /* the iterator ends when the connection closes; not an error here */
       }
     })();
-    this.sessions.set(handle, { connection, cleanup, acpSessionId, pump, services, permissions, events });
+    this.sessions.set(handle, {
+      connection,
+      cleanup,
+      acpSessionId,
+      pump,
+      services,
+      permissions,
+      events,
+      modeIds: new Set(modes?.availableModes.map((mode) => mode.id) ?? []),
+      unsubscribeStatus,
+    });
     append('client/session_created', { target, harnessId: harness.id, cwd });
     return {
       sessionId: handle,
@@ -391,7 +541,26 @@ export class ChatSessionController {
       harnessName: harness.name,
       quirks: [...harness.quirks],
       capabilities: connection.capabilities as unknown as Record<string, unknown>,
+      ...(modes !== undefined ? { modes } : {}),
     };
+  }
+
+  /**
+   * `session/set_mode`. An unknown `modeId` is rejected *here*, before any ACP
+   * call: agents differ wildly in how they handle a bogus mode (Pi's adapter
+   * would happily take one), and a silent no-op would leave the selector showing
+   * a mode the agent is not in.
+   */
+  async setMode(handle: string, modeId: string): Promise<ChatSessionSetModeResponse> {
+    const state = this.require(handle);
+    if (!state.modeIds.has(modeId)) {
+      throw new Error(`Unknown session mode '${modeId}'`);
+    }
+    const outcome = await Effect.runPromise(
+      Effect.either(state.connection.setMode({ sessionId: state.acpSessionId, modeId })),
+    );
+    if (outcome._tag === 'Left') throw toError(outcome.left);
+    return { ok: true, currentModeId: modeId };
   }
 
   /** One prompt turn; resolves with the stop reason. Throws on turn failure. */
@@ -441,6 +610,9 @@ export class ChatSessionController {
     const state = this.sessions.get(handle);
     if (state === undefined) return;
     this.sessions.delete(handle);
+    // Before the kill-tree: the reap would otherwise be reported as a status
+    // transition for a session the renderer has already forgotten.
+    state.unsubscribeStatus();
     // Release anything the agent is still blocked on before killing it, and drop
     // the session's remembered `*_always` answers — memory is per-session and
     // must die with it.

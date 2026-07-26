@@ -27,6 +27,19 @@ export type ChatTarget = 'mock' | 'pi';
 
 export type ChatStatus = 'idle' | 'connecting' | 'ready' | 'prompting' | 'cancelling' | 'error';
 
+export interface ChatSessionMode {
+  readonly id: string;
+  readonly name: string;
+}
+
+/** Agent *process* lifecycle, as pushed over `chat:session:status`. */
+export interface ChatAgentStatus {
+  readonly status: 'spawning' | 'ready' | 'crashed' | 'gave-up' | 'exited';
+  readonly stderrTail?: string;
+  readonly exitCode?: number | null;
+  readonly message?: string;
+}
+
 export interface ChatSessionInfo {
   readonly sessionId: string;
   readonly target: ChatTarget;
@@ -34,6 +47,14 @@ export interface ChatSessionInfo {
   readonly harnessName: string;
   readonly quirks: readonly string[];
   readonly capabilities: Record<string, unknown>;
+  /**
+   * Modes the agent advertised at `session/new`, or `null` when it advertised
+   * none. `null` means "no mode selector" — never an empty dropdown.
+   */
+  readonly modes: {
+    readonly currentModeId: string;
+    readonly availableModes: readonly ChatSessionMode[];
+  } | null;
 }
 
 export interface ChatSessionContextValue {
@@ -43,8 +64,20 @@ export interface ChatSessionContextValue {
   readonly transcript: TranscriptState;
   /** Permission requests the agent is currently blocked on, oldest first. */
   readonly permissions: readonly PendingPermission[];
+  /**
+   * The mode the session is actually in: the agent's `current_mode_update` wins
+   * over what was advertised at `session/new`, so an agent-initiated switch is
+   * reflected without the user touching anything.
+   */
+  readonly currentModeId: string | null;
+  /** Latest agent-process status. `null` until the process says otherwise. */
+  readonly agentStatus: ChatAgentStatus | null;
+  /** Stop reason of the last completed turn, for the end-of-turn notice. */
+  readonly lastStopReason: string | null;
   readonly newSession: (target: ChatTarget) => Promise<void>;
-  readonly sendPrompt: (text: string) => Promise<void>;
+  /** Resolves `true` when the turn ran; `false` when it failed (draft is kept). */
+  readonly sendPrompt: (text: string) => Promise<boolean>;
+  readonly setMode: (modeId: string) => Promise<void>;
   readonly cancel: () => Promise<void>;
   readonly dispose: () => Promise<void>;
   readonly respondToPermission: (requestId: string, optionId: string | undefined) => void;
@@ -73,6 +106,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const [error, setError] = React.useState<string | null>(null);
   const [transcript, dispatch] = React.useReducer(transcriptReducer, initialTranscriptState);
   const [permissions, setPermissions] = React.useState<readonly PendingPermission[]>([]);
+  const [agentStatus, setAgentStatus] = React.useState<ChatAgentStatus | null>(null);
+  const [lastStopReason, setLastStopReason] = React.useState<string | null>(null);
 
   // The subscription is installed once and filters on a ref, so re-subscribing
   // per session (and racing the frames that arrive during the swap) is avoided.
@@ -160,6 +195,17 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     };
   }, []);
 
+  // Process lifecycle (STEP-23-04). Not batched with transcript frames: a crash
+  // must reach the user immediately, and there may be no further frames at all.
+  React.useEffect(() => {
+    if (typeof window.srgnt?.onChatSessionStatus !== 'function') return;
+    return window.srgnt.onChatSessionStatus((event) => {
+      if (event.sessionId !== sessionIdRef.current) return;
+      const { sessionId: _sessionId, ...status } = event;
+      setAgentStatus(status);
+    });
+  }, []);
+
   const respondToPermission = React.useCallback((requestId: string, optionId: string | undefined) => {
     const current = sessionIdRef.current;
     if (current === null) return;
@@ -184,6 +230,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
         .map((entry) => entry.request);
       earlyPermissions.current = [];
       setPermissions(held);
+      setAgentStatus(null);
+      setLastStopReason(null);
       setSession({
         sessionId: result.sessionId,
         target: result.target,
@@ -191,6 +239,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
         harnessName: result.harnessName,
         quirks: result.quirks,
         capabilities: result.capabilities,
+        modes: result.modes ?? null,
       });
       setStatus('ready');
     } catch (cause) {
@@ -204,15 +253,19 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   }, []);
 
   const sendPrompt = React.useCallback(
-    async (text: string) => {
+    async (text: string): Promise<boolean> => {
       const current = sessionIdRef.current;
-      if (current === null || text.trim() === '') return;
+      if (current === null || text.trim() === '') return false;
       setError(null);
+      setLastStopReason(null);
       setStatus('prompting');
       dispatch({ type: 'user_prompt', text });
+      let ok = false;
       try {
-        await window.srgnt.chatSessionPrompt(current, text);
+        const result = await window.srgnt.chatSessionPrompt(current, text);
+        setLastStopReason(result.stopReason);
         setStatus('ready');
+        ok = true;
       } catch (cause) {
         setStatus('error');
         setError(messageOf(cause));
@@ -222,9 +275,27 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
         flush();
         dispatch({ type: 'close_open' });
       }
+      return ok;
     },
     [flush],
   );
+
+  const setMode = React.useCallback(async (modeId: string) => {
+    const current = sessionIdRef.current;
+    if (current === null || typeof window.srgnt?.chatSessionSetMode !== 'function') return;
+    try {
+      const result = await window.srgnt.chatSessionSetMode(current, modeId);
+      // Reflect what the agent accepted, not what was clicked. The reducer's
+      // `current_mode_update` is the other (agent-initiated) path into the same
+      // field, so both converge on one source of truth.
+      dispatch({
+        type: 'update',
+        notification: { sessionUpdate: 'current_mode_update', currentModeId: result.currentModeId },
+      });
+    } catch (cause) {
+      setError(messageOf(cause));
+    }
+  }, []);
 
   const cancel = React.useCallback(async () => {
     const current = sessionIdRef.current;
@@ -255,6 +326,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       setError(null);
       dispatch({ type: 'reset' });
       setPermissions([]);
+      setAgentStatus(null);
+      setLastStopReason(null);
     } catch (cause) {
       // Keep the handle so the user can retry: forgetting it here would strand
       // the agent process with no way to dispose it before app quit.
@@ -272,8 +345,12 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       error,
       transcript,
       permissions,
+      currentModeId: transcript.currentModeId ?? session?.modes?.currentModeId ?? null,
+      agentStatus,
+      lastStopReason,
       newSession,
       sendPrompt,
+      setMode,
       cancel,
       dispose,
       respondToPermission,
@@ -285,8 +362,11 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       error,
       transcript,
       permissions,
+      agentStatus,
+      lastStopReason,
       newSession,
       sendPrompt,
+      setMode,
       cancel,
       dispose,
       respondToPermission,

@@ -23,6 +23,7 @@ const chatChannels = [
   ipcChannels.chatSessionPrompt,
   ipcChannels.chatSessionCancel,
   ipcChannels.chatSessionDispose,
+  ipcChannels.chatSessionSetMode,
 ];
 
 function fakeController() {
@@ -36,6 +37,7 @@ function fakeController() {
       capabilities: {},
     })),
     prompt: vi.fn(async () => ({ stopReason: 'end_turn' })),
+    setMode: vi.fn(async (_handle: string, modeId: string) => ({ ok: true as const, currentModeId: modeId })),
     cancel: vi.fn(async () => {}),
     dispose: vi.fn(async () => {}),
     disposeAll: vi.fn(async () => {}),
@@ -139,6 +141,7 @@ describe('registerChatHandlers', () => {
 
     options!.onUpdate({ sessionId: 'chat-x-1', update: { sessionUpdate: 'tool_call' } });
     options!.onTerminalOutput({ sessionId: 'chat-x-1', terminalId: 'chat-term-1', chunk: 'out\r\n' });
+    options!.onStatus({ sessionId: 'chat-x-1', status: 'crashed' });
 
     expect(sent).toEqual([
       {
@@ -149,7 +152,31 @@ describe('registerChatHandlers', () => {
         channel: ipcChannels.chatTerminalOutput,
         payload: { sessionId: 'chat-x-1', terminalId: 'chat-term-1', chunk: 'out\r\n' },
       },
+      {
+        channel: ipcChannels.chatSessionStatus,
+        payload: { sessionId: 'chat-x-1', status: 'crashed' },
+      },
     ]);
+  });
+
+  it('routes a set-mode call and rejects a malformed one', async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await expect(
+      handlers.get(ipcChannels.chatSessionSetMode)!({}, { sessionId: 'chat-x-1', modeId: 'xhigh' }),
+    ).resolves.toEqual({ ok: true, currentModeId: 'xhigh' });
+    expect(controller.setMode).toHaveBeenCalledWith('chat-x-1', 'xhigh');
+
+    // A payload missing `modeId` must never reach the controller: an untyped
+    // set-mode is exactly the `Schema.Unknown` escape hatch this step forbids.
+    await expect(
+      handlers.get(ipcChannels.chatSessionSetMode)!({}, { sessionId: 'chat-x-1' }),
+    ).rejects.toThrow();
+    expect(controller.setMode).toHaveBeenCalledTimes(1);
   });
 
   it('routes a permission answer to the controller', async () => {

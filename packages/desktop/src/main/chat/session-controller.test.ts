@@ -168,6 +168,9 @@ describe('built-in mock demo scenario', () => {
     const types = MOCK_DEMO_SCENARIO.directives.map((directive) => directive.type);
     expect(types).toContain('plan');
     expect(types).toContain('use_terminal');
+    // The manual `pnpm dev` path for the permission prompt: Pi never sends this,
+    // so without it the prompt is unreachable by hand.
+    expect(types).toContain('request_permission');
     const contents = MOCK_DEMO_SCENARIO.directives.flatMap((directive) =>
       'content' in directive ? (directive.content as readonly { type: string }[]) : [],
     );
@@ -285,7 +288,7 @@ describe('ChatSessionController — client services (STEP-23-02)', () => {
     await controller.dispose(session.sessionId);
   });
 
-  it('advertises fs read but NOT fs write before the permission engine lands', async () => {
+  it('advertises fs read and — since the permission engine landed — fs write', async () => {
     let captured: ClientPorts | undefined;
     const capturingConnect: ChatConnectFn = async (_target, ports) => {
       captured = ports;
@@ -303,7 +306,9 @@ describe('ChatSessionController — client services (STEP-23-02)', () => {
     });
     const session = await controller.newSession('mock');
     expect(captured?.fs?.readTextFile).toBeTypeOf('function');
-    expect(captured?.fs?.writeTextFile).toBeUndefined();
+    // STEP-23-03: present now, because every write goes through a default-ask
+    // permission round-trip. See permissions.test.ts for the refusal path.
+    expect(captured?.fs?.writeTextFile).toBeTypeOf('function');
     expect(captured?.terminal).toBeDefined();
     await controller.dispose(session.sessionId);
   });

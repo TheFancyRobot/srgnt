@@ -5,17 +5,22 @@ contract_version: 1
 title: Wire permission engine round-trips into default-ask prompt UI
 step_id: STEP-23-03
 phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-07-26'
 depends_on:
   - STEP-23-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-26-062041-wire-permission-engine-round-trips-into-default-ask-prompt-ui-claude-opus-5|SESSION-2026-07-26-062041 claude-opus-5 session for Wire permission engine round-trips into default-ask prompt UI]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-26-062041
+active_session_id: 05_Sessions/2026-07-26-062041-wire-permission-engine-round-trips-into-default-ask-prompt-ui-claude-opus-5
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round-trips into default-ask prompt UI]].
 ---
 
 # Step 03 - Wire permission engine round-trips into default-ask prompt UI
@@ -80,10 +85,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui/Validation_Plan|Validation Plan]].
+- Status: complete
+- Current owner: claude-opus-5
+- Last touched: 2026-07-26
+- Next action: None for this step. Proceed to [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces|STEP-23-04 Build composer with slash commands, modes, cancel and error surfaces]]; its cancel path must dismiss any pending permission prompt (the controller already releases them).
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -98,10 +103,13 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-26 - [[05_Sessions/2026-07-26-062041-wire-permission-engine-round-trips-into-default-ask-prompt-ui-claude-opus-5|SESSION-2026-07-26-062041 claude-opus-5 session for Wire permission engine round-trips into default-ask prompt UI]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- **Complete.** Both deliverables shipped: real `session/request_permission` round-trips through a default-ask engine with a blocking renderer prompt, and a quirk-driven self-approving trust badge for harnesses (Pi) that never send the request. See [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui/Outcome|Outcome]] for detail.
+- Engine: `packages/runtime/src/permissions/engine.ts` (pure). Port + pending map + deadline + audit: `packages/desktop/src/main/chat/permissions.ts`. UI: `PermissionPrompt.tsx`, `TrustBadge.tsx`. IPC: `chat:permission:request|respond|close`.
+- Carry-forwards discharged: `autoApprovePermission` replaced for chat sessions (dev console keeps its own); `fs/write_text_file` now exists via `authorizeWrite`; `client/fs_*` kinds added to `knownSessionEventKinds`.
+- Validation: runtime 300, contracts 148, desktop 989, harness 113 tests — all pass; `pnpm -r lint` clean; real spawned-mock smoke reached `end_turn` with one prompt answered and the decision in the audit stream.
+- Follow-up: live Pi confirmation not run (needs `npx pi-acp` + credentials; DEC-0018 probe 1 already measured 0 round-trips). STEP-23-05 should add `kind`/`locations` to the mock's `request_permission` directive.

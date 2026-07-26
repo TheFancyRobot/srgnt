@@ -53,6 +53,13 @@ export const knownSessionEventKinds = [
   'client/stop',
   'client/permission_request',
   'client/permission_decision',
+  // Client-service audit surface (STEP-23-02 emitted these, STEP-23-03 formalizes
+  // them). They belong in the shared vocabulary for the same reason the
+  // permission kinds do: what the agent read, wrote, and was refused is part of
+  // the same trust record, and Phase 24 persists one stream, not two.
+  'client/fs_read_text_file',
+  'client/fs_write_text_file',
+  'client/fs_denied',
   'client/session_closed',
 ] as const;
 export type KnownSessionEventKind = (typeof knownSessionEventKinds)[number];

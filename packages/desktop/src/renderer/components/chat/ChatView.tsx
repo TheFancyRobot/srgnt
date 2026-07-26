@@ -1,5 +1,7 @@
 import React from 'react';
 import { MessageList } from './MessageList.js';
+import { PermissionPrompt } from './PermissionPrompt.js';
+import { TrustBadge } from './TrustBadge.js';
 import { useChatSession, type ChatTarget } from './ChatSessionContext.js';
 
 /**
@@ -35,8 +37,19 @@ function EmptyState({ hasSession }: { readonly hasSession: boolean }): React.Rea
 }
 
 export function ChatView(): React.ReactElement {
-  const { session, status, error, transcript, newSession, sendPrompt, cancel, dispose, dismissError } =
-    useChatSession();
+  const {
+    session,
+    status,
+    error,
+    transcript,
+    permissions,
+    newSession,
+    sendPrompt,
+    cancel,
+    dispose,
+    respondToPermission,
+    dismissError,
+  } = useChatSession();
   const [target, setTarget] = React.useState<ChatTarget>('mock');
   const [draft, setDraft] = React.useState('');
 
@@ -87,6 +100,7 @@ export function ChatView(): React.ReactElement {
                   {session.quirks.length} quirk{session.quirks.length === 1 ? '' : 's'}
                 </span>
               )}
+              <TrustBadge quirks={session.quirks} />
             </span>
           ) : (
             <label className="chat-header-target">
@@ -152,6 +166,10 @@ export function ChatView(): React.ReactElement {
       )}
 
       <MessageList segments={transcript.segments} emptyState={<EmptyState hasSession={hasSession} />} />
+
+      {/* Between transcript and composer: the turn cannot advance until it is
+          answered, so it sits where the user's attention already is. */}
+      <PermissionPrompt requests={permissions} onRespond={respondToPermission} />
 
       <div className="chat-composer">
         <textarea

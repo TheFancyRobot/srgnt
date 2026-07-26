@@ -2,6 +2,7 @@ import { ipcMain, type BrowserWindow } from 'electron';
 import {
   ipcChannels,
   parseSync,
+  SChatPermissionResponse,
   SChatSessionNewRequest,
   SChatSessionPromptRequest,
   SChatSessionRef,
@@ -25,6 +26,8 @@ export interface ChatWiring {
   readonly createController?: (options: {
     onUpdate: (event: { sessionId: string; update: unknown }) => void;
     onTerminalOutput: (event: { sessionId: string; terminalId: string; chunk: string }) => void;
+    onPermissionRequest: (event: { sessionId: string; requestId: string }) => boolean;
+    onPermissionClose: (event: { sessionId: string; requestId: string; reason: string }) => void;
     getCwd?: () => string | undefined;
   }) => ChatSessionController;
 }
@@ -44,6 +47,14 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
       push(wiring, ipcChannels.chatSessionUpdate, event),
     onTerminalOutput: (event: { sessionId: string; terminalId: string; chunk: string }) =>
       push(wiring, ipcChannels.chatTerminalOutput, event),
+    // Returns whether the prompt was actually delivered: with no live window
+    // there is nobody to ask, and the controller answers the agent `cancelled`
+    // instead of blocking it on a prompt that will never be shown.
+    onPermissionRequest: (event: { sessionId: string; requestId: string }) =>
+      push(wiring, ipcChannels.chatPermissionRequest, event),
+    onPermissionClose: (event: { sessionId: string; requestId: string; reason: string }) => {
+      push(wiring, ipcChannels.chatPermissionClose, event);
+    },
     ...(wiring.getCwd !== undefined ? { getCwd: wiring.getCwd } : {}),
   };
 
@@ -81,6 +92,15 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
     await (await getController()).dispose(sessionId);
   });
 
+  ipcMain.handle(ipcChannels.chatPermissionRespond, async (_event, payload: unknown) => {
+    const { sessionId, requestId, optionId } = parseSync(SChatPermissionResponse, payload);
+    // No `getController()`: a response can only exist because a controller
+    // already asked, so constructing one here would be answering a question
+    // nobody posed.
+    if (controllerPromise === undefined) return;
+    (await controllerPromise).respondToPermission(sessionId, requestId, optionId);
+  });
+
   // Teardown: only tear down if a controller was ever constructed (an app where
   // no session was ever opened has nothing to dispose).
   return async () => {
@@ -90,8 +110,10 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
   };
 }
 
-function push(wiring: ChatWiring, channel: string, payload: unknown): void {
+/** Returns whether a live window actually received the frame. */
+function push(wiring: ChatWiring, channel: string, payload: unknown): boolean {
   const window = wiring.getWindow();
-  if (window === null || window.isDestroyed()) return;
+  if (window === null || window.isDestroyed()) return false;
   window.webContents.send(channel, payload);
+  return true;
 }

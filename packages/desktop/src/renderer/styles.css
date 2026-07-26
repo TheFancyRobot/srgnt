@@ -1663,6 +1663,82 @@
   cursor: pointer;
 }
 
+/* Permission surface (STEP-23-03). */
+
+.chat-trust-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-secondary);
+  cursor: help;
+}
+
+.chat-permissions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 16px 8px;
+}
+
+.chat-permission {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  /* Deliberately the strongest border in the panel: the turn is blocked here. */
+  border: 1px solid var(--color-border-brand);
+  background: var(--color-surface-secondary);
+}
+
+.chat-permission-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.chat-permission-kind {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--color-border-brand);
+  background: var(--color-surface-brand);
+  color: var(--color-text-brand);
+}
+
+.chat-permission-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.chat-permission-detail {
+  margin: 0;
+  padding: 6px 8px;
+  max-height: 140px;
+  overflow: auto;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border-radius: 6px;
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.chat-permission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-permission-cancel {
+  margin-left: auto;
+}
+
 .chat-transcript {
   flex: 1;
   min-height: 0;

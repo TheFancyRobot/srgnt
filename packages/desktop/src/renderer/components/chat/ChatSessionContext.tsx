@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatTerminalProvider } from './ChatTerminalContext.js';
+import type { PendingPermission } from './PermissionPrompt.js';
 import {
   initialTranscriptState,
   transcriptReducer,
@@ -40,10 +41,13 @@ export interface ChatSessionContextValue {
   readonly status: ChatStatus;
   readonly error: string | null;
   readonly transcript: TranscriptState;
+  /** Permission requests the agent is currently blocked on, oldest first. */
+  readonly permissions: readonly PendingPermission[];
   readonly newSession: (target: ChatTarget) => Promise<void>;
   readonly sendPrompt: (text: string) => Promise<void>;
   readonly cancel: () => Promise<void>;
   readonly dispose: () => Promise<void>;
+  readonly respondToPermission: (requestId: string, optionId: string | undefined) => void;
   readonly dismissError: () => void;
 }
 
@@ -68,12 +72,20 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const [status, setStatus] = React.useState<ChatStatus>('idle');
   const [error, setError] = React.useState<string | null>(null);
   const [transcript, dispatch] = React.useReducer(transcriptReducer, initialTranscriptState);
+  const [permissions, setPermissions] = React.useState<readonly PendingPermission[]>([]);
 
   // The subscription is installed once and filters on a ref, so re-subscribing
   // per session (and racing the frames that arrive during the swap) is avoided.
   const sessionIdRef = React.useRef<string | null>(null);
   const pending = React.useRef<unknown[]>([]);
   const cancelFlush = React.useRef<(() => void) | null>(null);
+  /**
+   * Prompts that arrived before their session handle was known. An agent may
+   * ask for permission during `initialize` or `session/new`, while
+   * `chatSessionNew` has not returned yet — main counts that push as delivered,
+   * so discarding it would block the agent for the full permission deadline.
+   */
+  const earlyPermissions = React.useRef<{ sessionId: string; request: PendingPermission }[]>([]);
 
   React.useEffect(() => {
     sessionIdRef.current = session?.sessionId ?? null;
@@ -110,6 +122,53 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     };
   }, [flush]);
 
+  // Permission prompts are NOT batched into the rAF flush: the agent's turn is
+  // blocked on each one, so a frame of latency buys nothing and dropping one
+  // into a batch that a `reset` later clears would strand the agent.
+  React.useEffect(() => {
+    if (typeof window.srgnt?.onChatPermissionRequest !== 'function') return;
+    const unsubscribeRequest = window.srgnt.onChatPermissionRequest((event) => {
+      const request = { ...event, paths: [...event.paths], options: [...event.options] };
+      if (event.sessionId !== sessionIdRef.current) {
+        // Not this session's — but it may be the session still being created.
+        // Hold it until `newSession` learns the handle; capped because an
+        // unmatched id would otherwise accumulate forever.
+        earlyPermissions.current = [
+          ...earlyPermissions.current.filter((held) => held.request.requestId !== event.requestId),
+          { sessionId: event.sessionId, request },
+        ].slice(-20);
+        return;
+      }
+      setPermissions((current) =>
+        // The agent may re-send on reconnect; ids are the identity, not order.
+        current.some((pending) => pending.requestId === event.requestId) ? current : [...current, request],
+      );
+    });
+    // Main resolved it without us (turn cancel, deadline, dispose): the prompt
+    // is already answered, so leaving it on screen would let the user "decide"
+    // something nobody is listening for.
+    const unsubscribeClose = window.srgnt.onChatPermissionClose?.((event) => {
+      earlyPermissions.current = earlyPermissions.current.filter(
+        (held) => held.request.requestId !== event.requestId,
+      );
+      if (event.sessionId !== sessionIdRef.current) return;
+      setPermissions((current) => current.filter((pending) => pending.requestId !== event.requestId));
+    });
+    return () => {
+      unsubscribeRequest();
+      unsubscribeClose?.();
+    };
+  }, []);
+
+  const respondToPermission = React.useCallback((requestId: string, optionId: string | undefined) => {
+    const current = sessionIdRef.current;
+    if (current === null) return;
+    // Optimistic removal: the main process treats a late or duplicate response
+    // as unknown and drops it, so a double-click cannot answer twice.
+    setPermissions((pending) => pending.filter((request) => request.requestId !== requestId));
+    void window.srgnt.chatPermissionRespond(current, requestId, optionId);
+  }, []);
+
   const newSession = React.useCallback(async (target: ChatTarget) => {
     setError(null);
     setStatus('connecting');
@@ -118,6 +177,13 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       pending.current = [];
       sessionIdRef.current = result.sessionId;
       dispatch({ type: 'reset' });
+      // Adopt anything the agent asked during startup; drop the rest, which
+      // belonged to sessions that never became this one.
+      const held = earlyPermissions.current
+        .filter((entry) => entry.sessionId === result.sessionId)
+        .map((entry) => entry.request);
+      earlyPermissions.current = [];
+      setPermissions(held);
       setSession({
         sessionId: result.sessionId,
         target: result.target,
@@ -188,6 +254,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       setStatus('idle');
       setError(null);
       dispatch({ type: 'reset' });
+      setPermissions([]);
     } catch (cause) {
       // Keep the handle so the user can retry: forgetting it here would strand
       // the agent process with no way to dispose it before app quit.
@@ -199,8 +266,32 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const dismissError = React.useCallback(() => setError(null), []);
 
   const value = React.useMemo<ChatSessionContextValue>(
-    () => ({ session, status, error, transcript, newSession, sendPrompt, cancel, dispose, dismissError }),
-    [session, status, error, transcript, newSession, sendPrompt, cancel, dispose, dismissError],
+    () => ({
+      session,
+      status,
+      error,
+      transcript,
+      permissions,
+      newSession,
+      sendPrompt,
+      cancel,
+      dispose,
+      respondToPermission,
+      dismissError,
+    }),
+    [
+      session,
+      status,
+      error,
+      transcript,
+      permissions,
+      newSession,
+      sendPrompt,
+      cancel,
+      dispose,
+      respondToPermission,
+      dismissError,
+    ],
   );
 
   return (

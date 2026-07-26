@@ -61,6 +61,13 @@ export const ipcChannels = {
   // Main→renderer push channel for output of terminals the *agent* created via
   // the client `terminal/*` services, so a tool card can embed them live.
   chatTerminalOutput: 'chat:terminal:output',
+  // Permission round-trip (STEP-23-03). `request` is pushed main→renderer when
+  // the engine resolves to `ask`; `respond` carries the user's choice back;
+  // `close` is pushed when main resolved the request WITHOUT the renderer (turn
+  // cancel, deadline expiry, session dispose) so the prompt cannot linger.
+  chatPermissionRequest: 'chat:permission:request',
+  chatPermissionRespond: 'chat:permission:respond',
+  chatPermissionClose: 'chat:permission:close',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -555,3 +562,56 @@ export const SChatTerminalOutputEvent = Schema.Struct({
   chunk: Schema.String,
 });
 export type ChatTerminalOutputEvent = Schema.Schema.Type<typeof SChatTerminalOutputEvent>;
+
+// Permission round-trip (STEP-23-03). Default-ask is an ARCH-0009 invariant, so
+// these carry the *decision surface* the user must see before answering: what
+// kind of tool, what it is about to touch, and every option the agent offered.
+
+/** One option the agent offered. `kind` is an open string: unknown kinds render as plain buttons. */
+export const SChatPermissionOption = Schema.Struct({
+  optionId: Schema.String,
+  name: Schema.String,
+  /** ACP hint (`allow_once` | `allow_always` | `reject_once` | `reject_always`), or anything else. */
+  kind: Schema.String,
+});
+export type ChatPermissionOption = Schema.Schema.Type<typeof SChatPermissionOption>;
+
+/** Main→renderer: the agent is blocked on this until `chat:permission:respond` arrives. */
+export const SChatPermissionRequestEvent = Schema.Struct({
+  /** The chat-local handle; the renderer filters on it. */
+  sessionId: Schema.String,
+  /** Client-assigned id the response routes by. Unique per session. */
+  requestId: Schema.String,
+  /** ACP `ToolKind`, or whatever the agent sent. */
+  kind: Schema.String,
+  title: Schema.String,
+  /** Paths the tool call declared it would touch, canonicalized where possible. */
+  paths: Schema.Array(Schema.String),
+  /** The command line for `execute` calls, when the agent disclosed one. */
+  command: Schema.optional(Schema.String),
+  options: Schema.Array(SChatPermissionOption),
+});
+export type ChatPermissionRequestEvent = Schema.Schema.Type<typeof SChatPermissionRequestEvent>;
+
+/**
+ * Renderer→main: the user's answer. An absent `optionId` is a cancel, which maps
+ * to ACP's `cancelled` outcome — never to a silent allow.
+ */
+export const SChatPermissionResponse = Schema.Struct({
+  sessionId: Schema.String,
+  requestId: Schema.String,
+  optionId: Schema.optional(Schema.String),
+});
+export type ChatPermissionResponse = Schema.Schema.Type<typeof SChatPermissionResponse>;
+
+/** Why a pending prompt was resolved without the user answering it. */
+export const SChatPermissionCloseReason = Schema.Literal('cancelled', 'expired', 'disposed');
+export type ChatPermissionCloseReason = Schema.Schema.Type<typeof SChatPermissionCloseReason>;
+
+/** Main→renderer: this prompt is already answered (by main); dismiss it. */
+export const SChatPermissionCloseEvent = Schema.Struct({
+  sessionId: Schema.String,
+  requestId: Schema.String,
+  reason: SChatPermissionCloseReason,
+});
+export type ChatPermissionCloseEvent = Schema.Schema.Type<typeof SChatPermissionCloseEvent>;

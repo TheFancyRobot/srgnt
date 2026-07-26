@@ -25,6 +25,9 @@ import {
   SSemanticSearchStatusRequest,
   SSemanticSearchStatusResponse,
   ipcChannels,
+  SChatPermissionCloseEvent,
+  SChatPermissionRequestEvent,
+  SChatPermissionResponse,
   SChatSessionNewRequest,
   SChatSessionNewResponse,
   SChatSessionPromptRequest,
@@ -473,6 +476,79 @@ describe('Chat session IPC (PHASE-23)', () => {
 
     it('rejects an update frame without a handle', () => {
       expect(() => parseSync(SChatSessionUpdateEvent, { update: {} })).toThrow();
+    });
+  });
+  describe('permission round-trip frames (STEP-23-03)', () => {
+    const request = {
+      sessionId: 'chat-mock-1',
+      requestId: 'chat-mock-1-perm-1',
+      kind: 'edit',
+      title: 'Edit answer.ts',
+      paths: ['/work/answer.ts'],
+      options: [
+        { optionId: 'a1', name: 'Allow once', kind: 'allow_once' },
+        { optionId: 'r1', name: 'Reject', kind: 'reject_once' },
+      ],
+    };
+
+    it('carries everything the user needs to judge the request', () => {
+      const parsed = parseSync(SChatPermissionRequestEvent, request);
+      expect(parsed.requestId).toBe('chat-mock-1-perm-1');
+      expect(parsed.paths).toEqual(['/work/answer.ts']);
+      expect(parsed.options).toHaveLength(2);
+    });
+
+    it('accepts an unknown option kind rather than dropping the option', () => {
+      // `kind` is an ACP *hint*; an agent may send anything, and the prompt must
+      // still render a working button for it.
+      const parsed = parseSync(SChatPermissionRequestEvent, {
+        ...request,
+        options: [{ optionId: 'x', name: 'Sure', kind: 'always_trust_me' }],
+      });
+      expect(parsed.options[0]!.kind).toBe('always_trust_me');
+    });
+
+    it('carries the command for execute calls', () => {
+      const parsed = parseSync(SChatPermissionRequestEvent, { ...request, kind: 'execute', command: 'rm -rf build' });
+      expect(parsed.command).toBe('rm -rf build');
+    });
+
+    it('rejects a request frame without a requestId — responses route by it', () => {
+      const { requestId: _dropped, ...withoutId } = request;
+      expect(() => parseSync(SChatPermissionRequestEvent, withoutId)).toThrow();
+    });
+
+    it('treats a response with no optionId as a cancel, not a malformed frame', () => {
+      const parsed = parseSync(SChatPermissionResponse, {
+        sessionId: 'chat-mock-1',
+        requestId: 'chat-mock-1-perm-1',
+      });
+      expect(parsed.optionId).toBeUndefined();
+    });
+
+    it('validates a selected response', () => {
+      expect(
+        parseSync(SChatPermissionResponse, {
+          sessionId: 'chat-mock-1',
+          requestId: 'chat-mock-1-perm-1',
+          optionId: 'a1',
+        }).optionId,
+      ).toBe('a1');
+    });
+
+    it('rejects a response missing the request it answers', () => {
+      expect(() => parseSync(SChatPermissionResponse, { sessionId: 'chat-mock-1' })).toThrow();
+    });
+
+    it('constrains the close reason to the three ways main can resolve a prompt', () => {
+      for (const reason of ['cancelled', 'expired', 'disposed']) {
+        expect(
+          parseSync(SChatPermissionCloseEvent, { sessionId: 'chat-mock-1', requestId: 'r1', reason }).reason,
+        ).toBe(reason);
+      }
+      expect(() =>
+        parseSync(SChatPermissionCloseEvent, { sessionId: 'chat-mock-1', requestId: 'r1', reason: 'because' }),
+      ).toThrow();
     });
   });
 });

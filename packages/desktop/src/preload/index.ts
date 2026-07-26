@@ -61,6 +61,9 @@ const ipcChannels = {
   chatSessionDispose: 'chat:session:dispose',
   chatSessionUpdate: 'chat:session:update',
   chatTerminalOutput: 'chat:terminal:output',
+  chatPermissionRequest: 'chat:permission:request',
+  chatPermissionRespond: 'chat:permission:respond',
+  chatPermissionClose: 'chat:permission:close',
 } as const;
 
 const api = {
@@ -239,6 +242,52 @@ const api = {
     ipcRenderer.on(ipcChannels.chatTerminalOutput, handler);
     return () => ipcRenderer.removeListener(ipcChannels.chatTerminalOutput, handler);
   },
+
+  /**
+   * Permission round-trip (STEP-23-03). The agent's turn is blocked on the
+   * matching `chatPermissionRespond` call, so a listener that drops one of these
+   * leaves an agent waiting until the main-process deadline fires.
+   */
+  onChatPermissionRequest: (
+    callback: (event: {
+      sessionId: string;
+      requestId: string;
+      kind: string;
+      title: string;
+      paths: readonly string[];
+      command?: string;
+      options: readonly { optionId: string; name: string; kind: string }[];
+    }) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: {
+        sessionId: string;
+        requestId: string;
+        kind: string;
+        title: string;
+        paths: readonly string[];
+        command?: string;
+        options: readonly { optionId: string; name: string; kind: string }[];
+      },
+    ) => callback(payload);
+    ipcRenderer.on(ipcChannels.chatPermissionRequest, handler);
+    return () => ipcRenderer.removeListener(ipcChannels.chatPermissionRequest, handler);
+  },
+  /** Main already resolved this prompt (turn cancel, deadline, dispose): dismiss it. */
+  onChatPermissionClose: (
+    callback: (event: { sessionId: string; requestId: string; reason: string }) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: { sessionId: string; requestId: string; reason: string },
+    ) => callback(payload);
+    ipcRenderer.on(ipcChannels.chatPermissionClose, handler);
+    return () => ipcRenderer.removeListener(ipcChannels.chatPermissionClose, handler);
+  },
+  /** Omit `optionId` to cancel — it maps to ACP `cancelled`, never a silent allow. */
+  chatPermissionRespond: (sessionId: string, requestId: string, optionId?: string): Promise<void> =>
+    ipcRenderer.invoke(ipcChannels.chatPermissionRespond, { sessionId, requestId, optionId }),
 
   platform: process.platform,
 };

@@ -124,6 +124,24 @@ export interface SrgntAPI {
   onChatTerminalOutput(
     callback: (event: { sessionId: string; terminalId: string; chunk: string }) => void,
   ): () => void;
+  // Permission round-trip (STEP-23-03). Optional because the provider mounts in
+  // renders backed by an older preload, where a missing bridge must degrade to
+  // "no prompts" rather than crashing the panel.
+  onChatPermissionRequest?(
+    callback: (event: {
+      sessionId: string;
+      requestId: string;
+      kind: string;
+      title: string;
+      paths: readonly string[];
+      command?: string;
+      options: readonly { optionId: string; name: string; kind: string }[];
+    }) => void,
+  ): () => void;
+  onChatPermissionClose?(
+    callback: (event: { sessionId: string; requestId: string; reason: string }) => void,
+  ): () => void;
+  chatPermissionRespond(sessionId: string, requestId: string, optionId?: string): Promise<void>;
 
   platform: string;
 }

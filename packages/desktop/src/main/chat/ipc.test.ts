@@ -39,6 +39,7 @@ function fakeController() {
     cancel: vi.fn(async () => {}),
     dispose: vi.fn(async () => {}),
     disposeAll: vi.fn(async () => {}),
+    respondToPermission: vi.fn(() => {}),
   };
 }
 
@@ -148,6 +149,75 @@ describe('registerChatHandlers', () => {
         channel: ipcChannels.chatTerminalOutput,
         payload: { sessionId: 'chat-x-1', terminalId: 'chat-term-1', chunk: 'out\r\n' },
       },
+    ]);
+  });
+
+  it('routes a permission answer to the controller', async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+    });
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
+    await handlers.get(ipcChannels.chatPermissionRespond)!(
+      {},
+      { sessionId: 'chat-x-1', requestId: 'chat-x-1-perm-1', optionId: 'allow-1' },
+    );
+    expect(controller.respondToPermission).toHaveBeenCalledWith('chat-x-1', 'chat-x-1-perm-1', 'allow-1');
+  });
+
+  it('treats a permission answer with no option id as a cancel', async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+    });
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
+    await handlers.get(ipcChannels.chatPermissionRespond)!(
+      {},
+      { sessionId: 'chat-x-1', requestId: 'chat-x-1-perm-1' },
+    );
+    expect(controller.respondToPermission).toHaveBeenCalledWith('chat-x-1', 'chat-x-1-perm-1', undefined);
+  });
+
+  it('does not construct a controller just because a permission answer arrived', async () => {
+    const createController = vi.fn(() => fakeController() as unknown as ChatSessionController);
+    registerChatHandlers({ getWindow: () => null, createController });
+    await handlers.get(ipcChannels.chatPermissionRespond)!(
+      {},
+      { sessionId: 'chat-x-1', requestId: 'ghost' },
+    );
+    expect(createController).not.toHaveBeenCalled();
+  });
+
+  it('reports permission-push delivery so an unaskable prompt fails closed', async () => {
+    let options:
+      | Parameters<NonNullable<Parameters<typeof registerChatHandlers>[0]['createController']>>[0]
+      | undefined;
+    let window: unknown = null;
+    registerChatHandlers({
+      getWindow: () => window as never,
+      createController: (received) => {
+        options = received;
+        return fakeController() as unknown as ChatSessionController;
+      },
+    });
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
+
+    // No window: the controller must learn the prompt was NOT delivered, so it
+    // answers the agent `cancelled` rather than blocking on an invisible prompt.
+    expect(options!.onPermissionRequest({ sessionId: 'chat-x-1', requestId: 'r1' })).toBe(false);
+
+    const sent: { channel: string; payload: unknown }[] = [];
+    window = {
+      isDestroyed: () => false,
+      webContents: { send: (channel: string, payload: unknown) => sent.push({ channel, payload }) },
+    };
+    expect(options!.onPermissionRequest({ sessionId: 'chat-x-1', requestId: 'r1' })).toBe(true);
+    options!.onPermissionClose({ sessionId: 'chat-x-1', requestId: 'r1', reason: 'expired' });
+    expect(sent.map((frame) => frame.channel)).toEqual([
+      ipcChannels.chatPermissionRequest,
+      ipcChannels.chatPermissionClose,
     ]);
   });
 });

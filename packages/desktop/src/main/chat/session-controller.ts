@@ -2,16 +2,20 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type {
+  ChatPermissionCloseEvent,
+  ChatPermissionRequestEvent,
   ChatSessionNewResponse,
   ChatSessionPromptResponse,
   ChatSessionUpdateEvent,
   ChatTarget,
   ChatTerminalOutputEvent,
   LaunchSpec,
+  SessionEvent,
 } from '@srgnt/contracts';
 import type { AcpAgentConnection, ClientPorts } from '@srgnt/harness';
 import { Effect } from 'effect';
 import { createChatClientServices, type ChatClientServices } from './client-services.js';
+import { createChatPermissionHost, type ChatPermissionHost } from './permissions.js';
 
 /**
  * `@srgnt/harness` is ESM-only (`"type": "module"`) and desktop-main compiles to
@@ -41,28 +45,12 @@ function loadHarness(): Promise<HarnessModule> {
  * and there is no session list; Phase 24 owns durability. Every session gets its
  * own supervised process so a kill-tree on dispose can never orphan a child.
  *
- * Unlike the dev console, permissions are NOT auto-approved forever: STEP-23-03
- * replaces {@link autoApprovePermission} with the real renderer round-trip. Until
- * then the default-ask policy has no UI to ask through, so the placeholder keeps
- * the mock/Pi turn from deadlocking. See the comment on the port below.
+ * Unlike the dev console (which keeps auto-approve — it is a raw dev harness,
+ * clearly labeled), chat sessions get the real default-ask permission engine:
+ * see `./permissions.ts`. That is also what makes `fs/write_text_file` exist at
+ * all, since the client services only expose it when a write authorizer is
+ * injected.
  */
-
-/**
- * TEMPORARY (STEP-23-03 replaces this): auto-selects the first `allow` option.
- * This step ships the streaming surface only — there is no permission UI yet, so
- * a blocking prompt would hang the turn with nothing on screen to resolve it.
- * STEP-23-03 swaps this for a real renderer round-trip honoring default-ask.
- */
-const autoApprovePermission: ClientPorts['permission'] = {
-  requestPermission: (params) => {
-    const option = params.options.find((candidate) => candidate.kind.startsWith('allow')) ?? params.options[0];
-    return Promise.resolve(
-      option
-        ? { outcome: { outcome: 'selected' as const, optionId: option.optionId } }
-        : { outcome: { outcome: 'cancelled' as const } },
-    );
-  },
-};
 
 /** Harness identity mirrored to the renderer at session open (trust/capability UI). */
 export interface ChatHarnessIdentity {
@@ -149,6 +137,20 @@ export const MOCK_DEMO_SCENARIO = {
       toolCallId: 'demo-1',
       status: 'completed',
       rawOutput: { bytes: 26 },
+    },
+    // Blocks the turn on a real `session/request_permission` so a manual
+    // `pnpm dev` run exercises the prompt by hand. Pi cannot: it self-approves
+    // and sends this zero times (DEC-0018 probe 1), so the mock is the ONLY way
+    // to see this path outside a test.
+    {
+      type: 'request_permission',
+      toolCallId: 'demo-2',
+      title: 'Edit answer.ts',
+      options: [
+        { optionId: 'allow-once', name: 'Allow once', kind: 'allow_once' },
+        { optionId: 'allow-always', name: 'Always allow this file', kind: 'allow_always' },
+        { optionId: 'reject-once', name: 'Refuse', kind: 'reject_once' },
+      ],
     },
     {
       type: 'tool_call',
@@ -259,6 +261,9 @@ interface SessionState {
   readonly acpSessionId: string;
   readonly pump: Promise<void>;
   readonly services: ChatClientServices;
+  readonly permissions: ChatPermissionHost;
+  /** In-memory audit stream. Phase 24 swaps the sink for events.jsonl. */
+  readonly events: SessionEvent[];
 }
 
 export interface ChatSessionControllerOptions {
@@ -268,10 +273,20 @@ export interface ChatSessionControllerOptions {
   readonly onUpdate: (event: ChatSessionUpdateEvent) => void;
   /** Receives output chunks from client-created terminals, keyed by chat handle. */
   readonly onTerminalOutput?: (event: ChatTerminalOutputEvent) => void;
+  /**
+   * Pushes a permission prompt to the renderer. MUST return `false` when there
+   * is no live window — an undeliverable prompt is answered `cancelled` rather
+   * than left blocking the agent. Absent entirely (tests, headless): same thing.
+   */
+  readonly onPermissionRequest?: (event: ChatPermissionRequestEvent) => boolean;
+  /** Tells the renderer to dismiss a prompt the main process already resolved. */
+  readonly onPermissionClose?: (event: ChatPermissionCloseEvent) => void;
   /** Working directory for `session/new`. Defaults to the OS temp dir. */
   readonly getCwd?: () => string | undefined;
   /** Builds the client services for a session. Injected in tests. */
   readonly createClientServices?: typeof createChatClientServices;
+  /** Permission prompt deadline. Injected in tests. */
+  readonly permissionDeadlineMs?: number;
 }
 
 function toError(cause: unknown): Error {
@@ -308,19 +323,44 @@ export class ChatSessionController {
     // `terminal/*`, and the shared system temp holds every other process's
     // temp files, including short-lived credential and token files.
     const cwd = this.options.getCwd?.() ?? mkdtempSync(join(tmpdir(), 'srgnt-chat-session-'));
+
+    // One audit stream per session, in the real `SSessionEvent` envelope so
+    // Phase 24's persistence is a sink swap, not a reshape. `protocolVersion` is
+    // read lazily: the stream exists before `connect` (client services need it)
+    // but nothing appends to it until the connection is up.
+    const events: SessionEvent[] = [];
+    let protocolVersion = 0;
+    const append = (kind: string, payload: Record<string, unknown>): void => {
+      events.push({ seq: events.length, ts: new Date().toISOString(), protocolVersion, kind, payload });
+    };
+
+    const permissions = createChatPermissionHost({
+      sessionId: handle,
+      onRequest: (event) => this.options.onPermissionRequest?.(event) ?? false,
+      onClose: (requestId, reason) =>
+        this.options.onPermissionClose?.({ sessionId: handle, requestId, reason }),
+      onAudit: append,
+      ...(this.options.permissionDeadlineMs !== undefined
+        ? { deadlineMs: this.options.permissionDeadlineMs }
+        : {}),
+    });
+
     const services = (this.options.createClientServices ?? createChatClientServices)({
       sessionRoot: cwd,
       onTerminalOutput: (terminalId, chunk) =>
         this.options.onTerminalOutput?.({ sessionId: handle, terminalId, chunk }),
-      // No `authorizeWrite`: `fs/write_text_file` is deliberately absent until
-      // STEP-23-03's permission engine can gate it, and the harness advertises
-      // the write capability off when the method is missing.
+      onAudit: (event) => append(event.kind, event.payload),
+      // This single option is what makes `fs/write_text_file` exist: the harness
+      // advertises the write capability from the method's presence, and the
+      // method only appears when there is something to authorize the write.
+      authorizeWrite: (path) => permissions.authorizeWrite(path),
     });
     const { connection, harness, cleanup } = await this.connect(target, {
-      permission: autoApprovePermission,
+      permission: permissions.port,
       fs: services.fs,
       terminal: services.terminal,
     });
+    protocolVersion = Number(connection.capabilities.protocolVersion ?? 0);
     let acpSessionId: string;
     try {
       const result = await Effect.runPromise(connection.newSession({ cwd, mcpServers: [] }));
@@ -342,7 +382,8 @@ export class ChatSessionController {
         /* the iterator ends when the connection closes; not an error here */
       }
     })();
-    this.sessions.set(handle, { connection, cleanup, acpSessionId, pump, services });
+    this.sessions.set(handle, { connection, cleanup, acpSessionId, pump, services, permissions, events });
+    append('client/session_created', { target, harnessId: harness.id, cwd });
     return {
       sessionId: handle,
       target,
@@ -374,9 +415,25 @@ export class ChatSessionController {
     const outcome = await Effect.runPromise(
       Effect.either(state.connection.cancel({ sessionId: state.acpSessionId })),
     );
+    // A cancelled turn takes its pending permission prompts with it: per the ACP
+    // spec the client answers outstanding requests `cancelled`. Done even when
+    // the cancel notification itself failed — leaving the agent blocked on a
+    // prompt the user can no longer see is strictly worse.
+    state.permissions.cancelAll('cancelled');
     // Surface transport/JSON-RPC failures instead of silently succeeding, so the
     // renderer doesn't show a cancelled turn as cancelled when it wasn't.
     if (outcome._tag === 'Left') throw toError(outcome.left);
+  }
+
+  /** Routes a renderer permission answer. Unknown ids are ignored, never thrown. */
+  respondToPermission(handle: string, requestId: string, optionId: string | undefined): void {
+    // Not `require`: a response racing session disposal is normal, not an error.
+    this.sessions.get(handle)?.permissions.respond(requestId, optionId);
+  }
+
+  /** The session's in-memory audit stream (`SSessionEvent` envelopes). */
+  sessionEvents(handle: string): readonly SessionEvent[] {
+    return this.sessions.get(handle)?.events ?? [];
   }
 
   /** Kill-trees the session's process and forgets it. Idempotent. */
@@ -384,6 +441,10 @@ export class ChatSessionController {
     const state = this.sessions.get(handle);
     if (state === undefined) return;
     this.sessions.delete(handle);
+    // Release anything the agent is still blocked on before killing it, and drop
+    // the session's remembered `*_always` answers — memory is per-session and
+    // must die with it.
+    state.permissions.cancelAll('disposed');
     // Client terminals are children of *this* process, not of the agent, so the
     // supervisor's kill-tree cannot reach them: kill them explicitly first.
     state.services.disposeAll();

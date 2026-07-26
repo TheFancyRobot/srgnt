@@ -59,10 +59,20 @@ export interface PermissionPort {
   requestPermission(params: RequestPermissionRequest): Promise<RequestPermissionResponse>;
 }
 
-/** File-system access the agent may use (advertised via `fs` client capabilities). */
+/**
+ * File-system access the agent may use (advertised via `fs` client capabilities).
+ *
+ * `writeTextFile` is optional so a host can expose a **read-only** file system
+ * honestly: the write capability is advertised from the method's presence, not
+ * from the port's, so a port without it initializes with
+ * `fs: { readTextFile: true, writeTextFile: false }` and the agent never asks.
+ * That is what PHASE-23 needs before STEP-23-03's permission engine can gate
+ * writes — the alternative (advertise write, then reject every call) would be a
+ * capability lie.
+ */
 export interface FileSystemPort {
   readTextFile(params: ReadTextFileRequest): Promise<ReadTextFileResponse>;
-  writeTextFile(params: WriteTextFileRequest): Promise<WriteTextFileResponse | void>;
+  writeTextFile?(params: WriteTextFileRequest): Promise<WriteTextFileResponse | void>;
 }
 
 /** Terminal access the agent may use (advertised via the `terminal` client capability). */
@@ -154,7 +164,7 @@ export interface ConnectOptions {
 const buildClientCapabilities = (ports: ClientPorts): ClientCapabilities => ({
   fs: {
     readTextFile: ports.fs !== undefined,
-    writeTextFile: ports.fs !== undefined,
+    writeTextFile: ports.fs?.writeTextFile !== undefined,
   },
   terminal: ports.terminal !== undefined,
 });
@@ -169,7 +179,12 @@ const buildClient = (ports: ClientPorts, hub: SessionUpdateHub): Client => {
   const fs = ports.fs;
   if (fs !== undefined) {
     client.readTextFile = (params) => fs.readTextFile(params);
-    client.writeTextFile = (params) => fs.writeTextFile(params);
+    // Only wired when the port actually implements it, so the client method set
+    // matches the advertised capabilities exactly.
+    const writeTextFile = fs.writeTextFile;
+    if (writeTextFile !== undefined) {
+      client.writeTextFile = (params) => writeTextFile.call(fs, params);
+    }
   }
   const terminal = ports.terminal;
   if (terminal !== undefined) {

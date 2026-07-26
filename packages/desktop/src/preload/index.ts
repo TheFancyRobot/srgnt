@@ -60,6 +60,7 @@ const ipcChannels = {
   chatSessionCancel: 'chat:session:cancel',
   chatSessionDispose: 'chat:session:dispose',
   chatSessionUpdate: 'chat:session:update',
+  chatTerminalOutput: 'chat:terminal:output',
 } as const;
 
 const api = {
@@ -226,6 +227,17 @@ const api = {
     const handler = (_event: Electron.IpcRendererEvent, payload: { sessionId: string; update: unknown }) => callback(payload);
     ipcRenderer.on(ipcChannels.chatSessionUpdate, handler);
     return () => ipcRenderer.removeListener(ipcChannels.chatSessionUpdate, handler);
+  },
+  /** Output of terminals the agent created through the client `terminal/*` services. */
+  onChatTerminalOutput: (
+    callback: (event: { sessionId: string; terminalId: string; chunk: string }) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: { sessionId: string; terminalId: string; chunk: string },
+    ) => callback(payload);
+    ipcRenderer.on(ipcChannels.chatTerminalOutput, handler);
+    return () => ipcRenderer.removeListener(ipcChannels.chatTerminalOutput, handler);
   },
 
   platform: process.platform,

@@ -13,6 +13,7 @@ import { navIcons } from './components/icons.js';
 import { NotesView } from './components/NotesView.js';
 import { NotesSidePanel } from './components/sidepanels/NotesSidePanel.js';
 import { SettingsSidePanel } from './components/sidepanels/SettingsSidePanel.js';
+import { ChatPlanSidePanel } from './components/sidepanels/ChatPlanSidePanel.js';
 import { NotesProvider } from './components/notes/NotesContext.js';
 import { DevConsoleGate } from './components/DevConsole.js';
 import { ChatView } from './components/chat/ChatView.js';
@@ -44,7 +45,7 @@ const initialUpdateStatus: UpdateCheckResponse = {
 };
 
 const defaultPanels: PanelDefinition[] = [
-  { id: 'chat', icon: navIcons['chat']!, label: 'Chat', section: 'main', order: 0 },
+  { id: 'chat', icon: navIcons['chat']!, label: 'Chat', section: 'main', order: 0, sidePanelContent: ChatPlanSidePanel },
   { id: 'notes', icon: navIcons['notes']!, label: 'Notes', section: 'main', order: 1, sidePanelContent: NotesSidePanel },
   { id: 'settings', icon: navIcons['settings']!, label: 'Settings', section: 'system', order: 2, sidePanelContent: SettingsSidePanel },
   { id: 'terminal', icon: navIcons['terminal']!, label: 'Terminal', section: 'utility', order: 3 },
@@ -424,7 +425,11 @@ function AppContent({
   };
 
   const layout = (
-    <AppLayout fullBleed={activePanel === 'terminal' || activePanel === 'chat'}>
+    <AppLayout
+      fullBleed={activePanel === 'terminal' || activePanel === 'chat'}
+      // Chat is full-bleed but still wants its plan side panel.
+      {...(activePanel === 'chat' ? { showSidePanel: true } : {})}
+    >
       {renderContent()}
     </AppLayout>
   );

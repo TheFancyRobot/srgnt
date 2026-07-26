@@ -31,6 +31,7 @@ import {
   SChatSessionPromptResponse,
   SChatSessionRef,
   SChatSessionUpdateEvent,
+  SChatTerminalOutputEvent,
 } from './contracts.js';
 
 describe('IPC Channel', () => {
@@ -376,9 +377,20 @@ describe('Chat session IPC (PHASE-23)', () => {
       ipcChannels.chatSessionCancel,
       ipcChannels.chatSessionDispose,
       ipcChannels.chatSessionUpdate,
+      ipcChannels.chatTerminalOutput,
     ]) {
       expect(() => parseSync(SIpcChannel, channel)).not.toThrow();
     }
+  });
+
+  it('carries client-terminal output chunks keyed by chat handle and terminal id', () => {
+    const parsed = parseSync(SChatTerminalOutputEvent, {
+      sessionId: 'chat-mock-1',
+      terminalId: 'chat-term-1',
+      chunk: 'hello\r\n',
+    });
+    expect(parsed).toEqual({ sessionId: 'chat-mock-1', terminalId: 'chat-term-1', chunk: 'hello\r\n' });
+    expect(() => parseSync(SChatTerminalOutputEvent, { sessionId: 'chat-mock-1', chunk: 'x' })).toThrow();
   });
 
   it('keeps the chat channels distinct from the dev-console ones', () => {

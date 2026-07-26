@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChatTerminalProvider } from './ChatTerminalContext.js';
 import {
   initialTranscriptState,
   transcriptReducer,
@@ -202,7 +203,13 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     [session, status, error, transcript, newSession, sendPrompt, cancel, dispose, dismissError],
   );
 
-  return <ChatSessionContext.Provider value={value}>{children}</ChatSessionContext.Provider>;
+  return (
+    <ChatSessionContext.Provider value={value}>
+      {/* Nested, not merged: terminal chunks arrive far more often than
+          transcript updates and must not re-render every transcript consumer. */}
+      <ChatTerminalProvider sessionId={session?.sessionId ?? null}>{children}</ChatTerminalProvider>
+    </ChatSessionContext.Provider>
+  );
 }
 
 export function useChatSession(): ChatSessionContextValue {

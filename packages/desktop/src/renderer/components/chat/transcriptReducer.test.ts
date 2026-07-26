@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   initialTranscriptState,
   transcriptReducer,
+  TOOL_CALL_STATUSES,
+  TOOL_KINDS,
   type Segment,
   type TextSegment,
+  type ToolCallContent,
   type ToolCallSegment,
   type TranscriptState,
 } from './transcriptReducer.js';
@@ -134,6 +137,134 @@ describe('transcriptReducer — tool call updates', () => {
     const state = feed([{ sessionId: 'acp-1', update: { sessionUpdate: 'tool_call', title: 'nameless' } }]);
     expect(state.segments).toHaveLength(0);
     expect(state.ignoredUpdateCount).toBe(1);
+  });
+});
+
+describe('transcriptReducer — tool call status semantics (STEP-23-02)', () => {
+  const statusOf = (state: TranscriptState): string => (state.segments[0] as ToolCallSegment).status;
+
+  it('normalizes every ACP status and defaults a missing one to pending', () => {
+    for (const status of TOOL_CALL_STATUSES) {
+      expect(statusOf(feed([toolCall('t1', { status })]))).toBe(status);
+    }
+    expect(statusOf(feed([toolCall('t1', { status: undefined })]))).toBe('pending');
+    expect(statusOf(feed([toolCall('t1', { status: 'nonsense' })]))).toBe('pending');
+  });
+
+  it('accepts completed arriving before in_progress and keeps the terminal status', () => {
+    const state = feed([
+      toolCall('t1', { status: 'pending' }),
+      toolCallUpdate('t1', { status: 'completed' }),
+      toolCallUpdate('t1', { status: 'in_progress' }),
+    ]);
+    expect(state.segments).toHaveLength(1);
+    expect(statusOf(state)).toBe('completed');
+  });
+
+  it('lets a late failure overwrite an earlier completion (terminal → terminal)', () => {
+    const state = feed([
+      toolCall('t1'),
+      toolCallUpdate('t1', { status: 'completed' }),
+      toolCallUpdate('t1', { status: 'failed' }),
+    ]);
+    expect(statusOf(state)).toBe('failed');
+  });
+
+  it('merges a late update arriving after the turn ended without reopening anything', () => {
+    const ended = transcriptReducer(feed([toolCall('t1'), agent('done')]), { type: 'close_open' });
+    const late = feed([toolCallUpdate('t1', { status: 'completed' })], ended);
+    expect(kinds(late.segments)).toEqual(['tool_call', 'agent_message']);
+    expect((late.segments[0] as ToolCallSegment).status).toBe('completed');
+    expect((late.segments[1] as TextSegment).open).toBe(false);
+  });
+
+  it('normalizes every ACP tool kind and buckets unknown kinds as other', () => {
+    for (const kind of TOOL_KINDS) {
+      expect((feed([toolCall('t1', { kind })]).segments[0] as ToolCallSegment).toolKind).toBe(kind);
+    }
+    expect((feed([toolCall('t1', { kind: 'teleport' })]).segments[0] as ToolCallSegment).toolKind).toBe('other');
+    expect((feed([toolCall('t1', { kind: undefined })]).segments[0] as ToolCallSegment).toolKind).toBe('other');
+  });
+});
+
+describe('transcriptReducer — tool call content blocks (STEP-23-02)', () => {
+  const contentOf = (state: TranscriptState): readonly ToolCallContent[] =>
+    (state.segments[0] as ToolCallSegment).content;
+
+  it('parses wrapped text, bare text, diff, and terminal blocks', () => {
+    const state = feed([
+      toolCall('t1', {
+        content: [
+          { type: 'content', content: { type: 'text', text: 'hello' } },
+          { type: 'text', text: 'bare' },
+          { type: 'diff', path: '/w/a.ts', oldText: 'a', newText: 'b' },
+          { type: 'terminal', terminalId: 'term-1' },
+        ],
+      }),
+    ]);
+    expect(contentOf(state)).toEqual([
+      { type: 'text', text: 'hello' },
+      { type: 'text', text: 'bare' },
+      { type: 'diff', path: '/w/a.ts', oldText: 'a', newText: 'b' },
+      { type: 'terminal', terminalId: 'term-1' },
+    ]);
+  });
+
+  it('treats a missing oldText as a new file and an empty newText as a deletion', () => {
+    const created = feed([toolCall('t1', { content: [{ type: 'diff', path: '/w/new.ts', newText: 'x' }] })]);
+    expect(contentOf(created)[0]).toEqual({ type: 'diff', path: '/w/new.ts', oldText: null, newText: 'x' });
+
+    const deleted = feed([toolCall('t2', { content: [{ type: 'diff', path: '/w/old.ts', oldText: 'x', newText: '' }] })]);
+    expect(contentOf(deleted)[0]).toEqual({ type: 'diff', path: '/w/old.ts', oldText: 'x', newText: '' });
+  });
+
+  it('keeps unrenderable blocks as unsupported instead of dropping them', () => {
+    const state = feed([
+      toolCall('t1', {
+        content: [
+          { type: 'content', content: { type: 'image', data: 'x' } },
+          { type: 'diff', path: '/w/a.ts' },
+          { type: 'terminal' },
+          { type: 'something_new' },
+          'not-an-object',
+        ],
+      }),
+    ]);
+    expect(contentOf(state)).toHaveLength(5);
+    expect(contentOf(state).every((block) => block.type === 'unsupported')).toBe(true);
+  });
+
+  it('replaces the whole content list on update and keeps it when the update omits it', () => {
+    const replaced = feed([
+      toolCall('t1', { content: [{ type: 'text', text: 'first' }] }),
+      toolCallUpdate('t1', { content: [{ type: 'text', text: 'second' }] }),
+    ]);
+    expect(contentOf(replaced)).toEqual([{ type: 'text', text: 'second' }]);
+
+    const kept = feed([
+      toolCall('t1', { content: [{ type: 'text', text: 'first' }] }),
+      toolCallUpdate('t1', { status: 'completed' }),
+    ]);
+    expect(contentOf(kept)).toEqual([{ type: 'text', text: 'first' }]);
+  });
+
+  it('defaults content and locations to empty arrays and parses locations tolerantly', () => {
+    const bare = feed([toolCall('t1')]);
+    expect(contentOf(bare)).toEqual([]);
+    expect((bare.segments[0] as ToolCallSegment).locations).toEqual([]);
+
+    const located = feed([
+      toolCall('t2', { locations: [{ path: '/w/a.ts', line: 12 }, { path: '/w/b.ts' }, { line: 3 }, 'junk'] }),
+    ]);
+    expect((located.segments[0] as ToolCallSegment).locations).toEqual([
+      { path: '/w/a.ts', line: 12 },
+      { path: '/w/b.ts', line: null },
+    ]);
+  });
+
+  it('carries rawOutput through updates (the Pi path for command output)', () => {
+    const state = feed([toolCall('t1'), toolCallUpdate('t1', { status: 'completed', rawOutput: { stdout: 'ok\n' } })]);
+    expect((state.segments[0] as ToolCallSegment).rawOutput).toEqual({ stdout: 'ok\n' });
   });
 });
 

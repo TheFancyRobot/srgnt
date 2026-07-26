@@ -58,6 +58,9 @@ export const ipcChannels = {
   chatSessionDispose: 'chat:session:dispose',
   // Main→renderer push channel for streamed session/update frames.
   chatSessionUpdate: 'chat:session:update',
+  // Main→renderer push channel for output of terminals the *agent* created via
+  // the client `terminal/*` services, so a tool card can embed them live.
+  chatTerminalOutput: 'chat:terminal:output',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -537,3 +540,18 @@ export const SChatSessionUpdateEvent = Schema.Struct({
   update: Schema.Unknown,
 });
 export type ChatSessionUpdateEvent = Schema.Schema.Type<typeof SChatSessionUpdateEvent>;
+
+/**
+ * One chunk of output from a client-created terminal, pushed main→renderer over
+ * `chat:terminal:output`. Chunks are raw pty bytes (ANSI included) and are
+ * append-only per `terminalId`, so a late-mounting embed can be caught up by
+ * replaying everything received so far.
+ */
+export const SChatTerminalOutputEvent = Schema.Struct({
+  /** The chat-local handle the terminal belongs to; the renderer filters on it. */
+  sessionId: Schema.String,
+  /** Client-assigned terminal id, as returned from `terminal/create`. */
+  terminalId: Schema.String,
+  chunk: Schema.String,
+});
+export type ChatTerminalOutputEvent = Schema.Schema.Type<typeof SChatTerminalOutputEvent>;

@@ -76,4 +76,18 @@ describe('AppLayout', () => {
     render(<AppLayout fullBleed>Content</AppLayout>);
     expect(screen.queryByTestId('side-panel')).not.toBeInTheDocument();
   });
+
+  it('renders the side panel in a full-bleed panel that opts back in (chat plan panel)', () => {
+    render(
+      <AppLayout fullBleed showSidePanel>
+        Content
+      </AppLayout>,
+    );
+    expect(screen.getByTestId('side-panel-today')).toBeInTheDocument();
+  });
+
+  it('honors an explicit showSidePanel={false} on a non-full-bleed panel', () => {
+    render(<AppLayout showSidePanel={false}>Content</AppLayout>);
+    expect(screen.queryByTestId('side-panel')).not.toBeInTheDocument();
+  });
 });

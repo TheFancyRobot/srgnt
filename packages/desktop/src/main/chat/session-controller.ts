@@ -6,10 +6,12 @@ import type {
   ChatSessionPromptResponse,
   ChatSessionUpdateEvent,
   ChatTarget,
+  ChatTerminalOutputEvent,
   LaunchSpec,
 } from '@srgnt/contracts';
 import type { AcpAgentConnection, ClientPorts } from '@srgnt/harness';
 import { Effect } from 'effect';
+import { createChatClientServices, type ChatClientServices } from './client-services.js';
 
 /**
  * `@srgnt/harness` is ESM-only (`"type": "module"`) and desktop-main compiles to
@@ -76,8 +78,13 @@ export interface ChatConnection {
   readonly cleanup: () => Promise<void>;
 }
 
-/** Opens a connection for a target. Injected so tests can use an in-process mock. */
-export type ChatConnectFn = (target: ChatTarget) => Promise<ChatConnection>;
+/**
+ * Opens a connection for a target. Injected so tests can use an in-process mock.
+ * The controller builds `ports` (permission + the STEP-23-02 client services) and
+ * hands them in, because client services are scoped to the session's cwd and
+ * must exist before `initialize` advertises their capabilities.
+ */
+export type ChatConnectFn = (target: ChatTarget, ports: ClientPorts) => Promise<ChatConnection>;
 
 /**
  * Identity for the built-in deterministic mock. It is not a registry harness
@@ -93,49 +100,115 @@ export const MOCK_HARNESS_IDENTITY: ChatHarnessIdentity = {
 let cachedMockLaunch: LaunchSpec | undefined;
 
 /**
+ * The scripted turn the built-in mock agent replays for a manual `pnpm dev`
+ * check. It exercises exactly what the chat surface renders: interleaved thought
+ * and message chunks with tool calls between two message runs (so the
+ * transcript's segment-boundary rule is visible by hand), GFM-heavy message
+ * bodies, and — since STEP-23-02 — a plan, a diff-bearing tool call, and a
+ * client-created terminal, so one run covers every card variant.
+ *
+ * Exported so a test can validate it against the mock's own scenario schema: a
+ * typo here would otherwise only surface as a dead mock agent at runtime.
+ * STEP-23-05 replaces this fixed script with injectable scenarios.
+ */
+export const MOCK_DEMO_SCENARIO = {
+  name: 'chat-demo',
+  sessionId: 'mock-chat-session',
+  stopReason: 'end_turn',
+  directives: [
+    {
+      type: 'emit_chunks',
+      channel: 'thought',
+      chunks: ['Reading the request. ', 'Checking which files matter here.'],
+      delayMs: 40,
+    },
+    {
+      type: 'plan',
+      entries: [
+        { content: 'Inspect the file', priority: 'high', status: 'in_progress' },
+        { content: 'Apply the edit', priority: 'medium', status: 'pending' },
+        { content: 'Run the check', priority: 'low', status: 'pending' },
+      ],
+    },
+    {
+      type: 'emit_chunks',
+      channel: 'agent',
+      chunks: ['## Plan\n\n', '1. Inspect the file\n2. Summarize it\n\n', 'Starting now.'],
+      delayMs: 40,
+    },
+    {
+      type: 'tool_call',
+      toolCallId: 'demo-1',
+      title: 'Inspect file',
+      kind: 'read',
+      status: 'in_progress',
+      content: [{ type: 'content', content: { type: 'text', text: 'export const answer = 41;\n' } }],
+    },
+    {
+      type: 'tool_call_update',
+      toolCallId: 'demo-1',
+      status: 'completed',
+      rawOutput: { bytes: 26 },
+    },
+    {
+      type: 'tool_call',
+      toolCallId: 'demo-2',
+      title: 'Edit answer.ts',
+      kind: 'edit',
+      status: 'in_progress',
+      content: [
+        {
+          type: 'diff',
+          path: 'answer.ts',
+          oldText: 'export const answer = 41;\n',
+          newText: 'export const answer = 42;\n',
+        },
+      ],
+    },
+    { type: 'tool_call_update', toolCallId: 'demo-2', status: 'completed' },
+    // Exercises the client terminal service end to end: the mock calls
+    // `terminal/create`, our TerminalPort runs it, and the card embeds it.
+    // `chat-term-1` is the id the port assigns to a session's first terminal,
+    // which is why the card can reference it before the process starts.
+    {
+      type: 'tool_call',
+      toolCallId: 'demo-3',
+      title: 'Run checks',
+      kind: 'execute',
+      status: 'in_progress',
+      content: [{ type: 'terminal', terminalId: 'chat-term-1' }],
+    },
+    { type: 'use_terminal', command: 'echo', args: ['checks passed'] },
+    { type: 'tool_call_update', toolCallId: 'demo-3', status: 'completed' },
+    {
+      type: 'plan',
+      entries: [
+        { content: 'Inspect the file', priority: 'high', status: 'completed' },
+        { content: 'Apply the edit', priority: 'medium', status: 'completed' },
+        { content: 'Run the check', priority: 'low', status: 'completed' },
+      ],
+    },
+    {
+      type: 'emit_chunks',
+      channel: 'agent',
+      chunks: ['Done. Here is the summary:\n\n', '| File | Lines |\n| --- | --- |\n| `index.ts` | 42 |\n'],
+      delayMs: 40,
+    },
+  ],
+} as const;
+
+/**
  * LaunchSpec for the built mock agent, resolved from the installed
  * `@srgnt/harness` package so it works both in `pnpm dev` and a packaged app.
  * `ELECTRON_RUN_AS_NODE=1` makes Electron's own binary run the bin as plain
  * Node (in a Node/vitest process it is a harmless no-op).
- *
- * The scenario exercises exactly what this step renders: interleaved thought and
- * message chunks with a tool call between two message runs (so the transcript's
- * segment-boundary rule is visible by hand), and GFM-heavy message bodies.
- * STEP-23-05 replaces this fixed script with injectable scenarios.
  */
 function mockLaunchSpec(): LaunchSpec {
   if (cachedMockLaunch !== undefined) return cachedMockLaunch;
   const harnessEntry = require.resolve('@srgnt/harness');
   const binPath = join(harnessEntry, '..', 'testing', 'mock-agent', 'bin.js');
-  const scenario = {
-    name: 'chat-demo',
-    sessionId: 'mock-chat-session',
-    stopReason: 'end_turn',
-    directives: [
-      {
-        type: 'emit_chunks',
-        channel: 'thought',
-        chunks: ['Reading the request. ', 'Checking which files matter here.'],
-        delayMs: 40,
-      },
-      {
-        type: 'emit_chunks',
-        channel: 'agent',
-        chunks: ['## Plan\n\n', '1. Inspect the file\n2. Summarize it\n\n', 'Starting now.'],
-        delayMs: 40,
-      },
-      { type: 'tool_call', toolCallId: 'demo-1', title: 'Inspect file', kind: 'read', status: 'in_progress' },
-      { type: 'tool_call_update', toolCallId: 'demo-1', status: 'completed' },
-      {
-        type: 'emit_chunks',
-        channel: 'agent',
-        chunks: ['Done. Here is the summary:\n\n', '| File | Lines |\n| --- | --- |\n| `index.ts` | 42 |\n'],
-        delayMs: 40,
-      },
-    ],
-  };
   const scenarioPath = join(mkdtempSync(join(tmpdir(), 'srgnt-chat-mock-')), 'scenario.json');
-  writeFileSync(scenarioPath, JSON.stringify(scenario));
+  writeFileSync(scenarioPath, JSON.stringify(MOCK_DEMO_SCENARIO));
   cachedMockLaunch = {
     command: process.execPath,
     args: [binPath, '--scenario', scenarioPath],
@@ -150,7 +223,7 @@ function mockLaunchSpec(): LaunchSpec {
  * spawned process, so both targets exercise supervisor + wrapper, just
  * deterministically for the mock.
  */
-export const defaultChatConnect: ChatConnectFn = async (target) => {
+export const defaultChatConnect: ChatConnectFn = async (target, ports) => {
   const { AcpAgentConnection, Supervisor, piDefinition } = await loadHarness();
   const definition = target === 'pi' ? piDefinition : undefined;
   const launch = definition?.launch ?? mockLaunchSpec();
@@ -166,7 +239,7 @@ export const defaultChatConnect: ChatConnectFn = async (target) => {
     AcpAgentConnection.connect({
       launch,
       spawn: supervisor.spawnerFor(handleId),
-      ports: { permission: autoApprovePermission },
+      ports,
       ...(capabilityOverrides !== undefined ? { capabilityOverrides } : {}),
     }),
   );
@@ -185,6 +258,7 @@ interface SessionState {
   readonly cleanup: () => Promise<void>;
   readonly acpSessionId: string;
   readonly pump: Promise<void>;
+  readonly services: ChatClientServices;
 }
 
 export interface ChatSessionControllerOptions {
@@ -192,8 +266,12 @@ export interface ChatSessionControllerOptions {
   readonly connect?: ChatConnectFn;
   /** Receives every streamed `session/update`, keyed by the chat handle id. */
   readonly onUpdate: (event: ChatSessionUpdateEvent) => void;
+  /** Receives output chunks from client-created terminals, keyed by chat handle. */
+  readonly onTerminalOutput?: (event: ChatTerminalOutputEvent) => void;
   /** Working directory for `session/new`. Defaults to the OS temp dir. */
   readonly getCwd?: () => string | undefined;
+  /** Builds the client services for a session. Injected in tests. */
+  readonly createClientServices?: typeof createChatClientServices;
 }
 
 function toError(cause: unknown): Error {
@@ -222,16 +300,36 @@ export class ChatSessionController {
   /** initialize → session/new; starts streaming updates. Returns a chat handle. */
   async newSession(target: ChatTarget): Promise<ChatSessionNewResponse> {
     const handle = `chat-${target}-${++this.counter}`;
-    const { connection, harness, cleanup } = await this.connect(target);
+    // The cwd must be known *before* connecting: client services are confined to
+    // it, and their presence is what `initialize` advertises as capabilities.
+    //
+    // With no workspace, the fallback is a fresh scratch directory rather than
+    // `tmpdir()` itself — the cwd IS the containment boundary for `fs/*` and
+    // `terminal/*`, and the shared system temp holds every other process's
+    // temp files, including short-lived credential and token files.
+    const cwd = this.options.getCwd?.() ?? mkdtempSync(join(tmpdir(), 'srgnt-chat-session-'));
+    const services = (this.options.createClientServices ?? createChatClientServices)({
+      sessionRoot: cwd,
+      onTerminalOutput: (terminalId, chunk) =>
+        this.options.onTerminalOutput?.({ sessionId: handle, terminalId, chunk }),
+      // No `authorizeWrite`: `fs/write_text_file` is deliberately absent until
+      // STEP-23-03's permission engine can gate it, and the harness advertises
+      // the write capability off when the method is missing.
+    });
+    const { connection, harness, cleanup } = await this.connect(target, {
+      permission: autoApprovePermission,
+      fs: services.fs,
+      terminal: services.terminal,
+    });
     let acpSessionId: string;
     try {
-      const cwd = this.options.getCwd?.() ?? tmpdir();
       const result = await Effect.runPromise(connection.newSession({ cwd, mcpServers: [] }));
       acpSessionId = result.sessionId;
     } catch (cause) {
       // The connection is live but unusable — tear the process down here so a
       // failed `session/new` (e.g. Pi missing → SpawnFailed) can never leak a
       // supervised child with no handle to dispose it by.
+      services.disposeAll();
       await cleanup();
       throw toError(cause);
     }
@@ -244,7 +342,7 @@ export class ChatSessionController {
         /* the iterator ends when the connection closes; not an error here */
       }
     })();
-    this.sessions.set(handle, { connection, cleanup, acpSessionId, pump });
+    this.sessions.set(handle, { connection, cleanup, acpSessionId, pump, services });
     return {
       sessionId: handle,
       target,
@@ -286,6 +384,9 @@ export class ChatSessionController {
     const state = this.sessions.get(handle);
     if (state === undefined) return;
     this.sessions.delete(handle);
+    // Client terminals are children of *this* process, not of the agent, so the
+    // supervisor's kill-tree cannot reach them: kill them explicitly first.
+    state.services.disposeAll();
     await state.cleanup();
   }
 

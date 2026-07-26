@@ -1,6 +1,7 @@
 import React from 'react';
 import { Markdown } from './Markdown.js';
 import { ThoughtBlock } from './ThoughtBlock.js';
+import { ToolCallCard } from './ToolCallCard.js';
 import type { Segment } from './transcriptReducer.js';
 
 /**
@@ -40,15 +41,7 @@ function MessageBubble({ segment }: { readonly segment: Segment }): React.ReactE
     case 'thought':
       return <ThoughtBlock segment={segment} />;
     case 'tool_call':
-      // STEP-23-02 replaces this with the real card (diff + terminal embeds).
-      // Until then it exists so ordering around tool calls is visibly correct.
-      return (
-        <article className="chat-tool-call" data-testid="chat-tool-call" data-status={segment.status}>
-          <span className="chat-tool-call-kind">{segment.toolKind ?? 'tool'}</span>
-          <span className="chat-tool-call-title">{segment.title}</span>
-          <span className="chat-tool-call-status">{segment.status}</span>
-        </article>
-      );
+      return <ToolCallCard segment={segment} />;
     default:
       return null;
   }

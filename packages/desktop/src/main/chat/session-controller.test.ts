@@ -470,7 +470,14 @@ describe('mock scenario injection seam (STEP-23-05)', () => {
     // The spawned bin would exit 2 on a missing scenario, which the supervisor
     // reads as a crash loop; failing here turns that into a session error the
     // renderer can show.
-    expect(() => resolveMockScenarioPath()).toThrow(/does not exist/);
+    expect(() => resolveMockScenarioPath()).toThrow(/unreadable path/);
+  });
+
+  it('rejects a directory, which exists but still dooms the process', () => {
+    // `existsSync` is true for a directory; the bin's readFileSync is not, so
+    // this has to be caught here or it becomes the same opaque restart storm.
+    process.env[MOCK_SCENARIO_ENV] = scratch;
+    expect(() => resolveMockScenarioPath()).toThrow(/must point at a file/);
   });
 });
 

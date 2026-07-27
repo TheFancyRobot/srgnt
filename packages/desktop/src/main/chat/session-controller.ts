@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type {
@@ -257,8 +257,19 @@ export function resolveMockScenarioPath(
   override: string | undefined = process.env[MOCK_SCENARIO_ENV],
 ): string {
   if (override === undefined || override === '') return defaultScenarioPath();
-  if (!existsSync(override)) {
-    throw new Error(`${MOCK_SCENARIO_ENV} points at a file that does not exist: ${override}`);
+  // `statSync`, not `existsSync`: a directory or an unreadable path exists but
+  // still makes the spawned bin exit 2, which is the opaque restart storm this
+  // check exists to prevent.
+  let stat;
+  try {
+    stat = statSync(override);
+  } catch (cause) {
+    throw new Error(
+      `${MOCK_SCENARIO_ENV} points at an unreadable path: ${override} (${cause instanceof Error ? cause.message : String(cause)})`,
+    );
+  }
+  if (!stat.isFile()) {
+    throw new Error(`${MOCK_SCENARIO_ENV} must point at a file, not a directory: ${override}`);
   }
   return override;
 }
@@ -523,11 +534,22 @@ export class ChatSessionController {
       // method only appears when there is something to authorize the write.
       authorizeWrite: (path) => permissions.authorizeWrite(path),
     });
-    const { connection, harness, cleanup, onSupervisorEvent } = await this.connect(target, {
-      permission: permissions.port,
-      fs: services.fs,
-      terminal: services.terminal,
-    });
+    let connected;
+    try {
+      connected = await this.connect(target, {
+        permission: permissions.port,
+        fs: services.fs,
+        terminal: services.terminal,
+      });
+    } catch (cause) {
+      // `connect` can fail before any process exists (a bad scenario override
+      // throws while building the LaunchSpec). The services already own a temp
+      // cwd and can own terminals, so they have to be released here — the
+      // session/new path below does the same for a failure one step later.
+      services.disposeAll();
+      throw toError(cause);
+    }
+    const { connection, harness, cleanup, onSupervisorEvent } = connected;
     protocolVersion = Number(connection.capabilities.protocolVersion ?? 0);
     // `gave-up` reports only a restart count, so the tail of the crash that
     // exhausted the budget is remembered here and threaded into it.

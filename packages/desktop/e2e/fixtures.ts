@@ -56,13 +56,15 @@ export const test = base.extend<E2EFixtures & E2EOptions>({
 
   agentAssertions: async ({ userDataDir }, use) => {
     await use(async () => {
-      try {
-        return JSON.parse(await fs.readFile(path.join(userDataDir, ASSERTIONS_FILE), 'utf8')) as string[];
-      } catch {
-        // No file: the scenario ran no `expect_*` directive, or the turn died
-        // before finishing. Either way there is nothing to report.
-        return [];
-      }
+      // Deliberately NOT caught. The bin rewrites this file at the end of every
+      // completed turn — `[]` when the scenario asserted nothing — so a missing
+      // or unparseable file means the channel itself broke: the `--assertions`
+      // wiring regressed, the child died mid-turn, or the write failed. Turning
+      // that into `[]` would make `expect(await agentAssertions()).toEqual([])`
+      // pass no matter what the renderer sent, which is the exact vacuity this
+      // channel exists to remove.
+      const raw = await fs.readFile(path.join(userDataDir, ASSERTIONS_FILE), 'utf8');
+      return JSON.parse(raw) as string[];
     });
   },
 

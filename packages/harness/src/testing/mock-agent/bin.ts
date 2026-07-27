@@ -73,8 +73,21 @@ new AgentSideConnection(
             // Synchronous on purpose: the runner awaits this before the
             // `PromptResponse` is framed, so a driver that sees the turn finish
             // is guaranteed to find the file already written.
-            onTurnEnd: (errors: readonly string[]) =>
-              writeFileSync(assertionsPath, JSON.stringify(errors)),
+            onTurnEnd: (errors: readonly string[]) => {
+              try {
+                writeFileSync(assertionsPath, JSON.stringify(errors));
+              } catch (cause) {
+                // A read-only or vanished directory must not kill the turn. The
+                // driver reads this file and fails loudly when it is absent, so
+                // the failure still surfaces — as a failed assertion rather than
+                // a mock that crashes mid-conversation.
+                process.stderr.write(
+                  `mock-agent: could not write assertions to ${assertionsPath}: ${
+                    cause instanceof Error ? cause.message : String(cause)
+                  }\n`,
+                );
+              }
+            },
           }
         : {}),
     }),

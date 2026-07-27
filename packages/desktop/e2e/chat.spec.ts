@@ -267,7 +267,12 @@ test.describe('cancel mid-stream', () => {
     await sendPrompt(page, 'try again please');
     await expect(page.getByTestId('chat-message-user')).toHaveCount(2);
     await expect(page.getByTestId('chat-message-agent')).toHaveCount(2);
-    await page.getByTestId('chat-cancel').click();
+    // Same wait as the first cancel: Stop is disabled while `!busy`, so clicking
+    // it before the second turn is in flight is a no-op that only fails on a
+    // slow machine.
+    const secondStop = page.getByTestId('chat-cancel');
+    await expect(secondStop).toBeEnabled();
+    await secondStop.click();
     await waitForTurnEnd(page);
     expect(await agentAssertions()).toEqual([]);
   });

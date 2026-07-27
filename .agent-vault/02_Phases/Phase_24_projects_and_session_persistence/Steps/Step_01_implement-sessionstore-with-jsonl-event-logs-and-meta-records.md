@@ -5,16 +5,21 @@ contract_version: 1
 title: Implement SessionStore with JSONL event logs and meta records
 step_id: STEP-24-01
 phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]'
-status: planned
-owner: ''
+status: complete
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-07-27'
 depends_on: []
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-27-044923-implement-sessionstore-with-jsonl-event-logs-and-meta-records-claude-opus-5|SESSION-2026-07-27-044923 claude-opus-5 session for Implement SessionStore with JSONL event logs and meta records]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-27-044923
+active_session_id: 05_Sessions/2026-07-27-044923-implement-sessionstore-with-jsonl-event-logs-and-meta-records-claude-opus-5
+context_status: complete
+context_summary: 'STEP-24-01 complete: the @srgnt/runtime SessionStore (append-only events.jsonl with dense store-owned seq, atomic meta.json, tolerant reader, repair-before-append tail recovery). Automated validation green across runtime, contracts, harness, typecheck and root build; no manual or GUI pass was performed, since the store is a headless disk layer not yet wired into the app.'
 ---
 
 # Step 01 - Implement SessionStore with JSONL event logs and meta records
@@ -74,16 +79,17 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_01_implement-sessionstore-with-jsonl-event-logs-and-meta-records/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_01_implement-sessionstore-with-jsonl-event-logs-and-meta-records/Validation_Plan|Validation Plan]].
+- Status: complete
+- Current owner: claude-opus-5
+- Last touched: 2026-07-27
+- Result: `packages/runtime/src/sessions/` ships `events.jsonl` append/read with dense store-owned `seq`, atomic `meta.json`, tolerant reading, and repair-before-append tail recovery. 67 new tests; `pnpm --filter @srgnt/runtime test` 370 passed; typecheck, package build, and root `pnpm build` all clean. No manual or GUI pass (headless disk layer, not reachable from the app yet).
+- Next action: [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults|STEP-24-02 Implement project auto-create switcher and per-project defaults]] — the store validates `projectId` as a path-safe identifier but has no project entity behind it.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- Durable findings live in [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_01_implement-sessionstore-with-jsonl-event-logs-and-meta-records/Implementation_Notes|Implementation Notes]].
+- The three that change how a reader should think about this module: a corrupt tail has **two** repairs, not one (truncate the undecodable bytes, but re-add the newline when a *valid* final record merely lost it — truncating that case silently loses a complete event); interior corruption is a typed throw and `open()` refuses to repair it, leaving the file byte-for-byte intact; and `seq` is assigned synchronously at `append()` call time, which is what makes `Promise.all` of N concurrent appends come out dense and in call order.
 
 ## Human Notes
 
@@ -92,10 +98,12 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-27 - [[05_Sessions/2026-07-27-044923-implement-sessionstore-with-jsonl-event-logs-and-meta-records-claude-opus-5|SESSION-2026-07-27-044923 claude-opus-5 session for Implement SessionStore with JSONL event logs and meta records]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- **Complete.** `packages/runtime/src/sessions/` implements the SessionStore: append-only `events.jsonl` with store-owned dense monotonic `seq`, atomic `meta.json` CRUD, a tolerant reader, and repair-before-append corrupt-tail recovery. The contracts envelope schema was not changed. Exported from the `@srgnt/runtime` package root.
+- Validated by commands actually run and observed: `pnpm --filter @srgnt/runtime test` (370 passed, 67 new), `typecheck`, `build`, `pnpm --filter @srgnt/contracts test` (159 passed), `pnpm --filter @srgnt/harness test` (114 passed / 2 skipped), and root `pnpm build`. A deliberate negative control (repair disabled, then reverted) failed exactly the two repair tests, so that coverage is not vacuous.
+- **No manual or GUI verification was performed.** This step is a headless disk layer with no UI surface and no wiring into the running app, so there is nothing to click; that is a scope fact, not a deferred check.
+- Follow-up, deliberately out of scope here: the Phase 23 carry-forward (swapping `ChatSessionController`'s in-memory `SessionEvent[]` sink for this store) belongs to a later step; `projectId` is validated as a path-safe identifier (same whitelist as session ids) but has no project *entity* behind it — creation, defaults, ownership and lifecycle are STEP-24-02. Full detail in [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_01_implement-sessionstore-with-jsonl-event-logs-and-meta-records/Outcome|Outcome]].

@@ -19,7 +19,15 @@ export const defaultDesktopSettings: DesktopSettings = {
   },
 };
 
+/**
+ * `SRGNT_DEFAULT_WORKSPACE_ROOT` exists for E2E isolation. Onboarding's "Use
+ * Default Location" otherwise resolves to the real `$HOME/srgnt-workspace`, so
+ * every Playwright run wrote notes — and, since projects landed, a project
+ * directory per test — into the developer's actual workspace.
+ */
 export function resolveDefaultWorkspaceRoot(homePath: string): string {
+  const override = process.env.SRGNT_DEFAULT_WORKSPACE_ROOT;
+  if (override !== undefined && override !== '') return override;
   return path.join(homePath, 'srgnt-workspace');
 }
 

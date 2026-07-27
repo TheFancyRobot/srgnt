@@ -133,7 +133,8 @@ describe('ChatView — session lifecycle', () => {
     renderChat();
     fireEvent.change(screen.getByTestId('chat-target'), { target: { value: 'pi' } });
     await startSession();
-    expect(harness.api.chatSessionNew).toHaveBeenCalledWith('pi');
+    // Second arg is the active project id; `undefined` = derive it from the cwd.
+    expect(harness.api.chatSessionNew).toHaveBeenCalledWith('pi', undefined);
     expect(screen.getByTestId('chat-session-badge')).toHaveTextContent('Pi');
   });
 

@@ -2059,6 +2059,22 @@
   color: #e2e0db;
 }
 
+/* Project switcher rows (PHASE-24, STEP-24-02). Semantic tokens only. */
+.project-row {
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+}
+
+.project-row[data-active='true'] {
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-primary);
+}
+
+.project-row:hover {
+  background: var(--color-surface-tertiary);
+}
+
 .chat-plan-entry {
   display: flex;
   align-items: baseline;

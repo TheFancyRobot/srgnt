@@ -27,6 +27,7 @@ import { registerSettingsHandlers } from './services/settings.js';
 import { createUpdaterService } from './services/updater.js';
 import { createTerminalService } from './services/terminal.js';
 import { createSemanticSearchService } from './services/semantic-search.js';
+import { createProjectsService } from './services/projects.js';
 import { registerCrashHandlers } from './services/crash.js';
 import { registerShellHandlers } from './services/shell.js';
 import { registerDevConsoleHandlers } from './dev-console/index.js';
@@ -73,6 +74,13 @@ const semanticSearch = createSemanticSearchService({
   getWorkspaceRoot: () => workspace.getRoot(),
 });
 
+// Project entities (PHASE-24). Re-rooted through the workspace hooks below, and
+// its `setWorkspaceRoot` is also where a merge interrupted by a crash is rolled
+// forward — before anything reads a session list.
+const projects = createProjectsService({
+  getWorkspaceRoot: () => workspace.getRoot(),
+});
+
 const workspace = createWorkspaceService({
   getWindow: () => windowManager.getWindow(),
   hooks: {
@@ -81,6 +89,7 @@ const workspace = createWorkspaceService({
     afterRootChanged: async (root) => {
       crashReporter.setWorkspaceRoot(root);
       registerNotesHandlers(root);
+      await projects.setWorkspaceRoot(root);
       await semanticSearch.initialize(root);
     },
   },
@@ -105,6 +114,7 @@ workspace.registerIpcHandlers();
 registerSettingsHandlers(workspace);
 terminal.registerIpcHandlers();
 semanticSearch.registerIpcHandlers();
+projects.registerIpcHandlers();
 registerShellHandlers();
 registerCrashHandlers({ crashReporter, getWorkspaceRoot: () => workspace.getRoot() });
 windowManager.registerIpcHandlers();
@@ -123,6 +133,7 @@ const disposeDevConsole = registerDevConsoleHandlers({
 const disposeChat = registerChatHandlers({
   getWindow: () => windowManager.getWindow(),
   getCwd: () => workspace.getRoot() || undefined,
+  projects,
 });
 
 // Agent teardown must COMPLETE before the app exits, so it hangs off

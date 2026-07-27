@@ -5,17 +5,22 @@ contract_version: 1
 title: Implement project auto-create switcher and per-project defaults
 step_id: STEP-24-02
 phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]'
-status: planned
+status: complete
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-07-27'
 depends_on:
   - STEP-24-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-27-145330-implement-project-auto-create-switcher-and-per-project-defaults-claude-opus-5|SESSION-2026-07-27-145330 claude-opus-5 session for Implement project auto-create switcher and per-project defaults]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-27-145330
+active_session_id: 05_Sessions/2026-07-27-145330-implement-project-auto-create-switcher-and-per-project-defaults-claude-opus-5
+context_status: completed
+context_summary: 'STEP-24-02 complete: project entity (auto-create by directory, rename, merge with crash-recoverable journal), per-project defaults resolved into session creation, project-policy hook filled, and a ProjectSwitcher in the chat side panel. Automated validation green across contracts/runtime/desktop/harness, root build, root typecheck, and the new E2E spec; the manual GUI pass was NOT performed (headless session).'
 ---
 
 # Step 02 - Implement project auto-create switcher and per-project defaults
@@ -77,16 +82,15 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults/Validation_Plan|Validation Plan]].
+- Status: complete
+- Current owner: claude-opus-5
+- Last touched: 2026-07-27
+- Next action: Proceed to [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_03_add-session-list-auto-titles-and-concurrent-session-management|STEP-24-03 Add session list auto-titles and concurrent session management]]. Outstanding for this step: the manual GUI pass on the switcher (`pnpm --filter @srgnt/desktop dev`) was NOT performed in the executing session.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- Durable findings live in [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults/Implementation_Notes|Implementation Notes]]: the derived-id identity rule, the create-once lock, corrupt-file repair, the merge journal shape, the filled project-policy hook, and the active-project preselection gotcha that broke the Phase-23 chat E2E.
 
 ## Human Notes
 
@@ -95,10 +99,9 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-27 - [[05_Sessions/2026-07-27-145330-implement-project-auto-create-switcher-and-per-project-defaults-claude-opus-5|SESSION-2026-07-27-145330 claude-opus-5 session for Implement project auto-create switcher and per-project defaults]] - Implemented the step end to end and closed it: contracts, `ProjectStore`, IPC + main service, session-creation wiring, `ProjectSwitcher`, and an E2E spec. Caught and fixed one real regression mid-session (arbitrary active-project preselection broke the Phase-23 chat E2E). Automated validation green; manual GUI pass not performed.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+Complete. Projects are a real entity (`projects/<id>/project.json`), created only by directory, renameable, mergeable with crash-recoverable semantics, with per-project defaults resolving into session creation and the STEP-23-03 project-policy stub filled; a `ProjectSwitcher` ships in the chat panel's side panel. Automated validation is green across contracts/runtime/desktop/harness, root build, root typecheck, and the new `e2e/projects.spec.ts`. **The manual GUI pass was NOT performed** (headless session). Full result, exact commands, and follow-ups: [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults/Outcome|Outcome]].

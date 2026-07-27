@@ -47,6 +47,10 @@ export function getElectronLaunchEnv(
     ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
     SRGNT_E2E: '1',
     SRGNT_USER_DATA_PATH: userDataDir,
+    // Onboarding's "Use Default Location" otherwise picks $HOME/srgnt-workspace
+    // — the developer's real one. Each test gets its own instead, so a run
+    // cannot leave notes or auto-created projects on the machine.
+    SRGNT_DEFAULT_WORKSPACE_ROOT: path.join(userDataDir, 'workspace'),
     ...extra,
   };
 }

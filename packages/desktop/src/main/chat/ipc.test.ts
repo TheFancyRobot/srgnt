@@ -2,6 +2,8 @@
  * @vitest-environment node
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ipcChannels } from '@srgnt/contracts';
 
 const { handlers, mockHandle } = vi.hoisted(() => {
@@ -16,7 +18,7 @@ vi.mock('electron', () => ({
   ipcMain: { handle: mockHandle },
 }));
 
-import { registerChatHandlers, type ChatSessionController } from './index.js';
+import { registerChatHandlers, resolveChatTarget, type ChatSessionController } from './index.js';
 
 const chatChannels = [
   ipcChannels.chatSessionNew,
@@ -63,7 +65,8 @@ describe('registerChatHandlers', () => {
     }
 
     await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
-    expect(controller.newSession).toHaveBeenCalledWith('mock');
+    // No `projects` wiring → no project resolved, exactly as in Phase 23.
+    expect(controller.newSession).toHaveBeenCalledWith('mock', {});
 
     await handlers.get(ipcChannels.chatSessionPrompt)!({}, { sessionId: 'chat-x-1', text: 'hi' });
     expect(controller.prompt).toHaveBeenCalledWith('chat-x-1', 'hi');
@@ -246,5 +249,131 @@ describe('registerChatHandlers', () => {
       ipcChannels.chatPermissionRequest,
       ipcChannels.chatPermissionClose,
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Project resolution (PHASE-24, STEP-24-02)
+// ---------------------------------------------------------------------------
+
+describe('resolveChatTarget', () => {
+  it('prefers an explicit choice over the project default', () => {
+    expect(resolveChatTarget('mock', 'pi')).toBe('mock');
+    expect(resolveChatTarget('pi', 'mock')).toBe('pi');
+  });
+
+  it('falls back to the project default, then to mock', () => {
+    expect(resolveChatTarget(undefined, 'pi')).toBe('pi');
+    expect(resolveChatTarget(undefined, undefined)).toBe('mock');
+  });
+
+  it('ignores a default naming a harness this surface cannot drive', () => {
+    // harnesses.json is user data; an unknown default must degrade, not crash.
+    expect(resolveChatTarget(undefined, 'opencode')).toBe('mock');
+  });
+});
+
+describe('registerChatHandlers project resolution', () => {
+  const project = {
+    id: 'abc123',
+    name: 'srgnt',
+    rootDir: tmpdir(),
+    additionalDirectories: [] as readonly string[],
+    createdAt: '2026-07-20T10:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    handlers.clear();
+  });
+
+  function projectsStub(overrides: Partial<typeof project> = {}) {
+    const resolved = { ...project, ...overrides };
+    return {
+      get: vi.fn(async () => resolved),
+      ensureForDir: vi.fn(async () => resolved),
+    };
+  }
+
+  it('auto-creates the project from the workspace cwd when none is named', async () => {
+    const controller = fakeController();
+    const projects = projectsStub();
+    registerChatHandlers({
+      getWindow: () => null,
+      getCwd: () => '/ws',
+      projects,
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
+
+    expect(projects.ensureForDir).toHaveBeenCalledWith('/ws');
+    expect(projects.get).not.toHaveBeenCalled();
+    expect(controller.newSession).toHaveBeenCalledWith('mock', {
+      projectId: 'abc123',
+      cwd: project.rootDir,
+    });
+  });
+
+  it('looks the project up by id when the renderer named one', async () => {
+    const controller = fakeController();
+    const projects = projectsStub();
+    registerChatHandlers({
+      getWindow: () => null,
+      getCwd: () => '/ws',
+      projects,
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock', projectId: 'abc123' });
+
+    expect(projects.get).toHaveBeenCalledWith('abc123');
+    expect(projects.ensureForDir).not.toHaveBeenCalled();
+  });
+
+  it("applies the project's defaultHarnessId when no target was chosen", async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      getCwd: () => '/ws',
+      projects: projectsStub({ defaultHarnessId: 'pi' } as Partial<typeof project>),
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await handlers.get(ipcChannels.chatSessionNew)!({}, {});
+
+    expect(controller.newSession).toHaveBeenCalledWith('pi', expect.objectContaining({ projectId: 'abc123' }));
+  });
+
+  it("passes the project's permission policy through to the controller", async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      getCwd: () => '/ws',
+      projects: projectsStub({ permissionPolicy: { read: 'allow' } } as Partial<typeof project>),
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
+
+    expect(controller.newSession).toHaveBeenCalledWith(
+      'mock',
+      expect.objectContaining({ permissionPolicy: { read: 'allow' } }),
+    );
+  });
+
+  it('fails with a readable error when the project rootDir no longer exists', async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      getCwd: () => '/ws',
+      projects: projectsStub({ rootDir: join(tmpdir(), 'srgnt-deleted-checkout-that-does-not-exist') }),
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await expect(handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' })).rejects.toThrow(
+      /no longer exists/,
+    );
+    expect(controller.newSession).not.toHaveBeenCalled();
   });
 });

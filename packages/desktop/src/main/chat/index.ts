@@ -1,4 +1,5 @@
 import { ipcMain, type BrowserWindow } from 'electron';
+import { existsSync } from 'node:fs';
 import {
   ipcChannels,
   parseSync,
@@ -7,6 +8,8 @@ import {
   SChatSessionPromptRequest,
   SChatSessionRef,
   SChatSessionSetModeRequest,
+  type ChatTarget,
+  type Project,
 } from '@srgnt/contracts';
 // Type-only import: `session-controller` statically imports the ESM-only
 // `@srgnt/harness`, and the desktop main is compiled to CommonJS, so a *value*
@@ -18,11 +21,39 @@ import type { ChatSessionController } from './session-controller.js';
 export type { ChatSessionController } from './session-controller.js';
 export type { ChatConnectFn, ChatConnection, ChatHarnessIdentity } from './session-controller.js';
 
+/**
+ * Which harnesses the chat surface can actually drive. A project's stored
+ * `defaultHarnessId` is free-form (harnesses.json can name anything), so it is
+ * checked against this before being used as a target — an unknown default must
+ * degrade to the mock, not crash session creation.
+ */
+const CHAT_TARGETS: readonly string[] = ['mock', 'pi'];
+
+export function resolveChatTarget(
+  requested: ChatTarget | undefined,
+  defaultHarnessId: string | undefined,
+): ChatTarget {
+  if (requested !== undefined) return requested;
+  if (defaultHarnessId !== undefined && CHAT_TARGETS.includes(defaultHarnessId)) {
+    return defaultHarnessId as ChatTarget;
+  }
+  return 'mock';
+}
+
 export interface ChatWiring {
   /** The active window; the controller pushes `chat:session:update` frames to it. */
   readonly getWindow: () => BrowserWindow | null;
   /** Working directory for sessions (workspace root). Defaults to OS temp dir. */
   readonly getCwd?: () => string | undefined;
+  /**
+   * Resolves the project a session belongs to (STEP-24-02): by id when the
+   * renderer named one, otherwise auto-created for the workspace cwd. Absent
+   * (tests, headless) means sessions carry no project, exactly as in Phase 23.
+   */
+  readonly projects?: {
+    get(projectId: string): Promise<Project>;
+    ensureForDir(rootDir: string): Promise<Project>;
+  };
   /** Overrides controller construction (tests). */
   readonly createController?: (options: {
     onUpdate: (event: { sessionId: string; update: unknown }) => void;
@@ -80,8 +111,37 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
   };
 
   ipcMain.handle(ipcChannels.chatSessionNew, async (_event, payload: unknown) => {
-    const { target } = parseSync(SChatSessionNewRequest, payload);
-    return (await getController()).newSession(target);
+    const { target, projectId } = parseSync(SChatSessionNewRequest, payload);
+    // "Project = directory": with no explicit id the workspace cwd materializes
+    // one, so a user who never thinks about projects still gets theirs.
+    const cwd = wiring.getCwd?.();
+    const project =
+      wiring.projects === undefined
+        ? undefined
+        : projectId !== undefined
+          ? await wiring.projects.get(projectId)
+          : cwd !== undefined && cwd !== ''
+            ? await wiring.projects.ensureForDir(cwd)
+            : undefined;
+    // A project outlives its checkout: it must keep listing after the directory
+    // is deleted, but a session there would hand the agent a cwd that is not a
+    // directory. Fail with something a user can act on instead.
+    if (project !== undefined && !existsSync(project.rootDir)) {
+      throw new Error(
+        `Project "${project.name}" points at ${project.rootDir}, which no longer exists. Restore the directory or switch projects.`,
+      );
+    }
+    return (await getController()).newSession(resolveChatTarget(target, project?.defaultHarnessId), {
+      ...(project !== undefined
+        ? {
+            projectId: project.id,
+            cwd: project.rootDir,
+            ...(project.permissionPolicy !== undefined
+              ? { permissionPolicy: project.permissionPolicy }
+              : {}),
+          }
+        : {}),
+    });
   });
 
   ipcMain.handle(ipcChannels.chatSessionPrompt, async (_event, payload: unknown) => {

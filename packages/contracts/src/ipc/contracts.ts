@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { PositiveInt } from '../shared-schemas.js';
 import { SLaunchContext } from '../entities/launch.js';
+import { SProject, SProjectPermissionPolicy } from '../project.js';
 
 export const ipcChannels = {
   appGetVersion: 'app:get-version',
@@ -75,6 +76,15 @@ export const ipcChannels = {
   chatPermissionRequest: 'chat:permission:request',
   chatPermissionRespond: 'chat:permission:respond',
   chatPermissionClose: 'chat:permission:close',
+  // Projects (PHASE-24, STEP-24-02). "Project = directory": the user never
+  // creates one explicitly, `project:ensure` materializes it for a directory and
+  // is idempotent, so the switcher's "add" affordance and the session-creation
+  // path are the same call. Deletion is deliberately absent (merge only).
+  projectList: 'project:list',
+  projectEnsure: 'project:ensure',
+  projectRename: 'project:rename',
+  projectMerge: 'project:merge',
+  projectSetDefaults: 'project:set-defaults',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -508,7 +518,18 @@ export const SChatTarget = Schema.Literal('mock', 'pi');
 export type ChatTarget = Schema.Schema.Type<typeof SChatTarget>;
 
 export const SChatSessionNewRequest = Schema.Struct({
-  target: SChatTarget,
+  /**
+   * Absent means "use the project's `defaultHarnessId`" (STEP-24-02), falling
+   * back to `mock` when the project names none or names one this surface cannot
+   * drive. An explicit choice always wins over the stored default.
+   */
+  target: Schema.optional(SChatTarget),
+  /**
+   * Which project the session belongs to. Absent means "derive it from the
+   * workspace cwd" — the auto-create path that materializes a project the first
+   * time a directory is used.
+   */
+  projectId: Schema.optional(Schema.String),
 });
 export type ChatSessionNewRequest = Schema.Schema.Type<typeof SChatSessionNewRequest>;
 
@@ -530,6 +551,8 @@ export const SChatSessionNewResponse = Schema.Struct({
   /** Opaque chat-local handle (NOT the ACP session id). */
   sessionId: Schema.String,
   target: SChatTarget,
+  /** The project the session was created under (STEP-24-02). */
+  projectId: Schema.optional(Schema.String),
   /** Harness identity, mirrored from the `HarnessDefinition` that was launched. */
   harnessId: Schema.String,
   harnessName: Schema.String,
@@ -681,3 +704,47 @@ export const SChatPermissionCloseEvent = Schema.Struct({
   reason: SChatPermissionCloseReason,
 });
 export type ChatPermissionCloseEvent = Schema.Schema.Type<typeof SChatPermissionCloseEvent>;
+
+// Project IPC types (PHASE-24, STEP-24-02). The renderer never invents a project
+// id: every mutation names an existing one, and creation goes through
+// `project:ensure` with a directory, which is what makes "project = directory"
+// the only way a project comes into being.
+
+export const SProjectEnsureRequest = Schema.Struct({
+  /** Any directory path; the store resolves it and derives the id from that. */
+  rootDir: Schema.String,
+});
+export type ProjectEnsureRequest = Schema.Schema.Type<typeof SProjectEnsureRequest>;
+
+export const SProjectRef = Schema.Struct({
+  projectId: Schema.String,
+});
+export type ProjectRef = Schema.Schema.Type<typeof SProjectRef>;
+
+export const SProjectRenameRequest = Schema.Struct({
+  projectId: Schema.String,
+  name: Schema.String,
+});
+export type ProjectRenameRequest = Schema.Schema.Type<typeof SProjectRenameRequest>;
+
+/** Irreversible: source sessions move under the target and the source is removed. */
+export const SProjectMergeRequest = Schema.Struct({
+  sourceProjectId: Schema.String,
+  targetProjectId: Schema.String,
+});
+export type ProjectMergeRequest = Schema.Schema.Type<typeof SProjectMergeRequest>;
+
+export const SProjectSetDefaultsRequest = Schema.Struct({
+  projectId: Schema.String,
+  /** Absent leaves the stored value alone; `null` clears it. */
+  defaultHarnessId: Schema.optional(Schema.NullOr(Schema.String)),
+  permissionPolicy: Schema.optional(Schema.NullOr(SProjectPermissionPolicy)),
+});
+export type ProjectSetDefaultsRequest = Schema.Schema.Type<typeof SProjectSetDefaultsRequest>;
+
+export const SProjectListResponse = Schema.Struct({
+  projects: Schema.Array(SProject),
+  /** Project directories that could not be read — reported, never fatal. */
+  skipped: Schema.Array(Schema.Struct({ projectId: Schema.String, reason: Schema.String })),
+});
+export type ProjectListResponse = Schema.Schema.Type<typeof SProjectListResponse>;

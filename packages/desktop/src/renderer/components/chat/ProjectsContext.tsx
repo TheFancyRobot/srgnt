@@ -90,7 +90,9 @@ export function ProjectsProvider({ children }: { readonly children: React.ReactN
         await window.srgnt.projectRename?.(projectId, name);
         setError(null);
       } catch (cause) {
+        // See mergeProjects: refreshing here would clear the error it just set.
         setError(messageOf(cause));
+        return;
       }
       await refresh();
     },
@@ -107,6 +109,12 @@ export function ProjectsProvider({ children }: { readonly children: React.ReactN
         setError(null);
       } catch (cause) {
         setError(messageOf(cause));
+        // No refresh on failure: `refresh` clears the error on its success path,
+        // so it would erase the message this just set — and for merge, an
+        // irreversible action behind a confirm, the user would see the dialog
+        // close with no explanation. Nothing changed on disk, so there is
+        // nothing to resync anyway.
+        return;
       }
       await refresh();
     },

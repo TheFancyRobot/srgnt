@@ -4,6 +4,7 @@ import { MessageList } from './MessageList.js';
 import { PermissionPrompt } from './PermissionPrompt.js';
 import { TrustBadge } from './TrustBadge.js';
 import { useChatSession, type ChatTarget } from './ChatSessionContext.js';
+import { useProjectsOptional } from './ProjectsContext.js';
 
 /**
  * The chat center panel (PHASE-23, STEP-23-01) — the first product surface of
@@ -39,7 +40,15 @@ function EmptyState({ hasSession }: { readonly hasSession: boolean }): React.Rea
 export function ChatView(): React.ReactElement {
   const { session, status, error, transcript, permissions, newSession, dispose, respondToPermission, dismissError } =
     useChatSession();
-  const [target, setTarget] = React.useState<ChatTarget>('mock');
+  // `null` means "the user has not chosen", which is what lets the project's
+  // `defaultHarnessId` decide. Without it the selector always sent an explicit
+  // target and main's default resolution was unreachable — a project set to Pi
+  // still opened Mock unless the user touched the dropdown.
+  const [chosenTarget, setChosenTarget] = React.useState<ChatTarget | null>(null);
+  const projectDefault = useProjectsOptional()?.activeProject?.defaultHarnessId;
+  const target: ChatTarget =
+    chosenTarget ?? (projectDefault === 'pi' || projectDefault === 'mock' ? projectDefault : 'mock');
+  const setTarget = setChosenTarget;
 
   const hasSession = session !== null;
   const connecting = status === 'connecting';

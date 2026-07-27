@@ -419,6 +419,11 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   );
 }
 
+/** Like {@link useChatSession}, but `null` outside the provider. */
+export function useChatSessionOptional(): ChatSessionContextValue | null {
+  return React.useContext(ChatSessionContext);
+}
+
 export function useChatSession(): ChatSessionContextValue {
   const value = React.useContext(ChatSessionContext);
   if (value === null) {

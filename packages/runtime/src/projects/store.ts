@@ -143,6 +143,19 @@ export class ProjectStore {
 
   constructor(readonly workspaceRoot: string) {}
 
+  /**
+   * Both ids, always in sorted order so two callers taking the same pair can
+   * never deadlock against each other. Merge touches two projects at once, and
+   * a concurrent rename or setDefaults on either one would otherwise interleave
+   * with a multi-step destructive move.
+   */
+  private withLocks<T>(ids: readonly string[], run: () => Promise<T>): Promise<T> {
+    const [first, second] = [...new Set(ids)].sort();
+    if (first === undefined) return run();
+    if (second === undefined) return this.withLock(first, run);
+    return this.withLock(first, () => this.withLock(second, run));
+  }
+
   private withLock<T>(projectId: string, run: () => Promise<T>): Promise<T> {
     const previous = this.locks.get(projectId) ?? Promise.resolve();
     // `then(run, run)`: a rejected predecessor must not poison every later
@@ -229,9 +242,21 @@ export class ProjectStore {
         }
         return existing.project;
       }
-      // `corrupt` is repaired, not rejected: the record carries no trustworthy
-      // `rootDir`, so there is no other directory whose project could be stolen
-      // by rewriting it — and leaving it broken would wedge this directory forever.
+      // `corrupt` is normally repaired rather than rejected: the record carries
+      // no trustworthy `rootDir`, so rewriting it steals nothing, and leaving it
+      // broken would wedge this directory forever.
+      //
+      // Unless sessions already live under this id. Then the directory demonstrably
+      // belonged to some project, the truncated-hash collision this guard exists
+      // for becomes reachable, and rebinding would hand another root's history to
+      // this one. Fail closed and let a human look.
+      if (existing.kind === 'corrupt' && (await this.sessionIds(projectId)).length > 0) {
+        throw new ProjectIdCollisionError(
+          projectId,
+          resolved,
+          'unreadable project.json beside existing sessions'
+        );
+      }
       await this.sweepTempFiles(projectId);
       const now = new Date().toISOString();
       return this.write({
@@ -329,13 +354,21 @@ export class ProjectStore {
    * merge loudly instead.
    *
    * ponytail: not serialized against the per-id create lock, so a merge racing
-   * an `ensureProjectForDir` for the same project can interleave. Merge is a
-   * rare, user-initiated action; take both projects' locks if that ever bites.
+   * Holds BOTH projects' locks (sorted, so a concurrent pair cannot deadlock),
+   * because the move is multi-step and destructive: a rename or setDefaults
+   * landing halfway through would be lost or would write into a directory this
+   * is about to delete.
    */
   async merge(sourceProjectId: string, targetProjectId: string): Promise<Project> {
     if (sourceProjectId === targetProjectId) {
       throw new ProjectMergeError('Cannot merge a project into itself.');
     }
+    return this.withLocks([sourceProjectId, targetProjectId], () =>
+      this.mergeLocked(sourceProjectId, targetProjectId)
+    );
+  }
+
+  private async mergeLocked(sourceProjectId: string, targetProjectId: string): Promise<Project> {
     const source = await this.get(sourceProjectId);
     const target = await this.get(targetProjectId);
 
@@ -352,26 +385,80 @@ export class ProjectStore {
     return this.applyMerge(journal, target);
   }
 
+  /**
+   * Rewrite one moved session's `projectId` to the merge target. Tolerant: a
+   * session whose meta is missing or unreadable must not wedge the merge, since
+   * its events have already moved and recovery has to stay idempotent.
+   */
+  private async retargetSessionMeta(targetProjectId: string, sessionId: string): Promise<void> {
+    const metaPath = path.join(
+      projectSessionsDirectory(this.workspaceRoot, targetProjectId),
+      sessionId,
+      'meta.json'
+    );
+    let raw: string;
+    try {
+      raw = await fs.readFile(metaPath, 'utf8');
+    } catch (error) {
+      if (errno(error) === 'ENOENT') return;
+      throw error;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (typeof parsed !== 'object' || parsed === null) return;
+    const current = parsed as Record<string, unknown>;
+    if (current.projectId === targetProjectId) return;
+    await writeJsonAtomic(metaPath, {
+      ...current,
+      projectId: targetProjectId,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
   /** Steps 2-5 of a merge. Idempotent, so both `merge` and recovery use it. */
   private async applyMerge(journal: MergeJournal, target: Project | undefined): Promise<Project> {
     const { sourceProjectId, targetProjectId } = journal;
     const sourceSessions = projectSessionsDirectory(this.workspaceRoot, sourceProjectId);
     const targetSessions = projectSessionsDirectory(this.workspaceRoot, targetProjectId);
     const ids = await this.sessionIds(sourceProjectId);
-    if (ids.length > 0) await fs.mkdir(targetSessions, { recursive: true });
 
+    // Every destination is checked BEFORE the first rename. Discovering a
+    // collision on the Nth id mid-loop would leave N-1 sessions already moved
+    // and a journal on disk that replays into the same collision forever —
+    // sessions split across two projects with no way out.
+    const collisions: string[] = [];
     for (const sessionId of ids) {
-      const destination = path.join(targetSessions, sessionId);
       try {
-        await fs.access(destination);
-        throw new ProjectMergeError(
-          `Session ${sessionId} already exists under project ${targetProjectId}; merge aborted without overwriting it.`
-        );
+        await fs.access(path.join(targetSessions, sessionId));
+        collisions.push(sessionId);
       } catch (error) {
-        if (error instanceof ProjectMergeError) throw error;
         if (errno(error) !== 'ENOENT') throw error;
       }
-      await fs.rename(path.join(sourceSessions, sessionId), destination);
+    }
+    if (collisions.length > 0) {
+      // Nothing has moved, so the journal describes work that will never be
+      // valid. Drop it rather than leaving recovery to retry it every boot.
+      await fs.rm(mergeJournalPath(this.workspaceRoot, targetProjectId), { force: true });
+      throw new ProjectMergeError(
+        `Session${collisions.length > 1 ? 's' : ''} ${collisions.join(', ')} already exist${
+          collisions.length > 1 ? '' : 's'
+        } under project ${targetProjectId}; merge aborted without moving anything.`
+      );
+    }
+
+    if (ids.length > 0) await fs.mkdir(targetSessions, { recursive: true });
+    for (const sessionId of ids) {
+      await fs.rename(path.join(sourceSessions, sessionId), path.join(targetSessions, sessionId));
+      // The moved session's own `meta.json` still claims the source project,
+      // which is deleted below — `listSessions(target)` would return sessions
+      // whose `projectId` points at nothing, and any lookup built from that id
+      // (readMeta, readEvents, resume) would miss. Written directly because
+      // SessionStore.updateMeta refuses identity changes by design.
+      await this.retargetSessionMeta(targetProjectId, sessionId);
     }
 
     const current = target ?? (await this.get(targetProjectId));
@@ -432,7 +519,11 @@ export class ProjectStore {
         ? journal.sourceAdditionalDirectories.filter((entry) => typeof entry === 'string')
         : [];
       try {
-        await this.applyMerge(journal, undefined);
+        // Same pair of locks as `merge`: recovery runs at startup, but nothing
+        // stops a project operation racing it once the app is up.
+        await this.withLocks([journal.sourceProjectId, targetProjectId], () =>
+          this.applyMerge(journal, undefined)
+        );
         result.resumed.push(targetProjectId);
       } catch (error) {
         result.failed.push({ targetProjectId, reason: String(error) });

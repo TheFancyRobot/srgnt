@@ -50,6 +50,16 @@ async function startSession(page: Page): Promise<void> {
   await expect(page.getByTestId('project-list')).toBeVisible();
 }
 
+/**
+ * A live session pins the app to its own project's directory, so the switcher
+ * refuses to change projects underneath it. Ending the session is how a user
+ * switches — these specs do the same.
+ */
+async function endSession(page: Page): Promise<void> {
+  await page.getByTestId('chat-dispose').click();
+  await expect(page.getByTestId('chat-new-session')).toBeVisible();
+}
+
 function row(page: Page, projectId: string) {
   return page.locator(`[data-testid="project-row"][data-project-id="${projectId}"]`);
 }
@@ -104,6 +114,12 @@ test.describe('project switcher', () => {
     await expect(row(page, idA)).toContainText(dirA);
     await expect(row(page, idB)).toContainText(dirB);
 
+    // While the session is live the switch is refused: the agent is running in
+    // project A's directory and must not be silently re-labelled as B.
+    await expect(row(page, idB).getByTestId('project-select')).toBeDisabled();
+    await expect(page.getByTestId('project-switch-locked')).toBeVisible();
+    await endSession(page);
+
     await row(page, idB).getByTestId('project-select').click();
     await expect(row(page, idB)).toHaveAttribute('data-active', 'true');
     await expect(row(page, idA)).toHaveAttribute('data-active', 'false');
@@ -123,6 +139,8 @@ test.describe('project switcher', () => {
     const idA = await ensureProject(page, dirA);
     const idB = await ensureProject(page, dirB);
     await startSession(page);
+    // Selecting a project is blocked while a session is live; end it first.
+    await endSession(page);
 
     await row(page, idA).getByTestId('project-select').click();
     await expect(row(page, idA)).toHaveAttribute('data-active', 'true');

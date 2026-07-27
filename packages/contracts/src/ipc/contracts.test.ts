@@ -34,7 +34,6 @@ import {
   SChatPermissionCloseEvent,
   SChatPermissionRequestEvent,
   SChatPermissionResponse,
-  SChatSessionNewRequest,
   SChatSessionNewResponse,
   SChatSessionPromptRequest,
   SChatSessionPromptResponse,

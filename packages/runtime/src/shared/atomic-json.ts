@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import * as fs from 'fs/promises';
+import * as path from 'path';
 
 /**
  * Write a JSON document atomically: a fully written, fsync'd temp file is
@@ -25,10 +26,36 @@ export async function writeJsonAtomic(filePath: string, value: unknown): Promise
       await handle.close();
     }
     await fs.rename(tmpPath, filePath);
+    await syncDirectory(path.dirname(filePath));
   } catch (error) {
     // Do not leave the scratch file behind on a failed write; a fixed name was
     // at least self-cleaning on the next attempt, a unique one is not.
     await fs.rm(tmpPath, { force: true });
     throw error;
+  }
+}
+
+/**
+ * `handle.sync()` flushes the temp file's contents; the *rename* lives in the
+ * parent directory, so without this a crash can lose the publish and leave the
+ * old document — or, for the merge journal, leave recovery blind to work that
+ * already started.
+ *
+ * Not every platform lets you fsync a directory (Windows rejects the open), and
+ * failing a completed write over a durability hint would be worse than the hint.
+ */
+async function syncDirectory(directory: string): Promise<void> {
+  let handle;
+  try {
+    handle = await fs.open(directory, 'r');
+  } catch {
+    return;
+  }
+  try {
+    await handle.sync();
+  } catch {
+    // EINVAL/EPERM/EISDIR depending on platform and filesystem.
+  } finally {
+    await handle.close();
   }
 }

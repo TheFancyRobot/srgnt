@@ -5,6 +5,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectSwitcher } from './ProjectSwitcher.js';
 import { ProjectsProvider, useProjects } from './ProjectsContext.js';
+import { ChatSessionProvider } from './ChatSessionContext.js';
+import { ChatView } from './ChatView.js';
 
 afterEach(cleanup);
 
@@ -31,6 +33,10 @@ let api: {
   projectList: AnyMock;
   projectRename: AnyMock;
   projectMerge: AnyMock;
+  // Only the live-session test needs these; the rest never open one.
+  chatSessionNew: AnyMock;
+  chatSessionDispose: AnyMock;
+  onChatSessionUpdate: AnyMock;
 };
 
 beforeEach(() => {
@@ -47,6 +53,17 @@ beforeEach(() => {
       listed = listed.filter((project) => project.id !== sourceProjectId);
       return listed[0]!;
     }) as AnyMock,
+    chatSessionNew: vi.fn(async (target: string) => ({
+      sessionId: 'chat-mock-1',
+      target,
+      harnessId: target,
+      harnessName: 'Mock Agent',
+      quirks: [],
+      capabilities: { protocolVersion: 1 },
+      projectId: projectA.id,
+    })) as AnyMock,
+    chatSessionDispose: vi.fn(async () => {}) as AnyMock,
+    onChatSessionUpdate: vi.fn(() => () => {}) as AnyMock,
   };
   (globalThis as { window: { srgnt: unknown } }).window.srgnt = api;
 });
@@ -55,6 +72,18 @@ function renderSwitcher() {
   return render(
     <ProjectsProvider>
       <ProjectSwitcher />
+    </ProjectsProvider>,
+  );
+}
+
+/** With a live chat session above it, as the real side panel is mounted. */
+function renderSwitcherWithSession() {
+  return render(
+    <ProjectsProvider>
+      <ChatSessionProvider>
+        <ChatView />
+        <ProjectSwitcher />
+      </ChatSessionProvider>
     </ProjectsProvider>,
   );
 }
@@ -168,6 +197,26 @@ describe('ProjectSwitcher', () => {
     fireEvent.keyDown(screen.getByTestId('project-rename-input'), { key: 'Enter' });
 
     await waitFor(() => expect(screen.getByTestId('project-error')).toHaveTextContent('cannot be empty'));
+  });
+
+  it('refuses to switch projects out from under a live session', async () => {
+    renderSwitcherWithSession();
+    await waitFor(() => expect(screen.getByTestId('project-list')).toBeInTheDocument());
+    // Before a session exists, switching is ordinary.
+    expect(within(row(projectB.id)).getByTestId('project-select')).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId('chat-new-session'));
+    await waitFor(() => expect(screen.getByTestId('chat-session-badge')).toBeInTheDocument());
+
+    // The session is pinned to the cwd it opened with; letting the switcher
+    // claim another project would leave the agent editing the wrong checkout.
+    expect(within(row(projectB.id)).getByTestId('project-select')).toBeDisabled();
+    expect(screen.getByTestId('project-switch-locked')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('chat-dispose'));
+    await waitFor(() =>
+      expect(within(row(projectB.id)).getByTestId('project-select')).toBeEnabled(),
+    );
   });
 
   it('shows an empty state rather than a broken panel with no projects', async () => {

@@ -9,7 +9,7 @@
 - `chat:session:new` resolution lives in `packages/desktop/src/main/chat/index.ts`: `projectId` -> `projects.get`, else `projects.ensureForDir(cwd)`. `resolveChatTarget(requested, defaultHarnessId)` prefers an explicit target, then the project default when it names a harness this surface can drive, then `mock`. A project whose `rootDir` no longer exists rejects session creation with a readable message instead of handing the agent a bad cwd.
 - The switcher's real home is the chat panel's side-panel content (`ChatPlanSidePanel`), as the corrected orientation in the brief says - NOT `Navigation.tsx`/`AppLayout`.
 - **Gotcha worth remembering:** the active project must default to the project whose `rootDir` IS the workspace root, or `null`. Preselecting `projects[0]` silently redirects session creation and broke all 8 Phase-23 chat E2E specs when that project's directory had been deleted. Regression test: `ProjectSwitcher.test.tsx > active project selection`.
-- `~/srgnt-workspace` is shared across desktop E2E runs (`completeOnboarding` clicks "Use Default Location"), so `e2e/projects.spec.ts` re-roots to a per-test temp workspace via `setWorkspaceRoot`. Other specs still share the default root.
+- Desktop E2E used to onboard into the developer's real `~/srgnt-workspace` (`completeOnboarding` clicks "Use Default Location"). Fixed during PR review: `resolveDefaultWorkspaceRoot` honors `SRGNT_DEFAULT_WORKSPACE_ROOT`, and `getElectronLaunchEnv` points it under each test's own user-data dir, so every spec is isolated by the fixture. `e2e/projects.spec.ts` additionally re-roots at runtime via `setWorkspaceRoot`.
 
 ## Related Notes
 

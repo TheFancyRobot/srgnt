@@ -6,7 +6,7 @@ Validation actually executed (all foreground): `@srgnt/contracts` 167 tests, `@s
 
 **Not performed:** the Validation Plan's manual `pnpm --filter @srgnt/desktop dev` pass (start a session in dir A, a second in dir B, switch/rename/merge by hand) was NOT run - the executing session was headless with no GUI, so no human-eyes check of the switcher's layout, spacing, or theming has happened. Real-Pi `defaultHarnessId` resolution was also not exercised; only the mock harness ran.
 
-Follow-ups (none blocking): the manual GUI pass; a real-Pi default-harness check; 8 leftover E2E project directories in `~/srgnt-workspace/projects/` pointing at deleted temp dirs (harmless, delete by hand - removal was sandbox-blocked in-session); re-rooting the other E2E specs to per-test workspaces; project deletion and the `permissionPolicy` editing UI, both recorded non-goals for this step. Carried forward and still open: `ChatSessionController` still buffers `SessionEvent[]` in memory instead of writing through `SessionStore`.
+Follow-ups (none blocking): the manual GUI pass; a real-Pi default-harness check; 8 leftover E2E project directories in `~/srgnt-workspace/projects/` pointing at deleted temp dirs (harmless and no longer accumulating now that the E2E fixture isolates the default workspace, but worth deleting by hand); project deletion and the `permissionPolicy` editing UI, both recorded non-goals for this step. Carried forward and still open: `ChatSessionController` still buffers `SessionEvent[]` in memory instead of writing through `SessionStore`.
 
 ## Related Notes
 

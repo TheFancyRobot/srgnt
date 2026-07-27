@@ -71,7 +71,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - **Truncated-hash collisions are a tunable, not a correctness risk.** `ensureProjectForDir` compares the stored `rootDir` before reusing a project and throws `ProjectIdCollisionError` on a mismatch, so widening the 12-char slice is a free change later.
 - **A corrupt `project.json` is repaired, not rejected.** It carries no trustworthy `rootDir`, so there is no other directory whose project could be stolen by rewriting it - and rejecting would wedge that directory forever. A valid record with a *different* `rootDir` is the only fail-closed case.
 - `request.kind` is agent-supplied, so the project-policy lookup uses `Object.prototype.hasOwnProperty.call` - a bare `policy[kind]` would let `__proto__`/`constructor` return a function where a decision was expected. Covered by a test.
-- **`~/srgnt-workspace` is shared by every desktop E2E run.** `completeOnboarding` clicks "Use Default Location", so anything a spec writes into the workspace persists across runs and leaks between tests. `e2e/projects.spec.ts` re-roots to a per-test temp workspace via `setWorkspaceRoot`; other specs do not, and that is a latent cross-test coupling.
+- **`~/srgnt-workspace` used to be shared by every desktop E2E run.** `completeOnboarding` clicks "Use Default Location", which resolved to the developer's real home workspace, so anything a spec wrote persisted across runs and leaked between tests. Fixed during PR review: `resolveDefaultWorkspaceRoot` honors `SRGNT_DEFAULT_WORKSPACE_ROOT` and `getElectronLaunchEnv` points it inside each test's own user-data dir, so every spec is isolated by the fixture. `e2e/projects.spec.ts` additionally re-roots at runtime via `setWorkspaceRoot`.
 - The permission engine already had the `projectPolicy` hook from STEP-23-03; filling it needed no engine change at all, only `createProjectPolicyHook` and passing an engine into `createChatPermissionHost`.
 
 ## Context Handoff
@@ -87,12 +87,12 @@ What STEP-24-03 inherits:
 - **Session creation already carries a project**: `chat:session:new` takes an optional `projectId` (absent = derive from the workspace cwd) and an optional `target` (absent = the project's `defaultHarnessId`, then `mock`). The response and the `client/session_created` audit event both carry `projectId`. The session cwd is the project's `rootDir`.
 - **Renderer state**: `ProjectsContext.tsx` holds `projects` + `activeProjectId`; `ProjectSwitcher` lives in `ChatPlanSidePanel`. The active project defaults to the one whose `rootDir` is the workspace root and is `null` otherwise - **do not "helpfully" preselect an arbitrary project**, that exact change broke every chat E2E this session (see Findings).
 - **Still in memory**: `ChatSessionController` keeps `SessionEvent[]` per session and does NOT write through `SessionStore`. The persistence swap is still open work; when it lands, mind the recorded `ponytail:` ceiling in `sessions/event-log.ts` - `readEventLog` reads the whole file and `readEvents({fromSeq})` filters after parsing, so a poll-from-zero loop is quadratic. Read once and follow the tail.
-- **`~/srgnt-workspace` is shared by every desktop E2E run**; `e2e/projects.spec.ts` re-roots to a temp workspace via `setWorkspaceRoot`, other specs do not. Copy that pattern for any spec that writes project or session data.
+- **E2E specs each get their own default workspace** via `SRGNT_DEFAULT_WORKSPACE_ROOT` in `getElectronLaunchEnv` (added during PR review). Nothing a spec writes reaches the developer's real `~/srgnt-workspace`; no per-spec action is needed.
 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Itemized below. Post-review additions: `runtime/src/projects/store.ts` (both-project merge lock, pre-flight collision check, moved-session retarget, corrupt-record collision guard), `runtime/src/shared/atomic-json.ts` (parent-directory fsync), `desktop/src/main/settings.ts` + `desktop/e2e/fixtures.ts` (per-test default workspace), `renderer/components/chat/{ProjectsContext,ProjectSwitcher,ChatView,ChatSessionContext}.tsx`, `contracts/src/ipc/contracts.test.ts` (duplicate import).
 <!-- AGENT-END:session-changed-paths -->
 - `packages/contracts/src/project.ts` - `SProjectPermissionPolicy`, `PROJECT_NAME_MAX_LENGTH`, bounded `name`, optional `permissionPolicy`.
 - `packages/contracts/src/ipc/contracts.ts` - `project:*` channels; ensure/rename/merge/set-defaults/list schemas; `SChatSessionNewRequest.target` optional + `projectId`; `SChatSessionNewResponse.projectId`.
@@ -119,9 +119,9 @@ What STEP-24-03 inherits:
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: `pnpm --filter @srgnt/{runtime,desktop,contracts,harness} test`, `pnpm -r run typecheck`, `pnpm build`, `playwright test`
+- Result: PASS — runtime 415 (5 consecutive runs, fast-check), desktop 1073, contracts 167, harness 114 + 2 skipped; E2E 81 passed / 2 pre-existing environmental failures.
+- Notes: per-command detail below. Post-review re-runs are recorded at the end of this section.
 <!-- AGENT-END:session-validation-run -->
 All commands below were run in the foreground on macOS (darwin 25.5.0); results are verbatim.
 
@@ -154,12 +154,12 @@ All commands below were run in the foreground on macOS (darwin 25.5.0); results 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults|STEP-24-02 Implement project auto-create switcher and per-project defaults]].
+- [x] STEP-24-02 is complete; continue at [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_03_add-session-list-auto-titles-and-concurrent-session-management|STEP-24-03 Add session list auto titles and concurrent session management]].
 <!-- AGENT-END:session-follow-up-work -->
 - [ ] Manual/GUI pass on the switcher (`pnpm --filter @srgnt/desktop dev`): layout, spacing, theming, and the merge confirm copy. NOT done in this session (headless agent, no GUI).
 - [ ] Real-Pi check of per-project `defaultHarnessId` (only the mock harness ran here).
-- [ ] `~/srgnt-workspace/projects/` on this machine holds 8 leftover project directories from this session's failed E2E runs, all pointing at deleted `/var/folders/.../srgnt-e2e-projects-*` temp dirs. Harmless now (they are never preselected) but they clutter the switcher; delete them by hand. Removal was blocked in-session by the tool sandbox.
-- [ ] Other desktop E2E specs still onboard into the shared `~/srgnt-workspace`; consider re-rooting them to a per-test temp workspace the way `projects.spec.ts` does.
+- [ ] `~/srgnt-workspace/projects/` on this machine holds 8 leftover project directories from this session's failed E2E runs, all pointing at deleted `/var/folders/.../srgnt-e2e-projects-*` temp dirs. Harmless (never preselected) and no longer accumulating now that E2E is isolated, but they clutter the switcher; delete by hand.
+- [x] Resolved during PR review: `getElectronLaunchEnv` sets `SRGNT_DEFAULT_WORKSPACE_ROOT` under each test's user-data dir, so every spec onboards into its own workspace.
 - [ ] Project *deletion* is a recorded non-goal for this step (merge only) - Phase 25 or later.
 - [ ] `permissionPolicy` has storage + lookup but no editing UI (Phase 25, as recorded in the brief).
 - [ ] `ProjectStore.merge` is not serialized against the per-id create lock (`ponytail:` comment in `store.ts`); take both projects' locks if a merge is ever seen racing an `ensureProjectForDir`.

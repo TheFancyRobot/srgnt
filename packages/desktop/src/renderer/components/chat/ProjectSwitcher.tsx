@@ -1,5 +1,6 @@
 import React from 'react';
 import { useProjectsOptional, type RendererProject } from './ProjectsContext.js';
+import { useChatSessionOptional } from './ChatSessionContext.js';
 
 /**
  * Project switcher (PHASE-24, STEP-24-02), rendered in the chat panel's side
@@ -17,11 +18,16 @@ import { useProjectsOptional, type RendererProject } from './ProjectsContext.js'
 function ProjectRow({
   project,
   active,
+  disabled = false,
+  disabledReason,
   onSelect,
   onRename,
 }: {
   readonly project: RendererProject;
   readonly active: boolean;
+  /** True while a live session pins the app to another project's directory. */
+  readonly disabled?: boolean;
+  readonly disabledReason?: string;
   readonly onSelect: () => void;
   readonly onRename: (name: string) => void;
 }): React.ReactElement {
@@ -60,6 +66,8 @@ function ProjectRow({
             className="flex-1 text-left"
             data-testid="project-select"
             aria-pressed={active}
+            disabled={disabled}
+            title={disabled ? disabledReason : project.rootDir}
             onClick={onSelect}
           >
             <span className="block text-xs truncate">{project.name}</span>
@@ -95,6 +103,7 @@ export function ProjectSwitcher(): React.ReactElement | null {
   // Re-read on mount: the list is stale whenever something changed while the
   // panel was closed — a session auto-created a project, or the workspace root
   // moved and main is now serving an entirely different set.
+  const session = useChatSessionOptional();
   const refresh = context?.refresh;
   React.useEffect(() => {
     void refresh?.();
@@ -102,6 +111,16 @@ export function ProjectSwitcher(): React.ReactElement | null {
   if (context === null) return null;
   const { projects, activeProjectId, activeProject, loading, error, setActiveProjectId, renameProject, mergeProjects, dismissError } =
     context;
+
+  // A live session is pinned to the cwd it was opened with. Switching the
+  // active project underneath it would leave the switcher claiming B while the
+  // agent still reads and writes files in A — the agent editing the wrong
+  // checkout is not a state worth allowing for the convenience of not asking.
+  const liveSession = session?.session ?? null;
+  const locked = liveSession !== null;
+  const lockReason = locked
+    ? 'End the current session to switch projects — it is still running in its own directory.'
+    : undefined;
 
   const mergeSource = projects.find((project) => project.id === mergeSourceId) ?? null;
   const mergeable = projects.filter((project) => project.id !== activeProjectId);
@@ -138,11 +157,19 @@ export function ProjectSwitcher(): React.ReactElement | null {
               key={project.id}
               project={project}
               active={project.id === activeProjectId}
+              disabled={locked && project.id !== activeProjectId}
+              disabledReason={lockReason}
               onSelect={() => setActiveProjectId(project.id)}
               onRename={(name) => void renameProject(project.id, name)}
             />
           ))}
         </ul>
+      )}
+
+      {locked && (
+        <p className="text-[11px] text-text-tertiary" data-testid="project-switch-locked">
+          {lockReason}
+        </p>
       )}
 
       {mergeable.length > 0 && activeProject !== null && (

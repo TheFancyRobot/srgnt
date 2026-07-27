@@ -121,6 +121,22 @@ describe('ensureProjectForDir', () => {
     ]);
   });
 
+  it('refuses to rebind a corrupt record that has sessions under it', async () => {
+    const existing = await store.ensureProjectForDir(dir('existing'));
+    await seedSessions(existing.id, ['s1']);
+    // A corrupt project.json normally gets repaired — but sessions prove the
+    // directory belonged to some project, so rebinding it to another root would
+    // hand that root somebody else's history.
+    await fs.writeFile(
+      path.join(workspaceRoot, workspaceDirectories.projects, existing.id, 'project.json'),
+      '{ not json',
+      'utf8'
+    );
+    await expect(store.ensureProjectForDir(existing.rootDir)).rejects.toBeInstanceOf(
+      ProjectIdCollisionError
+    );
+  });
+
   it('fails closed when a truncated-hash collision would reuse another directory', async () => {
     const mine = dir('mine');
     const projectId = deriveProjectId(mine);
@@ -358,6 +374,45 @@ describe('recoverMerges', () => {
     await expect(store.get(source.id)).rejects.toBeInstanceOf(ProjectNotFoundError);
     expect((await store.get(target.id)).additionalDirectories).toContain(source.rootDir);
     // Journal cleared, so a second recovery is a no-op rather than a re-run.
+    expect(await createProjectStore(workspaceRoot).recoverMerges()).toEqual({ resumed: [], failed: [] });
+  });
+
+  it('rewrites moved sessions to the target project id', async () => {
+    const source = await store.ensureProjectForDir(dir('source'));
+    const target = await store.ensureProjectForDir(dir('target'));
+    await seedSessions(source.id, ['s1', 's2']);
+    await store.merge(source.id, target.id);
+
+    // The source project is gone, so a session still claiming it would name a
+    // path that does not exist — unreopenable by its own identity.
+    const sessions = createSessionStore(workspaceRoot);
+    const listed = await sessions.listSessions(target.id);
+    expect(listed.sessions.map((session) => session.projectId)).toEqual([target.id, target.id]);
+    for (const session of listed.sessions) {
+      expect(await sessions.readMeta({ projectId: session.projectId, sessionId: session.id })).toBeDefined();
+    }
+    await sessions.close();
+  });
+
+  it('aborts a colliding merge before moving anything, and does not wedge recovery', async () => {
+    const source = await store.ensureProjectForDir(dir('source'));
+    const target = await store.ensureProjectForDir(dir('target'));
+    // `keep` collides; `s2` sorts after it, so a per-session check would move
+    // one of them before noticing.
+    await seedSessions(source.id, ['keep', 's2']);
+    await seedSessions(target.id, ['keep']);
+
+    await expect(store.merge(source.id, target.id)).rejects.toBeInstanceOf(ProjectMergeError);
+
+    // Nothing moved: both projects are exactly as they were.
+    const sessions = createSessionStore(workspaceRoot);
+    expect((await sessions.listSessions(source.id)).sessions.map((s) => s.id)).toEqual(['keep', 's2']);
+    expect((await sessions.listSessions(target.id)).sessions.map((s) => s.id)).toEqual(['keep']);
+    await sessions.close();
+    await expect(store.get(source.id)).resolves.toBeDefined();
+
+    // And the journal is gone, so recovery does not replay the same collision
+    // on every boot forever.
     expect(await createProjectStore(workspaceRoot).recoverMerges()).toEqual({ resumed: [], failed: [] });
   });
 

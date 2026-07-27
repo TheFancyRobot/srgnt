@@ -129,6 +129,14 @@ const SRequestPermission = Schema.Struct({
   type: Schema.Literal('request_permission'),
   toolCallId: Schema.String,
   title: Schema.optionalWith(Schema.String, { default: () => 'Permission required' }),
+  /**
+   * The three fields the client scopes an `allow_always` on. Without them every
+   * request normalizes to `kind: 'other'` with a title-only scope, which made
+   * path and command scoping unreachable from a scripted scenario (STEP-23-05).
+   */
+  kind: Schema.optional(SToolKind),
+  locations: Schema.optional(Schema.Array(Schema.Struct({ path: Schema.String }))),
+  rawInput: Schema.optional(Schema.Unknown),
   options: Schema.Array(SPermissionOption),
   /** Assert the client's decision kind for this round-trip. */
   expectOutcome: Schema.optional(Schema.Literal('selected', 'cancelled')),

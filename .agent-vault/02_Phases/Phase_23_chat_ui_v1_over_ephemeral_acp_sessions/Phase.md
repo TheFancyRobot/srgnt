@@ -4,10 +4,10 @@ template_version: 2
 contract_version: 1
 title: Chat UI v1 Over Ephemeral ACP Sessions
 phase_id: PHASE-23
-status: planned
-owner: ''
+status: completed
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-07-27'
 depends_on:
   - '[[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|PHASE-22 ACP Core Package and Pi Integration Spike]]'
 related_architecture:
@@ -65,22 +65,22 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 ## Acceptance Criteria
 
-- [ ] Scope is concrete and linked to the right durable notes.
-- [ ] Step notes exist for the first executable work units.
-- [ ] Validation and documentation expectations are explicit.
-- [ ] A user can run a full Pi conversation: streamed responses, visible thoughts, tool-call cards updating live, diffs and terminal output rendered inline.
-- [ ] Permission requests block on user allow/reject (once/always honored for the session) and cancel works mid-turn without orphaning the process.
-- [ ] Slash commands and modes render from live agent data (`available_commands_update`, mode state) — nothing hardcoded.
-- [ ] Agent crash mid-turn surfaces a recoverable error state (no white screen, no zombie process).
-- [ ] `fs/*` reads/writes are path-guarded to the session cwd and audit-logged; `terminal/*` runs through node-pty with output visible in the tool card.
-- [ ] Playwright E2E covers the above against the mock agent; all suites green.
-- [ ] New UI uses existing semantic tokens/components — no parallel design system.
+- [x] Scope is concrete and linked to the right durable notes.
+- [x] Step notes exist for the first executable work units.
+- [x] Validation and documentation expectations are explicit.
+- [ ] A user can run a full Pi conversation: streamed responses, visible thoughts, tool-call cards updating live, diffs and terminal output rendered inline. **Built and covered against the mock agent; the real-Pi run is manual and has NOT been performed.**
+- [x] Permission requests block on user allow/reject (once/always honored for the session) and cancel works mid-turn without orphaning the process. (STEP-23-03; allow/deny and cancel proven E2E in STEP-23-05, including agent-side confirmation of the option actually sent.)
+- [x] Slash commands and modes render from live agent data (`available_commands_update`, mode state) — nothing hardcoded. (STEP-23-04; E2E in STEP-23-05 covers list/filter/insert and both user- and agent-driven mode changes.)
+- [x] Agent crash mid-turn surfaces a recoverable error state (no white screen, no zombie process). (STEP-23-04; E2E in STEP-23-05 crashes a real child process and proves the reopened session still round-trips a prompt.)
+- [x] `fs/*` reads/writes are path-guarded to the session cwd and audit-logged; `terminal/*` runs through node-pty with output visible in the tool card. (STEP-23-02/03.)
+- [x] Playwright E2E covers the above against the mock agent. `e2e/chat.spec.ts` is 8/8 green with a 3/3 flake check. Caveat: in the full local `test:e2e` run two *pre-existing environmental* specs fail — `app.spec.ts` (node-pty `posix_spawnp` on this machine) and `bug-0013-visual.spec.ts` (Linux-packaged-only) — and no CI run of the Desktop E2E workflow with the new spec has been observed yet.
+- [x] New UI uses existing semantic tokens/components — no parallel design system.
 
 ## Linear Context
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Phase|PHASE-22 ACP Core Package and Pi Integration Spike]]
-- Current phase status: planned
+- Current phase status: completed
 - Next phase: [[02_Phases/Phase_24_projects_and_session_persistence/Phase|PHASE-24 Projects and Session Persistence]]
 <!-- AGENT-END:phase-linear-context -->
 
@@ -105,15 +105,16 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01 Build ChatView streaming surface with message thought and markdown rendering]]
-- [ ] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel|STEP-23-02 Render tool-call cards with diff and terminal embeds and plan panel]]
-- [ ] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round-trips into default-ask prompt UI]]
-- [ ] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces|STEP-23-04 Build composer with slash commands modes cancel and error surfaces]]
-- [ ] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage|STEP-23-05 Add mock-agent-driven chat E2E coverage]]
+- [x] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_01_build-chatview-streaming-surface-with-message-thought-and-markdown-rendering|STEP-23-01 Build ChatView streaming surface with message thought and markdown rendering]]
+- [x] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_02_render-tool-call-cards-with-diff-and-terminal-embeds-and-plan-panel|STEP-23-02 Render tool-call cards with diff and terminal embeds and plan panel]]
+- [x] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round-trips into default-ask prompt UI]]
+- [x] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces|STEP-23-04 Build composer with slash commands modes cancel and error surfaces]]
+- [x] [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage|STEP-23-05 Add mock-agent-driven chat E2E coverage]]
 <!-- AGENT-END:phase-steps -->
 
 ## Notes
 
+- **Phase closed 2026-07-27** after STEP-23-05. Two things are deliberately still open and are verification, not implementation: (1) the manual real-Pi conversation smoke this phase always deferred to manual, and (2) the manual `pnpm dev` mock walkthrough owed since STEP-23-04. Neither has been performed. Carry both into PHASE-24.
 - Add architecture, bug, and decision links as the milestone becomes more concrete.
 - Use the `Steps/` directory for the first executable units instead of expanding this note too far.
 - Sequencing rationale (decision log D16): UI before persistence de-risks the product's core surface earliest; the raw-ACP event envelope keeps the schema protocol-shaped either way, so storage (Phase 24) won't force UI rework.

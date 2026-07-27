@@ -8,7 +8,27 @@ interface E2EFixtures {
   electronApp: ElectronApplication;
   window: Page;
   userDataDir: string;
+  /**
+   * The mock agent's `expect_*` failures for the turns run so far, read back out
+   * of the spawned process. Empty when the scenario made no assertions or all of
+   * them held — a UI that renders correctly but answers a permission request
+   * with the wrong option is only visible here.
+   */
+  agentAssertions: () => Promise<readonly string[]>;
 }
+
+interface E2EOptions {
+  /**
+   * Scenario the built-in mock agent replays instead of the app's demo script.
+   * Set per test/describe with `test.use({ mockScenario: {...} })`; it is written
+   * into the test's own temp dir and injected via `SRGNT_MOCK_SCENARIO`.
+   */
+  mockScenario: unknown;
+}
+
+/** Written next to the scenario by the mock bin; see `mockLaunchSpec`. */
+const ASSERTIONS_FILE = 'mock-assertions.json';
+const SCENARIO_FILE = 'scenario.json';
 
 function shouldDisableElectronSandbox(): boolean {
   return process.platform === 'linux' && (process.env.CI === 'true' || process.env.SRGNT_E2E_DISABLE_SANDBOX === '1');
@@ -18,16 +38,34 @@ export function getElectronLaunchArgs(baseArgs: string[] = []): string[] {
   return shouldDisableElectronSandbox() ? [...baseArgs, '--no-sandbox'] : baseArgs;
 }
 
-export function getElectronLaunchEnv(userDataDir: string): NodeJS.ProcessEnv {
+export function getElectronLaunchEnv(
+  userDataDir: string,
+  extra: NodeJS.ProcessEnv = {},
+): NodeJS.ProcessEnv {
   return {
     ...process.env,
     ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
     SRGNT_E2E: '1',
     SRGNT_USER_DATA_PATH: userDataDir,
+    ...extra,
   };
 }
 
-export const test = base.extend<E2EFixtures>({
+export const test = base.extend<E2EFixtures & E2EOptions>({
+  mockScenario: [undefined, { option: true }],
+
+  agentAssertions: async ({ userDataDir }, use) => {
+    await use(async () => {
+      try {
+        return JSON.parse(await fs.readFile(path.join(userDataDir, ASSERTIONS_FILE), 'utf8')) as string[];
+      } catch {
+        // No file: the scenario ran no `expect_*` directive, or the turn died
+        // before finishing. Either way there is nothing to report.
+        return [];
+      }
+    });
+  },
+
   userDataDir: async ({}, use, testInfo) => {
     const slug = testInfo.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), `srgnt-e2e-${slug || 'test'}-`));
@@ -39,10 +77,16 @@ export const test = base.extend<E2EFixtures>({
     }
   },
 
-  electronApp: async ({ userDataDir }, use) => {
+  electronApp: async ({ userDataDir, mockScenario }, use) => {
+    let extraEnv: NodeJS.ProcessEnv = {};
+    if (mockScenario !== undefined) {
+      const scenarioPath = path.join(userDataDir, SCENARIO_FILE);
+      await fs.writeFile(scenarioPath, JSON.stringify(mockScenario));
+      extraEnv = { SRGNT_MOCK_SCENARIO: scenarioPath };
+    }
     const electronApp = await electron.launch({
       args: getElectronLaunchArgs(['.']),
-      env: getElectronLaunchEnv(userDataDir),
+      env: getElectronLaunchEnv(userDataDir, extraEnv),
     });
 
     try {

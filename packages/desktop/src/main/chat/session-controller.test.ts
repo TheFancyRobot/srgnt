@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { spawn } from 'node:child_process';
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type {
@@ -18,7 +18,9 @@ import { createChatClientServices, type TerminalSpawn } from './client-services.
 import {
   ChatSessionController,
   MOCK_DEMO_SCENARIO,
+  MOCK_SCENARIO_ENV,
   readModes,
+  resolveMockScenarioPath,
   supervisorEventToStatus,
   type ChatConnectFn,
 } from './session-controller.js';
@@ -433,6 +435,42 @@ describe('built-in mock demo scenario', () => {
     expect(contents.map((block) => block.type)).toEqual(
       expect.arrayContaining(['content', 'diff', 'terminal']),
     );
+  });
+});
+
+describe('mock scenario injection seam (STEP-23-05)', () => {
+  // The whole seam is this one decision: which scenario file the spawned mock
+  // replays. E2E needs an arbitrary per-test scenario; every other run must be
+  // byte-for-byte what it was before the env var existed.
+  const scratch = mkdtempSync(join(tmpdir(), 'srgnt-scenario-seam-'));
+
+  afterEach(() => {
+    delete process.env[MOCK_SCENARIO_ENV];
+  });
+
+  it('falls back to the built-in demo scenario when the env var is unset', () => {
+    const path = resolveMockScenarioPath(undefined);
+    expect(JSON.parse(readFileSync(path, 'utf8')).name).toBe(MOCK_DEMO_SCENARIO.name);
+    // Same file every time: sessions must not each leak a temp dir.
+    expect(resolveMockScenarioPath(undefined)).toBe(path);
+  });
+
+  it('uses the override file when the env var points at a real scenario', () => {
+    const override = join(scratch, 'injected.json');
+    writeFileSync(override, JSON.stringify({ name: 'injected', directives: [] }));
+    process.env[MOCK_SCENARIO_ENV] = override;
+    // Read from the environment, not just the argument — that is how the E2E
+    // fixture injects it across the Electron process boundary.
+    expect(resolveMockScenarioPath()).toBe(override);
+  });
+
+  it('throws a readable error instead of launching a doomed process', () => {
+    const missing = join(scratch, 'not-there.json');
+    process.env[MOCK_SCENARIO_ENV] = missing;
+    // The spawned bin would exit 2 on a missing scenario, which the supervisor
+    // reads as a crash loop; failing here turns that into a session error the
+    // renderer can show.
+    expect(() => resolveMockScenarioPath()).toThrow(/does not exist/);
   });
 });
 

@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import * as fs from 'fs/promises';
 import { Schema } from 'effect';
 import { SSession, type Session, safeParse } from '@srgnt/contracts';
@@ -51,14 +52,25 @@ export async function readSessionMeta(metaPath: string): Promise<Session> {
  */
 export async function writeSessionMeta(metaPath: string, session: Session): Promise<Session> {
   const validated = parseSessionMeta(session, metaPath);
-  const tmpPath = `${metaPath}.tmp`;
-  const handle = await fs.open(tmpPath, 'w');
+  // Unique per write. A fixed `${metaPath}.tmp` means two overlapping writes
+  // share one inode: the second `open(..., 'w')` truncates the file the first is
+  // still filling, and whichever `rename` lands first can publish a partial
+  // document — which is exactly the atomicity this function exists to provide.
+  const tmpPath = `${metaPath}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
   try {
-    await handle.writeFile(`${JSON.stringify(validated, null, 2)}\n`, 'utf8');
-    await handle.sync();
-  } finally {
-    await handle.close();
+    const handle = await fs.open(tmpPath, 'wx');
+    try {
+      await handle.writeFile(`${JSON.stringify(validated, null, 2)}\n`, 'utf8');
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+    await fs.rename(tmpPath, metaPath);
+  } catch (error) {
+    // Do not leave the scratch file behind on a failed write; the old fixed
+    // name was at least self-cleaning on the next attempt, a unique one is not.
+    await fs.rm(tmpPath, { force: true });
+    throw error;
   }
-  await fs.rename(tmpPath, metaPath);
   return validated;
 }

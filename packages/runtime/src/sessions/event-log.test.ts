@@ -255,7 +255,10 @@ describe('SessionEventLog append', () => {
       SessionEventLogWriteError
     );
 
-    // Reopening is the documented repair path, and it still works.
+    // Reopening is the documented repair path. Closing first is not incidental:
+    // the handle holds the single-writer lock, and `close` has to survive a
+    // handle whose descriptor is already gone.
+    await log.close();
     const reopened = await SessionEventLog.open(logPath);
     const recovered = await reopened.append({ kind: 'client/stop' });
     expect(recovered.seq).toBe(2);
@@ -280,6 +283,27 @@ describe('SessionEventLog append', () => {
     await fs.writeFile(logPath, `${valid}\n${line.toString('binary')}\n`, 'binary');
 
     await expect(readEventLog(logPath)).rejects.toBeInstanceOf(SessionEventLogCorruptionError);
+  });
+
+  it('refuses a second writer, and reclaims a lock whose owner is gone', async () => {
+    // Two handles both derive nextSeq from a snapshot, so both would append the
+    // same seq successfully — duplicate records in the source of truth, silently.
+    const first = await appendAll(1);
+    await expect(SessionEventLog.open(logPath)).rejects.toBeInstanceOf(SessionEventLogWriteError);
+    await first.close();
+
+    // Released on close.
+    const second = await SessionEventLog.open(logPath);
+    await second.close();
+
+    // A crash leaves the lock behind. An unopenable session would be a worse
+    // failure than the duplicate seq this guards against, so a dead owner's
+    // lock is stolen. PID 1 is never this process and always exists, so the
+    // live-owner branch is covered by the rejection above.
+    await fs.writeFile(`${logPath}.lock`, '2147483646');
+    const third = await SessionEventLog.open(logPath);
+    expect((await third.append({ kind: 'client/stop' })).seq).toBe(1);
+    await third.close();
   });
 
   it('refuses to open a log with interior corruption rather than destroying it', async () => {

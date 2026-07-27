@@ -79,6 +79,10 @@ describe('session meta', () => {
     const updated: Session = { ...session, status: 'closed' };
     await writeSessionMeta(metaPath, updated);
     expect(await readSessionMeta(metaPath)).toEqual(updated);
-    expect(await fs.readdir(dir)).toEqual(['meta.json']);
+    // The stray scratch file from the crashed write is NOT adopted by the next
+    // one — temp names are unique per write, so an interrupted write can never
+    // hand its half-filled inode to a later one.
+    expect(await fs.readdir(dir)).toContain('meta.json');
+    expect(await fs.readdir(dir)).toContain('meta.json.tmp');
   });
 });

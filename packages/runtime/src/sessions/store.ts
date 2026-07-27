@@ -130,7 +130,10 @@ export class SessionStore {
    * returning ids that point at a different directory than the one they were
    * read from, so they are rejected rather than silently ignored.
    */
-  async updateMeta(ref: SessionRef, patch: Partial<SessionMetaInput>): Promise<Session> {
+  async updateMeta(
+    ref: SessionRef,
+    patch: Partial<Omit<SessionMetaInput, 'id' | 'projectId'>> & { id?: string; projectId?: string }
+  ): Promise<Session> {
     if (patch.id !== undefined && patch.id !== ref.sessionId) {
       throw new SessionIdentityError(`Cannot change session id from ${ref.sessionId} to ${patch.id}`);
     }

@@ -152,6 +152,65 @@ export async function readEventLog(
   };
 }
 
+/**
+ * Advisory single-writer lock beside the log.
+ *
+ * `nextSeq` is derived from a snapshot read, so two handles on one file compute
+ * the same next number and both append successfully — duplicate `seq` in the
+ * source of truth, with nothing raised. The desktop app does not take an
+ * Electron single-instance lock, so a second process is not hypothetical.
+ *
+ * A lock whose owner is gone is stolen rather than honored: a crash must not
+ * make a session permanently unopenable.
+ */
+async function acquireWriterLock(eventsPath: string): Promise<string> {
+  const lockPath = `${eventsPath}.lock`;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const handle = await fs.open(lockPath, 'wx');
+      try {
+        await handle.writeFile(String(process.pid), 'utf8');
+      } finally {
+        await handle.close();
+      }
+      return lockPath;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code !== 'EEXIST') throw error;
+      if (attempt === 1) break;
+      if (await lockOwnerIsAlive(lockPath)) break;
+      await fs.rm(lockPath, { force: true });
+    }
+  }
+  throw new SessionEventLogWriteError(
+    `${eventsPath} is already open for writing by another handle (${lockPath})`
+  );
+}
+
+async function lockOwnerIsAlive(lockPath: string): Promise<boolean> {
+  let pid: number;
+  try {
+    pid = Number.parseInt(await fs.readFile(lockPath, 'utf8'), 10);
+  } catch {
+    // Vanished between EEXIST and the read, or unreadable: treat as free and
+    // let the retry decide.
+    return false;
+  }
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  if (pid === process.pid) return true;
+  try {
+    // Signal 0 tests for existence without delivering anything.
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM means it exists and belongs to someone else — still alive.
+    return (error as NodeJS.ErrnoException)?.code === 'EPERM';
+  }
+}
+
+async function releaseWriterLock(lockPath: string): Promise<void> {
+  await fs.rm(lockPath, { force: true });
+}
+
 export interface AppendEventInput {
   kind: string;
   payload?: unknown;
@@ -179,31 +238,44 @@ export class SessionEventLog {
     private readonly handle: FileHandle,
     private nextSeq: number,
     /** True when opening had to repair a corrupt or unterminated tail. */
-    readonly repairedTail: boolean
+    readonly repairedTail: boolean,
+    private readonly lockPath: string
   ) {}
 
-  // ponytail: `open` reads the whole file to learn the last seq and the tail
-  // state. A tail-only scan would be O(1) but has to handle records spanning
-  // the read window; do it if a session log ever gets big enough to notice.
+  // ponytail: `open` (and `readEventLog`) read the whole file — to learn the
+  // last seq here, and because `fromSeq` filters after parsing there. Fine
+  // while nothing consumes this; a streaming reader plus a seq→offset index is
+  // the upgrade once ChatSessionController polls it. See STEP-24-02 follow-ups.
   static async open(eventsPath: string): Promise<SessionEventLog> {
-    const existing = await readEventLog(eventsPath);
+    // Exclusive first: `nextSeq` below is a snapshot, so a second writer would
+    // compute the same number and interleave duplicate `seq` values into the
+    // file that is meant to be the session's source of truth — silently, since
+    // both appends succeed.
+    const lock = await acquireWriterLock(eventsPath);
+    try {
+      const existing = await readEventLog(eventsPath);
 
-    if (existing.truncatedTail) {
-      if (existing.tailMissingNewline) {
-        await fs.appendFile(eventsPath, '\n');
-      } else {
-        await fs.truncate(eventsPath, existing.lastValidByteOffset);
+      if (existing.truncatedTail) {
+        if (existing.tailMissingNewline) {
+          await fs.appendFile(eventsPath, '\n');
+        } else {
+          await fs.truncate(eventsPath, existing.lastValidByteOffset);
+        }
       }
-    }
 
-    const last = existing.events[existing.events.length - 1];
-    const handle = await fs.open(eventsPath, 'a');
-    return new SessionEventLog(
-      eventsPath,
-      handle,
-      last === undefined ? 0 : last.seq + 1,
-      existing.truncatedTail
-    );
+      const last = existing.events[existing.events.length - 1];
+      const handle = await fs.open(eventsPath, 'a');
+      return new SessionEventLog(
+        eventsPath,
+        handle,
+        last === undefined ? 0 : last.seq + 1,
+        existing.truncatedTail,
+        lock
+      );
+    } catch (error) {
+      await releaseWriterLock(lock);
+      throw error;
+    }
   }
 
   get nextSequence(): number {
@@ -282,14 +354,21 @@ export class SessionEventLog {
   }
 
   async close(): Promise<void> {
-    await this.tail;
+    await this.tail.catch(() => undefined);
     // ponytail: fsync on close only, not per append — one trivial Pi turn is
     // 85+ updates. Durability contract is "at most the in-flight chunk is
     // lost". Per-checkpoint fsync arrives with STEP-24-05 if it is ever needed.
     try {
       await this.handle.sync();
+    } catch {
+      // A failed handle (the poisoned case) cannot be synced; closing and
+      // releasing the lock still has to happen.
     } finally {
-      await this.handle.close();
+      try {
+        await this.handle.close();
+      } finally {
+        await releaseWriterLock(this.lockPath);
+      }
     }
   }
 }

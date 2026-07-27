@@ -65,6 +65,18 @@ describe('SessionStore', () => {
     expect(listed.sessions.map((session) => session.id)).toEqual(['sess-1']);
   });
 
+  it('keeps meta.json valid when two updates overlap', async () => {
+    await store.createSession(meta());
+    await Promise.all([
+      store.updateMeta(ref, { title: 'first' }),
+      store.updateMeta(ref, { title: 'second' }),
+    ]);
+    // Unique temp names mean neither write can publish the other's partial
+    // document; the file is one of the two, never a blend or a truncation.
+    const after = await store.readMeta(ref);
+    expect(['first', 'second']).toContain(after.title);
+  });
+
   it('closeSession releases the handle and later appends still land', async () => {
     await store.createSession(meta());
     await store.appendEvent(ref, 'acp/session_update');

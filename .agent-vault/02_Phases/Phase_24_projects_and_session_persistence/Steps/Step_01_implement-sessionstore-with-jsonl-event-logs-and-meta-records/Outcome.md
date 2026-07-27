@@ -38,7 +38,7 @@ No manual, GUI, or CI verification was performed — this step is a headless dis
 ## Follow-Up
 
 - `SessionStore` is not wired to anything yet. The Phase 23 carry-forward — replacing `ChatSessionController`'s in-memory `SessionEvent[]` sink in `packages/desktop/src/main/chat/session-controller.ts` with this store — is deliberately **not** done here and belongs to a later step in this phase.
-- `projectId` is a caller-supplied string; project entities and validation are STEP-24-02.
+- `projectId` is validated as a path-safe identifier (the same whitelist as session ids), but there is no project *entity* behind it: creation, per-project defaults, ownership and lifecycle are STEP-24-02.
 - `packages/runtime/src/workspace/` is still not exported from the package root. Pre-existing, unrelated, left alone.
 - If interior (non-tail) corruption is ever observed in practice, the typed `SessionEventLogCorruptionError` is the signal — recovery policy for it would need a decision note, not a silent skip.
 

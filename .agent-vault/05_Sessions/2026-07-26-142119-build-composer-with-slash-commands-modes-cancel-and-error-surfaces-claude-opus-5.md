@@ -145,7 +145,7 @@ Not run: the manual `pnpm dev` mock walkthrough and the real-Pi run. See Follow-
 
 ## Completion Summary
 
-STEP-23-04 is **complete**. Every acceptance check in the Validation Plan is implemented and covered by an automated test, and the four validation commands plus a real-process orphan check were run in the foreground and passed (see Validation Run for the exact counts).
+STEP-23-04 is **complete for its automated scope**. Every acceptance check in the Validation Plan is implemented and covered by an automated test, and the validation commands plus a real-process orphan check were run in the foreground and passed (see Validation Run for the exact counts). The two manual passes — the `pnpm dev` mock walkthrough and the real-Pi run — were NOT performed, so the Validation Plan is not fully discharged; see Follow-Up Work.
 
 Delivered: a real composer (`Composer.tsx`) with the STEP-23-01 keymap preserved (Enter sends, Shift+Enter newlines, IME `isComposing` guard, send disabled while a turn is in flight); a slash-command menu rendered entirely from `available_commands_update` with filtering, keyboard navigation, insert-on-select and empty-list degradation; a session-mode selector that exists only when the agent advertises modes, switches through a new typed `chat:session:set-mode` channel, and follows agent-initiated `current_mode_update`; a distinct rendering for every `StopReason`; and an agent-crash surface fed by supervisor events over a new typed `chat:session:status` channel, with the stderr tail, a preserved read-only transcript, and a working "New session" recovery.
 

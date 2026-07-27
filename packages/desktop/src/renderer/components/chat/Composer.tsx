@@ -79,6 +79,7 @@ export function Composer(): React.ReactElement {
   const [draft, setDraft] = React.useState('');
   const [caret, setCaret] = React.useState(0);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [recovering, setRecovering] = React.useState(false);
   const [highlight, setHighlight] = React.useState(0);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -192,12 +193,18 @@ export function Composer(): React.ReactElement {
   }, []);
 
   const handleRecover = React.useCallback(() => {
-    if (session === null) return;
+    // Re-entrancy guard, not politeness: dispose→newSession is async and the
+    // button stays mounted for the whole round trip, so a second click would
+    // open a second session and leave the first one's process unreachable.
+    if (session === null || recovering) return;
     const { target } = session;
+    setRecovering(true);
     // Dispose first: the crashed process may still have live children, and the
     // kill-tree is what guarantees the recovery does not stack up orphans.
-    void dispose().then(() => newSession(target));
-  }, [dispose, newSession, session]);
+    void dispose()
+      .then(() => newSession(target))
+      .finally(() => setRecovering(false));
+  }, [dispose, newSession, recovering, session]);
 
   const stopNotice = lastStopReason === null ? null : STOP_REASON_NOTICES[lastStopReason] ?? null;
 
@@ -223,8 +230,9 @@ export function Composer(): React.ReactElement {
             className="chat-button chat-button-primary"
             data-testid="chat-recover"
             onClick={handleRecover}
+            disabled={recovering}
           >
-            New session
+            {recovering ? 'Starting…' : 'New session'}
           </button>
         </div>
       )}

@@ -20,7 +20,7 @@ tags:
 context_id: SESSION-2026-07-26-142119
 active_session_id: 05_Sessions/2026-07-26-142119-build-composer-with-slash-commands-modes-cancel-and-error-surfaces-claude-opus-5
 context_status: completed
-context_summary: 'STEP-23-04 complete: composer with slash commands, session modes, cancel and crash/error surfaces; full validation plan green.'
+context_summary: 'STEP-23-04 complete: composer with slash commands, session modes, cancel and crash/error surfaces; automated validation green, manual mock walkthrough and real-Pi run still outstanding.'
 ---
 
 # Step 04 - Build composer with slash commands modes cancel and error surfaces
@@ -126,7 +126,7 @@ Delivered:
 - A distinct end-of-turn rendering for every `StopReason` (`end_turn` intentionally silent).
 - Crash surface: supervisor events → typed `chat:session:status` push → banner with message and stderr tail, transcript preserved read-only, working "New session" recovery (dispose + fresh `session/new`), and no `ErrorBoundary` involvement.
 
-Validation (all run in the foreground, all passing): `pnpm --filter @srgnt/desktop test` (57 files / 1035 tests), `pnpm --filter @srgnt/contracts test` (7 files / 159 tests), `pnpm --filter @srgnt/harness test` (113 passed / 2 skipped, no harness changes needed), `pnpm --filter @srgnt/desktop typecheck`, `pnpm lint`, `pnpm --filter @srgnt/desktop build`. Additionally, a real spawned mock agent under a real `Supervisor` was crashed mid-turn: the supervisor emitted `spawning, ready, crashed`, the prompt failed `ConnectionLost`, and no pid survived dispose — the evidence behind the no-orphan acceptance check.
+Automated validation (all run in the foreground, all passing; the manual passes below are NOT included): `pnpm --filter @srgnt/desktop test` (57 files / 1035 tests), `pnpm --filter @srgnt/contracts test` (7 files / 159 tests), `pnpm --filter @srgnt/harness test` (113 passed / 2 skipped, no harness changes needed), `pnpm --filter @srgnt/desktop typecheck`, `pnpm lint`, `pnpm --filter @srgnt/desktop build`. Additionally, a real spawned mock agent under a real `Supervisor` was crashed mid-turn: the supervisor emitted `spawning, ready, crashed`, the prompt failed `ConnectionLost`, and no pid survived dispose — the evidence behind the no-orphan acceptance check.
 
 STEP-23-03's carry-forward is closed: the composer's Stop reaches `ChatSessionController.cancel` and a pending permission prompt visibly dismisses, asserted through the real provider and `ChatView` rather than only at the controller level.
 

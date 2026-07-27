@@ -483,6 +483,36 @@ describe('Composer — crash and recovery', () => {
     expect(screen.getByTestId('chat-input')).toBeEnabled();
   });
 
+  it('does not start two sessions when recovery is clicked twice', async () => {
+    // dispose → newSession is async and the button stays mounted throughout;
+    // a second session here would leave the first process unreachable.
+    let release: (() => void) | undefined;
+    harness = installSrgntStub({
+      chatSessionDispose: vi.fn(
+        async () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          }),
+      ),
+    });
+    renderChat();
+    await startSession();
+    await harness.pushStatus(crash);
+
+    const recover = screen.getByTestId('chat-recover');
+    fireEvent.click(recover);
+    expect(recover).toBeDisabled();
+    fireEvent.click(recover);
+
+    await act(async () => {
+      release?.();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(harness.api.chatSessionNew).toHaveBeenCalledTimes(2));
+    // Twice total: the initial session plus exactly one recovery.
+    expect(harness.api.chatSessionDispose).toHaveBeenCalledTimes(1);
+  });
+
   it('names a give-up distinctly from a single crash', async () => {
     renderChat();
     await startSession();

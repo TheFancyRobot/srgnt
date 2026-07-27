@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { Readable } from 'node:stream';
 import { AgentSideConnection, ndJsonStream } from '@agentclientprotocol/sdk';
 import { MockAgent } from './runner.js';
@@ -16,16 +16,12 @@ import { parseScenario } from './scenario.js';
  * `emit_malformed` directive's raw, un-framed bytes.
  */
 
-function scenarioPathFromArgv(argv: readonly string[]): string | undefined {
-  const flagIndex = argv.indexOf('--scenario');
+function flagValue(argv: readonly string[], flag: string): string | undefined {
+  const flagIndex = argv.indexOf(`--${flag}`);
   if (flagIndex !== -1 && flagIndex + 1 < argv.length) {
     return argv[flagIndex + 1];
   }
-  const inline = argv.find((arg) => arg.startsWith('--scenario='));
-  if (inline !== undefined) {
-    return inline.slice('--scenario='.length);
-  }
-  return process.env.MOCK_AGENT_SCENARIO;
+  return argv.find((arg) => arg.startsWith(`--${flag}=`))?.slice(flag.length + 3);
 }
 
 function fail(message: string): never {
@@ -33,10 +29,19 @@ function fail(message: string): never {
   process.exit(2);
 }
 
-const scenarioPath = scenarioPathFromArgv(process.argv.slice(2));
+const argv = process.argv.slice(2);
+const scenarioPath = flagValue(argv, 'scenario') ?? process.env.MOCK_AGENT_SCENARIO;
 if (scenarioPath === undefined) {
   fail('no scenario provided (use --scenario <path> or MOCK_AGENT_SCENARIO)');
 }
+
+/**
+ * Where the turn's `expect_*` failures are written (JSON array, rewritten at the
+ * end of every turn). This is the only channel an out-of-process driver has for
+ * agent-side assertions: a UI that renders correctly but *answers* a permission
+ * request wrongly is invisible from the renderer, and would otherwise pass.
+ */
+const assertionsPath = flagValue(argv, 'assertions');
 
 let scenario;
 try {
@@ -63,6 +68,28 @@ new AgentSideConnection(
     new MockAgent(conn, scenario, {
       onCrash: (exitCode) => process.exit(exitCode),
       rawWrite: (raw) => writeStdout(encoder.encode(raw)),
+      ...(assertionsPath !== undefined
+        ? {
+            // Synchronous on purpose: the runner awaits this before the
+            // `PromptResponse` is framed, so a driver that sees the turn finish
+            // is guaranteed to find the file already written.
+            onTurnEnd: (errors: readonly string[]) => {
+              try {
+                writeFileSync(assertionsPath, JSON.stringify(errors));
+              } catch (cause) {
+                // A read-only or vanished directory must not kill the turn. The
+                // driver reads this file and fails loudly when it is absent, so
+                // the failure still surfaces — as a failed assertion rather than
+                // a mock that crashes mid-conversation.
+                process.stderr.write(
+                  `mock-agent: could not write assertions to ${assertionsPath}: ${
+                    cause instanceof Error ? cause.message : String(cause)
+                  }\n`,
+                );
+              }
+            },
+          }
+        : {}),
     }),
   stream,
 );

@@ -40,6 +40,14 @@ export interface RunnerHooks {
   rawWrite?: (raw: string) => void | Promise<void>;
   /** Deterministic delay seam; defaults to real `setTimeout`. */
   delay?: (ms: number) => Promise<void>;
+  /**
+   * Reports the accumulated `expect_*` failures once a turn's directives have
+   * run, before the `PromptResponse` goes back on the wire. In-process tests
+   * read {@link MockAgent.assertionErrors} directly; a driver on the far side of
+   * a spawned process (the E2E suite) has no such handle, so the stdio bin uses
+   * this to persist them somewhere the driver can read.
+   */
+  onTurnEnd?: (assertionErrors: readonly string[]) => void | Promise<void>;
 }
 
 const realDelay = (ms: number): Promise<void> =>
@@ -156,6 +164,7 @@ export class MockAgent implements Agent {
     for (const directive of this.scenario.directives) {
       await this.execute(params.sessionId, directive);
     }
+    await this.hooks.onTurnEnd?.(this.assertionErrors);
     if (this.cancelledTurns.has(params.sessionId)) {
       return { stopReason: 'cancelled' };
     }
@@ -249,7 +258,15 @@ export class MockAgent implements Agent {
       case 'request_permission': {
         const response = await this.conn.requestPermission({
           sessionId,
-          toolCall: { toolCallId: directive.toolCallId, title: directive.title },
+          toolCall: {
+            toolCallId: directive.toolCallId,
+            title: directive.title,
+            ...(directive.kind !== undefined ? { kind: directive.kind } : {}),
+            ...(directive.locations !== undefined
+              ? { locations: directive.locations.map((location) => ({ ...location })) }
+              : {}),
+            ...(directive.rawInput !== undefined ? { rawInput: directive.rawInput } : {}),
+          },
           options: directive.options.map((o) => ({
             optionId: o.optionId,
             name: o.name,

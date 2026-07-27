@@ -159,4 +159,42 @@ describe('standalone bin over stdio (registry custom definition + supervisor)', 
     expect(error).toBeInstanceOf(ConnectionLost);
     await connection.closed;
   }, 30_000);
+
+  // The only channel an out-of-process driver (the desktop E2E suite) has for
+  // agent-side assertions: without it a client that renders a permission prompt
+  // correctly but answers it with the wrong option would look like a pass.
+  it('writes expect_* failures to --assertions before the turn response', async () => {
+    const file = scenarioFile('assertions', {
+      directives: [
+        { type: 'expect_prompt', contains: 'never sent' },
+        {
+          type: 'request_permission',
+          toolCallId: 'p1',
+          title: 'Do a thing',
+          kind: 'edit',
+          locations: [{ path: '/w/answer.ts' }],
+          options: [{ optionId: 'allow-once', name: 'Allow once', kind: 'allow_once' }],
+          expectOutcome: 'selected',
+        },
+      ],
+    });
+    const assertionsFile = join(scratch, 'assertions.json');
+    const connection = await connectViaRegistry('mock-assertions', {
+      command: process.execPath,
+      args: [BIN, '--scenario', file, '--assertions', assertionsFile],
+      env: {},
+    });
+    const session = await Effect.runPromise(connection.newSession({ cwd: scratch, mcpServers: [] }));
+    await Effect.runPromise(
+      connection.prompt({ sessionId: session.sessionId, prompt: [{ type: 'text', text: 'go' }] }),
+    );
+
+    // The file exists the moment the prompt resolves — no polling, no sleep.
+    const failures = JSON.parse(readFileSync(assertionsFile, 'utf8')) as string[];
+    expect(failures).toHaveLength(2);
+    expect(failures[0]).toContain('expect_prompt');
+    // `cancelPermissions` answers every request `cancelled`, so the scenario's
+    // `expectOutcome: 'selected'` is the second recorded failure.
+    expect(failures[1]).toContain('expected outcome selected but got cancelled');
+  }, 30_000);
 });

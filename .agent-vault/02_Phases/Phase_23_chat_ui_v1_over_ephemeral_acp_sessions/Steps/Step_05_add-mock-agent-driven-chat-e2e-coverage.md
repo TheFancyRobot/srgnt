@@ -5,19 +5,24 @@ contract_version: 1
 title: Add mock-agent-driven chat E2E coverage
 step_id: STEP-23-05
 phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-07-27'
 depends_on:
   - STEP-23-02
   - STEP-23-03
   - STEP-23-04
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-27-023147-add-mock-agent-driven-chat-e2e-coverage-claude-opus-5|SESSION-2026-07-27-023147 claude-opus-5 session for Add mock-agent-driven chat E2E coverage]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-27-023147
+active_session_id: 05_Sessions/2026-07-27-023147-add-mock-agent-driven-chat-e2e-coverage-claude-opus-5
+context_status: completed
+context_summary: 'STEP-23-05 complete: mock-agent-driven chat E2E (8 tests, 7 behaviors) plus the SRGNT_MOCK_SCENARIO injection seam and an agent-side assertion channel. Automated validation only — chat spec 8/8 and 3/3 on the flake check, unit suites green; no manual pnpm dev walkthrough, no real-Pi run, and no observed CI run of the Desktop E2E workflow.'
 ---
 
 # Step 05 - Add mock-agent-driven chat E2E coverage
@@ -77,16 +82,19 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage/Validation_Plan|Validation Plan]].
+- Status: complete
+- Current owner: claude-opus-5
+- Last touched: 2026-07-27
+- Next action: None for this step, and none left in PHASE-23. Automated validation only: `e2e/chat.spec.ts` is 8/8 green with a 3/3 flake check, but no manual `pnpm dev` walkthrough and no real-Pi conversation were run, and the Desktop E2E workflow has not yet been observed green on a PR. See [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage/Outcome|Outcome]].
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- Full findings live in [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage/Implementation_Notes|Implementation Notes]]. The four that change how the next engineer works:
+- The injection seam is `SRGNT_MOCK_SCENARIO` → `resolveMockScenarioPath()` (`packages/desktop/src/main/chat/session-controller.ts`), consumed by the `mockScenario` Playwright option fixture. Unset ⇒ the app behaves exactly as before.
+- Agent-side `expect_*` assertions only escape the spawned mock through `--assertions <path>` (`RunnerHooks.onTurnEnd` → `bin.ts`), read back by the `agentAssertions` fixture. A test that omits that check can pass while the UI answers the agent wrongly.
+- `disableAnimations()` is unusable in chat specs: the renderer's CSP rejects `page.addStyleTag`.
+- `request_permission` scenarios can now carry `kind` / `locations` / `rawInput`, so path- and command-scoped prompts are testable end to end (STEP-23-03 carry-forward closed).
 
 ## Human Notes
 
@@ -95,10 +103,12 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-27 - [[05_Sessions/2026-07-27-023147-add-mock-agent-driven-chat-e2e-coverage-claude-opus-5|SESSION-2026-07-27-023147 claude-opus-5 session for Add mock-agent-driven chat E2E coverage]] - Step executed and completed: `e2e/chat.spec.ts` (8 tests / 7 behaviors), the `SRGNT_MOCK_SCENARIO` injection seam, the `--assertions` agent-side assertion channel, and `request_permission` scope fields. Automated validation green (8/8, 3/3 flake check); no manual/GUI pass performed.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Complete. `packages/desktop/e2e/chat.spec.ts` covers all seven required behaviors in 8 tests, driving the real stack (Electron main spawns the mock agent as a child process through Supervisor + `AcpAgentConnection`) with a per-test injected scenario. No network, no LLM, no `pi` binary.
+- Validation actually run: `playwright test e2e/chat.spec.ts` 8/8 green and 3/3 on the flake check; `pnpm --filter @srgnt/desktop test` 1042 passed; `pnpm --filter @srgnt/harness test` 114 passed / 2 skipped; `typecheck` clean; full `test:e2e` 78 passed with 2 pre-existing environmental failures (`app.spec.ts` node-pty `posix_spawnp`, `bug-0013-visual.spec.ts` Linux-packaged-only). A deliberate negative-control run proved the agent-side assertion channel catches a wrong permission answer.
+- **Not run: any manual or GUI verification.** No `pnpm dev` walkthrough and no real-Pi conversation smoke were performed in this session, and no CI run of the Desktop E2E workflow has been observed with the new spec in it. Those remain owed for the phase.
+- Full detail and follow-ups: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage/Outcome|Outcome]].

@@ -1,6 +1,6 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type {
   ChatPermissionCloseEvent,
   ChatPermissionRequestEvent,
@@ -99,7 +99,12 @@ export const MOCK_HARNESS_IDENTITY: ChatHarnessIdentity = {
   quirks: [],
 };
 
-let cachedMockLaunch: LaunchSpec | undefined;
+/**
+ * Env var an E2E test sets to make the mock replay *its* scenario instead of the
+ * built-in demo. One file path, chosen per test, so scenarios stay test-local
+ * and parallel-safe; unset (every real run) means nothing about the app changes.
+ */
+export const MOCK_SCENARIO_ENV = 'SRGNT_MOCK_SCENARIO';
 
 /**
  * The scripted turn the built-in mock agent replays for a manual `pnpm dev`
@@ -111,7 +116,8 @@ let cachedMockLaunch: LaunchSpec | undefined;
  *
  * Exported so a test can validate it against the mock's own scenario schema: a
  * typo here would otherwise only surface as a dead mock agent at runtime.
- * STEP-23-05 replaces this fixed script with injectable scenarios.
+ * It remains the *default*; STEP-23-05 added {@link MOCK_SCENARIO_ENV} so an
+ * E2E test can replace it per test without touching this script.
  */
 export const MOCK_DEMO_SCENARIO = {
   name: 'chat-demo',
@@ -228,24 +234,71 @@ export const MOCK_DEMO_SCENARIO = {
   ],
 } as const;
 
+let cachedDefaultScenarioPath: string | undefined;
+
+/** Writes {@link MOCK_DEMO_SCENARIO} once per process and reuses the path. */
+function defaultScenarioPath(): string {
+  if (cachedDefaultScenarioPath === undefined) {
+    cachedDefaultScenarioPath = join(mkdtempSync(join(tmpdir(), 'srgnt-chat-mock-')), 'scenario.json');
+    writeFileSync(cachedDefaultScenarioPath, JSON.stringify(MOCK_DEMO_SCENARIO));
+  }
+  return cachedDefaultScenarioPath;
+}
+
+/**
+ * Resolves which scenario file the mock replays. The override is checked for
+ * existence *here* rather than left to the spawned bin: a missing file would
+ * otherwise surface as a mock process that exits 2 during `connect`, i.e. a
+ * restart storm and an opaque "agent died" instead of a readable session error.
+ *
+ * Exported for unit tests — the whole injection seam is this one decision.
+ */
+export function resolveMockScenarioPath(
+  override: string | undefined = process.env[MOCK_SCENARIO_ENV],
+): string {
+  if (override === undefined || override === '') return defaultScenarioPath();
+  // `statSync`, not `existsSync`: a directory or an unreadable path exists but
+  // still makes the spawned bin exit 2, which is the opaque restart storm this
+  // check exists to prevent.
+  let stat;
+  try {
+    stat = statSync(override);
+  } catch (cause) {
+    throw new Error(
+      `${MOCK_SCENARIO_ENV} points at an unreadable path: ${override} (${cause instanceof Error ? cause.message : String(cause)})`,
+    );
+  }
+  if (!stat.isFile()) {
+    throw new Error(`${MOCK_SCENARIO_ENV} must point at a file, not a directory: ${override}`);
+  }
+  return override;
+}
+
 /**
  * LaunchSpec for the built mock agent, resolved from the installed
  * `@srgnt/harness` package so it works both in `pnpm dev` and a packaged app.
  * `ELECTRON_RUN_AS_NODE=1` makes Electron's own binary run the bin as plain
  * Node (in a Node/vitest process it is a harmless no-op).
+ *
+ * `--assertions` lands next to the scenario so an E2E driver can read the mock's
+ * own `expect_*` failures back out of the spawned process; for the built-in demo
+ * that is a throwaway file in a temp dir nobody looks at.
  */
 function mockLaunchSpec(): LaunchSpec {
-  if (cachedMockLaunch !== undefined) return cachedMockLaunch;
   const harnessEntry = require.resolve('@srgnt/harness');
   const binPath = join(harnessEntry, '..', 'testing', 'mock-agent', 'bin.js');
-  const scenarioPath = join(mkdtempSync(join(tmpdir(), 'srgnt-chat-mock-')), 'scenario.json');
-  writeFileSync(scenarioPath, JSON.stringify(MOCK_DEMO_SCENARIO));
-  cachedMockLaunch = {
+  const scenarioPath = resolveMockScenarioPath();
+  return {
     command: process.execPath,
-    args: [binPath, '--scenario', scenarioPath],
+    args: [
+      binPath,
+      '--scenario',
+      scenarioPath,
+      '--assertions',
+      join(dirname(scenarioPath), 'mock-assertions.json'),
+    ],
     env: { ELECTRON_RUN_AS_NODE: '1' },
   };
-  return cachedMockLaunch;
 }
 
 /**
@@ -481,11 +534,22 @@ export class ChatSessionController {
       // method only appears when there is something to authorize the write.
       authorizeWrite: (path) => permissions.authorizeWrite(path),
     });
-    const { connection, harness, cleanup, onSupervisorEvent } = await this.connect(target, {
-      permission: permissions.port,
-      fs: services.fs,
-      terminal: services.terminal,
-    });
+    let connected;
+    try {
+      connected = await this.connect(target, {
+        permission: permissions.port,
+        fs: services.fs,
+        terminal: services.terminal,
+      });
+    } catch (cause) {
+      // `connect` can fail before any process exists (a bad scenario override
+      // throws while building the LaunchSpec). The services already own a temp
+      // cwd and can own terminals, so they have to be released here — the
+      // session/new path below does the same for a failure one step later.
+      services.disposeAll();
+      throw toError(cause);
+    }
+    const { connection, harness, cleanup, onSupervisorEvent } = connected;
     protocolVersion = Number(connection.capabilities.protocolVersion ?? 0);
     // `gave-up` reports only a restart count, so the tail of the crash that
     // exhausted the budget is remembered here and threaded into it.

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Composer } from './Composer.js';
 import { MessageList } from './MessageList.js';
 import { PermissionPrompt } from './PermissionPrompt.js';
 import { TrustBadge } from './TrustBadge.js';
@@ -9,10 +10,9 @@ import { useChatSession, type ChatTarget } from './ChatSessionContext.js';
  * the ACP pivot. Opens an ephemeral session against a harness, sends a prompt,
  * and renders the streamed transcript.
  *
- * Scope note: the real composer (slash commands, modes, rich cancel/error UX) is
- * STEP-23-04 and the tool cards are STEP-23-02. The controls here are the
- * minimum needed to drive and watch a turn — including a send button disabled
- * while a turn is in flight, so this step cannot double-submit.
+ * The view owns session lifecycle (target choice, start, end) and the transcript;
+ * everything about *driving a turn* — input, slash commands, mode selection,
+ * cancel, stop reasons, and crash recovery — belongs to `Composer` (STEP-23-04).
  *
  * Session state lives in `ChatSessionProvider` above the panel switch, so
  * navigating to Notes and back neither kills the session nor loses transcript.
@@ -37,51 +37,12 @@ function EmptyState({ hasSession }: { readonly hasSession: boolean }): React.Rea
 }
 
 export function ChatView(): React.ReactElement {
-  const {
-    session,
-    status,
-    error,
-    transcript,
-    permissions,
-    newSession,
-    sendPrompt,
-    cancel,
-    dispose,
-    respondToPermission,
-    dismissError,
-  } = useChatSession();
+  const { session, status, error, transcript, permissions, newSession, dispose, respondToPermission, dismissError } =
+    useChatSession();
   const [target, setTarget] = React.useState<ChatTarget>('mock');
-  const [draft, setDraft] = React.useState('');
 
   const hasSession = session !== null;
-  const cancelling = status === 'cancelling';
-  // A cancelled turn is still a turn in flight — see the note in
-  // ChatSessionContext.cancel. Send stays disabled until the prompt settles.
-  const busy = status === 'prompting' || cancelling;
   const connecting = status === 'connecting';
-  const canSend = hasSession && !busy && draft.trim() !== '';
-
-  const handleSend = React.useCallback(() => {
-    if (!canSend) return;
-    const text = draft;
-    setDraft('');
-    void sendPrompt(text);
-  }, [canSend, draft, sendPrompt]);
-
-  const handleKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Enter sends, Shift+Enter is a newline — the convention every agent chat
-      // uses. STEP-23-04 owns the full keymap.
-      //
-      // `isComposing` guards IME input: for CJK users the first Enter commits
-      // the candidate word, and sending there would ship a half-typed draft.
-      if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-        event.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend],
-  );
 
   return (
     <div className="chat-view" data-testid="chat-view">
@@ -133,25 +94,14 @@ export function ChatView(): React.ReactElement {
               {connecting ? 'Starting…' : 'Start session'}
             </button>
           ) : (
-            <>
-              <button
-                type="button"
-                data-testid="chat-cancel"
-                className="chat-button"
-                onClick={() => void cancel()}
-                disabled={!busy || cancelling}
-              >
-                {cancelling ? 'Stopping…' : 'Stop'}
-              </button>
-              <button
-                type="button"
-                data-testid="chat-dispose"
-                className="chat-button"
-                onClick={() => void dispose()}
-              >
-                End session
-              </button>
-            </>
+            <button
+              type="button"
+              data-testid="chat-dispose"
+              className="chat-button"
+              onClick={() => void dispose()}
+            >
+              End session
+            </button>
           )}
         </div>
       </header>
@@ -171,28 +121,7 @@ export function ChatView(): React.ReactElement {
           answered, so it sits where the user's attention already is. */}
       <PermissionPrompt requests={permissions} onRespond={respondToPermission} />
 
-      <div className="chat-composer">
-        <textarea
-          data-testid="chat-input"
-          className="chat-input"
-          value={draft}
-          rows={2}
-          disabled={!hasSession}
-          placeholder={hasSession ? 'Send a message…' : 'Start a session to send a message'}
-          aria-label="Message"
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-        <button
-          type="button"
-          data-testid="chat-send"
-          className="chat-button chat-button-primary"
-          onClick={handleSend}
-          disabled={!canSend}
-        >
-          {busy ? 'Sending…' : 'Send'}
-        </button>
-      </div>
+      <Composer />
     </div>
   );
 }

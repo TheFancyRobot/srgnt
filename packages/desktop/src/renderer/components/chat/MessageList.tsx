@@ -20,8 +20,19 @@ function MessageBubble({ segment }: { readonly segment: Segment }): React.ReactE
   switch (segment.kind) {
     case 'user_message':
       return (
-        <article className="chat-message chat-message-user" data-testid="chat-message-user">
-          <header className="chat-message-role">You</header>
+        <article
+          className="chat-message chat-message-user"
+          data-testid="chat-message-user"
+          data-failed={segment.failed === true ? 'true' : undefined}
+        >
+          <header className="chat-message-role">
+            You
+            {segment.failed === true && (
+              <span className="chat-message-failed" data-testid="chat-message-failed">
+                not sent
+              </span>
+            )}
+          </header>
           {/* The user's own text is shown verbatim: echoing their input back as
               rendered markdown would silently change what they think they sent. */}
           <p className="chat-message-plain">{segment.text}</p>

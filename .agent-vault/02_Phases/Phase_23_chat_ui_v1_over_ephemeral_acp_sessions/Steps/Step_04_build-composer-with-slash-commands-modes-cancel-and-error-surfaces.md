@@ -5,17 +5,22 @@ contract_version: 1
 title: Build composer with slash commands modes cancel and error surfaces
 step_id: STEP-23-04
 phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-07-26'
 depends_on:
   - STEP-23-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-07-26-142119-build-composer-with-slash-commands-modes-cancel-and-error-surfaces-claude-opus-5|SESSION-2026-07-26-142119 claude-opus-5 session for Build composer with slash commands modes cancel and error surfaces]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-07-26-142119
+active_session_id: 05_Sessions/2026-07-26-142119-build-composer-with-slash-commands-modes-cancel-and-error-surfaces-claude-opus-5
+context_status: completed
+context_summary: 'STEP-23-04 complete: composer with slash commands, session modes, cancel and crash/error surfaces; automated validation green, manual mock walkthrough and real-Pi run still outstanding.'
 ---
 
 # Step 04 - Build composer with slash commands modes cancel and error surfaces
@@ -78,16 +83,26 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces/Validation_Plan|Validation Plan]].
+- Status: complete
+- Current owner: claude-opus-5
+- Last touched: 2026-07-26
+- Next action: None for this step. Proceed to [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage|STEP-23-05 Add mock-agent-driven chat E2E coverage]]. Two manual verification passes remain owed against this step (mock walkthrough, real Pi) — see the session note's Follow-Up Work; they are verification, not unfinished implementation.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- `packages/desktop/src/renderer/components/chat/Composer.tsx` is the new surface: textarea + custom slash popover (plain `<textarea>`, NOT CodeMirror — the recorded assumption held), mode selector, Send/Stop, stop-reason notice, crash banner. It exports two pure helpers, `parseCommands` and `slashQuery`, which are unit-tested independently of React.
+- `ChatView.tsx` now owns only session lifecycle and the transcript; its inline composer and its duplicate header Stop button are gone. The `chat-input`, `chat-send` and `chat-cancel` test ids moved into `Composer` unchanged, so STEP-23-01/02/03 tests still exercise the same controls.
+- Send and Stop stay mounted together with exactly one enabled, rather than swapping. This preserves STEP-23-01's "send disabled while a turn is in flight" literally, and makes cancel-with-no-turn a disabled no-op.
+- `ChatSessionContext.sendPrompt` now resolves `Promise<boolean>` (turn ran / turn failed). The composer clears the draft optimistically and restores it only when the turn failed and nothing new was typed — that is how "input NOT cleared on error/crash" is satisfied without stranding text after a successful send.
+- The current mode has a single source of truth: `transcript.currentModeId` (set by `current_mode_update`) wins over the `session/new` advertisement. A user-driven `setMode` dispatches a synthetic `current_mode_update` with whatever the agent echoed back, so both paths converge.
+- `ChatConnection` gained an optional `onSupervisorEvent(listener) => unsubscribe`. `defaultChatConnect` supplies it from the per-session `Supervisor`; in-process test connections omit it. Subscription happens after `connect` resolves, so the initial `spawning`/`ready` pair is deliberately not observed.
+- `supervisorEventToStatus(sessionId, event, lastStderrTail)` is exported and pure — the crash mapping is provable without a dying process. `reaped` maps to `null` (our own teardown must never render as a failure). `gave-up` carries no `ExitInfo`, so the controller remembers the preceding `crashed` event's stderr tail and threads it in.
+- A death status (`crashed`/`gave-up`/`exited`) also calls `permissions.cancelAll('cancelled')`: a dead agent cannot answer a prompt, and leaving one on screen would be worse than dismissing it.
+- `dispose` unsubscribes the supervisor listener *before* the kill-tree, otherwise the reap would push a status frame for a session the renderer has already forgotten. Covered by a test.
+- `MOCK_DEMO_SCENARIO` now sets `initialize.modes` (five Pi-like thinking levels) and leads with an `advertise_commands` directive, so the slash menu and mode selector are reachable in a manual `pnpm dev` run instead of only in tests. A test asserts both stay present.
+- Real-process evidence for the crash path: a mock agent spawned under a real `Supervisor` with a `crash` directive emitted `spawning, ready, crashed`, failed the prompt with `ConnectionLost`, and left no surviving pid after dispose.
+- The Execution Brief's "preload does `parseSync` on receive" is not accurate: the preload runs sandboxed and cannot import runtime values from `@srgnt/contracts` at all (BUG-0002, guarded by `preload-ipc-sync.test.ts`). The real pattern is the inlined channel-name allowlist plus `parseSync` at the main-process handler boundary, which both new channels follow.
 
 ## Human Notes
 
@@ -96,10 +111,23 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-07-26 - [[05_Sessions/2026-07-26-142119-build-composer-with-slash-commands-modes-cancel-and-error-surfaces-claude-opus-5|SESSION-2026-07-26-142119 claude-opus-5 session for Build composer with slash commands modes cancel and error surfaces]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+**Complete.** The composer is built and the session is drivable and recoverable.
+
+Delivered:
+
+- `Composer.tsx` — multiline input with STEP-23-01's keymap preserved (Enter sends, Shift+Enter newlines, IME `isComposing` guard, submit disabled while a turn is in flight), plus draft preservation across a failed turn.
+- Slash-command menu fed entirely by `available_commands_update`: `/`-at-line-start trigger, prefix filtering, arrow-key navigation, Enter/Tab/click insert, Escape close, and no menu at all when the agent advertises nothing or an update empties the list.
+- Session-mode selector rendered only when the agent advertises modes, switching via a new typed `chat:session:set-mode` channel, and following agent-initiated `current_mode_update` without user action. An unadvertised `modeId` is rejected in the controller before any ACP call.
+- A distinct end-of-turn rendering for every `StopReason` (`end_turn` intentionally silent).
+- Crash surface: supervisor events → typed `chat:session:status` push → banner with message and stderr tail, transcript preserved read-only, working "New session" recovery (dispose + fresh `session/new`), and no `ErrorBoundary` involvement.
+
+Automated validation (all run in the foreground, all passing; the manual passes below are NOT included): `pnpm --filter @srgnt/desktop test` (57 files / 1035 tests), `pnpm --filter @srgnt/contracts test` (7 files / 159 tests), `pnpm --filter @srgnt/harness test` (113 passed / 2 skipped, no harness changes needed), `pnpm --filter @srgnt/desktop typecheck`, `pnpm lint`, `pnpm --filter @srgnt/desktop build`. Additionally, a real spawned mock agent under a real `Supervisor` was crashed mid-turn: the supervisor emitted `spawning, ready, crashed`, the prompt failed `ConnectionLost`, and no pid survived dispose — the evidence behind the no-orphan acceptance check.
+
+STEP-23-03's carry-forward is closed: the composer's Stop reaches `ChatSessionController.cancel` and a pending permission prompt visibly dismisses, asserted through the real provider and `ChatView` rather than only at the controller level.
+
+Follow-up (verification, not implementation): the manual `pnpm dev` mock walkthrough and the manual real-Pi run were not performed in this session. Both are recorded in the session note's Follow-Up Work.

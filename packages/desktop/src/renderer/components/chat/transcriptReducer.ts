@@ -84,6 +84,13 @@ export interface TextSegment extends SegmentBase {
   readonly kind: 'user_message' | 'agent_message' | 'thought';
   readonly text: string;
   readonly open: boolean;
+  /**
+   * Set on a user prompt whose turn never ran. The composer hands the text back
+   * so it can be retried, and the retry appends a second identical message —
+   * without this the two are indistinguishable and the transcript reads as if
+   * the user said the same thing twice.
+   */
+  readonly failed?: boolean;
 }
 
 /**
@@ -137,6 +144,8 @@ export type TranscriptAction =
   | { readonly type: 'updates'; readonly notifications: readonly unknown[] }
   /** Locally appended user turn — the user's own text never arrives as a frame. */
   | { readonly type: 'user_prompt'; readonly text: string }
+  /** Marks the newest user prompt as never-run, so a retry is not a duplicate. */
+  | { readonly type: 'prompt_failed' }
   /** Closes any open segment (turn ended, cancelled, or interrupted). */
   | { readonly type: 'close_open' }
   /** New session: drop everything, including the id counter. */
@@ -416,6 +425,16 @@ export function transcriptReducer(state: TranscriptState, action: TranscriptActi
         segments: [...withClosed.segments, segment],
         nextSegmentId: withClosed.nextSegmentId + 1,
       };
+    }
+    case 'prompt_failed': {
+      // The newest user message, not the newest segment: a failed turn may still
+      // have streamed agent output before it died.
+      let index = state.segments.length - 1;
+      while (index >= 0 && state.segments[index]!.kind !== 'user_message') index -= 1;
+      if (index < 0) return state;
+      const segments = [...state.segments];
+      segments[index] = { ...(segments[index] as TextSegment), failed: true };
+      return { ...state, segments };
     }
     case 'close_open':
       return { ...state, segments: closeTrailing(state.segments) };

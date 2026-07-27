@@ -116,11 +116,25 @@ export interface SrgntAPI {
     harnessName: string;
     quirks: readonly string[];
     capabilities: Record<string, unknown>;
+    /** Absent when the agent advertises no session modes → no mode selector. */
+    modes?: { currentModeId: string; availableModes: readonly { id: string; name: string }[] };
   }>;
   chatSessionPrompt(sessionId: string, text: string): Promise<{ stopReason: string }>;
   chatSessionCancel(sessionId: string): Promise<void>;
   chatSessionDispose(sessionId: string): Promise<void>;
+  /** Optional: an older preload has no mode bridge, so the selector just hides. */
+  chatSessionSetMode?(sessionId: string, modeId: string): Promise<{ ok: true; currentModeId: string }>;
   onChatSessionUpdate(callback: (event: { sessionId: string; update: unknown }) => void): () => void;
+  /** Agent process lifecycle (STEP-23-04): the crash surface. */
+  onChatSessionStatus?(
+    callback: (event: {
+      sessionId: string;
+      status: 'spawning' | 'ready' | 'crashed' | 'gave-up' | 'exited';
+      stderrTail?: string;
+      exitCode?: number | null;
+      message?: string;
+    }) => void,
+  ): () => void;
   onChatTerminalOutput(
     callback: (event: { sessionId: string; terminalId: string; chunk: string }) => void,
   ): () => void;

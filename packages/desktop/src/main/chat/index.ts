@@ -6,6 +6,7 @@ import {
   SChatSessionNewRequest,
   SChatSessionPromptRequest,
   SChatSessionRef,
+  SChatSessionSetModeRequest,
 } from '@srgnt/contracts';
 // Type-only import: `session-controller` statically imports the ESM-only
 // `@srgnt/harness`, and the desktop main is compiled to CommonJS, so a *value*
@@ -26,6 +27,7 @@ export interface ChatWiring {
   readonly createController?: (options: {
     onUpdate: (event: { sessionId: string; update: unknown }) => void;
     onTerminalOutput: (event: { sessionId: string; terminalId: string; chunk: string }) => void;
+    onStatus: (event: { sessionId: string; status: string }) => void;
     onPermissionRequest: (event: { sessionId: string; requestId: string }) => boolean;
     onPermissionClose: (event: { sessionId: string; requestId: string; reason: string }) => void;
     getCwd?: () => string | undefined;
@@ -47,6 +49,11 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
       push(wiring, ipcChannels.chatSessionUpdate, event),
     onTerminalOutput: (event: { sessionId: string; terminalId: string; chunk: string }) =>
       push(wiring, ipcChannels.chatTerminalOutput, event),
+    // Agent process lifecycle (STEP-23-04). Fire-and-forget: with no live window
+    // there is nothing to warn, and the session is torn down at quit anyway.
+    onStatus: (event: { sessionId: string; status: string }) => {
+      push(wiring, ipcChannels.chatSessionStatus, event);
+    },
     // Returns whether the prompt was actually delivered: with no live window
     // there is nobody to ask, and the controller answers the agent `cancelled`
     // instead of blocking it on a prompt that will never be shown.
@@ -85,6 +92,11 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
   ipcMain.handle(ipcChannels.chatSessionCancel, async (_event, payload: unknown) => {
     const { sessionId } = parseSync(SChatSessionRef, payload);
     await (await getController()).cancel(sessionId);
+  });
+
+  ipcMain.handle(ipcChannels.chatSessionSetMode, async (_event, payload: unknown) => {
+    const { sessionId, modeId } = parseSync(SChatSessionSetModeRequest, payload);
+    return (await getController()).setMode(sessionId, modeId);
   });
 
   ipcMain.handle(ipcChannels.chatSessionDispose, async (_event, payload: unknown) => {

@@ -56,8 +56,15 @@ export const ipcChannels = {
   chatSessionPrompt: 'chat:session:prompt',
   chatSessionCancel: 'chat:session:cancel',
   chatSessionDispose: 'chat:session:dispose',
+  // Session modes (STEP-23-04). For Pi this is the thinking-level control; for
+  // any agent it is `session/set_mode`. Agents that advertise no modes get no
+  // selector at all — the surface is capability-driven, never hardcoded.
+  chatSessionSetMode: 'chat:session:set-mode',
   // Main→renderer push channel for streamed session/update frames.
   chatSessionUpdate: 'chat:session:update',
+  // Main→renderer push channel for agent *process* lifecycle (STEP-23-04). This
+  // is the crash surface: supervisor events, not ACP frames.
+  chatSessionStatus: 'chat:session:status',
   // Main→renderer push channel for output of terminals the *agent* created via
   // the client `terminal/*` services, so a tool card can embed them live.
   chatTerminalOutput: 'chat:terminal:output',
@@ -505,6 +512,20 @@ export const SChatSessionNewRequest = Schema.Struct({
 });
 export type ChatSessionNewRequest = Schema.Schema.Type<typeof SChatSessionNewRequest>;
 
+/** One session mode the agent advertises (Pi: a thinking level, `off`…`xhigh`). */
+export const SChatSessionMode = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+});
+export type ChatSessionMode = Schema.Schema.Type<typeof SChatSessionMode>;
+
+/** The agent's advertised mode set plus the mode it starts in. */
+export const SChatSessionModes = Schema.Struct({
+  currentModeId: Schema.String,
+  availableModes: Schema.Array(SChatSessionMode),
+});
+export type ChatSessionModes = Schema.Schema.Type<typeof SChatSessionModes>;
+
 export const SChatSessionNewResponse = Schema.Struct({
   /** Opaque chat-local handle (NOT the ACP session id). */
   sessionId: Schema.String,
@@ -520,6 +541,12 @@ export const SChatSessionNewResponse = Schema.Struct({
   quirks: Schema.Array(Schema.String),
   /** Negotiated ACP capabilities (opaque; shape owned by @srgnt/harness). */
   capabilities: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  /**
+   * Session modes as advertised in the `session/new` response, or absent when
+   * the agent advertises none. Absent means "no mode selector" — the renderer
+   * must not invent one (STEP-23-04).
+   */
+  modes: Schema.optional(SChatSessionModes),
 });
 export type ChatSessionNewResponse = Schema.Schema.Type<typeof SChatSessionNewResponse>;
 
@@ -547,6 +574,45 @@ export const SChatSessionUpdateEvent = Schema.Struct({
   update: Schema.Unknown,
 });
 export type ChatSessionUpdateEvent = Schema.Schema.Type<typeof SChatSessionUpdateEvent>;
+
+/** Renderer→main: switch the session's mode. */
+export const SChatSessionSetModeRequest = Schema.Struct({
+  sessionId: Schema.String,
+  modeId: Schema.String,
+});
+export type ChatSessionSetModeRequest = Schema.Schema.Type<typeof SChatSessionSetModeRequest>;
+
+/**
+ * Main→renderer answer to a set-mode call. `currentModeId` is echoed so the
+ * selector settles on what the agent actually accepted rather than on what the
+ * user clicked.
+ */
+export const SChatSessionSetModeResponse = Schema.Struct({
+  ok: Schema.Literal(true),
+  currentModeId: Schema.String,
+});
+export type ChatSessionSetModeResponse = Schema.Schema.Type<typeof SChatSessionSetModeResponse>;
+
+/**
+ * Agent *process* lifecycle, mirroring `SupervisorEvent` minus the
+ * reducer-internal `reaped`. This is the crash surface: `crashed`/`gave-up`
+ * carry the stderr tail so the user sees why, not just that.
+ */
+export const SChatSessionStatus = Schema.Literal('spawning', 'ready', 'crashed', 'gave-up', 'exited');
+export type ChatSessionStatusValue = Schema.Schema.Type<typeof SChatSessionStatus>;
+
+export const SChatSessionStatusEvent = Schema.Struct({
+  /** The chat-local handle; the renderer filters on it (stale handles dropped). */
+  sessionId: Schema.String,
+  status: SChatSessionStatus,
+  /** Last captured stderr lines. Only populated for `crashed`/`gave-up`. */
+  stderrTail: Schema.optional(Schema.String),
+  /** Exit code, or `null` when a signal ended the process. */
+  exitCode: Schema.optional(Schema.NullOr(Schema.Number)),
+  /** Human-readable detail (e.g. "gave up after 3 restarts"). */
+  message: Schema.optional(Schema.String),
+});
+export type ChatSessionStatusEvent = Schema.Schema.Type<typeof SChatSessionStatusEvent>;
 
 /**
  * One chunk of output from a client-created terminal, pushed main→renderer over

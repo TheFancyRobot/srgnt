@@ -5,7 +5,7 @@ contract_version: 1
 title: team-lead session for Add Playwright/Electron interactive UI validation matrix and visual regression coverage
 session_id: SESSION-2026-04-14-173032
 date: '2026-04-14'
-status: complete
+status: completed
 owner: team-lead
 branch: ''
 phase: Phase_14_notes_view

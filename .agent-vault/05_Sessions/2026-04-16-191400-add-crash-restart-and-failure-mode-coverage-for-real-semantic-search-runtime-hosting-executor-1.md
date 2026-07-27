@@ -5,7 +5,7 @@ contract_version: 1
 title: executor-1 session for Add crash restart and failure-mode coverage for real semantic-search runtime hosting
 session_id: SESSION-2026-04-16-191400
 date: '2026-04-16'
-status: in-progress
+status: completed
 owner: executor-1
 branch: ''
 phase: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]'

@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Implement Obsidian-style live-preview markdown editor foundation
 session_id: SESSION-2026-04-01-190658
 date: '2026-04-01'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'

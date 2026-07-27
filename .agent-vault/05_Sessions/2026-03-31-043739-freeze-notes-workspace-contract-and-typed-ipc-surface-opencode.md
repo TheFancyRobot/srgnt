@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Freeze Notes workspace contract and typed IPC surface
 session_id: SESSION-2026-03-31-043739
 date: '2026-03-31'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'

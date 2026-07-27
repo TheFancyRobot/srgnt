@@ -5,7 +5,7 @@ contract_version: 1
 title: claude-fable-5-worker session for Bootstrap workspace v2 layout and contracts v2 domain skeleton
 session_id: SESSION-2026-07-12-182319
 date: '2026-07-12'
-status: complete
+status: completed
 owner: claude-fable-5-worker
 branch: phase/21-pivot-groundwork
 phase: '[[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]]'

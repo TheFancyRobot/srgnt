@@ -5,7 +5,7 @@ contract_version: 1
 title: bugfix-reviewers session for Implement markdown slash commands on top of live preview
 session_id: SESSION-2026-04-06-213600
 date: '2026-04-06'
-status: in-progress
+status: completed
 owner: bugfix-reviewers
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'

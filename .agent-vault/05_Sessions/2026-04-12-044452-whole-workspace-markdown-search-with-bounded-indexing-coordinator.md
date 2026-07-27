@@ -5,7 +5,7 @@ contract_version: 1
 title: coordinator session for Whole-workspace markdown search with bounded indexing
 session_id: SESSION-2026-04-12-044452
 date: '2026-04-12'
-status: in-progress
+status: completed
 owner: coordinator
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'

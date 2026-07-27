@@ -333,8 +333,12 @@ export class ProjectStore {
   }
 
   private async sessionIds(projectId: string): Promise<string[]> {
+    return this.sessionIdsIn(projectSessionsDirectory(this.workspaceRoot, projectId));
+  }
+
+  private async sessionIdsIn(sessionsDirectory: string): Promise<string[]> {
     try {
-      return (await fs.readdir(projectSessionsDirectory(this.workspaceRoot, projectId), { withFileTypes: true }))
+      return (await fs.readdir(sessionsDirectory, { withFileTypes: true }))
         .filter((entry) => entry.isDirectory() && isSafeId(entry.name))
         .map((entry) => entry.name);
     } catch (error) {
@@ -353,7 +357,6 @@ export class ProjectStore {
    * overwritten — a session id that already exists under the target aborts the
    * merge loudly instead.
    *
-   * ponytail: not serialized against the per-id create lock, so a merge racing
    * Holds BOTH projects' locks (sorted, so a concurrent pair cannot deadlock),
    * because the move is multi-step and destructive: a rename or setDefaults
    * landing halfway through would be lost or would write into a directory this
@@ -451,6 +454,17 @@ export class ProjectStore {
     }
 
     if (ids.length > 0) await fs.mkdir(targetSessions, { recursive: true });
+
+    // A crash between a rename below and its retarget leaves that session
+    // already under the target, where `sessionIds(sourceProjectId)` can no
+    // longer see it — so a later recovery pass would never revisit it and its
+    // `projectId` would point at the source project this function deletes.
+    // Sweeping the target first makes the retarget as re-derivable as the move.
+    // `retargetSessionMeta` is a no-op once the id already matches.
+    for (const sessionId of await this.sessionIdsIn(targetSessions)) {
+      await this.retargetSessionMeta(targetProjectId, sessionId);
+    }
+
     for (const sessionId of ids) {
       await fs.rename(path.join(sourceSessions, sessionId), path.join(targetSessions, sessionId));
       // The moved session's own `meta.json` still claims the source project,

@@ -394,6 +394,45 @@ describe('recoverMerges', () => {
     await sessions.close();
   });
 
+  it('retargets a session left behind by a crash between its move and its rewrite', async () => {
+    const source = await store.ensureProjectForDir(dir('source'));
+    const target = await store.ensureProjectForDir(dir('target'));
+    await seedSessions(source.id, ['s1', 's2']);
+
+    const projects = path.join(workspaceRoot, workspaceDirectories.projects);
+    await fs.writeFile(
+      mergeJournalPath(workspaceRoot, target.id),
+      JSON.stringify({
+        sourceProjectId: source.id,
+        targetProjectId: target.id,
+        sourceRootDir: source.rootDir,
+        sourceAdditionalDirectories: [],
+        startedAt: '2026-07-27T10:00:00.000Z',
+      }),
+      'utf8'
+    );
+    // The exact crash window: s1 is physically under the target already, but its
+    // meta still names the source — and `sessionIds(source)` can no longer see
+    // it, so nothing would ever revisit it.
+    await fs.mkdir(path.join(projects, target.id, 'sessions'), { recursive: true });
+    await fs.rename(
+      path.join(projects, source.id, 'sessions', 's1'),
+      path.join(projects, target.id, 'sessions', 's1')
+    );
+
+    expect(await createProjectStore(workspaceRoot).recoverMerges()).toEqual({
+      resumed: [target.id],
+      failed: [],
+    });
+
+    const sessions = createSessionStore(workspaceRoot);
+    const listed = await sessions.listSessions(target.id);
+    expect(listed.sessions.map((session) => session.id)).toEqual(['s1', 's2']);
+    // s1 is the one that would have kept a projectId naming a deleted project.
+    expect(listed.sessions.map((session) => session.projectId)).toEqual([target.id, target.id]);
+    await sessions.close();
+  });
+
   it('aborts a colliding merge before moving anything, and does not wedge recovery', async () => {
     const source = await store.ensureProjectForDir(dir('source'));
     const target = await store.ensureProjectForDir(dir('target'));

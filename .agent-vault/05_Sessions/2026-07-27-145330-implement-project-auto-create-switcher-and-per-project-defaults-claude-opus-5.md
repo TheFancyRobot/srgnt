@@ -162,7 +162,7 @@ All commands below were run in the foreground on macOS (darwin 25.5.0); results 
 - [x] Resolved during PR review: `getElectronLaunchEnv` sets `SRGNT_DEFAULT_WORKSPACE_ROOT` under each test's user-data dir, so every spec onboards into its own workspace.
 - [ ] Project *deletion* is a recorded non-goal for this step (merge only) - Phase 25 or later.
 - [ ] `permissionPolicy` has storage + lookup but no editing UI (Phase 25, as recorded in the brief).
-- [ ] `ProjectStore.merge` is not serialized against the per-id create lock (`ponytail:` comment in `store.ts`); take both projects' locks if a merge is ever seen racing an `ensureProjectForDir`.
+- [x] Resolved during PR review: `ProjectStore.merge` and `recoverMerges` now hold BOTH projects' locks, acquired in sorted order so a concurrent pair cannot deadlock.
 - [ ] Carried forward from STEP-24-01 and still open: `ChatSessionController` still buffers `SessionEvent[]` in memory rather than writing through `SessionStore`. This step deliberately did not touch it - the Execution Brief scopes the sink swap elsewhere, and `readEventLog`'s whole-file read (the recorded `ponytail:` perf ceiling) is untouched because nothing added here polls the event log.
 
 ## Completion Summary

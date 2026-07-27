@@ -2,7 +2,12 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { SessionEventLog, SessionEventLogCorruptionError, readEventLog } from './event-log.js';
+import {
+  SessionEventLog,
+  SessionEventLogCorruptionError,
+  SessionEventLogWriteError,
+  readEventLog,
+} from './event-log.js';
 
 /**
  * Real `pi-acp` traffic, copied verbatim from
@@ -218,6 +223,63 @@ describe('SessionEventLog append', () => {
     const result = await readEventLog(logPath);
     expect(result.events.map((event) => event.seq)).toEqual([0, 1, 2]);
     expect(result.truncatedTail).toBe(false);
+  });
+
+  it('refuses an invalid envelope instead of writing a line no reader can accept', async () => {
+    const log = await appendAll(1);
+    // `protocolVersion` is a plain `number` in the input type, so this
+    // type-checks. Written, it would be a newline-terminated line the schema
+    // rejects — i.e. interior corruption that `open` deliberately never repairs.
+    await expect(log.append({ kind: 'client/stop', protocolVersion: -1 })).rejects.toBeInstanceOf(
+      SessionEventLogWriteError
+    );
+    // The bad append spent no sequence number and wrote nothing.
+    expect(log.nextSequence).toBe(1);
+    const after = await log.append({ kind: 'client/stop' });
+    expect(after.seq).toBe(1);
+    await log.close();
+    const result = await readEventLog(logPath);
+    expect(result.events.map((event) => event.seq)).toEqual([0, 1]);
+  });
+
+  it('stops writing after a failed append rather than leaving a hole in seq', async () => {
+    const log = await appendAll(2);
+    // Close the descriptor underneath the handle: the next write fails the way
+    // a full or disconnected disk would.
+    await (log as unknown as { handle: { close: () => Promise<void> } }).handle.close();
+
+    await expect(log.append({ kind: 'client/stop' })).rejects.toBeTruthy();
+    // seq 2 is spent. Appending seq 3 after it would leave a gap; appending
+    // after a possibly half-written line would be interior corruption.
+    await expect(log.append({ kind: 'client/stop' })).rejects.toBeInstanceOf(
+      SessionEventLogWriteError
+    );
+
+    // Reopening is the documented repair path, and it still works.
+    const reopened = await SessionEventLog.open(logPath);
+    const recovered = await reopened.append({ kind: 'client/stop' });
+    expect(recovered.seq).toBe(2);
+    await reopened.close();
+    const result = await readEventLog(logPath);
+    expect(result.events.map((event) => event.seq)).toEqual([0, 1, 2]);
+  });
+
+  it('treats a line with malformed UTF-8 as corrupt, not as an altered payload', async () => {
+    // A flipped byte inside a JSON string. `toString('utf8')` would substitute
+    // U+FFFD and hand back structurally valid JSON, silently changing the
+    // payload of an event in the file that is meant to be the source of truth.
+    const good = await appendAll(1);
+    await good.close();
+    const valid = (await fs.readFile(logPath, 'utf8')).trimEnd();
+    const line = Buffer.from(
+      JSON.stringify({ seq: 1, ts: new Date().toISOString(), protocolVersion: 0, kind: 'x', payload: 'AA' }),
+      'utf8'
+    );
+    // 0xff never appears in valid UTF-8; drop it inside the payload string.
+    line[line.length - 3] = 0xff;
+    await fs.writeFile(logPath, `${valid}\n${line.toString('binary')}\n`, 'binary');
+
+    await expect(readEventLog(logPath)).rejects.toBeInstanceOf(SessionEventLogCorruptionError);
   });
 
   it('refuses to open a log with interior corruption rather than destroying it', async () => {

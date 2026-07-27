@@ -36,7 +36,33 @@ export class SessionEventLogCorruptionError extends Error {
   }
 }
 
-function decodeLine(raw: string): SessionEvent | undefined {
+/**
+ * An append was refused or failed. Distinct from corruption: the file on disk
+ * is still readable, but this handle will not write to it again.
+ */
+export class SessionEventLogWriteError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: unknown
+  ) {
+    super(message);
+    this.name = 'SessionEventLogWriteError';
+  }
+}
+
+/** Strict decoder: throws on malformed UTF-8 instead of substituting U+FFFD. */
+const strictDecoder = new TextDecoder('utf8', { fatal: true });
+
+function decodeUtf8Strict(buffer: Buffer, start: number, end: number): string | undefined {
+  try {
+    return strictDecoder.decode(buffer.subarray(start, end));
+  } catch {
+    return undefined;
+  }
+}
+
+function decodeLine(raw: string | undefined): SessionEvent | undefined {
+  if (raw === undefined) return undefined;
   let value: unknown;
   try {
     value = JSON.parse(raw);
@@ -83,7 +109,12 @@ export async function readEventLog(
     const newlineAt = buffer.indexOf(NEWLINE, start);
     const terminated = newlineAt !== -1;
     const end = terminated ? newlineAt : buffer.length;
-    const event = decodeLine(buffer.toString('utf8', start, end));
+    // Strict UTF-8, per line. `Buffer.toString('utf8')` substitutes U+FFFD for
+    // invalid sequences, so flipped bytes inside a string could decode to
+    // still-valid JSON and be accepted as a silently altered payload — in the
+    // file that is meant to be the session's source of truth. A line that is
+    // not valid UTF-8 takes the same path as one that is not valid JSON.
+    const event = decodeLine(decodeUtf8Strict(buffer, start, end));
 
     if (event === undefined) {
       if (!terminated) {
@@ -140,6 +171,8 @@ export interface AppendEventInput {
  */
 export class SessionEventLog {
   private tail: Promise<unknown> = Promise.resolve();
+  /** Set by the first failed append; every later append is refused. */
+  private failure: unknown;
 
   private constructor(
     readonly eventsPath: string,
@@ -149,6 +182,9 @@ export class SessionEventLog {
     readonly repairedTail: boolean
   ) {}
 
+  // ponytail: `open` reads the whole file to learn the last seq and the tail
+  // state. A tail-only scan would be O(1) but has to handle records spanning
+  // the read window; do it if a session log ever gets big enough to notice.
   static async open(eventsPath: string): Promise<SessionEventLog> {
     const existing = await readEventLog(eventsPath);
 
@@ -180,16 +216,62 @@ export class SessionEventLog {
    * dense, ordered, never-interleaved lines.
    */
   append(input: AppendEventInput): Promise<SessionEvent> {
-    const event: SessionEvent = {
-      seq: this.nextSeq++,
+    // A previous append failed. Continuing would either leave a hole in `seq`
+    // (the failed event's number is already spent) or append a clean line after
+    // a half-written one, turning a repairable tail into interior corruption
+    // that `open` deliberately refuses to fix. Reopening is the repair path.
+    if (this.failure !== undefined) {
+      return Promise.reject(
+        new SessionEventLogWriteError(
+          `${this.eventsPath} is closed for writing after an append failure; reopen it to repair`,
+          this.failure
+        )
+      );
+    }
+
+    const candidate = {
+      seq: this.nextSeq,
       ts: input.ts ?? new Date().toISOString(),
       protocolVersion: input.protocolVersion ?? 0,
       kind: input.kind,
       ...(input.payload === undefined ? {} : { payload: input.payload }),
     };
+    // Validate BEFORE spending the sequence number or writing. `protocolVersion`
+    // is a plain `number` in the input type, so a negative, fractional, or
+    // non-finite one type-checks — and a newline-terminated line the schema
+    // rejects is unrecoverable interior corruption on the next read.
+    const decoded = readSessionEvent(candidate);
+    if (!decoded.success) {
+      return Promise.reject(
+        new SessionEventLogWriteError(
+          `Refusing to append an invalid event to ${this.eventsPath}`,
+          decoded.error
+        )
+      );
+    }
+    const event = decoded.data;
+
+    this.nextSeq += 1;
     const line = `${JSON.stringify(event)}\n`;
-    const written = this.tail.then(() => this.handle.write(line)).then(() => event);
-    // Keep the chain alive after a failed write so later appends still serialize.
+    const bytes = Buffer.from(line, 'utf8');
+    const written = this.tail
+      .then(async () => {
+        const { bytesWritten } = await this.handle.write(bytes);
+        // A short write leaves a torn record on disk while the caller is told
+        // the event was appended.
+        if (bytesWritten !== bytes.length) {
+          throw new SessionEventLogWriteError(
+            `Short write to ${this.eventsPath}: ${bytesWritten} of ${bytes.length} bytes`
+          );
+        }
+        return event;
+      })
+      .catch((cause: unknown) => {
+        this.failure ??= cause;
+        throw cause;
+      });
+    // Keep the chain alive so a later append still serializes behind this one
+    // (it will be rejected by the guard above, but never interleaved).
     this.tail = written.catch(() => undefined);
     return written;
   }

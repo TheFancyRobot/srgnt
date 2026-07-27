@@ -15,6 +15,22 @@ import {
 } from './meta.js';
 import { isSafeId, projectSessionsDirectory, sessionPaths } from './paths.js';
 
+/** `createSession` was called for an id that already has a `meta.json`. */
+export class SessionAlreadyExistsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SessionAlreadyExistsError';
+  }
+}
+
+/** A metadata patch tried to change the ids that name the session's directory. */
+export class SessionIdentityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SessionIdentityError';
+  }
+}
+
 export interface SessionRef {
   projectId: string;
   sessionId: string;
@@ -51,6 +67,18 @@ export class SessionStore {
   async createSession(meta: SessionMetaInput): Promise<Session> {
     const session = parseSessionMeta(meta, `${meta.projectId}/${meta.id}`);
     const paths = this.paths({ projectId: session.projectId, sessionId: session.id });
+    // Refuse to reuse an id. Overwriting `meta.json` leaves the previous
+    // session's `events.jsonl` in place, so the new record would inherit
+    // somebody else's history — worse than a failed create.
+    try {
+      await fs.access(paths.meta);
+      throw new SessionAlreadyExistsError(
+        `Session ${session.projectId}/${session.id} already exists`
+      );
+    } catch (error) {
+      if (error instanceof SessionAlreadyExistsError) throw error;
+      if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error;
+    }
     await fs.mkdir(paths.directory, { recursive: true });
     return writeSessionMeta(paths.meta, session);
   }
@@ -94,15 +122,52 @@ export class SessionStore {
     return readSessionMeta(this.paths(ref).meta);
   }
 
-  /** Read-modify-write `meta.json`, stamping `updatedAt`. */
+  /**
+   * Read-modify-write `meta.json`, stamping `updatedAt`.
+   *
+   * `id` and `projectId` are identity, not metadata: they name the directory
+   * the file lives in. Letting a patch change them would leave `listSessions`
+   * returning ids that point at a different directory than the one they were
+   * read from, so they are rejected rather than silently ignored.
+   */
   async updateMeta(ref: SessionRef, patch: Partial<SessionMetaInput>): Promise<Session> {
+    if (patch.id !== undefined && patch.id !== ref.sessionId) {
+      throw new SessionIdentityError(`Cannot change session id from ${ref.sessionId} to ${patch.id}`);
+    }
+    if (patch.projectId !== undefined && patch.projectId !== ref.projectId) {
+      throw new SessionIdentityError(
+        `Cannot change project id from ${ref.projectId} to ${patch.projectId}`
+      );
+    }
     const paths = this.paths(ref);
     const current = await readSessionMeta(paths.meta);
     const next = parseSessionMeta(
-      { ...current, ...patch, updatedAt: patch.updatedAt ?? new Date().toISOString() },
+      {
+        ...current,
+        ...patch,
+        id: current.id,
+        projectId: current.projectId,
+        updatedAt: patch.updatedAt ?? new Date().toISOString(),
+      },
       paths.meta
     );
     return writeSessionMeta(paths.meta, next);
+  }
+
+  /**
+   * Close one session's append handle. Every open log holds a file descriptor
+   * until `close()`, so a long-lived process that touches many sessions needs a
+   * way to release one it is done with.
+   *
+   * ponytail: explicit release, no LRU. Add automatic eviction only if a caller
+   * is ever shown to keep enough sessions hot to matter.
+   */
+  async closeSession(ref: SessionRef): Promise<void> {
+    const key = this.key(ref);
+    const pending = this.logs.get(key);
+    if (pending === undefined) return;
+    this.logs.delete(key);
+    await (await pending).close();
   }
 
   /**

@@ -3,7 +3,13 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SessionPathError } from './paths.js';
-import { SessionStore, createSessionStore, type SessionRef } from './store.js';
+import {
+  SessionAlreadyExistsError,
+  SessionIdentityError,
+  SessionStore,
+  createSessionStore,
+  type SessionRef,
+} from './store.js';
 
 let root: string;
 let store: SessionStore;
@@ -32,6 +38,43 @@ afterEach(async () => {
 });
 
 describe('SessionStore', () => {
+  it('refuses to create a session that already exists', async () => {
+    await store.createSession(meta());
+    await store.appendEvent(ref, 'acp/session_update', { text: 'first session' });
+    await store.closeSession(ref);
+
+    await expect(store.createSession({ ...meta(), title: 'different' })).rejects.toBeInstanceOf(
+      SessionAlreadyExistsError
+    );
+    // The point of refusing: a silent overwrite would leave the new metadata
+    // pointing at the old session's event history.
+    expect((await store.readMeta(ref)).title).not.toBe('different');
+    expect((await store.readEvents(ref)).events).toHaveLength(1);
+  });
+
+  it('rejects a patch that would move a session out of its own directory', async () => {
+    await store.createSession(meta());
+    await expect(store.updateMeta(ref, { id: 'sess-2' })).rejects.toBeInstanceOf(
+      SessionIdentityError
+    );
+    await expect(store.updateMeta(ref, { projectId: 'proj-2' })).rejects.toBeInstanceOf(
+      SessionIdentityError
+    );
+    // Listing still agrees with the on-disk location.
+    const listed = await store.listSessions('proj-1');
+    expect(listed.sessions.map((session) => session.id)).toEqual(['sess-1']);
+  });
+
+  it('closeSession releases the handle and later appends still land', async () => {
+    await store.createSession(meta());
+    await store.appendEvent(ref, 'acp/session_update');
+    await store.closeSession(ref);
+    // Idempotent: closing an already-released session is not an error.
+    await store.closeSession(ref);
+    await store.appendEvent(ref, 'client/stop');
+    expect((await store.readEvents(ref)).events.map((event) => event.seq)).toEqual([0, 1]);
+  });
+
   it('creates the documented directory layout', async () => {
     const created = await store.createSession(meta());
     expect(created.kind).toBe('single');

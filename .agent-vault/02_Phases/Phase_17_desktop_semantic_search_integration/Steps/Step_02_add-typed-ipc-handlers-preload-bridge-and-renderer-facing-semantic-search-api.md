@@ -5,7 +5,7 @@ contract_version: 1
 title: Add typed IPC handlers, preload bridge, and renderer-facing semantic search API
 step_id: STEP-17-02
 phase: '[[02_Phases/Phase_17_desktop_semantic_search_integration/Phase|Phase 17 desktop semantic search integration]]'
-status: complete
+status: completed
 owner: executor-1
 created: '2026-04-02'
 updated: '2026-04-16'

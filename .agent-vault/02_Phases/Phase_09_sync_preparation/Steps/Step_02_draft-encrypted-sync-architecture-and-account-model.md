@@ -5,7 +5,7 @@ contract_version: 1
 title: Draft Encrypted Sync Architecture And Account Model
 step_id: STEP-09-02
 phase: '[[02_Phases/Phase_09_sync_preparation/Phase|Phase 09 sync preparation]]'
-status: done
+status: completed
 owner: executor-1
 created: '2026-03-21'
 updated: '2026-04-16'

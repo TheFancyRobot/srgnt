@@ -5,7 +5,7 @@ contract_version: 1
 title: Fix slash commands trigger logic and indentation preservation issues (BUG-0010)
 step_id: STEP-14-06b
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: done
+status: completed
 owner: fixer-codex
 created: '2026-04-06'
 updated: '2026-04-07'

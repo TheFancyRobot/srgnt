@@ -5,7 +5,7 @@ contract_version: 1
 title: Add whole-workspace markdown search with bounded indexing
 step_id: STEP-14-07
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: complete
+status: completed
 owner: executor-1
 created: '2026-03-31'
 updated: '2026-03-31'

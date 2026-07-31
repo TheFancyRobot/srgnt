@@ -5,7 +5,7 @@ contract_version: 1
 title: Wire Workflow Launch Actions And Artifact Context
 step_id: STEP-07-02
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-29'

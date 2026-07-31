@@ -5,7 +5,7 @@ contract_version: 1
 title: Add desktop integration tests and packaged offline validation
 step_id: STEP-17-04
 phase: '[[02_Phases/Phase_17_desktop_semantic_search_integration/Phase|Phase 17 desktop semantic search integration]]'
-status: complete
+status: completed
 owner: executor-1
 created: '2026-04-02'
 updated: '2026-04-16'

@@ -5,7 +5,7 @@ contract_version: 1
 title: Optimize renderer bundle splitting and lazy-load terminal surface
 step_id: STEP-13-07
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-30'
 updated: '2026-03-30'

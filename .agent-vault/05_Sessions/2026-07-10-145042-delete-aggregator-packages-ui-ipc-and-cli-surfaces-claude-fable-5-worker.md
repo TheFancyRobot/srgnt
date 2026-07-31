@@ -75,7 +75,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-changed-paths -->
 - Deleted packages: packages/fred, packages/entitlements, packages/sync, packages/executors, packages/connectors, examples/.
 - Deleted desktop: src/renderer/components/{TodayView,CalendarView,ConnectorStatus}.{tsx,test.tsx}, sidepanels/{Today,Calendar,Connectors}SidePanel.{tsx,test.tsx}, src/main/cli/, src/main/connectors/, src/main/connector-ipc.test.ts, dev-connectors/.
@@ -88,9 +88,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: not recorded
+- Result: not recorded
+- Notes: Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-validation-run -->
 - Sweep: `rg "@srgnt/(connectors|executors|sync|entitlements|fred)|ConnectorStatus|TodayView|CalendarView|connector:" packages/ --glob '!node_modules'` -> zero hits.
 - `pnpm typecheck` -> green (contracts, runtime, desktop main/preload/renderer).
@@ -114,7 +114,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces|STEP-21-02 Delete aggregator packages UI IPC and CLI surfaces]].
+- [x] Closed. [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces|STEP-21-02 Delete aggregator packages UI IPC and CLI surfaces]] is in a terminal state; this note was never filled in.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

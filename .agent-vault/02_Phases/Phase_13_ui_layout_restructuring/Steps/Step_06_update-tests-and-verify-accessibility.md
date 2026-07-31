@@ -5,7 +5,7 @@ contract_version: 1
 title: Update tests and verify accessibility
 step_id: STEP-13-06
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-30'
 updated: '2026-03-30'

@@ -5,7 +5,7 @@ contract_version: 1
 title: Add workspace-wide wikilink resolution, navigation, and note creation
 step_id: STEP-14-05
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: done
+status: completed
 owner: ''
 created: '2026-03-31'
 updated: '2026-04-05'

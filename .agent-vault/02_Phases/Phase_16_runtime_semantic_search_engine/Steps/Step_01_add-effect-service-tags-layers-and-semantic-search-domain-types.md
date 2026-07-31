@@ -5,7 +5,7 @@ contract_version: 1
 title: Add Effect service tags, layers, and semantic search domain types
 step_id: STEP-16-01
 phase: '[[02_Phases/Phase_16_runtime_semantic_search_engine/Phase|Phase 16 runtime semantic search engine]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-04-02'
 updated: '2026-04-14'

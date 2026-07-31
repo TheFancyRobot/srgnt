@@ -5,7 +5,7 @@ contract_version: 1
 title: Harden autosave, conflict recovery, and end-to-end Notes integration
 step_id: STEP-14-08
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: complete
+status: completed
 owner: executor-1
 created: '2026-03-31'
 updated: '2026-03-31'

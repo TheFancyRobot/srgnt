@@ -5,7 +5,7 @@ contract_version: 1
 title: Replace desktop worker stub with real runtime semantic-search Effect layer
 step_id: STEP-18-01
 phase: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]'
-status: done
+status: completed
 owner: executor-1
 created: '2026-04-16'
 updated: '2026-04-16'

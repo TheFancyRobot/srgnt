@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement Capability Policy And Approval Model
 step_id: STEP-03-02
 phase: '[[02_Phases/Phase_03_runtime_foundation/Phase|Phase 03 runtime foundation]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-22'

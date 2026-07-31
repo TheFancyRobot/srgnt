@@ -5,7 +5,7 @@ contract_version: 1
 title: Add Playwright/Electron interactive UI validation matrix and visual regression coverage
 step_id: STEP-14-11
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-04-13'
 updated: '2026-04-14'

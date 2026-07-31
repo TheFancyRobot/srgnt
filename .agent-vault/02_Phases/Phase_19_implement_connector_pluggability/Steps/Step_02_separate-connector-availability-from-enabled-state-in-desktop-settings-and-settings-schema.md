@@ -5,7 +5,7 @@ contract_version: 1
 title: Separate connector availability from enabled state in desktop settings and settings schema
 step_id: STEP-19-02
 phase: '[[02_Phases/Phase_19_implement_connector_pluggability/Phase|Phase 19 implement connector pluggability]]'
-status: done
+status: completed
 owner: executor-1
 created: '2026-04-16'
 updated: '2026-04-16'

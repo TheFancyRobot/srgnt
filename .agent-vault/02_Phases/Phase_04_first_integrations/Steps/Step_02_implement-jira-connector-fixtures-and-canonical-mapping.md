@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement Jira Connector Fixtures And Canonical Mapping
 step_id: STEP-04-02
 phase: '[[02_Phases/Phase_04_first_integrations/Phase|Phase 04 first integrations]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-22'

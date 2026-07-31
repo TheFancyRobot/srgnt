@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChatTerminalProvider } from './ChatTerminalContext.js';
+import { useProjectsOptional } from './ProjectsContext.js';
 import type { PendingPermission } from './PermissionPrompt.js';
 import {
   initialTranscriptState,
@@ -47,6 +48,8 @@ export interface ChatSessionInfo {
   readonly harnessName: string;
   readonly quirks: readonly string[];
   readonly capabilities: Record<string, unknown>;
+  /** The project the session was created under, or `null` when main resolved none. */
+  readonly projectId: string | null;
   /**
    * Modes the agent advertised at `session/new`, or `null` when it advertised
    * none. `null` means "no mode selector" — never an empty dropdown.
@@ -103,6 +106,12 @@ function scheduleFlush(callback: () => void): () => void {
 }
 
 export function ChatSessionProvider({ children }: { readonly children: React.ReactNode }): React.ReactElement {
+  // Optional: Phase-23 tests and any surface without projects mount this
+  // provider on its own, and a missing project context just means "let main
+  // derive the project from the cwd".
+  const projects = useProjectsOptional();
+  const activeProjectId = projects?.activeProjectId ?? null;
+  const refreshProjects = projects?.refresh;
   const [session, setSession] = React.useState<ChatSessionInfo | null>(null);
   const [status, setStatus] = React.useState<ChatStatus>('idle');
   const [error, setError] = React.useState<string | null>(null);
@@ -229,7 +238,10 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     setError(null);
     setStatus('connecting');
     try {
-      const result = await window.srgnt.chatSessionNew(target);
+      // `undefined` is meaningful: it tells main to derive (and auto-create) the
+      // project from the workspace cwd, which is what happens before the user
+      // has ever opened the switcher.
+      const result = await window.srgnt.chatSessionNew(target, activeProjectId ?? undefined);
       pending.current = [];
       sessionIdRef.current = result.sessionId;
       dispatch({ type: 'reset' });
@@ -253,9 +265,13 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
         harnessName: result.harnessName,
         quirks: result.quirks,
         capabilities: result.capabilities,
+        projectId: result.projectId ?? null,
         modes: result.modes ?? null,
       });
       setStatus('ready');
+      // A session may have just auto-created its project; without this the
+      // switcher stays empty until the next reload.
+      void refreshProjects?.();
     } catch (cause) {
       // The controller already tore down its side, so there is no handle to
       // clean up here — just surface it and stay in a retryable state.
@@ -264,7 +280,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       setStatus('error');
       setError(messageOf(cause));
     }
-  }, []);
+  }, [activeProjectId, refreshProjects]);
 
   const sendPrompt = React.useCallback(
     async (text: string): Promise<boolean> => {
@@ -401,6 +417,11 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       <ChatTerminalProvider sessionId={session?.sessionId ?? null}>{children}</ChatTerminalProvider>
     </ChatSessionContext.Provider>
   );
+}
+
+/** Like {@link useChatSession}, but `null` outside the provider. */
+export function useChatSessionOptional(): ChatSessionContextValue | null {
+  return React.useContext(ChatSessionContext);
 }
 
 export function useChatSession(): ChatSessionContextValue {

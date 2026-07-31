@@ -6,6 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatView } from './ChatView.js';
 import { ChatSessionProvider } from './ChatSessionContext.js';
+import { ProjectsProvider } from './ProjectsContext.js';
 
 /**
  * Drives ChatView through a scripted update stream by capturing the callback the
@@ -69,6 +70,13 @@ function installSrgntStub(overrides: Record<string, unknown> = {}): Harness {
     }),
     chatPermissionRespond: vi.fn(async () => {}),
     openExternal: vi.fn(async () => {}),
+    // Projects are optional for most of these tests; the one that checks the
+    // per-project harness default needs a project advertising `pi`.
+    getWorkspaceRoot: vi.fn(async () => '/w/one'),
+    projectList: vi.fn(async () => ({
+      projects: [{ id: 'proj-1', name: 'one', rootDir: '/w/one', additionalDirectories: [], defaultHarnessId: 'pi' }],
+      skipped: [],
+    })),
     ...overrides,
   };
   (window as unknown as { srgnt: unknown }).srgnt = api;
@@ -133,8 +141,24 @@ describe('ChatView — session lifecycle', () => {
     renderChat();
     fireEvent.change(screen.getByTestId('chat-target'), { target: { value: 'pi' } });
     await startSession();
-    expect(harness.api.chatSessionNew).toHaveBeenCalledWith('pi');
+    // Second arg is the active project id; `undefined` = derive it from the cwd.
+    expect(harness.api.chatSessionNew).toHaveBeenCalledWith('pi', undefined);
     expect(screen.getByTestId('chat-session-badge')).toHaveTextContent('Pi');
+  });
+
+  it("opens the active project's default harness when the user has not chosen", async () => {
+    // The selector always sent an explicit target, so main's defaultHarnessId
+    // resolution was unreachable: a project set to Pi still opened Mock.
+    render(
+      <ProjectsProvider>
+        <ChatSessionProvider>
+          <ChatView />
+        </ChatSessionProvider>
+      </ProjectsProvider>,
+    );
+    await waitFor(() => expect((screen.getByTestId('chat-target') as HTMLSelectElement).value).toBe('pi'));
+    await startSession();
+    expect(harness.api.chatSessionNew).toHaveBeenCalledWith('pi', 'proj-1');
   });
 
   it('surfaces declared harness quirks from the new-session response', async () => {

@@ -19,15 +19,18 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { completeOnboarding, expect, test } from './fixtures';
+import type { Page } from '@playwright/test';
+import { completeOnboarding, expect, test, workspaceRootFor } from './fixtures';
 
 /**
- * Remove all entries from the shared workspace Notes directory.
- * Tests share ~/srgnt-workspace across runs, so note-creation tests
- * must clean up before asserting a fresh state.
+ * Empty the test's own Notes directory.
+ *
+ * This used to delete everything under `~/srgnt-workspace/Notes` — the
+ * developer's real notes — because every spec onboarded into the shared default
+ * workspace. Each test now gets its own workspace root, so this scopes to it.
  */
-async function cleanWorkspaceNotes(): Promise<void> {
-  const notesDir = path.join(os.homedir(), 'srgnt-workspace', 'Notes');
+async function cleanWorkspaceNotes(userDataDir: string): Promise<void> {
+  const notesDir = path.join(workspaceRootFor(userDataDir), 'Notes');
   try {
     const entries = await fs.readdir(notesDir);
     for (const entry of entries) {
@@ -36,6 +39,15 @@ async function cleanWorkspaceNotes(): Promise<void> {
   } catch {
     // Directory may not exist yet — that's fine.
   }
+}
+
+/** The tree only renders once a note exists, so tests asserting it make one. */
+async function createNote(page: Page, title: string): Promise<void> {
+  await page.getByRole('button', { name: 'New note' }).click();
+  const inlineInput = page.locator('input[placeholder="note title..."]');
+  await inlineInput.fill(title);
+  await inlineInput.press('Enter');
+  await expect(page.getByRole('heading', { name: title + '.md' })).toBeVisible();
 }
 
 // ─── Titlebar ──────────────────────────────────────────────────────────────
@@ -225,12 +237,15 @@ test.describe('Notes Side Panel structure', () => {
 
   test('shows file tree with role="tree"', async ({ window: page }) => {
     await completeOnboarding(page);
+    // Seeded explicitly. This passed only because every spec shared one
+    // workspace and some earlier test had left a note in it.
+    await createNote(page, 'Tree Fixture Note');
     const tree = page.getByRole('tree', { name: 'Notes file tree' });
     await expect(tree).toBeVisible({ timeout: 20000 });
   });
 
-  test('shows empty state when no notes exist', async ({ window: page }) => {
-    await cleanWorkspaceNotes();
+  test('shows empty state when no notes exist', async ({ window: page, userDataDir }) => {
+    await cleanWorkspaceNotes(userDataDir);
     await completeOnboarding(page);
 
     // Wait for the loading indicator to disappear, then assert empty state.
@@ -251,8 +266,8 @@ test.describe('Notes Editor structure', () => {
     await expect(page.getByText('Select a note from the Explorer panel')).toBeVisible();
   });
 
-  test('has display mode toggle and close button after selecting a note', async ({ window: page }) => {
-    await cleanWorkspaceNotes();
+  test('has display mode toggle and close button after selecting a note', async ({ window: page, userDataDir }) => {
+    await cleanWorkspaceNotes(userDataDir);
     await completeOnboarding(page);
 
     // Create a note first
@@ -267,8 +282,8 @@ test.describe('Notes Editor structure', () => {
     await expect(page.locator('.btn-ghost').getByText('Close')).toBeVisible();
   });
 
-  test('CodeMirror editor container is present when editing a note', async ({ window: page }) => {
-    await cleanWorkspaceNotes();
+  test('CodeMirror editor container is present when editing a note', async ({ window: page, userDataDir }) => {
+    await cleanWorkspaceNotes(userDataDir);
     await completeOnboarding(page);
 
     // Create a note

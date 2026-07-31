@@ -46,3 +46,29 @@ describe('SProject', () => {
     expect(safeParse(SProject, { ...validProject, additionalDirectories: [42] }).success).toBe(false);
   });
 });
+
+describe('SProject permissionPolicy (PHASE-24, STEP-24-02)', () => {
+  it('decodes a per-kind policy', () => {
+    const project = parseSync(SProject, {
+      ...validProject,
+      permissionPolicy: { read: 'allow', execute: 'ask', delete: 'reject' },
+    });
+    expect(project.permissionPolicy).toEqual({ read: 'allow', execute: 'ask', delete: 'reject' });
+  });
+
+  it('rejects a decision outside allow/reject/ask', () => {
+    expect(
+      safeParse(SProject, { ...validProject, permissionPolicy: { read: 'maybe' } }).success,
+    ).toBe(false);
+  });
+
+  it('is absent by default — no policy means pure default-ask', () => {
+    expect(parseSync(SProject, validProject).permissionPolicy).toBeUndefined();
+  });
+
+  it('rejects a blank or over-long name', () => {
+    expect(safeParse(SProject, { ...validProject, name: '' }).success).toBe(false);
+    expect(safeParse(SProject, { ...validProject, name: 'x'.repeat(121) }).success).toBe(false);
+    expect(safeParse(SProject, { ...validProject, name: 'x'.repeat(120) }).success).toBe(true);
+  });
+});

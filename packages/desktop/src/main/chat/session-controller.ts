@@ -13,9 +13,11 @@ import type {
   ChatTarget,
   ChatTerminalOutputEvent,
   LaunchSpec,
+  ProjectPermissionPolicy,
   SessionEvent,
 } from '@srgnt/contracts';
 import type { AcpAgentConnection, ClientPorts, SupervisorEvent } from '@srgnt/harness';
+import { createPermissionEngine, createProjectPolicyHook } from '@srgnt/runtime';
 import { Effect } from 'effect';
 import { createChatClientServices, type ChatClientServices } from './client-services.js';
 import { createChatPermissionHost, type ChatPermissionHost } from './permissions.js';
@@ -359,6 +361,19 @@ interface SessionState {
   readonly unsubscribeStatus: () => void;
 }
 
+/**
+ * The project a session is being opened under (STEP-24-02). Resolved by the IPC
+ * layer, which owns the `ProjectStore` — the controller stays a pure ACP driver
+ * and never touches project storage itself.
+ */
+export interface ChatSessionProject {
+  readonly projectId?: string;
+  /** The project's `rootDir`; becomes the session cwd and the path-guard root. */
+  readonly cwd?: string;
+  /** Per-project standing permission answers, or absent for pure default-ask. */
+  readonly permissionPolicy?: ProjectPermissionPolicy;
+}
+
 export interface ChatSessionControllerOptions {
   /** Opens agent connections. Defaults to the real supervisor-backed connector. */
   readonly connect?: ChatConnectFn;
@@ -492,16 +507,19 @@ export class ChatSessionController {
   }
 
   /** initialize → session/new; starts streaming updates. Returns a chat handle. */
-  async newSession(target: ChatTarget): Promise<ChatSessionNewResponse> {
+  async newSession(target: ChatTarget, project: ChatSessionProject = {}): Promise<ChatSessionNewResponse> {
     const handle = `chat-${target}-${++this.counter}`;
     // The cwd must be known *before* connecting: client services are confined to
     // it, and their presence is what `initialize` advertises as capabilities.
     //
-    // With no workspace, the fallback is a fresh scratch directory rather than
-    // `tmpdir()` itself — the cwd IS the containment boundary for `fs/*` and
-    // `terminal/*`, and the shared system temp holds every other process's
-    // temp files, including short-lived credential and token files.
-    const cwd = this.options.getCwd?.() ?? mkdtempSync(join(tmpdir(), 'srgnt-chat-session-'));
+    // The project's `rootDir` wins when the caller resolved one (STEP-24-02) —
+    // that is what makes switching projects change where the agent can reach.
+    // With no workspace and no project, the fallback is a fresh scratch directory
+    // rather than `tmpdir()` itself: the cwd IS the containment boundary for
+    // `fs/*` and `terminal/*`, and the shared system temp holds every other
+    // process's temp files, including short-lived credential and token files.
+    const cwd =
+      project.cwd ?? this.options.getCwd?.() ?? mkdtempSync(join(tmpdir(), 'srgnt-chat-session-'));
 
     // One audit stream per session, in the real `SSessionEvent` envelope so
     // Phase 24's persistence is a sink swap, not a reshape. `protocolVersion` is
@@ -515,6 +533,12 @@ export class ChatSessionController {
 
     const permissions = createChatPermissionHost({
       sessionId: handle,
+      // The project's stored policy fills the engine's project-policy hook, which
+      // STEP-23-03 shipped as a permanent fall-through. With no policy the engine
+      // is built exactly as before: default-ask, nothing pre-answered.
+      ...(project.permissionPolicy !== undefined
+        ? { engine: createPermissionEngine({ projectPolicy: createProjectPolicyHook(project.permissionPolicy) }) }
+        : {}),
       onRequest: (event) => this.options.onPermissionRequest?.(event) ?? false,
       onClose: (requestId, reason) =>
         this.options.onPermissionClose?.({ sessionId: handle, requestId, reason }),
@@ -603,10 +627,16 @@ export class ChatSessionController {
       modeIds: new Set(modes?.availableModes.map((mode) => mode.id) ?? []),
       unsubscribeStatus,
     });
-    append('client/session_created', { target, harnessId: harness.id, cwd });
+    append('client/session_created', {
+      target,
+      harnessId: harness.id,
+      cwd,
+      ...(project.projectId !== undefined ? { projectId: project.projectId } : {}),
+    });
     return {
       sessionId: handle,
       target,
+      ...(project.projectId !== undefined ? { projectId: project.projectId } : {}),
       harnessId: harness.id,
       harnessName: harness.name,
       quirks: [...harness.quirks],

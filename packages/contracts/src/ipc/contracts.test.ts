@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { parseSync } from '../shared-schemas.js';
+import { parseSync, safeParse } from '../shared-schemas.js';
 import {
+  ipcChannelValues,
+  SChatSessionNewRequest,
+  SProjectEnsureRequest,
+  SProjectMergeRequest,
+  SProjectRenameRequest,
+  SProjectSetDefaultsRequest,
   SIpcChannel,
   SIpcRequest,
   SIpcResponse,
@@ -28,7 +34,6 @@ import {
   SChatPermissionCloseEvent,
   SChatPermissionRequestEvent,
   SChatPermissionResponse,
-  SChatSessionNewRequest,
   SChatSessionNewResponse,
   SChatSessionPromptRequest,
   SChatSessionPromptResponse,
@@ -655,5 +660,49 @@ describe('Chat session IPC (PHASE-23)', () => {
         parseSync(SChatPermissionCloseEvent, { sessionId: 'chat-mock-1', requestId: 'r1', reason: 'because' }),
       ).toThrow();
     });
+  });
+});
+
+describe('project IPC schemas (PHASE-24, STEP-24-02)', () => {
+  it('exposes every project channel', () => {
+    expect(ipcChannelValues).toEqual(
+      expect.arrayContaining([
+        'project:list',
+        'project:ensure',
+        'project:rename',
+        'project:merge',
+        'project:set-defaults',
+      ]),
+    );
+  });
+
+  it('decodes the ensure/rename/merge requests and rejects malformed ones', () => {
+    expect(parseSync(SProjectEnsureRequest, { rootDir: '/w/app' }).rootDir).toBe('/w/app');
+    expect(safeParse(SProjectEnsureRequest, { rootDir: 42 }).success).toBe(false);
+
+    expect(parseSync(SProjectRenameRequest, { projectId: 'a', name: 'A' }).name).toBe('A');
+    expect(safeParse(SProjectRenameRequest, { projectId: 'a' }).success).toBe(false);
+
+    expect(
+      parseSync(SProjectMergeRequest, { sourceProjectId: 'a', targetProjectId: 'b' }).targetProjectId,
+    ).toBe('b');
+    expect(safeParse(SProjectMergeRequest, { sourceProjectId: 'a' }).success).toBe(false);
+  });
+
+  it('lets set-defaults clear a field with null and omit it entirely', () => {
+    expect(parseSync(SProjectSetDefaultsRequest, { projectId: 'a', defaultHarnessId: null })).toEqual({
+      projectId: 'a',
+      defaultHarnessId: null,
+    });
+    expect(parseSync(SProjectSetDefaultsRequest, { projectId: 'a' })).toEqual({ projectId: 'a' });
+    expect(
+      safeParse(SProjectSetDefaultsRequest, { projectId: 'a', permissionPolicy: { read: 'nope' } }).success,
+    ).toBe(false);
+  });
+
+  it('makes chat:session:new target and projectId optional (project defaults fill in)', () => {
+    expect(parseSync(SChatSessionNewRequest, {})).toEqual({});
+    expect(parseSync(SChatSessionNewRequest, { projectId: 'abc' }).projectId).toBe('abc');
+    expect(safeParse(SChatSessionNewRequest, { target: 'bogus' }).success).toBe(false);
   });
 });

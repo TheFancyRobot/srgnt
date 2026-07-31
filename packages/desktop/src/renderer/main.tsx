@@ -18,6 +18,7 @@ import { NotesProvider } from './components/notes/NotesContext.js';
 import { DevConsoleGate } from './components/DevConsole.js';
 import { ChatView } from './components/chat/ChatView.js';
 import { ChatSessionProvider } from './components/chat/ChatSessionContext.js';
+import { ProjectsProvider } from './components/chat/ProjectsContext.js';
 
 const LazyTerminalPanel = React.lazy(async () => {
   const module = await import('./components/TerminalPanel.js');
@@ -444,7 +445,13 @@ function AppContent({
   // session state on panel switch would strand a live agent process in the main
   // process with no handle left to dispose it (see DevConsoleGate's keep-mounted
   // comment for the same trap).
-  return <ChatSessionProvider>{panel}</ChatSessionProvider>;
+  // ProjectsProvider wraps the session provider: `newSession` reads the active
+  // project id from it to decide which project the session lands in.
+  return (
+    <ProjectsProvider>
+      <ChatSessionProvider>{panel}</ChatSessionProvider>
+    </ProjectsProvider>
+  );
 }
 
 function SettingsUtilityPanel({

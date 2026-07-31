@@ -66,7 +66,26 @@ const ipcChannels = {
   chatPermissionRequest: 'chat:permission:request',
   chatPermissionRespond: 'chat:permission:respond',
   chatPermissionClose: 'chat:permission:close',
+  // Projects (PHASE-24). `project:ensure` is idempotent and derives the id from
+  // the directory, so it is both the "add a project" affordance and the read path.
+  projectList: 'project:list',
+  projectEnsure: 'project:ensure',
+  projectRename: 'project:rename',
+  projectMerge: 'project:merge',
+  projectSetDefaults: 'project:set-defaults',
 } as const;
+
+/** Mirrors `SProject` from @srgnt/contracts, which the sandboxed preload cannot import. */
+interface SrgntProject {
+  id: string;
+  name: string;
+  rootDir: string;
+  additionalDirectories: readonly string[];
+  defaultHarnessId?: string;
+  permissionPolicy?: Record<string, 'allow' | 'reject' | 'ask'>;
+  createdAt: string;
+  updatedAt?: string;
+}
 
 const api = {
   checkForUpdates: (): Promise<UpdateCheckResponse> => ipcRenderer.invoke(ipcChannels.appCheckForUpdates),
@@ -213,17 +232,22 @@ const api = {
   // Product chat surface over ephemeral ACP sessions (PHASE-23). Always
   // available — unlike the dev console these are not flag-gated.
   chatSessionNew: (
-    target: 'mock' | 'pi',
+    /** Absent falls back to the project's `defaultHarnessId`, then to `mock`. */
+    target?: 'mock' | 'pi',
+    /** Absent derives (and auto-creates) the project from the workspace cwd. */
+    projectId?: string,
   ): Promise<{
     sessionId: string;
     target: 'mock' | 'pi';
+    /** The project the session was created under (PHASE-24). */
+    projectId?: string;
     harnessId: string;
     harnessName: string;
     quirks: readonly string[];
     capabilities: Record<string, unknown>;
     /** Absent when the agent advertises no session modes → no mode selector. */
     modes?: { currentModeId: string; availableModes: readonly { id: string; name: string }[] };
-  }> => ipcRenderer.invoke(ipcChannels.chatSessionNew, { target }),
+  }> => ipcRenderer.invoke(ipcChannels.chatSessionNew, { target, projectId }),
   chatSessionPrompt: (sessionId: string, text: string): Promise<{ stopReason: string }> =>
     ipcRenderer.invoke(ipcChannels.chatSessionPrompt, { sessionId, text }),
   chatSessionCancel: (sessionId: string): Promise<void> =>
@@ -324,6 +348,30 @@ const api = {
   /** Omit `optionId` to cancel — it maps to ACP `cancelled`, never a silent allow. */
   chatPermissionRespond: (sessionId: string, requestId: string, optionId?: string): Promise<void> =>
     ipcRenderer.invoke(ipcChannels.chatPermissionRespond, { sessionId, requestId, optionId }),
+
+  // Projects (PHASE-24, STEP-24-02). "Project = directory": there is no
+  // create-by-name call anywhere on this surface — `projectEnsure` takes a
+  // directory, derives the id from it, and is idempotent.
+  projectList: (): Promise<{
+    projects: readonly SrgntProject[];
+    skipped: readonly { projectId: string; reason: string }[];
+  }> => ipcRenderer.invoke(ipcChannels.projectList),
+  projectEnsure: (rootDir: string): Promise<SrgntProject> =>
+    ipcRenderer.invoke(ipcChannels.projectEnsure, { rootDir }),
+  projectRename: (projectId: string, name: string): Promise<SrgntProject> =>
+    ipcRenderer.invoke(ipcChannels.projectRename, { projectId, name }),
+  /** Irreversible: source sessions move under the target and the source is removed. */
+  projectMerge: (sourceProjectId: string, targetProjectId: string): Promise<SrgntProject> =>
+    ipcRenderer.invoke(ipcChannels.projectMerge, { sourceProjectId, targetProjectId }),
+  /** `null` clears a default; omitting a field leaves the stored value alone. */
+  projectSetDefaults: (
+    projectId: string,
+    defaults: {
+      defaultHarnessId?: string | null;
+      permissionPolicy?: Record<string, 'allow' | 'reject' | 'ask'> | null;
+    },
+  ): Promise<SrgntProject> =>
+    ipcRenderer.invoke(ipcChannels.projectSetDefaults, { projectId, ...defaults }),
 
   platform: process.platform,
 };

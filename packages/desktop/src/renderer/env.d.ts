@@ -5,6 +5,7 @@ import type {
   DesktopSettings,
   DesktopSettingsResponse,
   LaunchContext,
+  Project,
   TerminalLaunchWithContextRequest,
   UpdateCheckResponse,
 } from '@srgnt/contracts';
@@ -109,9 +110,16 @@ export interface SrgntAPI {
   onDevSessionUpdate(callback: (event: { sessionId: string; update: unknown }) => void): () => void;
 
   // Product chat surface over ephemeral ACP sessions (PHASE-23)
-  chatSessionNew(target: 'mock' | 'pi'): Promise<{
+  chatSessionNew(
+    /** Absent falls back to the project's `defaultHarnessId`, then to `mock`. */
+    target?: 'mock' | 'pi',
+    /** Absent derives (and auto-creates) the project from the workspace cwd. */
+    projectId?: string,
+  ): Promise<{
     sessionId: string;
     target: 'mock' | 'pi';
+    /** The project the session was created under (PHASE-24, STEP-24-02). */
+    projectId?: string;
     harnessId: string;
     harnessName: string;
     quirks: readonly string[];
@@ -156,6 +164,26 @@ export interface SrgntAPI {
     callback: (event: { sessionId: string; requestId: string; reason: string }) => void,
   ): () => void;
   chatPermissionRespond(sessionId: string, requestId: string, optionId?: string): Promise<void>;
+
+  // Projects (PHASE-24, STEP-24-02). Optional because the provider mounts in
+  // renders backed by an older preload, where a missing bridge must degrade to
+  // "no projects" rather than crashing the panel.
+  projectList?(): Promise<{
+    projects: readonly Project[];
+    skipped: readonly { projectId: string; reason: string }[];
+  }>;
+  /** Idempotent; derives the id from the directory. The only way a project is created. */
+  projectEnsure?(rootDir: string): Promise<Project>;
+  projectRename?(projectId: string, name: string): Promise<Project>;
+  /** Irreversible: source sessions move under the target and the source is removed. */
+  projectMerge?(sourceProjectId: string, targetProjectId: string): Promise<Project>;
+  projectSetDefaults?(
+    projectId: string,
+    defaults: {
+      defaultHarnessId?: string | null;
+      permissionPolicy?: Record<string, 'allow' | 'reject' | 'ask'> | null;
+    },
+  ): Promise<Project>;
 
   platform: string;
 }

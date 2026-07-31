@@ -38,6 +38,17 @@ export function getElectronLaunchArgs(baseArgs: string[] = []): string[] {
   return shouldDisableElectronSandbox() ? [...baseArgs, '--no-sandbox'] : baseArgs;
 }
 
+/**
+ * The test's workspace root. A *sibling* of the user-data dir, never inside it:
+ * `app.spec.ts` asserts `workspaceRoot.startsWith(userDataDir) === false` to
+ * prove settings live in the workspace rather than in Electron's userData, and
+ * that is a string prefix test — so even `${userDataDir}-workspace` would read
+ * as "inside" and quietly break the invariant it checks.
+ */
+export function workspaceRootFor(userDataDir: string): string {
+  return path.join(path.dirname(userDataDir), `ws-${path.basename(userDataDir)}`);
+}
+
 export function getElectronLaunchEnv(
   userDataDir: string,
   extra: NodeJS.ProcessEnv = {},
@@ -47,6 +58,10 @@ export function getElectronLaunchEnv(
     ELECTRON_DISABLE_SECURITY_WARNINGS: 'true',
     SRGNT_E2E: '1',
     SRGNT_USER_DATA_PATH: userDataDir,
+    // Onboarding's "Use Default Location" otherwise picks $HOME/srgnt-workspace
+    // — the developer's real one. Each test gets its own instead, so a run
+    // cannot leave notes or auto-created projects on the machine.
+    SRGNT_DEFAULT_WORKSPACE_ROOT: workspaceRootFor(userDataDir),
     ...extra,
   };
 }
@@ -76,6 +91,7 @@ export const test = base.extend<E2EFixtures & E2EOptions>({
       await use(userDataDir);
     } finally {
       await fs.rm(userDataDir, { recursive: true, force: true });
+      await fs.rm(workspaceRootFor(userDataDir), { recursive: true, force: true });
     }
   },
 

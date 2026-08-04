@@ -3,7 +3,7 @@ note_type: session
 template_version: 2
 contract_version: 1
 title: opencode session for Implement Jira Connector Fixtures And Canonical Mapping
-session_id: SESSION-2026-03-22-170211
+session_id: SESSION-2026-03-22-170211-06
 date: '2026-03-22'
 status: completed
 owner: opencode

@@ -3,7 +3,7 @@ note_type: session
 template_version: 2
 contract_version: 1
 title: opencode session for Implement Capability Policy And Approval Model
-session_id: SESSION-2026-03-22-170211
+session_id: SESSION-2026-03-22-170211-05
 date: '2026-03-22'
 status: completed
 owner: opencode

@@ -76,7 +76,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - Deleted: `packages/runtime/src/{workflows,artifacts,launch,loaders,query,store}/`
 - Modified: `packages/runtime/src/index.ts` (exports logs, approvals, semantic-search only)
@@ -90,9 +90,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not recorded
-- Result: not recorded
-- Notes: Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are itemized under this block.
 <!-- AGENT-END:session-validation-run -->
 - `pnpm typecheck`: green (contracts, runtime, desktop main/preload/renderer).
 - `pnpm test`: contracts 181/181, runtime 283/283 (was 436 — delta is the deleted modules' own tests), desktop 756/756 (40 files). Required clean rebuild of contracts/runtime dist first (stale dist initially failed the 2 preload sync guards, then green).
@@ -115,7 +115,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [x] Closed. [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_03_slim-runtime-unbundle-search-model-and-modularize-desktop-main-services|STEP-21-03 Slim runtime unbundle search model and modularize desktop main services]] is in a terminal state; this note was never filled in.
+- [x] Closed. [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_03_slim-runtime-unbundle-search-model-and-modularize-desktop-main-services|STEP-21-03 Slim runtime unbundle search model and modularize desktop main services]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

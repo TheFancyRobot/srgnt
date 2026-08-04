@@ -48,7 +48,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
@@ -56,7 +56,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 <!-- AGENT-START:session-validation-run -->
 - Command: not recorded
 - Result: not recorded
-- Notes: Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Notes: Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-validation-run -->
 
 ## Bugs Encountered

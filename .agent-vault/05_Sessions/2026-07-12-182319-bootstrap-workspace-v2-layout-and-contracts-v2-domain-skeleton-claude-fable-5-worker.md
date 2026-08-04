@@ -80,7 +80,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - NEW packages/contracts/src/{project,session,harness}.ts (+ .test.ts each) — contracts v2 domain skeleton on effect/Schema.
 - REWRITTEN packages/contracts/src/workspace/layout.ts (+test) — workspace v2 layout (projects/, groups/templates/, harnesses.json + settings.json seed files); PARA dirs and SPersistenceContract/SFileBackedRecord removed.
@@ -95,9 +95,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not recorded
-- Result: not recorded
-- Notes: Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are itemized under this block.
 <!-- AGENT-END:session-validation-run -->
 - `pnpm --filter @srgnt/contracts test`: 7 files, 127/127 passed (incl. fast-check properties: unknown SessionEvent kinds round-trip; unknown envelope fields never break decoding; Pi definition round-trip).
 - `pnpm --filter @srgnt/runtime test`: 13 files, 287/287 passed (incl. rewritten bootstrap tests: exact v2 layout, idempotency, seed files never overwritten, v1 dirs ignored/not removed, validate() read-only + missingFiles).
@@ -121,7 +121,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [x] Closed. [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton|STEP-21-04 Bootstrap workspace v2 layout and contracts v2 domain skeleton]] is in a terminal state; this note was never filled in.
+- [x] Closed. [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton|STEP-21-04 Bootstrap workspace v2 layout and contracts v2 domain skeleton]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

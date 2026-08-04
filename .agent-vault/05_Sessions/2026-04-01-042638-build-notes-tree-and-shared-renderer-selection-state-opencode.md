@@ -56,7 +56,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - `packages/desktop/src/renderer/components/notes/NotesContext.tsx` — CREATED (190 lines)
 - `packages/desktop/src/renderer/components/sidepanels/NotesSidePanel.tsx` — REWRITTEN (310 lines, was 92-line placeholder)
@@ -66,9 +66,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not recorded
-- Result: not recorded
-- Notes: Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are itemized under this block.
 <!-- AGENT-END:session-validation-run -->
 - Command: `pnpm run typecheck` — Result: ✅ PASSED
 - Command: `pnpm run test` — Result: ✅ PASSED (469 tests)
@@ -94,7 +94,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [x] Closed. [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]] is in a terminal state; this note was never filled in.
+- [x] Closed. [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

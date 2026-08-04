@@ -77,7 +77,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - `packages/desktop/package.json` — `test:e2e` and `test:e2e:headed` scripts now include `e2e/gfm-compliance.spec.ts`
 
@@ -86,7 +86,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 <!-- AGENT-START:session-validation-run -->
 - Command: not recorded
 - Result: not recorded
-- Notes: Not recorded. This session note was never filled in during the work; the authoritative record is the linked step and its Outcome companion.
+- Notes: Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-validation-run -->
 
 ## Bugs Encountered
@@ -104,7 +104,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [x] Closed. [[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]] is in a terminal state; this note was never filled in.
+- [x] Closed. [[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

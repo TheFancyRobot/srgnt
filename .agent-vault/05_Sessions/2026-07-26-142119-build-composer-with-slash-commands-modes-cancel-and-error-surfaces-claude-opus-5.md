@@ -5,7 +5,7 @@ contract_version: 1
 title: claude-opus-5 session for Build composer with slash commands modes cancel and error surfaces
 session_id: SESSION-2026-07-26-142119
 date: '2026-07-26'
-status: complete
+status: completed
 owner: claude-opus-5
 branch: phase/23-step-04-composer
 phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]'
@@ -18,7 +18,7 @@ tags:
   - session
 context:
   context_id: SESSION-2026-07-26-142119
-  status: complete
+  status: completed
   updated_at: '2026-07-26T16:45:00.000Z'
   current_focus:
     summary: 'STEP-23-04 complete: composer with slash commands, session modes, cancel and crash/error surfaces; validation green.'

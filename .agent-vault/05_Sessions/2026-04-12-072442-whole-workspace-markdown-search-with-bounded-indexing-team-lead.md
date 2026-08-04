@@ -5,7 +5,7 @@ contract_version: 1
 title: Full codebase review, test fixes, and coverage push
 session_id: SESSION-2026-04-12-072442
 date: '2026-04-12'
-status: complete
+status: completed
 owner: team-lead
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
@@ -70,7 +70,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - `packages/desktop/src/renderer/components/Onboarding.test.tsx` — fixed React concurrent mode with Object.defineProperty
 - `packages/desktop/src/renderer/components/Titlebar.test.tsx` — fixed React concurrent mode with Object.defineProperty
@@ -88,9 +88,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Command: `pnpm test`
 - Result: 40 files, 641 tests, 0 failures
@@ -112,7 +112,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]].
+- [x] Closed. [[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 - [ ] **Playwright UI/UX interactive testing** — Every feature needs to be tested interactively in a real browser (Electron). Every UI element needs to be verified for correct placement and styling. Unit tests (jsdom/Vitest) cannot validate layout, visual styling, spacing, responsive behavior, focus states, animations, keyboard navigation, or drag/drop.
   - **Playwright for Electron setup** — Playwright has first-class Electron support; configure it for the srgnt desktop app.

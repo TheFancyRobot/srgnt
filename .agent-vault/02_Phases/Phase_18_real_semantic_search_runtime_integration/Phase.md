@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Real Semantic Search Runtime Integration
 phase_id: PHASE-18
-status: complete
+status: completed
 owner: ''
 created: '2026-04-16'
 updated: '2026-04-16'
@@ -92,11 +92,11 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]] -- swap the fake worker service for the real runtime layer graph.
-- [ ] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_02_wire-real-worker-configuration-model-asset-resolution-and-derived-index-paths|STEP-18-02 Wire real worker configuration, model asset resolution, and derived index paths]] -- ensure the worker receives real workspace and model configuration in dev and packaged builds.
-- [ ] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces|STEP-18-03 Add real corpus indexing and retrieval integration tests against temporary markdown workspaces]] -- prove real indexing and retrieval with deterministic fixtures.
-- [ ] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting|STEP-18-04 Add crash, restart, and failure-mode coverage for real semantic-search runtime hosting]] -- cover missing assets, rebuilds, and workspace-switch edge cases.
-- [ ] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation|STEP-18-05 Add a minimal semantic-search UI slice for end-to-end query and result validation]] -- prove a real user-facing query flow before broader UX work.
+- [x] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]] -- swap the fake worker service for the real runtime layer graph.
+- [x] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_02_wire-real-worker-configuration-model-asset-resolution-and-derived-index-paths|STEP-18-02 Wire real worker configuration, model asset resolution, and derived index paths]] -- ensure the worker receives real workspace and model configuration in dev and packaged builds.
+- [x] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_03_add-real-corpus-indexing-and-retrieval-integration-tests-against-temporary-markdown-workspaces|STEP-18-03 Add real corpus indexing and retrieval integration tests against temporary markdown workspaces]] -- prove real indexing and retrieval with deterministic fixtures.
+- [x] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting|STEP-18-04 Add crash, restart, and failure-mode coverage for real semantic-search runtime hosting]] -- cover missing assets, rebuilds, and workspace-switch edge cases.
+- [x] [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_05_add-a-minimal-semantic-search-ui-slice-for-end-to-end-query-and-result-validation|STEP-18-05 Add a minimal semantic-search UI slice for end-to-end query and result validation]] -- prove a real user-facing query flow before broader UX work.
 <!-- AGENT-END:phase-steps -->
 
 ## Parallel Work Map

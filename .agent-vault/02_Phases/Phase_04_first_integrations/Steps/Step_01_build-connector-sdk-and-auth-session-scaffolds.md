@@ -5,7 +5,7 @@ contract_version: 1
 title: Build Connector SDK And Auth Session Scaffolds
 step_id: STEP-04-01
 phase: '[[02_Phases/Phase_04_first_integrations/Phase|Phase 04 first integrations]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-22'
@@ -63,7 +63,7 @@ Create the shared connector plumbing behind the privileged desktop boundary.
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner:
 - Last touched: 2026-03-22
 - Next action: None — step is complete.

@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Persist layout preferences and add collapse behaviors
 session_id: SESSION-2026-03-30-193903
 date: '2026-03-30'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
@@ -47,15 +47,15 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: not recorded
+- Result: not recorded
+- Notes: Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-validation-run -->
 
 ## Bugs Encountered
@@ -73,7 +73,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]].
+- [x] Closed. [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_05_persist-layout-preferences-and-add-collapse-behaviors|STEP-13-05 Persist layout preferences and add collapse behaviors]] is in a terminal state; this note was never filled in.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

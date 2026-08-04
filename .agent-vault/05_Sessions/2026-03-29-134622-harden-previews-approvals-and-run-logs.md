@@ -5,7 +5,7 @@ contract_version: 1
 title: Session for Harden Previews Approvals And Run Logs
 session_id: SESSION-2026-03-29-134622
 date: '2026-03-29'
-status: in-progress
+status: completed
 owner: ''
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
@@ -66,15 +66,15 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: not recorded
+- Result: not recorded
+- Notes: Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-validation-run -->
 
 ## Bugs Encountered

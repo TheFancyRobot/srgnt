@@ -5,7 +5,7 @@ contract_version: 1
 title: Wire real worker configuration model asset resolution and derived index paths
 step_id: STEP-18-02
 phase: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]'
-status: done
+status: completed
 owner: executor-1
 created: '2026-04-16'
 updated: '2026-04-16'
@@ -69,10 +69,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: completed
 - Current owner: 
 - Last touched: 2026-04-16
-- Next action: Begin only after STEP-18-01 lands; then trace model/index path assembly from desktop bootstrap into worker config and make dev/packaged resolution explicit.
+- Next action: None. This step is complete; the record is the Outcome companion.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

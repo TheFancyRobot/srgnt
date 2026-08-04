@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement Capability Policy And Approval Model
 step_id: STEP-03-02
 phase: '[[02_Phases/Phase_03_runtime_foundation/Phase|Phase 03 runtime foundation]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-22'
@@ -61,7 +61,7 @@ Translate manifest-declared capabilities and approvals into reusable runtime enf
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner:
 - Last touched: 2026-03-22
 - Next action: None — step is complete.

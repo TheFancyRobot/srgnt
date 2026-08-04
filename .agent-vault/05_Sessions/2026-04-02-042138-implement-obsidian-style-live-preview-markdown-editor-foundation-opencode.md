@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Implement Obsidian-style live-preview markdown editor foundation
 session_id: SESSION-2026-04-02-042138
 date: '2026-04-02'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
@@ -47,15 +47,15 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - `pnpm --filter @srgnt/desktop test -- --run src/renderer/components/notes/MarkdownEditor.test.tsx src/renderer/components/NotesView.test.tsx` — PASSED.
 - `pnpm --filter @srgnt/desktop run build` — PASSED.
@@ -76,7 +76,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]].
+- [x] Closed. [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 - Reproduce the remaining backspace-over-dedent case in the live app with a targeted Electron E2E that presses `Tab` four times, then `Backspace`, and inspects both saved markdown and cursor/focus behavior.
 - Add bullet-continuation handling for `Enter` at the end of unordered list items so the next line starts with the expected list marker.

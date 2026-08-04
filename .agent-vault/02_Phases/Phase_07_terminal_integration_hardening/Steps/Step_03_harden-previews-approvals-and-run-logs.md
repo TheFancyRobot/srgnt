@@ -5,7 +5,7 @@ contract_version: 1
 title: Harden Previews Approvals And Run Logs
 step_id: STEP-07-03
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-29'
@@ -68,7 +68,7 @@ Add the trust and audit features required once terminal launches can affect user
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: —
 - Last touched: 2026-03-29
 - Next action: None — step complete

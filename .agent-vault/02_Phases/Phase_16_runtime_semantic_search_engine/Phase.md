@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Runtime Semantic Search Engine
 phase_id: PHASE-16
-status: complete
+status: completed
 owner: coordinator
 created: '2026-04-02'
 updated: '2026-04-16'
@@ -97,7 +97,7 @@ tags:
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types|STEP-16-01 Add Effect service tags, layers, and semantic search domain types]] -- unlocks runtime implementation.
+- [x] [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types|STEP-16-01 Add Effect service tags, layers, and semantic search domain types]] -- unlocks runtime implementation.
 - [ ] [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_02_implement-local-embeddingservice-with-bundled-multilingual-model-loading-and-batching|STEP-16-02 Implement local EmbeddingService with bundled multilingual model loading and batching]] -- depends on Step 01 and Phase 15 model bundling.
 - [ ] [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_03_implement-vectrastore-and-persistent-index-state-manifests|STEP-16-03 Implement VectraStore and persistent index state manifests]] -- depends on Step 01.
 - [ ] [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_04_implement-workspace-indexing-orchestration-and-stale-data-cleanup|STEP-16-04 Implement workspace indexing orchestration and stale-data cleanup]] -- joins Steps 02-03 with Phase 15 corpus and chunking outputs.

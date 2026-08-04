@@ -5,7 +5,7 @@ contract_version: 1
 title: Whole-workspace markdown search with bounded indexing
 step_id: STEP-14-09
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-04-09'
 updated: '2026-04-13'
@@ -67,7 +67,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: 
 - Last touched: 2026-04-13
 - Next action: Follow-up work moved to Playwright/Electron UI testing planning; STEP-14-09 itself is complete.

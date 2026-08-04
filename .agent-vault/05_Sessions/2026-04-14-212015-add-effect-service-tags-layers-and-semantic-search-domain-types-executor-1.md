@@ -5,7 +5,7 @@ contract_version: 1
 title: executor-1 session for Add Effect service tags, layers, and semantic search domain types
 session_id: SESSION-2026-04-14-212015
 date: '2026-04-14'
-status: in-progress
+status: completed
 owner: executor-1
 branch: ''
 phase: '[[02_Phases/Phase_16_runtime_semantic_search_engine/Phase|Phase 16 runtime semantic search engine]]'
@@ -47,15 +47,15 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: not recorded
+- Result: not recorded
+- Notes: Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-validation-run -->
 
 ## Bugs Encountered
@@ -73,7 +73,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types|STEP-16-01 Add Effect service tags, layers, and semantic search domain types]].
+- [x] Closed. [[02_Phases/Phase_16_runtime_semantic_search_engine/Steps/Step_01_add-effect-service-tags-layers-and-semantic-search-domain-types|STEP-16-01 Add Effect service tags, layers, and semantic search domain types]] is in a terminal state; this note was never filled in.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

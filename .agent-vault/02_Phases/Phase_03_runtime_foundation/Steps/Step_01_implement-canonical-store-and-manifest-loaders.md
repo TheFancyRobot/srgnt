@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement Canonical Store And Manifest Loaders
 step_id: STEP-03-01
 phase: '[[02_Phases/Phase_03_runtime_foundation/Phase|Phase 03 runtime foundation]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-22'
@@ -62,7 +62,7 @@ Turn the contract-only entity, skill, and connector definitions into executable 
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner:
 - Last touched: 2026-03-22
 - Next action: None — step is complete.

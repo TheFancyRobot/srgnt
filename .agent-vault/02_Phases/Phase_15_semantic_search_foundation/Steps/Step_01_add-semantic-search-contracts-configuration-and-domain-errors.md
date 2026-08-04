@@ -5,7 +5,7 @@ contract_version: 1
 title: Add semantic search contracts, configuration, and domain errors
 step_id: STEP-15-01
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
-status: complete
+status: completed
 owner: executor-1
 created: '2026-04-02'
 updated: '2026-04-12'
@@ -61,10 +61,10 @@ tags:
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: completed
 - Current owner:
 - Last touched: 2026-04-02
-- Next action: Freeze the semantic search domain and IPC contract surface.
+- Next action: None. This step is complete; the record is the Outcome companion.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -85,4 +85,4 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion for this step means runtime, contracts, and desktop all share one typed semantic-search contract surface with targeted tests.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion for this step means runtime, contracts, and desktop all share one typed semantic-search contract surface with targeted tests.

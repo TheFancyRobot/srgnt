@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement Artifact Registry Run History And Executor Contracts
 step_id: STEP-03-03
 phase: '[[02_Phases/Phase_03_runtime_foundation/Phase|Phase 03 runtime foundation]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-22'
@@ -63,7 +63,7 @@ Create the runtime records that connect skill execution, artifacts, and pluggabl
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner:
 - Last touched: 2026-03-22
 - Next action: None — step is complete.

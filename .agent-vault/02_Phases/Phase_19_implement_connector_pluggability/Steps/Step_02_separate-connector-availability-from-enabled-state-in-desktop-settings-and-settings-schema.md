@@ -5,7 +5,7 @@ contract_version: 1
 title: Separate connector availability from enabled state in desktop settings and settings schema
 step_id: STEP-19-02
 phase: '[[02_Phases/Phase_19_implement_connector_pluggability/Phase|Phase 19 implement connector pluggability]]'
-status: done
+status: completed
 owner: executor-1
 created: '2026-04-16'
 updated: '2026-04-16'
@@ -102,7 +102,7 @@ Migration happens once during settings read/merge and is **not** repeated on ren
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: done
+- Status: completed
 - Current owner: reviewer
 - Last touched: 2026-04-16
 - Next action: Route reviewed settings migration work to tester and continue Phase 19 validation.

@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Wire Workflow Launch Actions And Artifact Context
 session_id: SESSION-2026-03-29-042830
 date: '2026-03-29'
-status: complete
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_07_terminal_integration_hardening/Phase|Phase 07 terminal integration hardening]]'
@@ -49,15 +49,15 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Command: `pnpm --filter @srgnt/runtime run typecheck && pnpm --filter @srgnt/desktop run typecheck && pnpm --filter @srgnt/runtime run test && pnpm --filter @srgnt/desktop run test`
 - Result: ALL PASS — 109 runtime tests, 75 desktop tests, clean typecheck
@@ -78,7 +78,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]].
+- [x] Closed. [[02_Phases/Phase_07_terminal_integration_hardening/Steps/Step_02_wire-workflow-launch-actions-and-artifact-context|STEP-07-02 Wire Workflow Launch Actions And Artifact Context]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

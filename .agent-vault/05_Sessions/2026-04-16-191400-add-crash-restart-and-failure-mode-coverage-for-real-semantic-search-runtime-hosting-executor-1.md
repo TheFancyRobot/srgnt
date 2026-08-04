@@ -5,7 +5,7 @@ contract_version: 1
 title: executor-1 session for Add crash restart and failure-mode coverage for real semantic-search runtime hosting
 session_id: SESSION-2026-04-16-191400
 date: '2026-04-16'
-status: in-progress
+status: completed
 owner: executor-1
 branch: ''
 phase: '[[02_Phases/Phase_18_real_semantic_search_runtime_integration/Phase|Phase 18 real semantic search runtime integration]]'
@@ -47,15 +47,15 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: not recorded
+- Result: not recorded
+- Notes: Not recorded — this block was never filled in during the work. The authoritative record is the linked step and its Outcome companion.
 <!-- AGENT-END:session-validation-run -->
 
 ## Bugs Encountered
@@ -73,7 +73,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting|STEP-18-04 Add crash restart and failure-mode coverage for real semantic-search runtime hosting]].
+- [x] Closed. [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_04_add-crash-restart-and-failure-mode-coverage-for-real-semantic-search-runtime-hosting|STEP-18-04 Add crash restart and failure-mode coverage for real semantic-search runtime hosting]] is in a terminal state; this note was never filled in.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

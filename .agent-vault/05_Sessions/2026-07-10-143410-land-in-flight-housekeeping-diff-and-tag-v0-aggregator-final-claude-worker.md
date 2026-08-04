@@ -18,7 +18,7 @@ tags:
   - session
 context:
   context_id: SESSION-2026-07-10-143410
-  status: active
+  status: completed
   updated_at: '2026-07-10T14:34:10.193Z'
   current_focus:
     summary: Advance [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_01_land-in-flight-housekeeping-diff-and-tag-v0-aggregator-final|STEP-21-01 Land in-flight housekeeping diff and tag v0-aggregator-final]].
@@ -75,7 +75,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - packages/desktop/e2e/fixtures.ts (Create Workspace -> Use Default Location)
 - packages/desktop/e2e/app.spec.ts (11 occurrences)
@@ -87,9 +87,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Command: `pnpm typecheck` — PASS (all packages).
 - Command: `pnpm test` — PASS on definitive run (contracts 315/315; desktop 59 files / 971 tests incl. Onboarding.test.tsx 15/15). First attempt hit a flaky Node v24 SIGABRT vitest-worker crash in @srgnt/contracts; package green in isolation and on full rerun.
@@ -112,7 +112,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_01_land-in-flight-housekeeping-diff-and-tag-v0-aggregator-final|STEP-21-01 Land in-flight housekeeping diff and tag v0-aggregator-final]].
+- [x] Closed. [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_01_land-in-flight-housekeeping-diff-and-tag-v0-aggregator-final|STEP-21-01 Land in-flight housekeeping diff and tag v0-aggregator-final]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

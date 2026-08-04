@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Refactor AppLayout to three-panel shell
 session_id: SESSION-2026-03-30-161918
 date: '2026-03-30'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
@@ -52,7 +52,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - `packages/desktop/src/renderer/components/ActivityBar.tsx` — added status dot below utility items
 - `packages/desktop/src/renderer/components/Navigation.tsx` — removed old Navigation/NavButton/NavItem/canonicalNavItems, kept only AppLayout
@@ -62,9 +62,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Command: pnpm --filter @srgnt/desktop typecheck
 - Result: PASS
@@ -89,7 +89,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_03_refactor-applayout-to-three-panel-shell|STEP-13-03 Refactor AppLayout to three-panel shell]].
+- [x] Closed. [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_03_refactor-applayout-to-three-panel-shell|STEP-13-03 Refactor AppLayout to three-panel shell]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary
@@ -100,7 +100,7 @@ de-or-updated -->
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_03_refactor-applayout-to-three-panel-shell|STEP-13-03 Refactor AppLayout to three-panel shell]].
+- [x] Closed. [[02_Phases/Phase_13_ui_layout_restructuring/Steps/Step_03_refactor-applayout-to-three-panel-shell|STEP-13-03 Refactor AppLayout to three-panel shell]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

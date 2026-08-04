@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement Teams Wedge Connector
 step_id: STEP-04-04
 phase: '[[02_Phases/Phase_04_first_integrations/Phase|Phase 04 first integrations]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-21'
 updated: '2026-03-22'
@@ -63,7 +63,7 @@ Implement the already-selected third wedge connector and the collaboration strea
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner:
 - Last touched: 2026-03-22
 - Next action: None — step is complete.

@@ -5,7 +5,7 @@ contract_version: 1
 title: OpenCode session for Build Notes tree and shared renderer selection state
 session_id: SESSION-2026-04-01-042638
 date: '2026-04-01'
-status: in-progress
+status: completed
 owner: OpenCode
 branch: ''
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
@@ -56,7 +56,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - `packages/desktop/src/renderer/components/notes/NotesContext.tsx` — CREATED (190 lines)
 - `packages/desktop/src/renderer/components/sidepanels/NotesSidePanel.tsx` — REWRITTEN (310 lines, was 92-line placeholder)
@@ -66,9 +66,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Command: `pnpm run typecheck` — Result: ✅ PASSED
 - Command: `pnpm run test` — Result: ✅ PASSED (469 tests)
@@ -94,7 +94,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]].
+- [x] Closed. [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

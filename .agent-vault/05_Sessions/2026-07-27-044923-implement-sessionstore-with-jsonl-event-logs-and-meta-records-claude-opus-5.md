@@ -5,7 +5,7 @@ contract_version: 1
 title: claude-opus-5 session for Implement SessionStore with JSONL event logs and meta records
 session_id: SESSION-2026-07-27-044923
 date: '2026-07-27'
-status: complete
+status: completed
 owner: claude-opus-5
 branch: phase/24-step-01-sessionstore
 phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]'
@@ -18,7 +18,7 @@ tags:
   - session
 context:
   context_id: SESSION-2026-07-27-044923
-  status: complete
+  status: completed
   updated_at: '2026-07-27T05:05:00.000Z'
   current_focus:
     summary: 'STEP-24-01 complete: the @srgnt/runtime SessionStore (append-only events.jsonl with dense store-owned seq, atomic meta.json, tolerant reader, repair-before-append tail recovery). Automated validation green across runtime, contracts, harness, typecheck and root build; no manual or GUI pass was performed, since the store is a headless disk layer not yet wired into the app.'

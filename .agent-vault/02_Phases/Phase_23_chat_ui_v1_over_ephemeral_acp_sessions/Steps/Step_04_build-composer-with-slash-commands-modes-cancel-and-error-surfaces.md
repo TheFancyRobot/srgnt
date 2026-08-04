@@ -83,7 +83,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: claude-opus-5
 - Last touched: 2026-07-26
 - Next action: None for this step. Proceed to [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage|STEP-23-05 Add mock-agent-driven chat E2E coverage]]. Two manual verification passes remain owed against this step (mock walkthrough, real Pi) — see the session note's Follow-Up Work; they are verification, not unfinished implementation.

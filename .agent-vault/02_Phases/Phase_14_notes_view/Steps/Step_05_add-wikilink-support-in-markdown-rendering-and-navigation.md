@@ -5,7 +5,7 @@ contract_version: 1
 title: Add workspace-wide wikilink resolution, navigation, and note creation
 step_id: STEP-14-05
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: done
+status: completed
 owner: ''
 created: '2026-03-31'
 updated: '2026-04-05'
@@ -71,10 +71,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: completed
 - Current owner: 
 - Last touched: 2026-03-31
-- Next action: Start STEP-14-05.
+- Next action: None. This step is complete; the record is the Outcome companion.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

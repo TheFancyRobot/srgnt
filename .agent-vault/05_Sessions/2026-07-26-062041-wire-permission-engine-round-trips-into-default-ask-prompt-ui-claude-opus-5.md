@@ -5,7 +5,7 @@ contract_version: 1
 title: claude-opus-5 session for Wire permission engine round-trips into default-ask prompt UI
 session_id: SESSION-2026-07-26-062041
 date: '2026-07-26'
-status: complete
+status: completed
 owner: claude-opus-5
 branch: phase/23-step-03-permissions
 phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]'
@@ -18,7 +18,7 @@ tags:
   - session
 context:
   context_id: SESSION-2026-07-26-062041
-  status: complete
+  status: completed
   updated_at: '2026-07-26T06:20:41.161Z'
   current_focus:
     summary: Advance [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_03_wire-permission-engine-round-trips-into-default-ask-prompt-ui|STEP-23-03 Wire permission engine round-trips into default-ask prompt UI]].

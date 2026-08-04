@@ -5,7 +5,7 @@ contract_version: 1
 title: Draft Encrypted Sync Architecture And Account Model
 step_id: STEP-09-02
 phase: '[[02_Phases/Phase_09_sync_preparation/Phase|Phase 09 sync preparation]]'
-status: done
+status: completed
 owner: executor-1
 created: '2026-03-21'
 updated: '2026-04-16'
@@ -60,7 +60,7 @@ Translate the classification matrix into a future sync architecture without unde
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: done
+- Status: completed
 - Current owner: executor-1
 - Last touched: 2026-04-16
 - Next action: None — sync architecture and account/sync scaffolding are complete.

@@ -5,7 +5,7 @@ contract_version: 1
 title: Update tests and verify accessibility
 step_id: STEP-13-06
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-30'
 updated: '2026-03-30'
@@ -179,7 +179,7 @@ completed_at: '2026-03-30'
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: OpenCode
 - Last touched: 2026-03-30
 - Next action: Phase complete - all steps done

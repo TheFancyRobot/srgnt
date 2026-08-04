@@ -5,7 +5,7 @@ contract_version: 1
 title: claude-opus-5 session for Add mock-agent-driven chat E2E coverage
 session_id: SESSION-2026-07-27-023147
 date: '2026-07-27'
-status: complete
+status: completed
 owner: claude-opus-5
 branch: phase/23-step-05-e2e
 phase: '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|Phase 23 chat ui v1 over ephemeral acp sessions]]'
@@ -18,7 +18,7 @@ tags:
   - session
 context:
   context_id: SESSION-2026-07-27-023147
-  status: complete
+  status: completed
   updated_at: '2026-07-27T04:15:00.000Z'
   current_focus:
     summary: 'STEP-23-05 complete: mock-agent-driven chat E2E plus the scenario-injection seam and agent-side assertion channel. Automated validation green; no manual/GUI pass and no observed CI run.'

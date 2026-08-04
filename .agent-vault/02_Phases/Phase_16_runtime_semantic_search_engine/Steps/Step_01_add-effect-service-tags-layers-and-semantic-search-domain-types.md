@@ -5,7 +5,7 @@ contract_version: 1
 title: Add Effect service tags, layers, and semantic search domain types
 step_id: STEP-16-01
 phase: '[[02_Phases/Phase_16_runtime_semantic_search_engine/Phase|Phase 16 runtime semantic search engine]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-04-02'
 updated: '2026-04-14'
@@ -55,10 +55,10 @@ tags:
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: completed
 - Current owner:
 - Last touched: 2026-04-02
-- Next action: Establish the runtime module and service skeleton.
+- Next action: None. This step is complete; the record is the Outcome companion.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -77,4 +77,4 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion means the runtime semantic-search package shape is stable and Effect-first.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion means the runtime semantic-search package shape is stable and Effect-first.

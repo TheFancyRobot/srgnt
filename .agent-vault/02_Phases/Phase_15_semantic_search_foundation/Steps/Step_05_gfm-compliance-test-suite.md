@@ -3,7 +3,7 @@ note_type: step
 template_version: 2
 contract_version: 1
 title: GFM Compliance Test Suite
-step_id: STEP-15-02
+step_id: STEP-15-05
 phase: '[[02_Phases/Phase_15_semantic_search_foundation/Phase|Phase 15 semantic search foundation]]'
 status: planned
 owner: ''
@@ -67,7 +67,7 @@ Use this note for one executable step inside a phase. This note is the source of
 - Status: planned
 - Current owner: 
 - Last touched: 2026-04-09
-- Next action: Start STEP-15-02.
+- Next action: Start STEP-15-05. (Renumbered from STEP-15-02, which now belongs solely to the corpus-policy step.)
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement SessionStore with JSONL event logs and meta records
 step_id: STEP-24-01
 phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]'
-status: complete
+status: completed
 owner: claude-opus-5
 created: '2026-07-10'
 updated: '2026-07-27'
@@ -18,7 +18,7 @@ tags:
   - step
 context_id: SESSION-2026-07-27-044923
 active_session_id: 05_Sessions/2026-07-27-044923-implement-sessionstore-with-jsonl-event-logs-and-meta-records-claude-opus-5
-context_status: complete
+context_status: completed
 context_summary: 'STEP-24-01 complete: the @srgnt/runtime SessionStore (append-only events.jsonl with dense store-owned seq, atomic meta.json, tolerant reader, repair-before-append tail recovery). Automated validation green across runtime, contracts, harness, typecheck and root build; no manual or GUI pass was performed, since the store is a headless disk layer not yet wired into the app.'
 ---
 
@@ -79,7 +79,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: claude-opus-5
 - Last touched: 2026-07-27
 - Result: `packages/runtime/src/sessions/` ships `events.jsonl` append/read with dense store-owned `seq`, atomic `meta.json`, tolerant reading, and repair-before-append tail recovery. 67 new tests; `pnpm --filter @srgnt/runtime test` 370 passed; typecheck, package build, and root `pnpm build` all clean. No manual or GUI pass (headless disk layer, not reachable from the app yet).

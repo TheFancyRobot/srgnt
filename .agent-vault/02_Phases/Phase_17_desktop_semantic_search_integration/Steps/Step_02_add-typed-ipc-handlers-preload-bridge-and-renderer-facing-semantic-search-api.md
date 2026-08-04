@@ -5,7 +5,7 @@ contract_version: 1
 title: Add typed IPC handlers, preload bridge, and renderer-facing semantic search API
 step_id: STEP-17-02
 phase: '[[02_Phases/Phase_17_desktop_semantic_search_integration/Phase|Phase 17 desktop semantic search integration]]'
-status: complete
+status: completed
 owner: executor-1
 created: '2026-04-02'
 updated: '2026-04-16'
@@ -57,10 +57,10 @@ tags:
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: completed
 - Current owner:
 - Last touched: 2026-04-02
-- Next action: Add the safe IPC and preload bridge for semantic search.
+- Next action: None. This step is complete; the record is the Outcome companion.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -79,7 +79,7 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion means the renderer has a safe, typed semantic-search bridge and nothing more.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion means the renderer has a safe, typed semantic-search bridge and nothing more.
 e.
 STEP-17-02 COMPLETE — validated 2026-04-16.
 

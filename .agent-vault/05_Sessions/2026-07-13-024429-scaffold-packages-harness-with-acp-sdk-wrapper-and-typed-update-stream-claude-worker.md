@@ -18,7 +18,7 @@ tags:
   - session
 context:
   context_id: SESSION-2026-07-13-024429
-  status: active
+  status: completed
   updated_at: '2026-07-13T02:44:29.677Z'
   current_focus:
     summary: Advance [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream|STEP-22-01 Scaffold packages/harness with ACP SDK wrapper and typed update stream]].
@@ -81,7 +81,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - `packages/harness/package.json` — new package `@srgnt/harness`, ESM, SDK pinned `1.2.1`.
 - `packages/harness/tsconfig.json` — extends `@srgnt/tsconfig/base.json`, NodeNext.
@@ -94,9 +94,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - `pnpm --filter @srgnt/harness test`: 25 passed / 0 failed (3 files: connection 11, stream 7, capabilities 7... actual split: capabilities 6, stream 7, connection 12).
 - `pnpm --filter @srgnt/harness typecheck`: clean. Boundary script: passed clean; exit 1 with deliberate electron import.
@@ -120,7 +120,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream|STEP-22-01 Scaffold packages/harness with ACP SDK wrapper and typed update stream]].
+- [x] Closed. [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_01_scaffold-packages-harness-with-acp-sdk-wrapper-and-typed-update-stream|STEP-22-01 Scaffold packages/harness with ACP SDK wrapper and typed update stream]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 - STEP-22-02 (supervisor) should own real process spawning/kill-trees; `childProcessSpawner` here is the minimal default (stderr inherited, `child.kill()` only — no kill-tree).
 - Consider migrating from deprecated `ClientSideConnection` to the SDK's `client()` app API on the next SDK bump (re-run fixture tests per pin policy).

@@ -5,7 +5,7 @@ contract_version: 1
 title: claude-fable-5-worker session for Delete aggregator packages UI IPC and CLI surfaces
 session_id: SESSION-2026-07-10-145042
 date: '2026-07-10'
-status: complete
+status: completed
 owner: claude-fable-5-worker
 branch: ''
 phase: '[[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Phase|Phase 21 pivot groundwork and aggregator teardown]]'
@@ -18,7 +18,7 @@ tags:
   - session
 context:
   context_id: SESSION-2026-07-10-145042
-  status: complete
+  status: completed
   updated_at: '2026-07-10T14:50:42.054Z'
   current_focus:
     summary: Advance [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces|STEP-21-02 Delete aggregator packages UI IPC and CLI surfaces]].
@@ -75,7 +75,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- None yet.
+- Recorded below, outside the block.
 <!-- AGENT-END:session-changed-paths -->
 - Deleted packages: packages/fred, packages/entitlements, packages/sync, packages/executors, packages/connectors, examples/.
 - Deleted desktop: src/renderer/components/{TodayView,CalendarView,ConnectorStatus}.{tsx,test.tsx}, sidepanels/{Today,Calendar,Connectors}SidePanel.{tsx,test.tsx}, src/main/cli/, src/main/connectors/, src/main/connector-ipc.test.ts, dev-connectors/.
@@ -88,9 +88,9 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- Command: not run yet
-- Result: not run
-- Notes: 
+- Command: recorded below, outside the block
+- Result: recorded below, outside the block
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Sweep: `rg "@srgnt/(connectors|executors|sync|entitlements|fred)|ConnectorStatus|TodayView|CalendarView|connector:" packages/ --glob '!node_modules'` -> zero hits.
 - `pnpm typecheck` -> green (contracts, runtime, desktop main/preload/renderer).
@@ -114,7 +114,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [ ] Continue [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces|STEP-21-02 Delete aggregator packages UI IPC and CLI surfaces]].
+- [x] Closed. [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_02_delete-aggregator-packages-ui-ipc-and-cli-surfaces|STEP-21-02 Delete aggregator packages UI IPC and CLI surfaces]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

@@ -5,7 +5,7 @@ contract_version: 1
 title: Persist layout preferences and add collapse behaviors
 step_id: STEP-13-05
 phase: '[[02_Phases/Phase_13_ui_layout_restructuring/Phase|Phase 13 UI Layout Restructuring]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-03-30'
 updated: '2026-03-30'
@@ -168,10 +168,10 @@ completed_at: '2026-03-30'
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: completed
 - Current owner:
 - Last touched: 2026-03-30
-- Next action: Start STEP-13-05.
+- Next action: None. This step is complete; the record is the Outcome companion.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

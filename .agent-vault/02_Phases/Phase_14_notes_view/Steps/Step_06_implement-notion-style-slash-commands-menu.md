@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement markdown slash commands on top of live preview
 step_id: STEP-14-06
 phase: '[[02_Phases/Phase_14_notes_view/Phase|Phase 14 notes view]]'
-status: done
+status: completed
 owner: ''
 created: '2026-03-31'
 updated: '2026-04-07'
@@ -68,7 +68,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: done
+- Status: completed
 - Current owner: 
 - Last touched: 2026-04-07
 - Next action: Completed - slash commands implemented and BUG-0010 fixed.

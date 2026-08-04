@@ -81,4 +81,4 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion means semantic search, reindexing, and future watchers all depend on one tested corpus-policy service.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion means semantic search, reindexing, and future watchers all depend on one tested corpus-policy service.

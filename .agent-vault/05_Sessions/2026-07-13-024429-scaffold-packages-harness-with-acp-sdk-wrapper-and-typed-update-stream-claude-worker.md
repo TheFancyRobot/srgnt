@@ -96,7 +96,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 <!-- AGENT-START:session-validation-run -->
 - Command: recorded below, outside the block
 - Result: recorded below, outside the block
-- Notes: The commands and results are itemized under this block.
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - `pnpm --filter @srgnt/harness test`: 25 passed / 0 failed (3 files: connection 11, stream 7, capabilities 7... actual split: capabilities 6, stream 7, connection 12).
 - `pnpm --filter @srgnt/harness typecheck`: clean. Boundary script: passed clean; exit 1 with deliberate electron import.

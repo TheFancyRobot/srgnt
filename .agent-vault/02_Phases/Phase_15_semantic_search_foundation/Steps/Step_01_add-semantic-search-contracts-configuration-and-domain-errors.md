@@ -85,4 +85,4 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion for this step means runtime, contracts, and desktop all share one typed semantic-search contract surface with targeted tests.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion for this step means runtime, contracts, and desktop all share one typed semantic-search contract surface with targeted tests.

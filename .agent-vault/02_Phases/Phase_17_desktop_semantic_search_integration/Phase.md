@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Desktop Semantic Search Integration
 phase_id: PHASE-17
-status: complete
+status: completed
 owner: coordinator
 created: '2026-04-02'
 updated: '2026-04-16'
@@ -93,9 +93,9 @@ tags:
 
 <!-- AGENT-START:phase-steps -->
 - [ ] [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_01_implement-desktop-semantic-search-host-and-worker-lifecycle|STEP-17-01 Implement desktop semantic search host and worker lifecycle]] -- establishes the Electron-side runtime boundary.
-- [ ] [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_02_add-typed-ipc-handlers-preload-bridge-and-renderer-facing-semantic-search-api|STEP-17-02 Add typed IPC handlers, preload bridge, and renderer-facing semantic search API]] -- depends on Step 01.
+- [x] [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_02_add-typed-ipc-handlers-preload-bridge-and-renderer-facing-semantic-search-api|STEP-17-02 Add typed IPC handlers, preload bridge, and renderer-facing semantic search API]] -- depends on Step 01.
 - [ ] [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_03_wire-workspace-enable-disable-behavior-reindex-triggers-and-status-reporting|STEP-17-03 Wire workspace enable-disable behavior, reindex triggers, and status reporting]] -- depends on Steps 01-02.
-- [ ] [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_04_add-desktop-integration-tests-and-packaged-offline-validation|STEP-17-04 Add desktop integration tests and packaged offline validation]] -- final validation step.
+- [x] [[02_Phases/Phase_17_desktop_semantic_search_integration/Steps/Step_04_add-desktop-integration-tests-and-packaged-offline-validation|STEP-17-04 Add desktop integration tests and packaged offline validation]] -- final validation step.
 <!-- AGENT-END:phase-steps -->
 
 ## Parallel Work Map

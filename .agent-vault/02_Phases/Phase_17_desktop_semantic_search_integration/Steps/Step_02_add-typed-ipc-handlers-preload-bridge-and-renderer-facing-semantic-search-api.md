@@ -79,7 +79,7 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion means the renderer has a safe, typed semantic-search bridge and nothing more.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion means the renderer has a safe, typed semantic-search bridge and nothing more.
 e.
 STEP-17-02 COMPLETE — validated 2026-04-16.
 

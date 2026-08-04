@@ -77,4 +77,4 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion means a packaged desktop build can locate the bundled model locally with remote model loading disabled.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion means a packaged desktop build can locate the bundled model locally with remote model loading disabled.

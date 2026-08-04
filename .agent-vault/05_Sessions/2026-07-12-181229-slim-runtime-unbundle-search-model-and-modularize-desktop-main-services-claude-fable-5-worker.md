@@ -92,7 +92,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 <!-- AGENT-START:session-validation-run -->
 - Command: recorded below, outside the block
 - Result: recorded below, outside the block
-- Notes: The commands and results are itemized under this block.
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - `pnpm typecheck`: green (contracts, runtime, desktop main/preload/renderer).
 - `pnpm test`: contracts 181/181, runtime 283/283 (was 436 — delta is the deleted modules' own tests), desktop 756/756 (40 files). Required clean rebuild of contracts/runtime dist first (stale dist initially failed the 2 preload sync guards, then green).

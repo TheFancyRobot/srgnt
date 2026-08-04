@@ -77,4 +77,4 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion means the runtime semantic-search package shape is stable and Effect-first.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion means the runtime semantic-search package shape is stable and Effect-first.

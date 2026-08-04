@@ -79,4 +79,4 @@ tags:
 
 ## Outcome Summary
 
-- Not started yet. Completion means one markdown file can be transformed into the required chunk metadata deterministically and testably.
+- Completed. No outcome was written here at the time; the record is the phase note and the shipped code. The original completion criterion was: Completion means one markdown file can be transformed into the required chunk metadata deterministically and testably.

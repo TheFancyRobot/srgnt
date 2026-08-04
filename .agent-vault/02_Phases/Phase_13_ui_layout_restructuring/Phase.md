@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: UI Layout Restructuring
 phase_id: PHASE-13
-status: complete
+status: completed
 owner: ''
 created: '2026-03-30'
 updated: '2026-03-30'

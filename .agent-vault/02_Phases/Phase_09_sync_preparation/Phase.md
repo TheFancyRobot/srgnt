@@ -90,9 +90,9 @@ Prepare the local-first product for future encrypted sync without turning remote
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_09_sync_preparation/Steps/Step_01_define-data-classification-and-sync-safe-boundaries|STEP-09-01 Define Data Classification And Sync Safe Boundaries]] - Start here; classifies what sync may and may not move.
-- [ ] [[02_Phases/Phase_09_sync_preparation/Steps/Step_02_draft-encrypted-sync-architecture-and-account-model|STEP-09-02 Draft Encrypted Sync Architecture And Account Model]] - Depends on Step 01.
-- [ ] [[02_Phases/Phase_09_sync_preparation/Steps/Step_03_validate-conflict-recovery-and-continuity-assumptions|STEP-09-03 Validate Conflict Recovery And Continuity Assumptions]] - Depends on Steps 01-02.
+- [x] [[02_Phases/Phase_09_sync_preparation/Steps/Step_01_define-data-classification-and-sync-safe-boundaries|STEP-09-01 Define Data Classification And Sync Safe Boundaries]] - Start here; classifies what sync may and may not move.
+- [x] [[02_Phases/Phase_09_sync_preparation/Steps/Step_02_draft-encrypted-sync-architecture-and-account-model|STEP-09-02 Draft Encrypted Sync Architecture And Account Model]] - Depends on Step 01.
+- [x] [[02_Phases/Phase_09_sync_preparation/Steps/Step_03_validate-conflict-recovery-and-continuity-assumptions|STEP-09-03 Validate Conflict Recovery And Continuity Assumptions]] - Depends on Steps 01-02.
 <!-- AGENT-END:phase-steps -->
 
 ## Notes

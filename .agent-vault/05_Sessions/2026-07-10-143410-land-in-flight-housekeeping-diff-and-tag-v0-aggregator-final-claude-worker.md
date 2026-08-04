@@ -89,7 +89,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 <!-- AGENT-START:session-validation-run -->
 - Command: recorded below, outside the block
 - Result: recorded below, outside the block
-- Notes: The commands and results are itemized under this block.
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Command: `pnpm typecheck` — PASS (all packages).
 - Command: `pnpm test` — PASS on definitive run (contracts 315/315; desktop 59 files / 971 tests incl. Onboarding.test.tsx 15/15). First attempt hit a flaky Node v24 SIGABRT vitest-worker crash in @srgnt/contracts; package green in isolation and on full rerun.

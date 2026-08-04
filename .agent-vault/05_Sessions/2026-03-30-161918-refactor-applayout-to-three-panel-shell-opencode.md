@@ -64,7 +64,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 <!-- AGENT-START:session-validation-run -->
 - Command: recorded below, outside the block
 - Result: recorded below, outside the block
-- Notes: The commands and results are itemized under this block.
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Command: pnpm --filter @srgnt/desktop typecheck
 - Result: PASS

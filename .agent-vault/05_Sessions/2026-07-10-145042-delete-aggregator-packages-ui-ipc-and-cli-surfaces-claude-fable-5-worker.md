@@ -90,7 +90,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 <!-- AGENT-START:session-validation-run -->
 - Command: recorded below, outside the block
 - Result: recorded below, outside the block
-- Notes: The commands and results are itemized under this block.
+- Notes: The commands and results are recorded below this block, outside it.
 <!-- AGENT-END:session-validation-run -->
 - Sweep: `rg "@srgnt/(connectors|executors|sync|entitlements|fred)|ConnectorStatus|TodayView|CalendarView|connector:" packages/ --glob '!node_modules'` -> zero hits.
 - `pnpm typecheck` -> green (contracts, runtime, desktop main/preload/renderer).

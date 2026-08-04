@@ -74,7 +74,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [x] Closed. [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]] is in a terminal state; this note was never filled in.
+- [x] Closed. [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]] is in a terminal state.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary
@@ -83,20 +83,3 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 - Current status saved: STEP-18-01 is in active review/revision, with executor-1 reporting all known issues fixed and validation green.
 - No direct code edits were made by team-lead in this session; work consisted of orchestration, technical direction, and handoff correction.
 - Clean handoff state: yes — next agent should monitor for reviewer/tester approval and only intervene if the pipeline stalls again.
-ncountered -->
-
-## Decisions Made or Updated
-
-<!-- AGENT-START:session-decisions-made-or-updated -->
-- None.
-<!-- AGENT-END:session-decisions-made-or-updated -->
-
-## Follow-Up Work
-
-<!-- AGENT-START:session-follow-up-work -->
-- [x] Closed. [[02_Phases/Phase_18_real_semantic_search_runtime_integration/Steps/Step_01_replace-desktop-worker-stub-with-real-runtime-semantic-search-effect-layer|STEP-18-01 Replace desktop worker stub with real runtime semantic-search Effect layer]] is in a terminal state; this note was never filled in.
-<!-- AGENT-END:session-follow-up-work -->
-
-## Completion Summary
-
-- State what finished, what remains, and whether the session ended in a clean handoff state.

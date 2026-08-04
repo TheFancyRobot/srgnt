@@ -179,7 +179,7 @@ completed_at: '2026-03-30'
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: OpenCode
 - Last touched: 2026-03-30
 - Next action: Phase complete - all steps done

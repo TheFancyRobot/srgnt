@@ -79,7 +79,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: claude-opus-5
 - Last touched: 2026-07-27
 - Result: `packages/runtime/src/sessions/` ships `events.jsonl` append/read with dense store-owned `seq`, atomic `meta.json`, tolerant reading, and repair-before-append tail recovery. 67 new tests; `pnpm --filter @srgnt/runtime test` 370 passed; typecheck, package build, and root `pnpm build` all clean. No manual or GUI pass (headless disk layer, not reachable from the app yet).

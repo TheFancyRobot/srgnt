@@ -69,10 +69,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: completed
 - Current owner: 
 - Last touched: 2026-04-16
-- Next action: Begin only after STEP-18-01 lands; then trace model/index path assembly from desktop bootstrap into worker config and make dev/packaged resolution explicit.
+- Next action: None. This step is complete; the record is the Outcome companion.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

@@ -102,7 +102,7 @@ Migration happens once during settings read/merge and is **not** repeated on ren
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: done
+- Status: completed
 - Current owner: reviewer
 - Last touched: 2026-04-16
 - Next action: Route reviewed settings migration work to tester and continue Phase 19 validation.

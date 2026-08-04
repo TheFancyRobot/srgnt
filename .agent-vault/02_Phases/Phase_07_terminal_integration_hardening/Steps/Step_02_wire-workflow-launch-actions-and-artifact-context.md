@@ -69,7 +69,7 @@ Connect product workflows to terminal launches with explicit context handoff.
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: —
 - Last touched: 2026-03-29
 - Next action: None — step complete

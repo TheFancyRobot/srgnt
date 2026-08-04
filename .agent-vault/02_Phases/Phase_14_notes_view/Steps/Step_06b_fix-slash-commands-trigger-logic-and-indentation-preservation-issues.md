@@ -69,7 +69,7 @@ This step tracked the bugfix work for [[03_Bugs/BUG-0010_slash-commands-trigger-
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: done
+- Status: completed
 - Current owner: fixer-codex
 - Last touched: 2026-04-07
 - Next action: Completed - all BUG-0010 issues fixed and tests passing. Proceed to Step 07 (search).

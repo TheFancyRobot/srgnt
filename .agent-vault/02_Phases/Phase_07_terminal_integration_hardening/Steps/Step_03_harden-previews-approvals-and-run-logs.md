@@ -68,7 +68,7 @@ Add the trust and audit features required once terminal launches can affect user
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: —
 - Last touched: 2026-03-29
 - Next action: None — step complete

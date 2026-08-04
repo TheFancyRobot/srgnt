@@ -61,7 +61,7 @@ Classify what data exists in the product and what sync may or may not move later
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: done
+- Status: completed
 - Current owner: executor-1
 - Last touched: 2026-04-16
 - Next action: None — design doc and sync classification scaffolding are complete.

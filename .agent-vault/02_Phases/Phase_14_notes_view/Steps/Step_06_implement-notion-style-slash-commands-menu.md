@@ -68,7 +68,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: done
+- Status: completed
 - Current owner: 
 - Last touched: 2026-04-07
 - Next action: Completed - slash commands implemented and BUG-0010 fixed.

@@ -83,10 +83,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: completed
 - Current owner: team-lead
 - Last touched: 2026-04-13
-- Next action: Convert the current Playwright Electron harness into an explicit UI coverage matrix with screenshot-baseline decisions and per-surface follow-up tasks.
+- Next action: None. This step is complete; the record is the Outcome companion.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes

@@ -60,7 +60,7 @@ Translate the classification matrix into a future sync architecture without unde
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: done
+- Status: completed
 - Current owner: executor-1
 - Last touched: 2026-04-16
 - Next action: None — sync architecture and account/sync scaffolding are complete.

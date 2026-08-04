@@ -78,7 +78,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: claude-fable-5-worker
 - Last touched: 2026-07-12
 - Next action: None — step complete. See [[02_Phases/Phase_21_pivot_groundwork_and_aggregator_teardown/Steps/Step_04_bootstrap-workspace-v2-layout-and-contracts-v2-domain-skeleton/Outcome|Outcome]]; continue with STEP-21-05 (docs rewrite).

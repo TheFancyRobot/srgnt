@@ -131,7 +131,7 @@ Use this note for a bounded phase of work in `02_Phases/`. This note is the sour
 - [x] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_02_refactor-built-in-connectors-to-register-through-the-shared-factory-path|STEP-20-02 Refactor built-in connectors to register through the shared factory path]] -- prove the contract with first-party connectors and remove desktop-only duplication.
 - [x] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_03_specify-remote-connector-package-metadata-and-cli-install-lifecycle|STEP-20-03 Specify remote connector package metadata and CLI install lifecycle]] -- define explicit-URL package records, integrity checks, and management semantics.
 - [x] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_04_implement-a-managed-connector-package-registry-and-safe-loader-boundary-in-desktop-main|STEP-20-04 Implement a managed connector package registry and safe loader boundary in desktop main]] -- add the host-side runtime and isolated loading path.
-- [ ] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_05_add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage|STEP-20-05 Add CLI install remove inspect commands and end-to-end regression coverage]] -- ship the CLI workflow and lock in the safety invariants with tests.
+- [x] [[02_Phases/Phase_20_connector_factory_and_remote_package_installation/Steps/Step_05_add-cli-install-remove-inspect-commands-and-end-to-end-regression-coverage|STEP-20-05 Add CLI install remove inspect commands and end-to-end regression coverage]] -- ship the CLI workflow and lock in the safety invariants with tests.
 <!-- AGENT-END:phase-steps -->
 
 ## Notes

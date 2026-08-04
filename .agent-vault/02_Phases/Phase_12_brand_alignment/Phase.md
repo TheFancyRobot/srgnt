@@ -91,11 +91,11 @@ Align the desktop app's visual identity — typography, color palette, logo, and
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_12_brand_alignment/Steps/Step_01_self-host-brand-fonts-and-update-typography-references|STEP-12-01 Self-host brand fonts and update typography references]]
-- [ ] [[02_Phases/Phase_12_brand_alignment/Steps/Step_02_replace-color-system-with-brand-palette|STEP-12-02 Replace color system with brand palette]]
-- [ ] [[02_Phases/Phase_12_brand_alignment/Steps/Step_03_move-anaglyph-logo-to-titlebar|STEP-12-03 Move anaglyph logo to titlebar]]
-- [ ] [[02_Phases/Phase_12_brand_alignment/Steps/Step_04_sweep-components-for-remaining-brand-mismatches|STEP-12-04 Sweep components for remaining brand mismatches]]
-- [ ] [[02_Phases/Phase_12_brand_alignment/Steps/Step_05_verify-app-icons-and-rebuild-platform-assets|STEP-12-05 Verify app icons and rebuild platform assets]]
+- [x] [[02_Phases/Phase_12_brand_alignment/Steps/Step_01_self-host-brand-fonts-and-update-typography-references|STEP-12-01 Self-host brand fonts and update typography references]]
+- [x] [[02_Phases/Phase_12_brand_alignment/Steps/Step_02_replace-color-system-with-brand-palette|STEP-12-02 Replace color system with brand palette]]
+- [x] [[02_Phases/Phase_12_brand_alignment/Steps/Step_03_move-anaglyph-logo-to-titlebar|STEP-12-03 Move anaglyph logo to titlebar]]
+- [x] [[02_Phases/Phase_12_brand_alignment/Steps/Step_04_sweep-components-for-remaining-brand-mismatches|STEP-12-04 Sweep components for remaining brand mismatches]]
+- [x] [[02_Phases/Phase_12_brand_alignment/Steps/Step_05_verify-app-icons-and-rebuild-platform-assets|STEP-12-05 Verify app icons and rebuild platform assets]]
 <!-- AGENT-END:phase-steps -->
 
 ## Notes

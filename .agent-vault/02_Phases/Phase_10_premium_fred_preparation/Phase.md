@@ -91,8 +91,8 @@ Define the optional premium boundary for Fred so later AI orchestration work can
 
 <!-- AGENT-START:phase-steps -->
 - [x] [[02_Phases/Phase_10_premium_fred_preparation/Steps/Step_01_define-entitlements-and-base-vs-premium-contracts|STEP-10-01 Define Entitlements And Base Vs Premium Contracts]] - Start here; freezes the commercial and capability boundary.
-- [ ] [[02_Phases/Phase_10_premium_fred_preparation/Steps/Step_02_specify-fred-integration-boundary-and-minimization-rules|STEP-10-02 Specify Fred Integration Boundary And Minimization Rules]] - Depends on Step 01.
-- [ ] [[02_Phases/Phase_10_premium_fred_preparation/Steps/Step_03_design-premium-workflow-concepts-without-base-coupling|STEP-10-03 Design Premium Workflow Concepts Without Base Coupling]] - Depends on Steps 01-02.
+- [x] [[02_Phases/Phase_10_premium_fred_preparation/Steps/Step_02_specify-fred-integration-boundary-and-minimization-rules|STEP-10-02 Specify Fred Integration Boundary And Minimization Rules]] - Depends on Step 01.
+- [x] [[02_Phases/Phase_10_premium_fred_preparation/Steps/Step_03_design-premium-workflow-concepts-without-base-coupling|STEP-10-03 Design Premium Workflow Concepts Without Base Coupling]] - Depends on Steps 01-02.
 <!-- AGENT-END:phase-steps -->
 
 > user_blocked: Phase 10 work is paused pending explicit user approval. No further assignments should be made for this phase.

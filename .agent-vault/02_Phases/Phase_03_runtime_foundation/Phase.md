@@ -99,8 +99,8 @@ Build the shared local runtime that sits behind the desktop shell: canonical sto
 - [x] [[02_Phases/Phase_03_runtime_foundation/Steps/Step_01_implement-canonical-store-and-manifest-loaders|STEP-03-01 Implement Canonical Store And Manifest Loaders]] - Start here; turns the Phase 01 schemas into executable shared packages.
 - [x] [[02_Phases/Phase_03_runtime_foundation/Steps/Step_02_implement-capability-policy-and-approval-model|STEP-03-02 Implement Capability Policy And Approval Model]] - Depends on Step 01.
 - [x] [[02_Phases/Phase_03_runtime_foundation/Steps/Step_03_implement-artifact-registry-run-history-and-executor-contracts|STEP-03-03 Implement Artifact Registry Run History And Executor Contracts]] - Depends on Steps 01-02.
-- [ ] [[02_Phases/Phase_03_runtime_foundation/Steps/Step_04_decide-query-index-strategy-and-dataview-feasibility|STEP-03-04 Decide Query Index Strategy And Dataview Feasibility]] - Depends on Step 01; can run in parallel with Step 02. Research spike only — produces a feasibility verdict and DEC note.
-- [ ] [[02_Phases/Phase_03_runtime_foundation/Steps/Step_05_implement-query-index-subsystem|STEP-03-05 Implement Query Index Subsystem]] - Depends on Steps 01 and 04. Blocked until STEP-03-04 DEC note is recorded and senior-reviewed. Production query/index implementation.
+- [x] [[02_Phases/Phase_03_runtime_foundation/Steps/Step_04_decide-query-index-strategy-and-dataview-feasibility|STEP-03-04 Decide Query Index Strategy And Dataview Feasibility]] - Depends on Step 01; can run in parallel with Step 02. Research spike only — produces a feasibility verdict and DEC note.
+- [x] [[02_Phases/Phase_03_runtime_foundation/Steps/Step_05_implement-query-index-subsystem|STEP-03-05 Implement Query Index Subsystem]] - Depends on Steps 01 and 04. Blocked until STEP-03-04 DEC note is recorded and senior-reviewed. Production query/index implementation.
 <!-- AGENT-END:phase-steps -->
 
 ## Notes

@@ -85,7 +85,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: claude-opus-5
 - Last touched: 2026-07-26
 - Next action: None for this step. Proceed to [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_04_build-composer-with-slash-commands-modes-cancel-and-error-surfaces|STEP-23-04 Build composer with slash commands, modes, cancel and error surfaces]]; its cancel path must dismiss any pending permission prompt (the controller already releases them).

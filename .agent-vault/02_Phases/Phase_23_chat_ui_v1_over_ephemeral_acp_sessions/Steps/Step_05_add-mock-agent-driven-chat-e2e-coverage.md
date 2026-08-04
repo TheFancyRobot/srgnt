@@ -82,7 +82,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: complete
+- Status: completed
 - Current owner: claude-opus-5
 - Last touched: 2026-07-27
 - Next action: None for this step, and none left in PHASE-23. Automated validation only: `e2e/chat.spec.ts` is 8/8 green with a 3/3 flake check, but no manual `pnpm dev` walkthrough and no real-Pi conversation were run, and the Desktop E2E workflow has not yet been observed green on a PR. See [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Steps/Step_05_add-mock-agent-driven-chat-e2e-coverage/Outcome|Outcome]].

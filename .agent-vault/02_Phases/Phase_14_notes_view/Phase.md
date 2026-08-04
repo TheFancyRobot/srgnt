@@ -127,15 +127,15 @@ Build the Notes view: a workspace-backed file/folder browser and markdown note e
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_01_add-ipc-channels-and-main-process-handlers-for-notes-file-operations|STEP-14-01 Freeze Notes workspace contract and typed IPC surface]] -- pending
-- [ ] [[02_Phases/Phase_14_notes_view/Steps/Step_02_create-notes-file-service-with-path-scoped-operations|STEP-14-02 Implement main-process notes service and scoped filesystem handlers]] -- pending
-- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]] -- pending
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_01_add-ipc-channels-and-main-process-handlers-for-notes-file-operations|STEP-14-01 Freeze Notes workspace contract and typed IPC surface]] -- done
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_02_create-notes-file-service-with-path-scoped-operations|STEP-14-02 Implement main-process notes service and scoped filesystem handlers]] -- done
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_03_build-real-file-tree-component-for-notessidepanel|STEP-14-03 Build Notes tree and shared renderer selection state]] -- done
 - [x] [[02_Phases/Phase_14_notes_view/Steps/Step_04_implement-markdown-editor-with-syntax-highlighting|STEP-14-04 Implement Obsidian-style live-preview markdown editor foundation]] -- done
 - [x] [[02_Phases/Phase_14_notes_view/Steps/Step_05_add-wikilink-support-in-markdown-rendering-and-navigation|STEP-14-05 Add workspace-wide wikilink resolution, navigation, and note creation]] -- done
 - [x] [[02_Phases/Phase_14_notes_view/Steps/Step_06_implement-notion-style-slash-commands-menu|STEP-14-06 Implement markdown slash commands on top of live preview]] -- done
 - [x] [[02_Phases/Phase_14_notes_view/Steps/Step_06b_fix-slash-commands-trigger-logic-and-indentation-preservation-issues|STEP-14-06b Fix slash commands trigger logic and indentation preservation issues (BUG-0010)]] -- done (bugfix)
-- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_07_add-basic-full-text-search-across-notes|STEP-14-07 Add whole-workspace markdown search with bounded indexing]] -- pending
-- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_08_wire-up-auto-save-error-handling-and-final-integration|STEP-14-08 Harden autosave, conflict recovery, and end-to-end Notes integration]] -- pending
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_07_add-basic-full-text-search-across-notes|STEP-14-07 Add whole-workspace markdown search with bounded indexing]] -- done
+- [x] [[02_Phases/Phase_14_notes_view/Steps/Step_08_wire-up-auto-save-error-handling-and-final-integration|STEP-14-08 Harden autosave, conflict recovery, and end-to-end Notes integration]] -- done
 - [x] [[02_Phases/Phase_14_notes_view/Steps/Step_09_whole-workspace-markdown-search-with-bounded-indexing|STEP-14-09 Whole-workspace markdown search with bounded indexing]]
 - [x] [[02_Phases/Phase_14_notes_view/Steps/Step_10_autosave-hardening-conflict-recovery-e2e|STEP-14-10 Autosave Hardening + Conflict Recovery + E2E]]
 - [x] [[02_Phases/Phase_14_notes_view/Steps/Step_11_add-playwright-electron-interactive-ui-validation-matrix-and-visual-regression-coverage|STEP-14-11 Add Playwright/Electron interactive UI validation matrix and visual regression coverage]]

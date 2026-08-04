@@ -24,19 +24,19 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 
 ## Objective
 
-- Advance [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_gfm-compliance-test-suite|STEP-15-02 GFM Compliance Test Suite]].
+- Advance [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_05_gfm-compliance-test-suite|STEP-15-05 GFM Compliance Test Suite]].
 - Leave a clean handoff if the work stops mid-step.
 
 ## Planned Scope
 
-- Review [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_gfm-compliance-test-suite|STEP-15-02 GFM Compliance Test Suite]] before editing.
+- Review [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_05_gfm-compliance-test-suite|STEP-15-05 GFM Compliance Test Suite]] before editing.
 - Record changed paths and validation as the session progresses.
 
 ## Execution Log
 
 <!-- AGENT-START:session-execution-log -->
 - 22:14 - Created session note.
-- 22:14 - Linked related step [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_gfm-compliance-test-suite|STEP-15-02 GFM Compliance Test Suite]].
+- 22:14 - Linked related step [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_05_gfm-compliance-test-suite|STEP-15-05 GFM Compliance Test Suite]].
 <!-- AGENT-END:session-execution-log -->
 
 ## Findings
@@ -73,7 +73,7 @@ Use one note per meaningful work session in \`05_Sessions/\`. This note records 
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
-- [x] Closed. [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_gfm-compliance-test-suite|STEP-15-02 GFM Compliance Test Suite]] is in a terminal state; this note was never filled in.
+- [x] Closed. [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_05_gfm-compliance-test-suite|STEP-15-05 GFM Compliance Test Suite]] is in a terminal state; this note was never filled in.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Completion Summary

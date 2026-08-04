@@ -116,7 +116,7 @@ tags:
 - [x] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_implement-canonical-workspace-markdown-corpus-policy-and-exclusions|STEP-15-02 Implement canonical workspace markdown corpus policy and exclusions]] -- can begin after Step 01.
 - [x] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_03_implement-markdown-frontmatter-parsing-heading-aware-chunking-and-wikilink-extraction|STEP-15-03 Implement markdown frontmatter parsing, heading-aware chunking, and wikilink extraction]] -- depends on Steps 01-02.
 - [x] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_04_bundle-the-offline-model-assets-and-add-local-only-model-resolution|STEP-15-04 Bundle the offline model assets and add local-only model resolution]] -- can run in parallel with Step 02 after Step 01.
-- [ ] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_02_gfm-compliance-test-suite|STEP-15-02 GFM Compliance Test Suite]]
+- [ ] [[02_Phases/Phase_15_semantic_search_foundation/Steps/Step_05_gfm-compliance-test-suite|STEP-15-05 GFM Compliance Test Suite]]
 <!-- AGENT-END:phase-steps -->
 
 ## Parallel Work Map

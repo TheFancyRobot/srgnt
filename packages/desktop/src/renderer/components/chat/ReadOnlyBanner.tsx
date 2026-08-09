@@ -23,10 +23,14 @@ export function ReadOnlyBanner(): React.ReactElement | null {
   // SAME idempotency key, which is what makes the second call resolve to the
   // first fork instead of creating a sibling. A new key is only minted when the
   // user moves to a different session.
-  const idempotencyKey = React.useMemo(
-    () => (sessionId === null ? '' : globalThis.crypto.randomUUID()),
-    [sessionId],
-  );
+  // A ref, not `useMemo`: memo is a cache React is allowed to drop, and a
+  // recomputed key would be a NEW idempotency key for the same session — which
+  // is exactly the retry that must fork once, forking twice instead.
+  const keyRef = React.useRef<{ sessionId: string | null; key: string }>({ sessionId: null, key: '' });
+  if (sessionId !== null && keyRef.current.sessionId !== sessionId) {
+    keyRef.current = { sessionId, key: globalThis.crypto.randomUUID() };
+  }
+  const idempotencyKey = sessionId === null ? '' : keyRef.current.key;
 
   const handleFork = React.useCallback(() => {
     if (forking || idempotencyKey === '') return;

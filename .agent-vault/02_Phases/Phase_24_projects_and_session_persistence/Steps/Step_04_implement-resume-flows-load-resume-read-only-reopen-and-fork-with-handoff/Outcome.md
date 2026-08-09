@@ -2,6 +2,8 @@
 
 Delivered: honest resume (lazy reconnect on first prompt, capability cascade, load-replay reconciliation) and fork-with-handoff (linked, idempotent, deterministic summary, never auto-sent).
 
+**Validation scope: automated only.** Every path below is verified against the mock agent and the unit/E2E suites. Resume against a real agent (`SRGNT_IT_PI=1`) was NOT performed, so the capability cascade is unverified against anything that lies about its capabilities in the wild.
+
 ## What shipped
 
 - `@srgnt/harness` — mock agent gained `loadReplay` (directives emitted as `session/update` from inside `session/load`, before its response) and `unimplementedMethods` (advertise a capability, answer `-32601`), plus `SessionUpdateHub.takeBuffered` / `AcpAgentConnection.takeBufferedUpdates` so a client can lift a replay off the channel without parking on live traffic.

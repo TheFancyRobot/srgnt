@@ -114,6 +114,7 @@ What the next agent needs to know before STEP-24-05:
 - `packages/desktop/e2e/resume.spec.ts` (new) - three mock variants.
 - `packages/desktop/package.json` - `resume.spec.ts` added to all three explicit E2E spec lists.
 - `.agent-vault/02_Phases/Phase_24_projects_and_session_persistence/Phase.md` + `Steps/Step_04_*` (step note, `Implementation_Notes.md`, `Outcome.md`).
+- `.agent-vault/00_Home/Active_Context.md` - execution pointer moved to STEP-24-05.
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
@@ -143,13 +144,19 @@ What the next agent needs to know before STEP-24-05:
 ## Bugs Encountered
 
 <!-- AGENT-START:session-bugs-encountered -->
-- None.
+- The in-flight fork guard was registered *after* an `await`, so a double-click forked twice. Found by test, fixed in-session.
+- `reconcileForkLinks` compared lineage positionally, rewriting `meta.json` on every list read and churning the `updatedAt` the list sorts on. Found by test, fixed in-session.
+- Found in PR review: `reconnect` had the same after-the-await guard shape as the fork bug above — two racing prompts each spawned an agent, and the second overwrote the session map, leaving the first process unreachable by `dispose`. Serialized per handle; negative control confirms 2 connects become 1.
+- Found in PR review: the fork's child metadata was queued through the void-returning `chainMeta`, so `newSession` reported success before the lineage-and-idempotency record was durable — a crash there cleared the guard with nothing on disk and a retry forked again.
+- Found in PR review: an abandoned reconnect never reaches `sessions`, so `dispose` never runs for it, stranding the `events.jsonl` descriptor and advisory lock on every retry.
 <!-- AGENT-END:session-bugs-encountered -->
 
 ## Decisions Made or Updated
 
 <!-- AGENT-START:session-decisions-made-or-updated -->
-- None.
+- No `forks/<key>` index file. The brief permitted one only as a rebuildable cache, so `findByKey` scans `listSessions` — the read the list already performs — for a human-paced action. Marked with a `ponytail:` comment. Consequence recorded honestly: the Validation Plan's "delete the index and re-assert" check is vacuous here, and is covered instead by the crash-retry test proving the child record is the only truth.
+- Reconnect failures are split into three classes rather than one, because they need opposite responses: `-32601` means that capability is dead (try the next path), session-not-found means the agent lost it (degrade at once, no second call), anything else is retryable (leave the session untouched).
+- The fork handoff is seeded as an editable draft and never auto-sent.
 <!-- AGENT-END:session-decisions-made-or-updated -->
 
 ## Follow-Up Work

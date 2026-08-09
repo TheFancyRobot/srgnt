@@ -591,6 +591,13 @@ function toError(cause: unknown): Error {
  */
 export class ChatSessionController {
   private readonly sessions = new Map<string, SessionState>();
+  /**
+   * Reconnects in flight, per handle. A session is not added to `sessions`
+   * until resume or load succeeds, so the `has(handle)` guard alone cannot stop
+   * two racing prompts from each spawning an agent — the second would overwrite
+   * `sessions` and leave the first process unreachable by `dispose`.
+   */
+  private readonly reconnecting = new Map<string, Promise<ChatSessionReconnectResponse>>();
   private readonly connect: ChatConnectFn;
 
   constructor(private readonly options: ChatSessionControllerOptions) {
@@ -647,7 +654,7 @@ export class ChatSessionController {
       // there is no `acpSessionId` and a failed connect would have left a
       // listable session that never existed. `idle` is the honest opening
       // status — connected, no turn in flight.
-      this.chainMeta(handle, async (persistence) => {
+      await this.chainMetaSettled(handle, async (persistence) => {
         await persistence.createSession({
           id: handle,
           projectId: persistRef.projectId,
@@ -875,9 +882,27 @@ export class ChatSessionController {
       readonly acpSessionId?: string;
     },
   ): Promise<ChatSessionReconnectResponse> {
-    // Already live (two prompts raced, or the renderer asked for a session it
-    // never lost). Reconnecting again would spawn a second agent for one id.
+    // Already live (the renderer asked for a session it never lost).
     if (this.sessions.has(handle)) return { outcome: 'resumed' };
+    // Registered synchronously, before any await, so a second prompt arriving
+    // mid-spawn joins this attempt instead of starting its own.
+    const running = this.reconnecting.get(handle);
+    if (running !== undefined) return running;
+    const attempt = this.reconnectOnce(handle, options).finally(() => {
+      this.reconnecting.delete(handle);
+    });
+    this.reconnecting.set(handle, attempt);
+    return attempt;
+  }
+
+  private async reconnectOnce(
+    handle: string,
+    options: {
+      readonly target: ChatTarget;
+      readonly project: ChatSessionProject;
+      readonly acpSessionId?: string;
+    },
+  ): Promise<ChatSessionReconnectResponse> {
     const acpSessionId = options.acpSessionId;
     if (acpSessionId === undefined || acpSessionId === '') {
       // Persisted before `session/new` returned: there is no agent-side id to
@@ -905,6 +930,18 @@ export class ChatSessionController {
       permissions.cancelAll('cancelled');
       services.disposeAll();
       await cleanup();
+      // A failed reconnect never reaches `this.sessions`, so `dispose` will
+      // never run for it — and appending `client/capability_mismatch` has
+      // already opened `events.jsonl`, taking its descriptor and advisory
+      // lock. Without this, each retry strands another one.
+      if (persistRef !== undefined) {
+        await this.options
+          .getStore?.()
+          ?.closeSession(persistRef)
+          .catch((error: unknown) => {
+            console.error(`[chat] could not close the event log for ${handle}:`, error);
+          });
+      }
     };
 
     const capabilities = connection.capabilities;
@@ -1177,6 +1214,27 @@ export class ChatSessionController {
    * pre-state and the later write would drop the earlier one's field. One chain
    * per session serializes them; different sessions still write in parallel.
    */
+  /**
+   * Like {@link chainMeta}, but resolves when the write lands and rejects if it
+   * fails. The fork commit needs this: `newSession` reporting success while the
+   * child's lineage-and-idempotency record is still queued means a crash can
+   * clear the in-flight guard with no record on disk, and the retry forks again.
+   */
+  private async chainMetaSettled(
+    handle: string,
+    write: (persistence: ChatSessionPersistence, ref: { projectId: string; sessionId: string }) => Promise<void>,
+  ): Promise<void> {
+    const state = this.sessions.get(handle);
+    const store = this.options.getStore?.();
+    if (state?.persistRef === undefined || store === undefined) return;
+    const ref = state.persistRef;
+    const settled = state.metaChain.then(() => write(store, ref));
+    // The chain must survive this write failing, or every later meta update for
+    // the session is dropped; the rejection is still surfaced to the caller.
+    state.metaChain = settled.catch(() => undefined);
+    await settled;
+  }
+
   private chainMeta(
     handle: string,
     write: (persistence: ChatSessionPersistence, ref: { projectId: string; sessionId: string }) => Promise<void>,

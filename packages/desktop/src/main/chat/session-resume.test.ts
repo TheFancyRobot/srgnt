@@ -138,6 +138,28 @@ describe('ChatSessionController.reconnect (STEP-24-04)', () => {
     return { ...result, controller };
   }
 
+  it('spawns one agent when two prompts race the same reconnect', async () => {
+    // The session is not in `sessions` until resume succeeds, so the
+    // already-live guard cannot catch this: both calls would spawn, the second
+    // would overwrite the map, and the first process would be unreachable by
+    // dispose.
+    const script = scenario({ initialize: { resumeSession: true }, directives: chunks(['Hi.']) });
+    const { handle, acpSessionId } = await persistedSession(script);
+    const rec = recorder(scenario({ initialize: { resumeSession: true } }));
+    const controller = controllerFor(rec.connect);
+    const options = { target: 'mock' as const, project: { ...project, cwd: root }, acpSessionId };
+
+    const [first, second] = await Promise.all([
+      controller.reconnect(handle, options),
+      controller.reconnect(handle, options),
+    ]);
+
+    expect(first.outcome).toBe('resumed');
+    expect(second.outcome).toBe('resumed');
+    expect(rec.connects).toBe(1);
+    await controller.dispose(handle);
+  });
+
   it('uses session/resume, with no replay, when the harness advertises it', async () => {
     const script = scenario({ initialize: { resumeSession: true }, directives: chunks(['Hi.']) });
     const { handle, acpSessionId } = await persistedSession(script);

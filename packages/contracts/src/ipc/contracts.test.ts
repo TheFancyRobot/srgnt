@@ -40,7 +40,6 @@ import {
   SSemanticSearchSearchResponse,
   SSemanticSearchStatusRequest,
   SSemanticSearchStatusResponse,
-  ipcChannels,
   SChatPermissionCloseEvent,
   SChatPermissionRequestEvent,
   SChatPermissionResponse,

@@ -2359,14 +2359,25 @@
 
 .session-lineage-link {
   font-size: 10px;
-  color: var(--color-text-tertiary);
+  /* Secondary, not tertiary: tertiary is under 4.5:1 on these backgrounds, and
+     this is an interactive control rather than a passive hint. */
+  color: var(--color-text-secondary);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
+/* `.btn` does not apply here, so the focus ring has to be declared. */
+.session-lineage-link:focus-visible {
+  outline: 2px solid var(--color-srgnt-500);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .session-lineage-link:disabled {
   text-decoration: none;
-  opacity: 0.6;
+  /* Dimming a already-low-contrast colour compounded to roughly 2.1:1. The
+     disabled state is carried by the removed underline and the cursor. */
+  color: var(--color-text-tertiary);
   cursor: default;
 }
 

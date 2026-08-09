@@ -549,7 +549,13 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const reconnect = React.useCallback(
     async (sessionId: string, projectId: string | null): Promise<boolean> => {
       if (projectId === null || typeof window.srgnt?.chatSessionReconnect !== 'function') {
-        setError('This session cannot be reconnected here. Start a new session to continue it.');
+        // No route to reconnect at all (older preload, or a session with no
+        // project). Leaving only an error would keep the composer enabled and
+        // let the user keep sending into nothing — the read-only state IS the
+        // honest one here.
+        const reason = 'This session cannot be reconnected here. Fork it to keep going.';
+        patch(sessionId, (entry) => ({ ...entry, live: false, readOnlyReason: reason }));
+        setError(reason);
         return false;
       }
       let result;
@@ -661,6 +667,12 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
           // The child already exists (and may no longer be live). Open it the
           // ordinary way rather than installing a second record for one id.
           await openPersistedSession(projectId, result.session.sessionId);
+          // `openPersistedSession` clears `pendingPrompt`, so without this a
+          // retry or double-click drops the handoff the user was meant to read
+          // before sending — the whole point of seeding it as a draft.
+          if (result.handoffText !== '') {
+            patch(result.session.sessionId, (entry) => ({ ...entry, pendingPrompt: result.handoffText }));
+          }
           return;
         }
         const opened: OpenSession = {

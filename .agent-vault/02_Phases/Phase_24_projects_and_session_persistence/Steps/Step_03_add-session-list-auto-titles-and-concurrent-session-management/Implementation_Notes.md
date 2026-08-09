@@ -1,6 +1,16 @@
 # Implementation Notes
 
-- Capture durable findings learned during execution. Prefer short bullets with file paths, commands, and observed behavior.
+- Session ids are `crypto.randomUUID()` (`packages/desktop/src/main/chat/session-controller.ts`). They name the on-disk session directory and outlive the process; the mock returns one fixed ACP session id for every session, so srgnt ids must be independent of it.
+- Persistence seam: `ChatSessionControllerOptions.getStore()` returns a four-method `ChatSessionPersistence`. Read per call, never captured, because the store is rebuilt whenever the workspace root changes.
+- One audit sink per session: `events.jsonl` when the session resolved a project, the Phase-23 in-memory array otherwise. `sessionEvents()` returns `[]` for a persisted session - the store is the single truth there. This is the sink swap STEP-23-03 planned for.
+- `meta.json` writes are serialized per session (`metaChain`), because `updateMeta` is a read-modify-write and a supervisor crash landing while a turn's `idle` write is in flight would otherwise drop a field. `flushMeta()` drains it for tests and quit.
+- Status mapping: `active` on prompt start, `idle` on stop reason, `error` on a failed turn or a `crashed`/`gave-up` supervisor event, `closed` on dispose, `interrupted` written once at open when the log did not end on a record boundary and no live connection exists. Process states (`spawning`/`ready`) are never persisted - `SSessionStatus` has no room for them, deliberately.
+- `chat:session:list` / `chat:session:open` (`packages/desktop/src/main/chat/index.ts`) are answered entirely from the store and never construct the controller; `open` only asks `has()` of an already-constructed one. `ipc.test.ts` asserts `createController` was never called.
+- Auto-titles: `deriveSessionTitle` in `@srgnt/contracts` - first non-empty line, trimmed, 60 code points with an ellipsis, surrogate-safe. Deterministic and LLM-free. Shared by main (persists) and the renderer (shows optimistically), so no title push channel was needed.
+- Renderer replay: `replayEvents` feeds persisted `acp/session_update` payloads plus `client/prompt` / `client/stop` through the SAME `transcriptReducer` as the live feed. `SessionList.test.tsx` asserts reducer(live) deep-equals reducer(replay).
+- **Swap from the Execution Brief, recorded as the brief required:** per-session `Supervisor` kept rather than the one shared `Supervisor`. The controller's `sessions` map plus `dispose`/`disposeAll` already is the equivalent registry the brief allowed for; handles are independent either way and no harness change was needed. Marked with a `ponytail:` comment on the controller class; revisit if STEP-24-05 wants one central `idleTimeoutMs`.
+- **STEP-24-02 conflict, resolved:** the project switcher's live-session lock was removed. It made this step's own acceptance check (two sessions in two projects) unreachable. Sessions now each carry their own `projectId` and cwd, so switching only decides where the NEXT session opens. `ProjectSwitcher.test.tsx` and `e2e/projects.spec.ts` assert the new behaviour.
+- The STEP-24-01 `ponytail:` ceiling on `readEvents` (whole-file read, `fromSeq` filters after parsing) was read before writing any reader. This step reads a log exactly once, at open - no polling loop, so the quadratic path is unreachable and no streaming reader was built.
 
 ## Related Notes
 

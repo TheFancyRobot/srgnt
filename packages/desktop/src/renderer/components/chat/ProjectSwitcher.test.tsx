@@ -199,24 +199,26 @@ describe('ProjectSwitcher', () => {
     await waitFor(() => expect(screen.getByTestId('project-error')).toHaveTextContent('cannot be empty'));
   });
 
-  it('refuses to switch projects out from under a live session', async () => {
+  it('keeps switching projects available while sessions are live (STEP-24-03)', async () => {
     renderSwitcherWithSession();
     await waitFor(() => expect(screen.getByTestId('project-list')).toBeInTheDocument());
-    // Before a session exists, switching is ordinary.
     expect(within(row(projectB.id)).getByTestId('project-select')).toBeEnabled();
 
     fireEvent.click(screen.getByTestId('chat-new-session'));
     await waitFor(() => expect(screen.getByTestId('chat-session-badge')).toBeInTheDocument());
 
-    // The session is pinned to the cwd it opened with; letting the switcher
-    // claim another project would leave the agent editing the wrong checkout.
-    expect(within(row(projectB.id)).getByTestId('project-select')).toBeDisabled();
-    expect(screen.getByTestId('project-switch-locked')).toBeInTheDocument();
+    // STEP-24-02 disabled this while a session was live. Since STEP-24-03 every
+    // session carries its own projectId and cwd and several run at once, so
+    // switching only changes where the NEXT session opens — no running agent
+    // moves, and blocking it would make cross-project concurrency unreachable.
+    expect(within(row(projectB.id)).getByTestId('project-select')).toBeEnabled();
+    expect(screen.queryByTestId('project-switch-locked')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('chat-dispose'));
-    await waitFor(() =>
-      expect(within(row(projectB.id)).getByTestId('project-select')).toBeEnabled(),
-    );
+    fireEvent.click(within(row(projectB.id)).getByTestId('project-select'));
+    await waitFor(() => expect(row(projectB.id).getAttribute('data-active')).toBe('true'));
+    // The session opened under project A is still running — and said so.
+    expect(screen.getByTestId('chat-session-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('project-sessions-elsewhere')).toHaveTextContent('1 session');
   });
 
   it('shows an empty state rather than a broken panel with no projects', async () => {

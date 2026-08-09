@@ -6,6 +6,7 @@ import type {
   DesktopSettingsResponse,
   LaunchContext,
   Project,
+  Session as PersistedSession,
   TerminalLaunchWithContextRequest,
   UpdateCheckResponse,
 } from '@srgnt/contracts';
@@ -132,6 +133,26 @@ export interface SrgntAPI {
   chatSessionDispose(sessionId: string): Promise<void>;
   /** Optional: an older preload has no mode bridge, so the selector just hides. */
   chatSessionSetMode?(sessionId: string, modeId: string): Promise<{ ok: true; currentModeId: string }>;
+  /**
+   * Persisted sessions (PHASE-24, STEP-24-03). Optional for the same reason the
+   * project bridge is: an older preload must degrade to "no session list", not
+   * crash the panel. Both are pure disk reads and spawn no agent.
+   */
+  chatSessionList?(projectId: string): Promise<{
+    sessions: readonly PersistedSession[];
+    skipped: readonly { sessionId: string; reason: string }[];
+  }>;
+  chatSessionOpen?(
+    projectId: string,
+    sessionId: string,
+  ): Promise<{
+    session: PersistedSession;
+    events: readonly { seq: number; ts: string; protocolVersion: number; kind: string; payload?: unknown }[];
+    /** The log ended mid-record: the last turn never completed. */
+    truncatedTail: boolean;
+    /** Whether main still holds a live agent connection for this session. */
+    live: boolean;
+  }>;
   onChatSessionUpdate(callback: (event: { sessionId: string; update: unknown }) => void): () => void;
   /** Agent process lifecycle (STEP-23-04): the crash surface. */
   onChatSessionStatus?(

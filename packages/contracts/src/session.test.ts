@@ -6,6 +6,8 @@ import {
   SSessionEvent,
   SSessionKind,
   SSessionStatus,
+  SESSION_TITLE_MAX_LENGTH,
+  deriveSessionTitle,
   isKnownSessionEventKind,
   knownSessionEventKinds,
   readSessionEvent,
@@ -152,6 +154,60 @@ describe('SSessionEvent envelope', () => {
           expect(readSessionEvent(raw).success).toBe(true);
         },
       ),
+    );
+  });
+});
+
+describe('deriveSessionTitle (STEP-24-03 auto-titles)', () => {
+  it('takes the first non-empty line, trimmed', () => {
+    expect(deriveSessionTitle('Fix the login bug')).toBe('Fix the login bug');
+    expect(deriveSessionTitle('  Fix the login bug  ')).toBe('Fix the login bug');
+    expect(deriveSessionTitle('Fix the login bug\nand also the logout one')).toBe('Fix the login bug');
+    // Leading blank lines are skipped rather than titling the session ''.
+    expect(deriveSessionTitle('\n\n   \nReal first line')).toBe('Real first line');
+    // All three line terminators, because a pasted prompt can carry any of them.
+    expect(deriveSessionTitle('one\r\ntwo')).toBe('one');
+    expect(deriveSessionTitle('one\rtwo')).toBe('one');
+  });
+
+  it('returns undefined for a prompt with no visible text', () => {
+    expect(deriveSessionTitle('')).toBeUndefined();
+    expect(deriveSessionTitle('   \n\t\n  ')).toBeUndefined();
+  });
+
+  it('truncates to the max length with an ellipsis', () => {
+    const long = 'x'.repeat(200);
+    const title = deriveSessionTitle(long)!;
+    expect([...title]).toHaveLength(SESSION_TITLE_MAX_LENGTH);
+    expect(title.endsWith('…')).toBe(true);
+
+    // Exactly at the limit is kept whole — no ellipsis for a title that fits.
+    const exact = 'y'.repeat(SESSION_TITLE_MAX_LENGTH);
+    expect(deriveSessionTitle(exact)).toBe(exact);
+  });
+
+  it('never splits a surrogate pair when truncating', () => {
+    // 100 astral code points: a UTF-16 slice at 59 would land mid-pair.
+    const title = deriveSessionTitle('👍'.repeat(100))!;
+    expect(title).not.toContain('�');
+    expect([...title]).toHaveLength(SESSION_TITLE_MAX_LENGTH);
+    expect([...title].slice(0, -1).every((point) => point === '👍')).toBe(true);
+  });
+
+  it('property: a derived title is always non-empty, single-line, and bounded', () => {
+    fc.assert(
+      fc.property(fc.string(), (prompt) => {
+        const title = deriveSessionTitle(prompt);
+        if (title === undefined) {
+          // Undefined only for prompts with nothing visible in them.
+          expect(prompt.trim()).toBe('');
+          return;
+        }
+        expect(title).not.toBe('');
+        expect(title).toBe(title.trim());
+        expect(/[\r\n]/.test(title)).toBe(false);
+        expect([...title].length).toBeLessThanOrEqual(SESSION_TITLE_MAX_LENGTH);
+      }),
     );
   });
 });

@@ -28,6 +28,7 @@ import { createUpdaterService } from './services/updater.js';
 import { createTerminalService } from './services/terminal.js';
 import { createSemanticSearchService } from './services/semantic-search.js';
 import { createProjectsService } from './services/projects.js';
+import { createSessionsService } from './services/sessions.js';
 import { registerCrashHandlers } from './services/crash.js';
 import { registerShellHandlers } from './services/shell.js';
 import { registerDevConsoleHandlers } from './dev-console/index.js';
@@ -81,15 +82,35 @@ const projects = createProjectsService({
   getWorkspaceRoot: () => workspace.getRoot(),
 });
 
+// Session persistence (PHASE-24, STEP-24-03). Re-rooted with the workspace for
+// the same reason projects are: an event log opened under the previous root
+// holds its file descriptor and advisory lock against a workspace nobody is in.
+const sessions = createSessionsService({
+  getWorkspaceRoot: () => workspace.getRoot(),
+});
+
+// Assigned once the chat handlers are registered below; the workspace hooks
+// are declared first, so the call is routed through this rather than reordered.
+let disposeLiveChatSessions: () => Promise<void> = async () => {};
+
 const workspace = createWorkspaceService({
   getWindow: () => windowManager.getWindow(),
   hooks: {
-    beforeRootChanged: (previousRoot, nextRoot) => semanticSearch.handleWorkspaceRootChange(previousRoot, nextRoot),
+    beforeRootChanged: async (previousRoot, nextRoot) => {
+      // A chat session belongs to the workspace it was opened in: its events
+      // and meta live under that root, and its agent's cwd points inside it.
+      // Carrying one across a re-root would append to a store that is about to
+      // close while its metadata resolves against the new root. Sessions are
+      // ended first, so nothing survives the swap to diverge.
+      await disposeLiveChatSessions();
+      await semanticSearch.handleWorkspaceRootChange(previousRoot, nextRoot);
+    },
     prepareWorkspace: (root) => ensureNotesDir(root),
     afterRootChanged: async (root) => {
       crashReporter.setWorkspaceRoot(root);
       registerNotesHandlers(root);
       await projects.setWorkspaceRoot(root);
+      await sessions.setWorkspaceRoot(root);
       await semanticSearch.initialize(root);
     },
   },
@@ -134,7 +155,10 @@ const disposeChat = registerChatHandlers({
   getWindow: () => windowManager.getWindow(),
   getCwd: () => workspace.getRoot() || undefined,
   projects,
+  sessions,
 });
+
+disposeLiveChatSessions = disposeChat;
 
 // Agent teardown must COMPLETE before the app exits, so it hangs off
 // `before-quit` with the quit deferred rather than off `will-quit`, which does
@@ -154,7 +178,13 @@ app.on('before-quit', (event) => {
       // It also never rejects, so a failed disposer has to be read off the
       // results — a silently swallowed one would leave an orphaned process tree
       // with nothing in the log to explain it.
+      // Chat teardown first, then the store: `disposeChat` writes each
+      // session's `closed` status and flushes its log, which needs the store
+      // still open.
       const results = await Promise.allSettled([disposeDevConsole(), disposeChat()]);
+      await sessions.close().catch((error: unknown) => {
+        console.error('[main] could not close the session store during quit:', error);
+      });
       for (const result of results) {
         if (result.status === 'rejected') {
           console.error('[main] agent teardown failed during quit:', result.reason);

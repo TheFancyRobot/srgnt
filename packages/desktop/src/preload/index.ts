@@ -60,6 +60,8 @@ const ipcChannels = {
   chatSessionCancel: 'chat:session:cancel',
   chatSessionDispose: 'chat:session:dispose',
   chatSessionSetMode: 'chat:session:set-mode',
+  chatSessionList: 'chat:session:list',
+  chatSessionOpen: 'chat:session:open',
   chatSessionUpdate: 'chat:session:update',
   chatSessionStatus: 'chat:session:status',
   chatTerminalOutput: 'chat:terminal:output',
@@ -83,6 +85,20 @@ interface SrgntProject {
   additionalDirectories: readonly string[];
   defaultHarnessId?: string;
   permissionPolicy?: Record<string, 'allow' | 'reject' | 'ask'>;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/** Mirrors `SSession` from @srgnt/contracts, for the same sandbox reason. */
+interface SrgntSession {
+  id: string;
+  projectId: string;
+  harnessId: string;
+  kind: 'single' | 'group';
+  status: 'active' | 'idle' | 'interrupted' | 'error' | 'closed';
+  title?: string;
+  acpSessionId?: string;
+  parentSessionId?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -260,6 +276,31 @@ const api = {
     modeId: string,
   ): Promise<{ ok: true; currentModeId: string }> =>
     ipcRenderer.invoke(ipcChannels.chatSessionSetMode, { sessionId, modeId }),
+  /**
+   * Persisted sessions for a project, newest activity first (PHASE-24). A pure
+   * disk read: listing sessions spawns no agent and loads no harness.
+   */
+  chatSessionList: (
+    projectId: string,
+  ): Promise<{
+    sessions: readonly SrgntSession[];
+    skipped: readonly { sessionId: string; reason: string }[];
+  }> => ipcRenderer.invoke(ipcChannels.chatSessionList, { projectId }),
+  /**
+   * One persisted session and its full event stream, for instant render from
+   * disk. Also spawns nothing — reconnecting a closed session is STEP-24-04.
+   */
+  chatSessionOpen: (
+    projectId: string,
+    sessionId: string,
+  ): Promise<{
+    session: SrgntSession;
+    events: readonly { seq: number; ts: string; protocolVersion: number; kind: string; payload?: unknown }[];
+    /** The log ended mid-record: the last turn never completed. */
+    truncatedTail: boolean;
+    /** Whether main still holds a live agent connection for this session. */
+    live: boolean;
+  }> => ipcRenderer.invoke(ipcChannels.chatSessionOpen, { projectId, sessionId }),
   onChatSessionUpdate: (callback: (event: { sessionId: string; update: unknown }) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, payload: { sessionId: string; update: unknown }) => callback(payload);
     ipcRenderer.on(ipcChannels.chatSessionUpdate, handler);

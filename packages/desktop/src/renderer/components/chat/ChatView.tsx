@@ -31,7 +31,7 @@ function EmptyState({ hasSession }: { readonly hasSession: boolean }): React.Rea
       <p className="chat-empty-body">
         {hasSession
           ? 'Send a prompt to start the turn.'
-          : 'Start a session to talk to an agent. Sessions are temporary and are not saved.'}
+          : 'Start a session to talk to an agent, or reopen one from the session list. Sessions are saved to your project.'}
       </p>
     </div>
   );

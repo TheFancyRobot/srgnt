@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtempSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -15,7 +16,9 @@ import type {
   LaunchSpec,
   ProjectPermissionPolicy,
   SessionEvent,
+  SessionStatus,
 } from '@srgnt/contracts';
+import { deriveSessionTitle } from '@srgnt/contracts';
 import type { AcpAgentConnection, ClientPorts, SupervisorEvent } from '@srgnt/harness';
 import { createPermissionEngine, createProjectPolicyHook } from '@srgnt/runtime';
 import { Effect } from 'effect';
@@ -46,9 +49,17 @@ function loadHarness(): Promise<HarnessModule> {
  * Electron-side lifecycle (IPC-facing methods, update fan-out) while
  * `@srgnt/harness` stays pure Node (Supervisor + wrapper).
  *
- * Ephemeral by design for Phase 23 — sessions live only for the app's lifetime
- * and there is no session list; Phase 24 owns durability. Every session gets its
- * own supervised process so a kill-tree on dispose can never orphan a child.
+ * Persistent since STEP-24-03: a session that resolved a project writes every
+ * prompt, streamed update, permission decision and stop through to its
+ * `events.jsonl`, and its lifecycle status to `meta.json`. A session with no
+ * project (no workspace root, headless test) stays memory-only, as in Phase 23.
+ *
+ * Every session gets its own supervised process so a kill-tree on dispose can
+ * never orphan a child. ponytail: per-session `Supervisor` kept rather than the
+ * one-shared-Supervisor the Execution Brief sketched — this map plus `dispose`/
+ * `disposeAll` already IS the registry a shared supervisor would provide, and
+ * handles are independent either way. Revisit if STEP-24-05 needs one central
+ * `idleTimeoutMs`.
  *
  * Unlike the dev console (which keeps auto-approve — it is a raw dev harness,
  * clearly labeled), chat sessions get the real default-ask permission engine:
@@ -342,6 +353,35 @@ export const defaultChatConnect: ChatConnectFn = async (target, ports) => {
   };
 };
 
+/**
+ * The slice of `SessionStore` this controller writes through (STEP-24-03). A
+ * structural type, not the class: the controller must stay constructible in a
+ * unit test with a two-method fake, and it has no business calling `merge` or
+ * `listSessions`.
+ */
+export interface ChatSessionPersistence {
+  createSession(meta: {
+    id: string;
+    projectId: string;
+    harnessId: string;
+    status: SessionStatus;
+    acpSessionId?: string;
+    title?: string;
+    createdAt: string;
+  }): Promise<unknown>;
+  appendEvent(
+    ref: { projectId: string; sessionId: string },
+    kind: string,
+    payload?: unknown,
+    protocolVersion?: number,
+  ): Promise<unknown>;
+  updateMeta(
+    ref: { projectId: string; sessionId: string },
+    patch: { status?: SessionStatus; title?: string },
+  ): Promise<unknown>;
+  closeSession(ref: { projectId: string; sessionId: string }): Promise<void>;
+}
+
 interface SessionState {
   readonly connection: AcpAgentConnection;
   readonly cleanup: () => Promise<void>;
@@ -349,8 +389,22 @@ interface SessionState {
   readonly pump: Promise<void>;
   readonly services: ChatClientServices;
   readonly permissions: ChatPermissionHost;
-  /** In-memory audit stream. Phase 24 swaps the sink for events.jsonl. */
+  /**
+   * In-memory audit stream — the sink used ONLY when the session has no project
+   * to persist under (no workspace root yet, or a headless test). A persisted
+   * session writes to `events.jsonl` instead; the two are never both filled, so
+   * there is exactly one audit truth per session.
+   */
   readonly events: SessionEvent[];
+  /** Writes one envelope to whichever sink this session has. */
+  readonly append: (kind: string, payload: Record<string, unknown>) => void;
+  /** Where the session persists, or `undefined` when it is memory-only. */
+  readonly persistRef: { projectId: string; sessionId: string } | undefined;
+  readonly harnessId: string;
+  /** Serializes `meta.json` read-modify-writes for this session. */
+  metaChain: Promise<void>;
+  /** Set once the first prompt titled the session; a later prompt never retitles. */
+  titled: boolean;
   /**
    * Mode ids the agent advertised at `session/new`. Empty when it advertised
    * none, which also means "reject every set-mode" — an agent with no modes has
@@ -397,6 +451,14 @@ export interface ChatSessionControllerOptions {
   readonly createClientServices?: typeof createChatClientServices;
   /** Permission prompt deadline. Injected in tests. */
   readonly permissionDeadlineMs?: number;
+  /**
+   * The disk sink for session events and metadata (STEP-24-03). Read per call
+   * rather than held, because the store is rebuilt whenever the workspace root
+   * changes — a captured one would keep writing into the workspace the user
+   * left. Returning `undefined` (no root yet, headless test) makes sessions
+   * memory-only, exactly as in Phase 23.
+   */
+  readonly getStore?: () => ChatSessionPersistence | undefined;
 }
 
 /**
@@ -492,15 +554,15 @@ function toError(cause: unknown): Error {
 }
 
 /**
- * Drives ephemeral ACP sessions for the chat surface. Handles are opaque
- * chat-local ids (not ACP session ids) so repeated mock sessions — which return
- * a fixed ACP session id — never collide, and so the renderer can filter pushed
- * frames on a handle it owns.
+ * Drives ACP sessions for the chat surface, several at a time. Handles are
+ * srgnt session ids (UUIDs, not ACP session ids) so repeated mock sessions —
+ * which return one fixed ACP session id — never collide, so the renderer can
+ * route pushed frames by a handle it owns, and so the id can name the session's
+ * directory on disk.
  */
 export class ChatSessionController {
   private readonly sessions = new Map<string, SessionState>();
   private readonly connect: ChatConnectFn;
-  private counter = 0;
 
   constructor(private readonly options: ChatSessionControllerOptions) {
     this.connect = options.connect ?? defaultChatConnect;
@@ -508,7 +570,11 @@ export class ChatSessionController {
 
   /** initialize → session/new; starts streaming updates. Returns a chat handle. */
   async newSession(target: ChatTarget, project: ChatSessionProject = {}): Promise<ChatSessionNewResponse> {
-    const handle = `chat-${target}-${++this.counter}`;
+    // A UUID, not a counter: the handle is now also the on-disk directory name
+    // and survives restarts, so it has to be unique across processes, not just
+    // within one. (The mock returns a fixed ACP session id for every session —
+    // that id can never be the srgnt id.)
+    const handle = randomUUID();
     // The cwd must be known *before* connecting: client services are confined to
     // it, and their presence is what `initialize` advertises as capabilities.
     //
@@ -521,14 +587,32 @@ export class ChatSessionController {
     const cwd =
       project.cwd ?? this.options.getCwd?.() ?? mkdtempSync(join(tmpdir(), 'srgnt-chat-session-'));
 
-    // One audit stream per session, in the real `SSessionEvent` envelope so
-    // Phase 24's persistence is a sink swap, not a reshape. `protocolVersion` is
-    // read lazily: the stream exists before `connect` (client services need it)
-    // but nothing appends to it until the connection is up.
+    // One audit stream per session. A session that resolved a project persists
+    // to `projects/<id>/sessions/<handle>/events.jsonl` — the sink swap Phase 23
+    // planned for; one with no project (no workspace root, headless test) falls
+    // back to the in-memory array. `protocolVersion` is read lazily: the stream
+    // exists before `connect` (client services need it) but nothing appends to
+    // it until the connection is up.
+    const store = this.options.getStore?.();
+    const persistRef =
+      store !== undefined && project.projectId !== undefined
+        ? { projectId: project.projectId, sessionId: handle }
+        : undefined;
     const events: SessionEvent[] = [];
     let protocolVersion = 0;
     const append = (kind: string, payload: Record<string, unknown>): void => {
-      events.push({ seq: events.length, ts: new Date().toISOString(), protocolVersion, kind, payload });
+      if (persistRef === undefined) {
+        events.push({ seq: events.length, ts: new Date().toISOString(), protocolVersion, kind, payload });
+        return;
+      }
+      // Fire-and-forget: the store already serializes appends per session (one
+      // chain per events.jsonl), so ordering holds without awaiting here — and
+      // awaiting would put a disk write in the path of every streamed chunk.
+      void store!
+        .appendEvent(persistRef, kind, payload, protocolVersion)
+        .catch((error: unknown) => {
+          console.error(`[chat] could not persist ${kind} for session ${handle}:`, error);
+        });
     };
 
     const permissions = createChatPermissionHost({
@@ -584,6 +668,13 @@ export class ChatSessionController {
         const status = supervisorEventToStatus(handle, event, lastStderrTail);
         if (status === null) return;
         append('client/agent_status', { ...status });
+        // The persisted vocabulary is `SSessionStatus`, which has no process
+        // states: a dead agent is an `error` session, a clean self-exit leaves
+        // the session `idle` (reopenable), and spawning/ready are transport
+        // detail the list must never show as a lifecycle state.
+        if (status.status === 'crashed' || status.status === 'gave-up') {
+          this.persistMeta(handle, { status: 'error' });
+        }
         this.options.onStatus?.(status);
         // A dead agent cannot answer anything it is still blocked on. Releasing
         // here (rather than waiting for dispose) is what keeps a crash from
@@ -610,6 +701,10 @@ export class ChatSessionController {
     const pump = (async () => {
       try {
         for await (const update of connection.updates(acpSessionId)) {
+          // Persisted verbatim, then pushed. Reopening the session replays these
+          // payloads through the renderer's transcript reducer — the same
+          // reducer the live push feeds — so disk and live render identically.
+          append('acp/session_update', update as Record<string, unknown>);
           this.options.onUpdate({ sessionId: handle, update });
         }
       } catch {
@@ -624,9 +719,30 @@ export class ChatSessionController {
       services,
       permissions,
       events,
+      append,
+      persistRef,
+      harnessId: harness.id,
+      metaChain: Promise.resolve(),
+      titled: false,
       modeIds: new Set(modes?.availableModes.map((mode) => mode.id) ?? []),
       unsubscribeStatus,
     });
+    if (persistRef !== undefined) {
+      // Written only now that the identity is settled: before `session/new`
+      // there is no `acpSessionId` and a failed connect would have left a
+      // listable session that never existed. `idle` is the honest opening
+      // status — connected, no turn in flight.
+      this.chainMeta(handle, async (persistence) => {
+        await persistence.createSession({
+          id: handle,
+          projectId: persistRef.projectId,
+          harnessId: harness.id,
+          status: 'idle',
+          acpSessionId,
+          createdAt: new Date().toISOString(),
+        });
+      });
+    }
     append('client/session_created', {
       target,
       harnessId: harness.id,
@@ -666,6 +782,13 @@ export class ChatSessionController {
   /** One prompt turn; resolves with the stop reason. Throws on turn failure. */
   async prompt(handle: string, text: string): Promise<ChatSessionPromptResponse> {
     const state = this.require(handle);
+    state.append('client/prompt', { text });
+    // The FIRST prompt names the session, and only the first: `titled` is set
+    // before the derivation can fail so a second prompt never retitles even if
+    // the first one had no visible text to title from.
+    const title = state.titled ? undefined : deriveSessionTitle(text);
+    state.titled = true;
+    this.persistMeta(handle, { status: 'active', ...(title !== undefined ? { title } : {}) });
     const outcome = await Effect.runPromise(
       Effect.either(
         state.connection.prompt({
@@ -674,7 +797,14 @@ export class ChatSessionController {
         }),
       ),
     );
-    if (outcome._tag === 'Left') throw toError(outcome.left);
+    if (outcome._tag === 'Left') {
+      const error = toError(outcome.left);
+      state.append('client/stop', { stopReason: 'error', message: error.message });
+      this.persistMeta(handle, { status: 'error' });
+      throw error;
+    }
+    state.append('client/stop', { stopReason: outcome.right.stopReason });
+    this.persistMeta(handle, { status: 'idle' });
     return { stopReason: outcome.right.stopReason };
   }
 
@@ -700,15 +830,32 @@ export class ChatSessionController {
     this.sessions.get(handle)?.permissions.respond(requestId, optionId);
   }
 
-  /** The session's in-memory audit stream (`SSessionEvent` envelopes). */
+  /**
+   * The session's audit stream, for sessions with no project to persist under.
+   * A persisted session writes to `events.jsonl` and returns `[]` here — read
+   * it back through the store (`chat:session:open`), which is the one truth.
+   */
   sessionEvents(handle: string): readonly SessionEvent[] {
     return this.sessions.get(handle)?.events ?? [];
+  }
+
+  /** The project a live session belongs to, or `undefined` if it has none. */
+  projectOf(handle: string): string | undefined {
+    return this.sessions.get(handle)?.persistRef?.projectId;
   }
 
   /** Kill-trees the session's process and forgets it. Idempotent. */
   async dispose(handle: string): Promise<void> {
     const state = this.sessions.get(handle);
     if (state === undefined) return;
+    // Closing the record before the map entry is dropped: `chainMeta` resolves
+    // its ref through the live session, so a `closed` write queued after the
+    // delete would find nothing to write to.
+    state.append('client/session_closed', {});
+    this.persistMeta(handle, { status: 'closed' });
+    const persistRef = state.persistRef;
+    const metaChain = state.metaChain;
+    const store = this.options.getStore?.();
     this.sessions.delete(handle);
     // Before the kill-tree: the reap would otherwise be reported as a status
     // transition for a session the renderer has already forgotten.
@@ -721,6 +868,14 @@ export class ChatSessionController {
     // supervisor's kill-tree cannot reach them: kill them explicitly first.
     state.services.disposeAll();
     await state.cleanup();
+    if (persistRef !== undefined) {
+      // Last, and only after `cleanup` ended the pump: closing the log while
+      // updates were still streaming would refuse the tail of the session.
+      await metaChain.catch(() => {});
+      await store?.closeSession(persistRef).catch((error: unknown) => {
+        console.error(`[chat] could not close the event log for session ${handle}:`, error);
+      });
+    }
   }
 
   /** Disposes every live session (app quit). Leak-free. */
@@ -741,5 +896,42 @@ export class ChatSessionController {
     const state = this.sessions.get(handle);
     if (state === undefined) throw new Error(`No chat session '${handle}'`);
     return state;
+  }
+
+  /**
+   * Runs one `meta.json` mutation on the session's own chain.
+   *
+   * `updateMeta` is a read-modify-write, so two overlapping calls (a supervisor
+   * crash landing while a turn's `idle` write is in flight) could each read the
+   * pre-state and the later write would drop the earlier one's field. One chain
+   * per session serializes them; different sessions still write in parallel.
+   */
+  private chainMeta(
+    handle: string,
+    write: (persistence: ChatSessionPersistence, ref: { projectId: string; sessionId: string }) => Promise<void>,
+  ): void {
+    const state = this.sessions.get(handle);
+    const store = this.options.getStore?.();
+    if (state?.persistRef === undefined || store === undefined) return;
+    const ref = state.persistRef;
+    state.metaChain = state.metaChain.then(
+      () =>
+        write(store, ref).catch((error: unknown) => {
+          console.error(`[chat] could not persist session meta for ${handle}:`, error);
+        }),
+      () => {},
+    );
+  }
+
+  /** Persists a status (and, on the first prompt, the derived title). */
+  private persistMeta(handle: string, patch: { status?: SessionStatus; title?: string }): void {
+    this.chainMeta(handle, async (persistence, ref) => {
+      await persistence.updateMeta(ref, patch);
+    });
+  }
+
+  /** Waits for every in-flight metadata write. Tests and quit only. */
+  async flushMeta(): Promise<void> {
+    await Promise.all([...this.sessions.values()].map((state) => state.metaChain));
   }
 }

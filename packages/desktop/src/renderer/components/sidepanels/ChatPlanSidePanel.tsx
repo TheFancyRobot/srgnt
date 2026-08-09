@@ -1,6 +1,7 @@
 import React from 'react';
 import { useChatSession } from '../chat/ChatSessionContext.js';
 import { ProjectSwitcher } from '../chat/ProjectSwitcher.js';
+import { SessionList } from '../chat/SessionList.js';
 
 /**
  * The agent plan panel (PHASE-23, STEP-23-02).
@@ -69,6 +70,9 @@ export function ChatPlanSidePanel(): React.ReactElement {
           AppLayout shell. It sits above the plan because which project you are
           in scopes everything below it. */}
       <ProjectSwitcher />
+      {/* Below the switcher: sessions are scoped to the active project, so the
+          list only makes sense once you know which project you are in. */}
+      <SessionList />
       <div className="p-3 border-b border-border-default flex items-baseline justify-between gap-2">
         <h2 className="section-heading">Plan</h2>
         {entries.length > 0 && (

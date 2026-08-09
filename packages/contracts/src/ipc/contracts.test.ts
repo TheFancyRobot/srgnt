@@ -3,6 +3,10 @@ import { parseSync, safeParse } from '../shared-schemas.js';
 import {
   ipcChannelValues,
   SChatSessionNewRequest,
+  SChatSessionListRequest,
+  SChatSessionListResponse,
+  SChatSessionOpenRequest,
+  SChatSessionOpenResponse,
   SProjectEnsureRequest,
   SProjectMergeRequest,
   SProjectRenameRequest,
@@ -698,6 +702,60 @@ describe('project IPC schemas (PHASE-24, STEP-24-02)', () => {
     expect(
       safeParse(SProjectSetDefaultsRequest, { projectId: 'a', permissionPolicy: { read: 'nope' } }).success,
     ).toBe(false);
+  });
+
+  it('requires a projectId to list sessions — the list is always per project', () => {
+    expect(parseSync(SChatSessionListRequest, { projectId: 'p1' }).projectId).toBe('p1');
+    expect(safeParse(SChatSessionListRequest, {}).success).toBe(false);
+
+    const listed = parseSync(SChatSessionListResponse, {
+      sessions: [
+        {
+          id: 's1',
+          projectId: 'p1',
+          harnessId: 'mock',
+          status: 'idle',
+          title: 'Fix the bug',
+          createdAt: '2026-07-12T10:00:00.000Z',
+          updatedAt: '2026-07-12T10:05:00.000Z',
+        },
+      ],
+      skipped: [{ sessionId: 'broken', reason: 'invalid meta' }],
+    });
+    expect(listed.sessions[0]!.title).toBe('Fix the bug');
+    expect(listed.skipped[0]!.sessionId).toBe('broken');
+    // An unknown status must not decode: the list renders a status dot per value.
+    expect(
+      safeParse(SChatSessionListResponse, {
+        sessions: [{ ...listed.sessions[0], status: 'running' }],
+        skipped: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('returns persisted events plus the truncated-tail flag when opening a session', () => {
+    expect(parseSync(SChatSessionOpenRequest, { projectId: 'p1', sessionId: 's1' }).sessionId).toBe('s1');
+    expect(safeParse(SChatSessionOpenRequest, { sessionId: 's1' }).success).toBe(false);
+
+    const opened = parseSync(SChatSessionOpenResponse, {
+      session: {
+        id: 's1',
+        projectId: 'p1',
+        harnessId: 'mock',
+        status: 'idle',
+        createdAt: '2026-07-12T10:00:00.000Z',
+      },
+      events: [
+        { seq: 0, ts: '2026-07-12T10:00:01.000Z', protocolVersion: 1, kind: 'client/prompt', payload: { text: 'hi' } },
+        // Unknown kinds decode: readers must never fail on a newer writer's kind.
+        { seq: 1, ts: '2026-07-12T10:00:02.000Z', protocolVersion: 1, kind: 'acp/future_kind' },
+      ],
+      truncatedTail: false,
+      live: true,
+    });
+    expect(opened.events).toHaveLength(2);
+    expect(opened.live).toBe(true);
+    expect(safeParse(SChatSessionOpenResponse, { ...opened, truncatedTail: 'no' }).success).toBe(false);
   });
 
   it('makes chat:session:new target and projectId optional (project defaults fill in)', () => {

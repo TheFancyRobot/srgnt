@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { PositiveInt } from '../shared-schemas.js';
 import { SLaunchContext } from '../entities/launch.js';
 import { SProject, SProjectPermissionPolicy } from '../project.js';
+import { SSession, SSessionEvent } from '../session.js';
 
 export const ipcChannels = {
   appGetVersion: 'app:get-version',
@@ -61,6 +62,12 @@ export const ipcChannels = {
   // any agent it is `session/set_mode`. Agents that advertise no modes get no
   // selector at all — the surface is capability-driven, never hardcoded.
   chatSessionSetMode: 'chat:session:set-mode',
+  // Persisted sessions (PHASE-24, STEP-24-03). `list` reads `meta.json` only —
+  // no event log is touched, so a project with 50 sessions costs 50 tiny reads
+  // and spawns nothing. `open` returns the persisted event stream so a session
+  // renders instantly from disk, still without spawning an agent.
+  chatSessionList: 'chat:session:list',
+  chatSessionOpen: 'chat:session:open',
   // Main→renderer push channel for streamed session/update frames.
   chatSessionUpdate: 'chat:session:update',
   // Main→renderer push channel for agent *process* lifecycle (STEP-23-04). This
@@ -597,6 +604,52 @@ export const SChatSessionUpdateEvent = Schema.Struct({
   update: Schema.Unknown,
 });
 export type ChatSessionUpdateEvent = Schema.Schema.Type<typeof SChatSessionUpdateEvent>;
+
+// Persisted session list / open (STEP-24-03). Both are pure disk reads: neither
+// spawns an agent, which is what keeps "UI-open ≠ process-running" true.
+
+export const SChatSessionListRequest = Schema.Struct({
+  /** Sessions are always listed per project — the list is grouped by project. */
+  projectId: Schema.String,
+});
+export type ChatSessionListRequest = Schema.Schema.Type<typeof SChatSessionListRequest>;
+
+export const SChatSessionListResponse = Schema.Struct({
+  /**
+   * `meta.json` records, newest-updated first. This is the full `Session` entity
+   * rather than a trimmed row shape: the list needs title, status, harnessId and
+   * `updatedAt` already, and a second near-identical schema would only be one
+   * more thing to keep in sync.
+   */
+  sessions: Schema.Array(SSession),
+  /** Session directories whose meta could not be read. Reported, never fatal. */
+  skipped: Schema.Array(Schema.Struct({ sessionId: Schema.String, reason: Schema.String })),
+});
+export type ChatSessionListResponse = Schema.Schema.Type<typeof SChatSessionListResponse>;
+
+export const SChatSessionOpenRequest = Schema.Struct({
+  projectId: Schema.String,
+  sessionId: Schema.String,
+});
+export type ChatSessionOpenRequest = Schema.Schema.Type<typeof SChatSessionOpenRequest>;
+
+export const SChatSessionOpenResponse = Schema.Struct({
+  session: SSession,
+  /**
+   * The persisted event stream in `seq` order. The renderer replays the
+   * `acp/session_update` payloads through the SAME transcript reducer the live
+   * feed uses — one reducer, two feeds, no second render path.
+   */
+  events: Schema.Array(SSessionEvent),
+  /**
+   * The log did not end on a record boundary — the shape of a crash mid-append.
+   * The session is reported `interrupted` when this is true.
+   */
+  truncatedTail: Schema.Boolean,
+  /** True when this session still has a live agent connection in main. */
+  live: Schema.Boolean,
+});
+export type ChatSessionOpenResponse = Schema.Schema.Type<typeof SChatSessionOpenResponse>;
 
 /** Renderer→main: switch the session's mode. */
 export const SChatSessionSetModeRequest = Schema.Struct({

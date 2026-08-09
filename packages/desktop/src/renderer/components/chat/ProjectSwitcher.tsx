@@ -112,15 +112,16 @@ export function ProjectSwitcher(): React.ReactElement | null {
   const { projects, activeProjectId, activeProject, loading, error, setActiveProjectId, renameProject, mergeProjects, dismissError } =
     context;
 
-  // A live session is pinned to the cwd it was opened with. Switching the
-  // active project underneath it would leave the switcher claiming B while the
-  // agent still reads and writes files in A — the agent editing the wrong
-  // checkout is not a state worth allowing for the convenience of not asking.
-  const liveSession = session?.session ?? null;
-  const locked = liveSession !== null;
-  const lockReason = locked
-    ? 'End the current session to switch projects — it is still running in its own directory.'
-    : undefined;
+  // STEP-24-02 refused to switch projects while a session was live, because
+  // there was exactly one implicit session and switching would have left the
+  // switcher claiming B while the agent still wrote files in A. Since STEP-24-03
+  // every session carries its own `projectId` and cwd and several run at once,
+  // so switching only changes which project the NEXT session opens in and which
+  // session list is shown — no running agent moves. The lock is gone; blocking
+  // it now would make concurrent sessions across projects unreachable.
+  const openInOtherProjects = (session?.openSessions ?? []).filter(
+    (entry) => entry.info.projectId !== null && entry.info.projectId !== activeProjectId,
+  ).length;
 
   const mergeSource = projects.find((project) => project.id === mergeSourceId) ?? null;
   const mergeable = projects.filter((project) => project.id !== activeProjectId);
@@ -157,8 +158,6 @@ export function ProjectSwitcher(): React.ReactElement | null {
               key={project.id}
               project={project}
               active={project.id === activeProjectId}
-              disabled={locked && project.id !== activeProjectId}
-              disabledReason={lockReason}
               onSelect={() => setActiveProjectId(project.id)}
               onRename={(name) => void renameProject(project.id, name)}
             />
@@ -166,9 +165,9 @@ export function ProjectSwitcher(): React.ReactElement | null {
         </ul>
       )}
 
-      {locked && (
-        <p className="text-[11px] text-text-tertiary" data-testid="project-switch-locked">
-          {lockReason}
+      {openInOtherProjects > 0 && (
+        <p className="text-[11px] text-text-tertiary" data-testid="project-sessions-elsewhere">
+          {openInOtherProjects} session{openInOtherProjects === 1 ? '' : 's'} still running in another project.
         </p>
       )}
 

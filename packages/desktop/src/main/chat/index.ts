@@ -4,13 +4,18 @@ import {
   ipcChannels,
   parseSync,
   SChatPermissionResponse,
+  SChatSessionListRequest,
   SChatSessionNewRequest,
+  SChatSessionOpenRequest,
   SChatSessionPromptRequest,
   SChatSessionRef,
   SChatSessionSetModeRequest,
+  type ChatSessionListResponse,
+  type ChatSessionOpenResponse,
   type ChatTarget,
   type Project,
 } from '@srgnt/contracts';
+import type { SessionStore } from '@srgnt/runtime';
 // Type-only import: `session-controller` statically imports the ESM-only
 // `@srgnt/harness`, and the desktop main is compiled to CommonJS, so a *value*
 // import here would become a top-level `require()` of an ESM package
@@ -54,6 +59,14 @@ export interface ChatWiring {
     get(projectId: string): Promise<Project>;
     ensureForDir(rootDir: string): Promise<Project>;
   };
+  /**
+   * The session store, rooted at the current workspace (STEP-24-03). Absent, or
+   * returning `undefined` before a workspace root exists, means sessions are
+   * memory-only and the list is empty — the Phase-23 behaviour.
+   */
+  readonly sessions?: {
+    store(): SessionStore | undefined;
+  };
   /** Overrides controller construction (tests). */
   readonly createController?: (options: {
     onUpdate: (event: { sessionId: string; update: unknown }) => void;
@@ -62,6 +75,7 @@ export interface ChatWiring {
     onPermissionRequest: (event: { sessionId: string; requestId: string }) => boolean;
     onPermissionClose: (event: { sessionId: string; requestId: string; reason: string }) => void;
     getCwd?: () => string | undefined;
+    getStore?: () => unknown;
   }) => ChatSessionController;
 }
 
@@ -94,6 +108,10 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
       push(wiring, ipcChannels.chatPermissionClose, event);
     },
     ...(wiring.getCwd !== undefined ? { getCwd: wiring.getCwd } : {}),
+    // Read per call, never captured: the store is rebuilt when the workspace
+    // root changes, and a captured one would keep appending into the workspace
+    // the user left.
+    getStore: () => wiring.sessions?.store(),
   };
 
   // Memoized so all handlers and the teardown share one controller.
@@ -142,6 +160,50 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
           }
         : {}),
     });
+  });
+
+  // List + open are pure disk reads. Neither constructs the controller, so
+  // browsing sessions never loads `@srgnt/harness` and never spawns an agent —
+  // the "UI-open ≠ process-running" invariant, enforced by omission.
+  ipcMain.handle(ipcChannels.chatSessionList, async (_event, payload: unknown) => {
+    const { projectId } = parseSync(SChatSessionListRequest, payload);
+    const store = wiring.sessions?.store();
+    if (store === undefined) return { sessions: [], skipped: [] } satisfies ChatSessionListResponse;
+    const { sessions, skipped } = await store.listSessions(projectId);
+    return {
+      // Newest activity first. `updatedAt` is absent until the first meta
+      // rewrite, so a never-prompted session sorts by its creation time rather
+      // than to the bottom of the list.
+      sessions: [...sessions].sort((left, right) =>
+        (right.updatedAt ?? right.createdAt).localeCompare(left.updatedAt ?? left.createdAt),
+      ),
+      skipped,
+    } satisfies ChatSessionListResponse;
+  });
+
+  ipcMain.handle(ipcChannels.chatSessionOpen, async (_event, payload: unknown) => {
+    const { projectId, sessionId } = parseSync(SChatSessionOpenRequest, payload);
+    const store = wiring.sessions?.store();
+    if (store === undefined) throw new Error('No workspace root: sessions are not persisted yet.');
+    const ref = { projectId, sessionId };
+    const [session, events] = await Promise.all([store.readMeta(ref), store.readEvents(ref)]);
+    // `has` on an already-constructed controller only: asking whether a session
+    // is live must not be what *creates* the controller.
+    const live =
+      controllerPromise !== undefined && (await controllerPromise).has(sessionId);
+    // A log that does not end on a record boundary is a turn that never
+    // finished — the crash-mid-append shape. Recorded once, and only for a
+    // session nobody is writing to: a live session's tail is simply in flight.
+    const repaired =
+      events.truncatedTail && !live && session.status !== 'interrupted'
+        ? await store.updateMeta(ref, { status: 'interrupted' })
+        : session;
+    return {
+      session: repaired,
+      events: events.events,
+      truncatedTail: events.truncatedTail,
+      live,
+    } satisfies ChatSessionOpenResponse;
   });
 
   ipcMain.handle(ipcChannels.chatSessionPrompt, async (_event, payload: unknown) => {

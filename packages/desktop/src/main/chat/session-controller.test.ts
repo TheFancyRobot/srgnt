@@ -63,7 +63,8 @@ describe('ChatSessionController (mock target, in-process)', () => {
     const controller = new ChatSessionController({ connect: mockConnect, onUpdate: (event) => updates.push(event) });
 
     const session = await controller.newSession('mock');
-    expect(session.sessionId).toMatch(/^chat-mock-/);
+    // A UUID since STEP-24-03: the handle is also the on-disk directory name.
+    expect(session.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(session.target).toBe('mock');
     expect(session.capabilities.protocolVersion).toBeGreaterThan(0);
     expect(controller.has(session.sessionId)).toBe(true);

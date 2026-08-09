@@ -36,6 +36,41 @@ export const SSession = Schema.Struct({
 });
 export type Session = Schema.Schema.Type<typeof SSession>;
 
+/** Longest auto-derived title, including the ellipsis that replaces the tail. */
+export const SESSION_TITLE_MAX_LENGTH = 60;
+
+/**
+ * Auto-title for a session, derived from its FIRST prompt (STEP-24-03).
+ *
+ * Deliberately deterministic and LLM-free: an LLM title would cost a round trip
+ * per session and make the same prompt title differently on two machines, which
+ * a test can only assert loosely. First non-empty line, trimmed, truncated to
+ * {@link SESSION_TITLE_MAX_LENGTH} with a trailing ellipsis.
+ *
+ * Returns `undefined` for a prompt with no visible text — an untitled session
+ * shows the "New session" placeholder rather than an empty row.
+ *
+ * Lives in contracts because BOTH sides derive it: main persists it to
+ * `meta.json`, the renderer shows it optimistically before the list reloads.
+ * Two implementations would drift; one pure function cannot.
+ */
+export function deriveSessionTitle(prompt: string): string | undefined {
+  // `split` on the three real line terminators, not a regex over the whole
+  // string: a prompt starting with blank lines must title from the first line
+  // that has content, not from the empty one.
+  const line = prompt
+    .split(/\r\n|\r|\n/)
+    .map((candidate) => candidate.trim())
+    .find((candidate) => candidate !== '');
+  if (line === undefined) return undefined;
+  if (line.length <= SESSION_TITLE_MAX_LENGTH) return line;
+  // Slice by code points, not UTF-16 units: cutting mid-surrogate would emit a
+  // lone half that renders as a replacement character.
+  const points = [...line];
+  if (points.length <= SESSION_TITLE_MAX_LENGTH) return line;
+  return `${points.slice(0, SESSION_TITLE_MAX_LENGTH - 1).join('').trimEnd()}…`;
+}
+
 // ─── SessionEvent envelope ───
 
 /** Version of the srgnt event envelope itself (not the ACP protocol version). */

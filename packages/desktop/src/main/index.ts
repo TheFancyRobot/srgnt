@@ -28,6 +28,7 @@ import { createUpdaterService } from './services/updater.js';
 import { createTerminalService } from './services/terminal.js';
 import { createSemanticSearchService } from './services/semantic-search.js';
 import { createProjectsService } from './services/projects.js';
+import { createSessionsService } from './services/sessions.js';
 import { registerCrashHandlers } from './services/crash.js';
 import { registerShellHandlers } from './services/shell.js';
 import { registerDevConsoleHandlers } from './dev-console/index.js';
@@ -81,6 +82,13 @@ const projects = createProjectsService({
   getWorkspaceRoot: () => workspace.getRoot(),
 });
 
+// Session persistence (PHASE-24, STEP-24-03). Re-rooted with the workspace for
+// the same reason projects are: an event log opened under the previous root
+// holds its file descriptor and advisory lock against a workspace nobody is in.
+const sessions = createSessionsService({
+  getWorkspaceRoot: () => workspace.getRoot(),
+});
+
 const workspace = createWorkspaceService({
   getWindow: () => windowManager.getWindow(),
   hooks: {
@@ -90,6 +98,7 @@ const workspace = createWorkspaceService({
       crashReporter.setWorkspaceRoot(root);
       registerNotesHandlers(root);
       await projects.setWorkspaceRoot(root);
+      await sessions.setWorkspaceRoot(root);
       await semanticSearch.initialize(root);
     },
   },
@@ -134,6 +143,7 @@ const disposeChat = registerChatHandlers({
   getWindow: () => windowManager.getWindow(),
   getCwd: () => workspace.getRoot() || undefined,
   projects,
+  sessions,
 });
 
 // Agent teardown must COMPLETE before the app exits, so it hangs off
@@ -154,7 +164,13 @@ app.on('before-quit', (event) => {
       // It also never rejects, so a failed disposer has to be read off the
       // results — a silently swallowed one would leave an orphaned process tree
       // with nothing in the log to explain it.
+      // Chat teardown first, then the store: `disposeChat` writes each
+      // session's `closed` status and flushes its log, which needs the store
+      // still open.
       const results = await Promise.allSettled([disposeDevConsole(), disposeChat()]);
+      await sessions.close().catch((error: unknown) => {
+        console.error('[main] could not close the session store during quit:', error);
+      });
       for (const result of results) {
         if (result.status === 'rejected') {
           console.error('[main] agent teardown failed during quit:', result.reason);

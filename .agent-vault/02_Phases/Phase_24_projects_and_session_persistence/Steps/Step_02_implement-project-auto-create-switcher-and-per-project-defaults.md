@@ -5,7 +5,7 @@ contract_version: 1
 title: Implement project auto-create switcher and per-project defaults
 step_id: STEP-24-02
 phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]'
-status: complete
+status: completed
 owner: ''
 created: '2026-07-10'
 updated: '2026-07-27'

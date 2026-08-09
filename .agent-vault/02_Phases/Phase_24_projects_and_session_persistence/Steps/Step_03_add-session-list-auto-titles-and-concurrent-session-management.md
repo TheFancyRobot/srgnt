@@ -5,17 +5,22 @@ contract_version: 1
 title: Add session list auto-titles and concurrent session management
 step_id: STEP-24-03
 phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-08-09'
 depends_on:
   - STEP-24-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-08-09-203248-add-session-list-auto-titles-and-concurrent-session-management-claude-opus-5|SESSION-2026-08-09-203248 claude-opus-5 session for Add session list auto-titles and concurrent session management]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-08-09-203248
+active_session_id: 05_Sessions/2026-08-09-203248-add-session-list-auto-titles-and-concurrent-session-management-claude-opus-5
+context_status: completed
+context_summary: 'STEP-24-03 complete: sessions persist to disk, are auto-titled from the first prompt, run concurrently across projects, and are listed with live status in the chat side panel. Validated with contracts 5x, runtime 5x, desktop 1099 tests, harness 114, workspace typecheck and 69 E2E specs. NOT validated: the manual pnpm dev / GUI pass, any real-Pi session, packaged-Linux E2E, and the 50-session responsiveness check.'
 ---
 
 # Step 03 - Add session list auto-titles and concurrent session management
@@ -75,16 +80,24 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_03_add-session-list-auto-titles-and-concurrent-session-management/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_03_add-session-list-auto-titles-and-concurrent-session-management/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-opus-5
+- Last touched: 2026-08-09
+- Next action: None for this step. Continue with [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_04_implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff|STEP-24-04 Implement resume flows load resume read-only reopen and fork with handoff]].
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- Session ids are `crypto.randomUUID()` (`packages/desktop/src/main/chat/session-controller.ts`). They name the on-disk directory and outlive the process; the mock returns one fixed ACP session id for every session, so the two must never be the same value.
+- Persistence seam: `ChatSessionControllerOptions.getStore()` returns a four-method `ChatSessionPersistence`, read per call so a workspace-root change is picked up rather than captured. A session with no `projectId` (no workspace root, headless test) stays memory-only exactly as in Phase 23 - one audit sink per session, never two.
+- `meta.json` writes go through a per-session promise chain (`metaChain`), because `updateMeta` is a read-modify-write and a supervisor crash landing mid-turn could otherwise drop a field. `flushMeta()` is the test/quit drain.
+- `chat:session:list` and `chat:session:open` (`packages/desktop/src/main/chat/index.ts`) are answered entirely from the store and never construct the controller; `open` only asks `has()` of an already-constructed one. `ipc.test.ts` asserts `createController` was never called - that is how "UI-open != process-running" is enforced.
+- **Swap from the Execution Brief, recorded as required:** per-session `Supervisor` kept instead of the one shared `Supervisor` the brief sketched. The controller's `sessions` map plus `dispose`/`disposeAll` already is the equivalent registry the brief allowed, handles are independent either way, and no harness change was needed. Noted as a `ponytail:` comment on the controller class; revisit if STEP-24-05 wants one central `idleTimeoutMs`.
+- **Conflict with STEP-24-02, resolved deliberately:** `ProjectSwitcher` refused to switch projects while a session was live. That made this step's own acceptance check (two sessions in two projects) unreachable, so the lock was removed. Every session now carries its own `projectId` and cwd, so switching only decides where the NEXT session opens; no running agent moves. A `project-sessions-elsewhere` note counts sessions still running in other projects. `ProjectSwitcher.test.tsx` and `e2e/projects.spec.ts` were updated to assert the new behaviour rather than deleted.
+- Auto-titles: `deriveSessionTitle` in `@srgnt/contracts` (first non-empty line, trimmed, 60 code points with an ellipsis, surrogate-safe). Deterministic and LLM-free. Both sides call it, so no title push channel was added; the renderer re-reads the list on a `listRevision` bump.
+- Renderer: `ChatSessionContext` now holds many sessions keyed by srgnt id, with per-session rAF update batches. The single-session fields are a projection of the active one, which is why every Phase-23 view compiled and passed unchanged.
+- Replay: `replayEvents` feeds persisted `acp/session_update` payloads (plus `client/prompt` and `client/stop`) through the SAME `transcriptReducer` as the live feed. `SessionList.test.tsx` asserts reducer(live) deep-equals reducer(replay).
+- The STEP-24-01 `ponytail:` perf ceiling on `readEvents` was read first. This step reads a log exactly once, at open - no polling loop, so the quadratic path is not reachable and no streaming reader was needed.
 
 ## Human Notes
 
@@ -93,10 +106,17 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-08-09 - [[05_Sessions/2026-08-09-203248-add-session-list-auto-titles-and-concurrent-session-management-claude-opus-5|SESSION-2026-08-09-203248 claude-opus-5 session for Add session list auto-titles and concurrent session management]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+Complete. Sessions are plural, named and persistent-by-default.
+
+Delivered: `SessionStore` wired into main behind `services/sessions.ts`; every prompt, streamed update, permission decision, stop and lifecycle transition of a project-backed session written to `events.jsonl` and `meta.json`; auto-titles derived from the first prompt and never rewritten; `chat:session:list` / `chat:session:open` as pure disk reads that spawn nothing; a multi-session renderer with per-session transcript routing; and a `SessionList` panel with harness badges and live status dots. The STEP-24-02 project-switch lock was removed - see Implementation Notes.
+
+Validation performed (all foreground, macOS): `pnpm --filter @srgnt/contracts test` 5 consecutive runs (174 each, fast-check repeated on purpose); `pnpm --filter @srgnt/runtime test` 5 consecutive runs (419 each); `pnpm --filter @srgnt/desktop test` (61 files, 1099); `pnpm --filter @srgnt/harness test` (114 passed, 2 skipped, untouched); `pnpm -r run typecheck` clean; Playwright over `chat`, `sessions`, `projects`, `gfm-compliance`, `ui-coverage-matrix` - 69 passed, 0 failed, including every Phase-23 chat spec.
+
+NOT performed, and not claimed: the Validation Plan's manual `pnpm dev` pass (two real dirs, mock + Pi concurrently, app restart), any real-Pi session, the packaged-Linux E2E, and the 50-session responsiveness measurement. Two E2E failures observed on this machine are pre-existing and unrelated: `bug-0013-visual.spec.ts` needs a packaged Linux build, and `app.spec.ts`'s node-pty `posix_spawnp` failure reproduces with the command sandbox disabled.
+
+Follow-up is recorded in the session note: `OpenSession.live` is stored but the composer does not yet act on it (STEP-24-04's reconnect-on-prompt), and `ChatTerminalProvider` still routes only the active session's terminal output.

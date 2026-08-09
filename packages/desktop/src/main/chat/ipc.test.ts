@@ -26,6 +26,8 @@ const chatChannels = [
   ipcChannels.chatSessionCancel,
   ipcChannels.chatSessionDispose,
   ipcChannels.chatSessionSetMode,
+  ipcChannels.chatSessionList,
+  ipcChannels.chatSessionOpen,
 ];
 
 function fakeController() {
@@ -79,6 +81,87 @@ describe('registerChatHandlers', () => {
 
     await teardown();
     expect(controller.disposeAll).toHaveBeenCalledOnce();
+  });
+
+  it('lists a project sessions newest-activity-first without constructing a controller', async () => {
+    const createController = vi.fn(() => fakeController() as unknown as ChatSessionController);
+    const listSessions = vi.fn(async () => ({
+      sessions: [
+        { id: 'old', projectId: 'p1', harnessId: 'mock', kind: 'single', status: 'idle', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z' },
+        { id: 'new', projectId: 'p1', harnessId: 'mock', kind: 'single', status: 'idle', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-05T00:00:00.000Z' },
+        // Never prompted, so no `updatedAt`: it sorts on `createdAt` instead of
+        // falling to the bottom of the list.
+        { id: 'never', projectId: 'p1', harnessId: 'mock', kind: 'single', status: 'idle', createdAt: '2026-01-03T00:00:00.000Z' },
+      ],
+      skipped: [{ sessionId: 'broken', reason: 'invalid meta' }],
+    }));
+    registerChatHandlers({
+      getWindow: () => null,
+      createController,
+      sessions: { store: () => ({ listSessions }) as never },
+    });
+
+    const listed = (await handlers.get(ipcChannels.chatSessionList)!({}, { projectId: 'p1' })) as {
+      sessions: { id: string }[];
+      skipped: { sessionId: string }[];
+    };
+    expect(listed.sessions.map((session) => session.id)).toEqual(['new', 'never', 'old']);
+    expect(listed.skipped[0]!.sessionId).toBe('broken');
+    // Listing is a disk read: it must never load the harness or spawn an agent.
+    expect(createController).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty session list when no workspace root exists yet', async () => {
+    registerChatHandlers({ getWindow: () => null, createController: () => fakeController() as unknown as ChatSessionController });
+    expect(await handlers.get(ipcChannels.chatSessionList)!({}, { projectId: 'p1' })).toEqual({
+      sessions: [],
+      skipped: [],
+    });
+  });
+
+  it('opens a persisted session from disk, marking a truncated tail interrupted', async () => {
+    const meta = {
+      id: 's1',
+      projectId: 'p1',
+      harnessId: 'mock',
+      kind: 'single',
+      status: 'idle',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    };
+    const updateMeta = vi.fn(async () => ({ ...meta, status: 'interrupted' }));
+    const createController = vi.fn(() => fakeController() as unknown as ChatSessionController);
+    registerChatHandlers({
+      getWindow: () => null,
+      createController,
+      sessions: {
+        store: () =>
+          ({
+            readMeta: async () => meta,
+            readEvents: async () => ({
+              events: [{ seq: 0, ts: '2026-01-01T00:00:01.000Z', protocolVersion: 1, kind: 'client/prompt', payload: { text: 'hi' } }],
+              truncatedTail: true,
+              lastValidByteOffset: 0,
+              tailMissingNewline: false,
+            }),
+            updateMeta,
+          }) as never,
+      },
+    });
+
+    const opened = (await handlers.get(ipcChannels.chatSessionOpen)!({}, { projectId: 'p1', sessionId: 's1' })) as {
+      session: { status: string };
+      events: unknown[];
+      truncatedTail: boolean;
+      live: boolean;
+    };
+    // A log that stops mid-record is a turn that never finished.
+    expect(updateMeta).toHaveBeenCalledWith({ projectId: 'p1', sessionId: 's1' }, { status: 'interrupted' });
+    expect(opened.session.status).toBe('interrupted');
+    expect(opened.events).toHaveLength(1);
+    expect(opened.truncatedTail).toBe(true);
+    // Nothing is live because nothing ever constructed the controller.
+    expect(opened.live).toBe(false);
+    expect(createController).not.toHaveBeenCalled();
   });
 
   it('does not construct a controller until a channel is actually used', async () => {

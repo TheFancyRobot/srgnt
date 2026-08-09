@@ -2075,6 +2075,55 @@
   background: var(--color-surface-tertiary);
 }
 
+/* Session list rows (PHASE-24, STEP-24-03). Semantic tokens only; the status
+   dot is coloured by data attribute so a new status needs one rule, not a
+   per-status component. */
+.session-row {
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+}
+
+.session-row[data-active='true'] {
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-primary);
+}
+
+.session-row:hover {
+  background: var(--color-surface-tertiary);
+}
+
+.session-status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+}
+
+.session-status-dot[data-status='active'] {
+  background: var(--color-success-500);
+}
+
+.session-status-dot[data-status='awaiting_permission'] {
+  background: var(--color-warning-500);
+}
+
+.session-status-dot[data-status='error'],
+.session-status-dot[data-status='interrupted'] {
+  background: var(--color-error-500);
+}
+
+.session-harness-badge {
+  flex: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-tertiary);
+}
+
 .chat-plan-entry {
   display: flex;
   align-items: baseline;

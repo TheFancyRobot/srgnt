@@ -9,14 +9,21 @@ import {
 } from './transcriptReducer.js';
 
 /**
- * Owns the live chat session and its transcript (PHASE-23, STEP-23-01).
+ * Owns the open chat sessions and their transcripts (PHASE-23 STEP-23-01,
+ * made plural by PHASE-24 STEP-24-03).
  *
- * This lives ABOVE the panel switch on purpose. The session is ephemeral but it
- * must survive the user visiting Notes or Terminal and coming back: unmounting
- * the view would drop the session handle without disposing it, leaving a live
- * agent process in the main process with nothing left to cancel or dispose it by
- * (the same trap documented on `DevConsoleGate`). Disposal is therefore tied to
- * explicit user action and app quit, never to unmount.
+ * This lives ABOVE the panel switch on purpose. Sessions must survive the user
+ * visiting Notes or Terminal and coming back: unmounting the view would drop the
+ * handles without disposing them, leaving live agent processes in the main
+ * process with nothing left to cancel or dispose them by (the same trap
+ * documented on `DevConsoleGate`). Disposal is tied to explicit user action and
+ * app quit, never to unmount.
+ *
+ * Several sessions are open at once, across projects, and every one of them
+ * keeps accumulating streamed updates whether or not it is the visible one —
+ * that is the whole point of concurrency. Only the *active* session is projected
+ * onto the single-session fields (`session`, `transcript`, …) so the Phase-23
+ * views keep working unchanged; everything else reads `openSessions`.
  *
  * Streamed updates are buffered and flushed once per animation frame. One
  * trivial real-Pi turn produced ~85 frames (37 thought + 23 message + 25 tool);
@@ -60,12 +67,31 @@ export interface ChatSessionInfo {
   } | null;
 }
 
+/** One session the renderer is holding open, live or replayed from disk. */
+export interface OpenSession {
+  readonly info: ChatSessionInfo;
+  readonly status: ChatStatus;
+  readonly transcript: TranscriptState;
+  readonly permissions: readonly PendingPermission[];
+  readonly agentStatus: ChatAgentStatus | null;
+  readonly lastStopReason: string | null;
+  /** Auto-title, derived locally on the first prompt and confirmed by the list. */
+  readonly title: string | null;
+  /**
+   * False for a session replayed from disk with no live connection in main.
+   * A read-only session renders its transcript but cannot take a prompt —
+   * reconnect-on-prompt is STEP-24-04.
+   */
+  readonly live: boolean;
+}
+
 export interface ChatSessionContextValue {
+  /** The ACTIVE session, or `null` when none is open/selected. */
   readonly session: ChatSessionInfo | null;
   readonly status: ChatStatus;
   readonly error: string | null;
   readonly transcript: TranscriptState;
-  /** Permission requests the agent is currently blocked on, oldest first. */
+  /** Permission requests the ACTIVE session is currently blocked on, oldest first. */
   readonly permissions: readonly PendingPermission[];
   /**
    * The mode the session is actually in: the agent's `current_mode_update` wins
@@ -77,7 +103,28 @@ export interface ChatSessionContextValue {
   readonly agentStatus: ChatAgentStatus | null;
   /** Stop reason of the last completed turn, for the end-of-turn notice. */
   readonly lastStopReason: string | null;
-  readonly newSession: (target: ChatTarget) => Promise<void>;
+  /** Every open session, in the order it was opened. */
+  readonly openSessions: readonly OpenSession[];
+  readonly activeSessionId: string | null;
+  /** Brings an already-open session to the front. Unknown ids are ignored. */
+  readonly selectSession: (sessionId: string) => void;
+  /**
+   * Renders a persisted session from disk, without spawning anything. A session
+   * already open is simply re-selected, so its in-memory stream is never lost.
+   */
+  readonly openPersistedSession: (projectId: string, sessionId: string) => Promise<void>;
+  /**
+   * Bumps whenever something changed that the persisted session list would
+   * show (a session opened, was titled, finished a turn, crashed, or closed).
+   * The list re-reads on it rather than polling.
+   */
+  readonly listRevision: number;
+  /**
+   * Opens a session. An absent `target` lets main pick the project's
+   * `defaultHarnessId` — the list's "New session" affordance never second-
+   * guesses the project's own default.
+   */
+  readonly newSession: (target?: ChatTarget) => Promise<void>;
   /** Resolves `true` when the turn ran; `false` when it failed (draft is kept). */
   readonly sendPrompt: (text: string) => Promise<boolean>;
   readonly setMode: (modeId: string) => Promise<void>;
@@ -105,6 +152,38 @@ function scheduleFlush(callback: () => void): () => void {
   return () => clearTimeout(handle);
 }
 
+/**
+ * Replays a persisted event stream into a transcript.
+ *
+ * The SAME reducer the live feed uses, fed the same `acp/session_update`
+ * payloads: identical event content must render identically whether it arrived
+ * over IPC or off disk, and a second replay-only render path is exactly how the
+ * two would drift. `client/prompt` is replayed too — the user's own text never
+ * arrives as an ACP frame, so without it a reopened session would show the
+ * agent answering nothing.
+ */
+export function replayEvents(
+  events: readonly { kind: string; payload?: unknown }[],
+): TranscriptState {
+  return events.reduce<TranscriptState>((state, event) => {
+    if (event.kind === 'acp/session_update') {
+      return transcriptReducer(state, { type: 'update', notification: event.payload });
+    }
+    if (event.kind === 'client/prompt') {
+      const text = (event.payload as { text?: unknown } | undefined)?.text;
+      return typeof text === 'string'
+        ? transcriptReducer(state, { type: 'user_prompt', text })
+        : state;
+    }
+    // A turn boundary closes the open run, so the next turn starts a new bubble
+    // instead of appending to the previous answer.
+    if (event.kind === 'client/stop') {
+      return transcriptReducer(state, { type: 'close_open' });
+    }
+    return state;
+  }, initialTranscriptState);
+}
+
 export function ChatSessionProvider({ children }: { readonly children: React.ReactNode }): React.ReactElement {
   // Optional: Phase-23 tests and any surface without projects mount this
   // provider on its own, and a missing project context just means "let main
@@ -112,18 +191,21 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const projects = useProjectsOptional();
   const activeProjectId = projects?.activeProjectId ?? null;
   const refreshProjects = projects?.refresh;
-  const [session, setSession] = React.useState<ChatSessionInfo | null>(null);
-  const [status, setStatus] = React.useState<ChatStatus>('idle');
+  const [sessions, setSessions] = React.useState<readonly OpenSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [transcript, dispatch] = React.useReducer(transcriptReducer, initialTranscriptState);
-  const [permissions, setPermissions] = React.useState<readonly PendingPermission[]>([]);
-  const [agentStatus, setAgentStatus] = React.useState<ChatAgentStatus | null>(null);
-  const [lastStopReason, setLastStopReason] = React.useState<string | null>(null);
+  // Session creation has no session to hang a status on yet, so it lives here.
+  const [connecting, setConnecting] = React.useState(false);
+  const [listRevision, setListRevision] = React.useState(0);
+  const bumpList = React.useCallback(() => setListRevision((revision) => revision + 1), []);
 
-  // The subscription is installed once and filters on a ref, so re-subscribing
-  // per session (and racing the frames that arrive during the swap) is avoided.
-  const sessionIdRef = React.useRef<string | null>(null);
-  const pending = React.useRef<unknown[]>([]);
+  // The subscriptions are installed once and route on the session id in the
+  // frame, so re-subscribing per session (and racing the frames that arrive
+  // during a swap) is avoided. Every open session receives its own frames,
+  // visible or not.
+  const knownIds = React.useRef<ReadonlySet<string>>(new Set());
+  const activeIdRef = React.useRef<string | null>(null);
+  const pending = React.useRef(new Map<string, unknown[]>());
   const cancelFlush = React.useRef<(() => void) | null>(null);
   /**
    * Prompts that arrived before their session handle was known. An agent may
@@ -136,15 +218,39 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const earlyStatuses = React.useRef<Record<string, ChatAgentStatus>>({});
 
   React.useEffect(() => {
-    sessionIdRef.current = session?.sessionId ?? null;
-  }, [session]);
+    knownIds.current = new Set(sessions.map((entry) => entry.info.sessionId));
+    activeIdRef.current = activeSessionId;
+  }, [sessions, activeSessionId]);
+
+  /** Patches one session in place. A stale id is a no-op, never a crash. */
+  const patch = React.useCallback(
+    (sessionId: string, change: (entry: OpenSession) => OpenSession) => {
+      setSessions((current) => {
+        const index = current.findIndex((entry) => entry.info.sessionId === sessionId);
+        if (index === -1) return current;
+        const next = [...current];
+        next[index] = change(current[index]!);
+        return next;
+      });
+    },
+    [],
+  );
 
   const flush = React.useCallback(() => {
     cancelFlush.current = null;
-    if (pending.current.length === 0) return;
-    const batch = pending.current;
-    pending.current = [];
-    dispatch({ type: 'updates', notifications: batch });
+    if (pending.current.size === 0) return;
+    const batches = pending.current;
+    pending.current = new Map();
+    setSessions((current) =>
+      current.map((entry) => {
+        const batch = batches.get(entry.info.sessionId);
+        if (batch === undefined || batch.length === 0) return entry;
+        return {
+          ...entry,
+          transcript: transcriptReducer(entry.transcript, { type: 'updates', notifications: batch }),
+        };
+      }),
+    );
   }, []);
 
   React.useEffect(() => {
@@ -153,10 +259,12 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     // A missing bridge must leave the rest of the app fully usable.
     if (typeof window.srgnt?.onChatSessionUpdate !== 'function') return;
     const unsubscribe = window.srgnt.onChatSessionUpdate((event) => {
-      // Frames are keyed by the chat-local handle: a stale session's tail (or a
-      // dev-console session) must never appear in this transcript.
-      if (event.sessionId !== sessionIdRef.current) return;
-      pending.current.push(event.update);
+      // Frames are keyed by the srgnt session id: a dev-console session, or one
+      // this renderer already disposed, must never land in someone's transcript.
+      if (!knownIds.current.has(event.sessionId)) return;
+      const batch = pending.current.get(event.sessionId);
+      if (batch === undefined) pending.current.set(event.sessionId, [event.update]);
+      else batch.push(event.update);
       if (cancelFlush.current === null) {
         cancelFlush.current = scheduleFlush(flush);
       }
@@ -177,8 +285,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     if (typeof window.srgnt?.onChatPermissionRequest !== 'function') return;
     const unsubscribeRequest = window.srgnt.onChatPermissionRequest((event) => {
       const request = { ...event, paths: [...event.paths], options: [...event.options] };
-      if (event.sessionId !== sessionIdRef.current) {
-        // Not this session's — but it may be the session still being created.
+      if (!knownIds.current.has(event.sessionId)) {
+        // Not a session we know — but it may be the one still being created.
         // Hold it until `newSession` learns the handle; capped because an
         // unmatched id would otherwise accumulate forever.
         earlyPermissions.current = [
@@ -187,10 +295,13 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
         ].slice(-20);
         return;
       }
-      setPermissions((current) =>
+      patch(event.sessionId, (entry) => ({
+        ...entry,
         // The agent may re-send on reconnect; ids are the identity, not order.
-        current.some((pending) => pending.requestId === event.requestId) ? current : [...current, request],
-      );
+        permissions: entry.permissions.some((held) => held.requestId === event.requestId)
+          ? entry.permissions
+          : [...entry.permissions, request],
+      }));
     });
     // Main resolved it without us (turn cancel, deadline, dispose): the prompt
     // is already answered, so leaving it on screen would let the user "decide"
@@ -199,14 +310,16 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       earlyPermissions.current = earlyPermissions.current.filter(
         (held) => held.request.requestId !== event.requestId,
       );
-      if (event.sessionId !== sessionIdRef.current) return;
-      setPermissions((current) => current.filter((pending) => pending.requestId !== event.requestId));
+      patch(event.sessionId, (entry) => ({
+        ...entry,
+        permissions: entry.permissions.filter((held) => held.requestId !== event.requestId),
+      }));
     });
     return () => {
       unsubscribeRequest();
       unsubscribeClose?.();
     };
-  }, []);
+  }, [patch]);
 
   // Process lifecycle (STEP-23-04). Not batched with transcript frames: a crash
   // must reach the user immediately, and there may be no further frames at all.
@@ -214,124 +327,208 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     if (typeof window.srgnt?.onChatSessionStatus !== 'function') return;
     return window.srgnt.onChatSessionStatus((event) => {
       const { sessionId, ...status } = event;
-      if (sessionId !== sessionIdRef.current) {
+      if (!knownIds.current.has(sessionId)) {
         // An agent can die between answering session/new and `chatSessionNew`
         // resolving here. Dropping that status would install an already-dead
         // session with a working composer and no recovery banner.
         earlyStatuses.current = { ...earlyStatuses.current, [sessionId]: status };
         return;
       }
-      setAgentStatus(status);
+      patch(sessionId, (entry) => ({ ...entry, agentStatus: status }));
+      // A crash rewrites the persisted status to `error`; the list must show it.
+      if (status.status !== 'spawning' && status.status !== 'ready') bumpList();
     });
+  }, [patch, bumpList]);
+
+  const respondToPermission = React.useCallback(
+    (requestId: string, optionId: string | undefined) => {
+      const current = activeIdRef.current;
+      if (current === null) return;
+      // Optimistic removal: the main process treats a late or duplicate response
+      // as unknown and drops it, so a double-click cannot answer twice.
+      patch(current, (entry) => ({
+        ...entry,
+        permissions: entry.permissions.filter((request) => request.requestId !== requestId),
+      }));
+      void window.srgnt.chatPermissionRespond(current, requestId, optionId);
+    },
+    [patch],
+  );
+
+  const newSession = React.useCallback(
+    async (target?: ChatTarget) => {
+      setError(null);
+      setConnecting(true);
+      try {
+        // `undefined` is meaningful: it tells main to derive (and auto-create) the
+        // project from the workspace cwd, which is what happens before the user
+        // has ever opened the switcher.
+        const result = await window.srgnt.chatSessionNew(target, activeProjectId ?? undefined);
+        // Adopt anything the agent asked during startup; drop the rest, which
+        // belonged to sessions that never became this one.
+        const held = earlyPermissions.current
+          .filter((entry) => entry.sessionId === result.sessionId)
+          .map((entry) => entry.request);
+        earlyPermissions.current = [];
+        // A status that arrived before the handle was known still describes THIS
+        // process — adopt it so a startup crash surfaces instead of vanishing.
+        const heldStatus = earlyStatuses.current[result.sessionId] ?? null;
+        earlyStatuses.current = {};
+        const opened: OpenSession = {
+          info: {
+            sessionId: result.sessionId,
+            target: result.target,
+            harnessId: result.harnessId,
+            harnessName: result.harnessName,
+            quirks: result.quirks,
+            capabilities: result.capabilities,
+            projectId: result.projectId ?? null,
+            modes: result.modes ?? null,
+          },
+          status: 'ready',
+          transcript: initialTranscriptState,
+          permissions: held,
+          agentStatus: heldStatus,
+          lastStopReason: null,
+          title: null,
+          live: true,
+        };
+        // Set before the state lands: frames for this session can arrive in the
+        // same tick, and the router drops anything it does not recognise.
+        knownIds.current = new Set([...knownIds.current, result.sessionId]);
+        activeIdRef.current = result.sessionId;
+        setSessions((current) => [...current, opened]);
+        setActiveSessionId(result.sessionId);
+        bumpList();
+        // A session may have just auto-created its project; without this the
+        // switcher stays empty until the next reload.
+        void refreshProjects?.();
+      } catch (cause) {
+        // The controller already tore down its side, so there is no handle to
+        // clean up here — just surface it and stay in a retryable state.
+        setError(messageOf(cause));
+      } finally {
+        setConnecting(false);
+      }
+    },
+    [activeProjectId, refreshProjects, bumpList],
+  );
+
+  const selectSession = React.useCallback((sessionId: string) => {
+    setActiveSessionId((current) => (current === sessionId ? current : sessionId));
   }, []);
 
-  const respondToPermission = React.useCallback((requestId: string, optionId: string | undefined) => {
-    const current = sessionIdRef.current;
-    if (current === null) return;
-    // Optimistic removal: the main process treats a late or duplicate response
-    // as unknown and drops it, so a double-click cannot answer twice.
-    setPermissions((pending) => pending.filter((request) => request.requestId !== requestId));
-    void window.srgnt.chatPermissionRespond(current, requestId, optionId);
-  }, []);
-
-  const newSession = React.useCallback(async (target: ChatTarget) => {
-    setError(null);
-    setStatus('connecting');
-    try {
-      // `undefined` is meaningful: it tells main to derive (and auto-create) the
-      // project from the workspace cwd, which is what happens before the user
-      // has ever opened the switcher.
-      const result = await window.srgnt.chatSessionNew(target, activeProjectId ?? undefined);
-      pending.current = [];
-      sessionIdRef.current = result.sessionId;
-      dispatch({ type: 'reset' });
-      // Adopt anything the agent asked during startup; drop the rest, which
-      // belonged to sessions that never became this one.
-      const held = earlyPermissions.current
-        .filter((entry) => entry.sessionId === result.sessionId)
-        .map((entry) => entry.request);
-      earlyPermissions.current = [];
-      setPermissions(held);
-      // A status that arrived before the handle was known still describes THIS
-      // process — adopt it so a startup crash surfaces instead of vanishing.
-      const heldStatus = earlyStatuses.current[result.sessionId] ?? null;
-      earlyStatuses.current = {};
-      setAgentStatus(heldStatus);
-      setLastStopReason(null);
-      setSession({
-        sessionId: result.sessionId,
-        target: result.target,
-        harnessId: result.harnessId,
-        harnessName: result.harnessName,
-        quirks: result.quirks,
-        capabilities: result.capabilities,
-        projectId: result.projectId ?? null,
-        modes: result.modes ?? null,
-      });
-      setStatus('ready');
-      // A session may have just auto-created its project; without this the
-      // switcher stays empty until the next reload.
-      void refreshProjects?.();
-    } catch (cause) {
-      // The controller already tore down its side, so there is no handle to
-      // clean up here — just surface it and stay in a retryable state.
-      setSession(null);
-      sessionIdRef.current = null;
-      setStatus('error');
-      setError(messageOf(cause));
-    }
-  }, [activeProjectId, refreshProjects]);
+  const openPersistedSession = React.useCallback(
+    async (projectId: string, sessionId: string) => {
+      // Already open: re-select rather than reload. Re-reading disk would drop
+      // everything a background session streamed since it was last shown.
+      if (knownIds.current.has(sessionId)) {
+        setActiveSessionId(sessionId);
+        return;
+      }
+      if (typeof window.srgnt?.chatSessionOpen !== 'function') return;
+      setError(null);
+      try {
+        const result = await window.srgnt.chatSessionOpen(projectId, sessionId);
+        const opened: OpenSession = {
+          info: {
+            sessionId: result.session.id,
+            // The persisted record knows the harness id, not which of the two
+            // chat targets it was; they coincide for every target we can drive.
+            target: result.session.harnessId === 'pi' ? 'pi' : 'mock',
+            harnessId: result.session.harnessId,
+            harnessName: result.session.harnessId,
+            quirks: [],
+            capabilities: {},
+            projectId: result.session.projectId,
+            modes: null,
+          },
+          status: 'ready',
+          transcript: replayEvents(result.events),
+          permissions: [],
+          agentStatus: null,
+          lastStopReason: null,
+          title: result.session.title ?? null,
+          // A reopened session with no live connection is read-only until
+          // STEP-24-04 lands reconnect-on-prompt.
+          live: result.live,
+        };
+        knownIds.current = new Set([...knownIds.current, sessionId]);
+        setSessions((current) => [...current, opened]);
+        setActiveSessionId(sessionId);
+      } catch (cause) {
+        setError(messageOf(cause));
+      }
+    },
+    [],
+  );
 
   const sendPrompt = React.useCallback(
     async (text: string): Promise<boolean> => {
-      const current = sessionIdRef.current;
+      const current = activeIdRef.current;
       if (current === null || text.trim() === '') return false;
       setError(null);
-      setLastStopReason(null);
-      setStatus('prompting');
-      dispatch({ type: 'user_prompt', text });
+      patch(current, (entry) => ({
+        ...entry,
+        status: 'prompting',
+        lastStopReason: null,
+        transcript: transcriptReducer(entry.transcript, { type: 'user_prompt', text }),
+      }));
       let ok = false;
       try {
         const result = await window.srgnt.chatSessionPrompt(current, text);
-        setLastStopReason(result.stopReason);
-        setStatus('ready');
+        patch(current, (entry) => ({ ...entry, status: 'ready', lastStopReason: result.stopReason }));
         ok = true;
       } catch (cause) {
-        setStatus('error');
         setError(messageOf(cause));
-        // The composer hands this text back for a retry, so the entry that never
-        // ran has to be distinguishable from the one that will.
-        dispatch({ type: 'prompt_failed' });
+        patch(current, (entry) => ({
+          ...entry,
+          status: 'error',
+          // The composer hands this text back for a retry, so the entry that
+          // never ran has to be distinguishable from the one that will.
+          transcript: transcriptReducer(entry.transcript, { type: 'prompt_failed' }),
+        }));
       } finally {
         // Whether the turn ended, failed, or was interrupted, no more chunks
         // belong to the trailing run — a later turn must start a fresh bubble.
         flush();
-        dispatch({ type: 'close_open' });
+        patch(current, (entry) => ({
+          ...entry,
+          transcript: transcriptReducer(entry.transcript, { type: 'close_open' }),
+        }));
+        // The turn just moved the session's title, status and `updatedAt`.
+        bumpList();
       }
       return ok;
     },
-    [flush],
+    [flush, patch, bumpList],
   );
 
-  const setMode = React.useCallback(async (modeId: string) => {
-    const current = sessionIdRef.current;
-    if (current === null || typeof window.srgnt?.chatSessionSetMode !== 'function') return;
-    try {
-      const result = await window.srgnt.chatSessionSetMode(current, modeId);
-      // Reflect what the agent accepted, not what was clicked. The reducer's
-      // `current_mode_update` is the other (agent-initiated) path into the same
-      // field, so both converge on one source of truth.
-      dispatch({
-        type: 'update',
-        notification: { sessionUpdate: 'current_mode_update', currentModeId: result.currentModeId },
-      });
-    } catch (cause) {
-      setError(messageOf(cause));
-    }
-  }, []);
+  const setMode = React.useCallback(
+    async (modeId: string) => {
+      const current = activeIdRef.current;
+      if (current === null || typeof window.srgnt?.chatSessionSetMode !== 'function') return;
+      try {
+        const result = await window.srgnt.chatSessionSetMode(current, modeId);
+        // Reflect what the agent accepted, not what was clicked. The reducer's
+        // `current_mode_update` is the other (agent-initiated) path into the same
+        // field, so both converge on one source of truth.
+        patch(current, (entry) => ({
+          ...entry,
+          transcript: transcriptReducer(entry.transcript, {
+            type: 'update',
+            notification: { sessionUpdate: 'current_mode_update', currentModeId: result.currentModeId },
+          }),
+        }));
+      } catch (cause) {
+        setError(messageOf(cause));
+      }
+    },
+    [patch],
+  );
 
   const cancel = React.useCallback(async () => {
-    const current = sessionIdRef.current;
+    const current = activeIdRef.current;
     if (current === null) return;
     // `session/cancel` is a notification, not a turn ender: the outstanding
     // prompt stays unresolved until the agent finishes winding down. Returning
@@ -339,51 +536,66 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     // concurrently with the cancelled turn on the same ACP session, interleaving
     // its updates. The turn stays busy until the prompt promise itself settles
     // in `sendPrompt`, which is the only signal that the agent is actually done.
-    setStatus((previous) => (previous === 'prompting' ? 'cancelling' : previous));
+    patch(current, (entry) => ({
+      ...entry,
+      status: entry.status === 'prompting' ? 'cancelling' : entry.status,
+    }));
     try {
       await window.srgnt.chatSessionCancel(current);
     } catch (cause) {
-      setStatus('error');
       setError(messageOf(cause));
+      patch(current, (entry) => ({ ...entry, status: 'error' }));
     }
-  }, []);
+  }, [patch]);
 
   const dispose = React.useCallback(async () => {
-    const current = sessionIdRef.current;
+    const current = activeIdRef.current;
     if (current === null) return;
     try {
       await window.srgnt.chatSessionDispose(current);
-      setSession(null);
-      sessionIdRef.current = null;
-      setStatus('idle');
-      setError(null);
-      dispatch({ type: 'reset' });
-      setPermissions([]);
-      setAgentStatus(null);
-      setLastStopReason(null);
     } catch (cause) {
-      // Keep the handle so the user can retry: forgetting it here would strand
+      // Keep the record so the user can retry: forgetting it here would strand
       // the agent process with no way to dispose it before app quit.
-      setStatus('error');
       setError(messageOf(cause));
+      patch(current, (entry) => ({ ...entry, status: 'error' }));
+      return;
     }
-  }, []);
+    setError(null);
+    pending.current.delete(current);
+    knownIds.current = new Set([...knownIds.current].filter((id) => id !== current));
+    setSessions((sessionList) => sessionList.filter((entry) => entry.info.sessionId !== current));
+    // Fall back to whatever is still open rather than to nothing: with three
+    // sessions running, ending one should not empty the panel. Resolved off the
+    // id set rather than inside the state updater, which React may re-run.
+    const remaining = [...knownIds.current];
+    setActiveSessionId(remaining.at(-1) ?? null);
+    bumpList();
+  }, [patch, bumpList]);
 
   const dismissError = React.useCallback(() => setError(null), []);
 
+  const active = sessions.find((entry) => entry.info.sessionId === activeSessionId) ?? null;
+
   const value = React.useMemo<ChatSessionContextValue>(
     () => ({
-      session,
-      status,
+      session: active?.info ?? null,
+      // `connecting` only while nothing is selected: opening a SECOND session
+      // must not blank out the first one's composer mid-turn.
+      status: connecting && active === null ? 'connecting' : (active?.status ?? 'idle'),
       error,
-      transcript,
-      permissions,
-      currentModeId: transcript.currentModeId ?? session?.modes?.currentModeId ?? null,
+      transcript: active?.transcript ?? initialTranscriptState,
+      permissions: active?.permissions ?? [],
+      currentModeId: active?.transcript.currentModeId ?? active?.info.modes?.currentModeId ?? null,
       // The preload bridge is optional in the types, so the selector must not
       // offer a switch that `setMode` would silently swallow.
       canSetMode: typeof window.srgnt?.chatSessionSetMode === 'function',
-      agentStatus,
-      lastStopReason,
+      agentStatus: active?.agentStatus ?? null,
+      lastStopReason: active?.lastStopReason ?? null,
+      openSessions: sessions,
+      activeSessionId,
+      selectSession,
+      openPersistedSession,
+      listRevision,
       newSession,
       sendPrompt,
       setMode,
@@ -393,13 +605,14 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       dismissError,
     }),
     [
-      session,
-      status,
+      active,
+      sessions,
+      activeSessionId,
       error,
-      transcript,
-      permissions,
-      agentStatus,
-      lastStopReason,
+      connecting,
+      listRevision,
+      selectSession,
+      openPersistedSession,
       newSession,
       sendPrompt,
       setMode,
@@ -414,7 +627,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     <ChatSessionContext.Provider value={value}>
       {/* Nested, not merged: terminal chunks arrive far more often than
           transcript updates and must not re-render every transcript consumer. */}
-      <ChatTerminalProvider sessionId={session?.sessionId ?? null}>{children}</ChatTerminalProvider>
+      <ChatTerminalProvider sessionId={activeSessionId}>{children}</ChatTerminalProvider>
     </ChatSessionContext.Provider>
   );
 }

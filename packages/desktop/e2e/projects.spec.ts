@@ -51,9 +51,9 @@ async function startSession(page: Page): Promise<void> {
 }
 
 /**
- * A live session pins the app to its own project's directory, so the switcher
- * refuses to change projects underneath it. Ending the session is how a user
- * switches — these specs do the same.
+ * Ends the session opened by {@link startSession}. Since STEP-24-03 switching
+ * projects no longer needs this — several sessions run at once across projects
+ * — but the merge spec still wants a quiet app before it moves sessions around.
  */
 async function endSession(page: Page): Promise<void> {
   await page.getByTestId('chat-dispose').click();
@@ -114,10 +114,12 @@ test.describe('project switcher', () => {
     await expect(row(page, idA)).toContainText(dirA);
     await expect(row(page, idB)).toContainText(dirB);
 
-    // While the session is live the switch is refused: the agent is running in
-    // project A's directory and must not be silently re-labelled as B.
-    await expect(row(page, idB).getByTestId('project-select')).toBeDisabled();
-    await expect(page.getByTestId('project-switch-locked')).toBeVisible();
+    // STEP-24-02 refused this while a session was live. Since STEP-24-03 every
+    // session carries its own projectId and cwd and several run at once, so
+    // switching only changes where the NEXT session opens — the running agent
+    // stays in its own directory and the panel says so.
+    await expect(row(page, idB).getByTestId('project-select')).toBeEnabled();
+    await expect(page.getByTestId('project-switch-locked')).toHaveCount(0);
     await endSession(page);
 
     await row(page, idB).getByTestId('project-select').click();

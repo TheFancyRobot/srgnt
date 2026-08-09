@@ -89,10 +89,22 @@ const sessions = createSessionsService({
   getWorkspaceRoot: () => workspace.getRoot(),
 });
 
+// Assigned once the chat handlers are registered below; the workspace hooks
+// are declared first, so the call is routed through this rather than reordered.
+let disposeLiveChatSessions: () => Promise<void> = async () => {};
+
 const workspace = createWorkspaceService({
   getWindow: () => windowManager.getWindow(),
   hooks: {
-    beforeRootChanged: (previousRoot, nextRoot) => semanticSearch.handleWorkspaceRootChange(previousRoot, nextRoot),
+    beforeRootChanged: async (previousRoot, nextRoot) => {
+      // A chat session belongs to the workspace it was opened in: its events
+      // and meta live under that root, and its agent's cwd points inside it.
+      // Carrying one across a re-root would append to a store that is about to
+      // close while its metadata resolves against the new root. Sessions are
+      // ended first, so nothing survives the swap to diverge.
+      await disposeLiveChatSessions();
+      await semanticSearch.handleWorkspaceRootChange(previousRoot, nextRoot);
+    },
     prepareWorkspace: (root) => ensureNotesDir(root),
     afterRootChanged: async (root) => {
       crashReporter.setWorkspaceRoot(root);
@@ -145,6 +157,8 @@ const disposeChat = registerChatHandlers({
   projects,
   sessions,
 });
+
+disposeLiveChatSessions = disposeChat;
 
 // Agent teardown must COMPLETE before the app exits, so it hangs off
 // `before-quit` with the quit deferred rather than off `will-quit`, which does

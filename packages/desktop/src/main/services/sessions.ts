@@ -29,8 +29,14 @@ export function createSessionsService(deps: { getWorkspaceRoot(): string }): Ses
     const root = deps.getWorkspaceRoot();
     if (root === '') return undefined;
     if (cachedStore === undefined || cachedRoot !== root) {
+      // Defensive: `setWorkspaceRoot` is the intended path and awaits the close.
+      // Reaching here with a changed root means something re-rooted without it,
+      // and silently replacing the store would strand the old one's descriptors
+      // and advisory locks with no handle left to close them by.
+      const stale = cachedStore;
       cachedRoot = root;
       cachedStore = createSessionStore(root);
+      void stale?.close().catch(() => {});
     }
     return cachedStore;
   }

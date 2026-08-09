@@ -235,6 +235,31 @@ describe('SessionList', () => {
     expect(screen.getByTestId('session-new')).toBeInTheDocument();
   });
 
+  it('opens a new session with no target so the project default applies', async () => {
+    // Passing 'mock' here opened a Mock session in a project configured for Pi.
+    renderPanel();
+    await waitFor(() => expect(screen.getByTestId('session-list')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('session-new'));
+    await waitFor(() => expect(api.chatSessionNew).toHaveBeenCalled());
+    expect((api.chatSessionNew as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBeUndefined();
+  });
+
+  it('refuses a prompt on a session replayed from disk', async () => {
+    // `live: false` means main holds no controller for that id, so the prompt
+    // would surface as a failed turn rather than an explained refusal.
+    renderPanel();
+    await waitFor(() => expect(screen.getByTestId('session-list')).toBeInTheDocument());
+    fireEvent.click(within(rowFor('sess-old')).getByTestId('session-open'));
+    await waitFor(() => expect(screen.getByTestId('chat-input')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('chat-input'), { target: { value: 'keep going' } });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('chat-send'));
+    });
+    await waitFor(() => expect(screen.getByTestId('chat-error')).toHaveTextContent(/no longer running/i));
+    expect(api.chatSessionPrompt).not.toHaveBeenCalled();
+  });
+
   it('opens a persisted session and renders its transcript from disk', async () => {
     openEvents = [
       { seq: 0, ts: '2026-08-01T10:00:01.000Z', protocolVersion: 1, kind: 'client/prompt', payload: { text: 'hi' } },

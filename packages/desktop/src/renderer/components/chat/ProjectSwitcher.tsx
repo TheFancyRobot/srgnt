@@ -119,8 +119,12 @@ export function ProjectSwitcher(): React.ReactElement | null {
   // so switching only changes which project the NEXT session opens in and which
   // session list is shown — no running agent moves. The lock is gone; blocking
   // it now would make concurrent sessions across projects unreachable.
+  // `live` too: `openSessions` also holds sessions replayed from disk, which are
+  // read-only records with no agent behind them. Counting those would claim
+  // work is "still running" when nothing is.
   const openInOtherProjects = (session?.openSessions ?? []).filter(
-    (entry) => entry.info.projectId !== null && entry.info.projectId !== activeProjectId,
+    (entry) =>
+      entry.live && entry.info.projectId !== null && entry.info.projectId !== activeProjectId,
   ).length;
 
   const mergeSource = projects.find((project) => project.id === mergeSourceId) ?? null;

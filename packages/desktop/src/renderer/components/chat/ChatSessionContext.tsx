@@ -205,6 +205,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   // visible or not.
   const knownIds = React.useRef<ReadonlySet<string>>(new Set());
   const activeIdRef = React.useRef<string | null>(null);
+  /** Mirrors `sessions` so callbacks can read `live` without re-binding. */
+  const liveById = React.useRef<ReadonlyMap<string, boolean>>(new Map());
   const pending = React.useRef(new Map<string, unknown[]>());
   const cancelFlush = React.useRef<(() => void) | null>(null);
   /**
@@ -219,6 +221,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
 
   React.useEffect(() => {
     knownIds.current = new Set(sessions.map((entry) => entry.info.sessionId));
+    liveById.current = new Map(sessions.map((entry) => [entry.info.sessionId, entry.live]));
     activeIdRef.current = activeSessionId;
   }, [sessions, activeSessionId]);
 
@@ -369,11 +372,18 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
         const held = earlyPermissions.current
           .filter((entry) => entry.sessionId === result.sessionId)
           .map((entry) => entry.request);
-        earlyPermissions.current = [];
+        // Only this session's entries. Sessions are concurrent now — the header
+        // button and the session list can both be creating one — so clearing the
+        // whole buffer would discard the other creation's startup prompt and
+        // leave that agent blocked until its permission deadline expires.
+        earlyPermissions.current = earlyPermissions.current.filter(
+          (entry) => entry.sessionId !== result.sessionId,
+        );
         // A status that arrived before the handle was known still describes THIS
         // process — adopt it so a startup crash surfaces instead of vanishing.
         const heldStatus = earlyStatuses.current[result.sessionId] ?? null;
-        earlyStatuses.current = {};
+        const { [result.sessionId]: _adopted, ...remainingStatuses } = earlyStatuses.current;
+        earlyStatuses.current = remainingStatuses;
         const opened: OpenSession = {
           info: {
             sessionId: result.sessionId,
@@ -454,7 +464,12 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
           live: result.live,
         };
         knownIds.current = new Set([...knownIds.current, sessionId]);
-        setSessions((current) => [...current, opened]);
+        // `knownIds` is only written after the read resolves, so two clicks on
+        // one row both pass the guard above. De-duplicate in the updater, which
+        // is the only place that sees the committed list.
+        setSessions((current) =>
+          current.some((entry) => entry.info.sessionId === sessionId) ? current : [...current, opened],
+        );
         setActiveSessionId(sessionId);
       } catch (cause) {
         setError(messageOf(cause));
@@ -467,6 +482,13 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     async (text: string): Promise<boolean> => {
       const current = activeIdRef.current;
       if (current === null || text.trim() === '') return false;
+      // A session replayed from disk has no process behind it. Main holds no
+      // controller entry for that id, so the prompt would surface as a failed
+      // turn; refusing here is the honest version until STEP-24-04 reconnects.
+      if (liveById.current.get(current) === false) {
+        setError('This session is no longer running. Start a new session to continue it.');
+        return false;
+      }
       setError(null);
       patch(current, (entry) => ({
         ...entry,

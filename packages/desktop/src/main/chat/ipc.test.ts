@@ -111,6 +111,39 @@ describe('registerChatHandlers', () => {
     expect(createController).not.toHaveBeenCalled();
   });
 
+  it('marks a session stranded active by a crash as interrupted when listing', async () => {
+    // The common crash shape: the app exited after a complete, newline-terminated
+    // event and before `client/stop`. The log is not torn, so nothing flags it,
+    // and no controller exists to ever close it out — without this the list
+    // reports "Running" forever and clicking the row is the only way to find out.
+    const createController = vi.fn(() => fakeController() as unknown as ChatSessionController);
+    const updateMeta = vi.fn(async (_ref: unknown, patch: { status: string }) => ({
+      id: 'stranded', projectId: 'p1', harnessId: 'mock', kind: 'single',
+      status: patch.status, createdAt: '2026-01-01T00:00:00.000Z',
+    }));
+    const listSessions = vi.fn(async () => ({
+      sessions: [
+        { id: 'stranded', projectId: 'p1', harnessId: 'mock', kind: 'single', status: 'active', createdAt: '2026-01-01T00:00:00.000Z' },
+        { id: 'clean', projectId: 'p1', harnessId: 'mock', kind: 'single', status: 'idle', createdAt: '2026-01-02T00:00:00.000Z' },
+      ],
+      skipped: [],
+    }));
+    registerChatHandlers({
+      getWindow: () => null,
+      createController,
+      sessions: { store: () => ({ listSessions, updateMeta }) as never },
+    });
+
+    const listed = (await handlers.get(ipcChannels.chatSessionList)!({}, { projectId: 'p1' })) as {
+      sessions: { id: string; status: string }[];
+    };
+    expect(listed.sessions.find((session) => session.id === 'stranded')!.status).toBe('interrupted');
+    // Only the stranded one is rewritten, and still no controller is built.
+    expect(listed.sessions.find((session) => session.id === 'clean')!.status).toBe('idle');
+    expect(updateMeta).toHaveBeenCalledTimes(1);
+    expect(createController).not.toHaveBeenCalled();
+  });
+
   it('returns an empty session list when no workspace root exists yet', async () => {
     registerChatHandlers({ getWindow: () => null, createController: () => fakeController() as unknown as ChatSessionController });
     expect(await handlers.get(ipcChannels.chatSessionList)!({}, { projectId: 'p1' })).toEqual({

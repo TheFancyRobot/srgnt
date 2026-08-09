@@ -170,11 +170,24 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
     const store = wiring.sessions?.store();
     if (store === undefined) return { sessions: [], skipped: [] } satisfies ChatSessionListResponse;
     const { sessions, skipped } = await store.listSessions(projectId);
+    // Same repair as `open`, applied here because the list is where the user
+    // actually sees the status: a session left `active` by a crash has no
+    // controller to ever close it, so without this it reads "Running" forever
+    // and clicking it is the only way to learn otherwise.
+    const controller = controllerPromise === undefined ? undefined : await controllerPromise;
+    const reconciled = await Promise.all(
+      sessions.map(async (session) => {
+        if (session.status !== 'active' || controller?.has(session.id) === true) return session;
+        return store
+          .updateMeta({ projectId, sessionId: session.id }, { status: 'interrupted' })
+          .catch(() => session);
+      }),
+    );
     return {
       // Newest activity first. `updatedAt` is absent until the first meta
       // rewrite, so a never-prompted session sorts by its creation time rather
       // than to the bottom of the list.
-      sessions: [...sessions].sort((left, right) =>
+      sessions: [...reconciled].sort((left, right) =>
         (right.updatedAt ?? right.createdAt).localeCompare(left.updatedAt ?? left.createdAt),
       ),
       skipped,
@@ -194,8 +207,14 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
     // A log that does not end on a record boundary is a turn that never
     // finished — the crash-mid-append shape. Recorded once, and only for a
     // session nobody is writing to: a live session's tail is simply in flight.
+    // A torn tail is the loud crash shape, but not the common one: an app that
+    // exits after a newline-terminated event and before `client/stop` leaves a
+    // perfectly valid log whose last word is still a turn in progress. Keying
+    // only on `truncatedTail` left those sessions reporting "Running" forever,
+    // since no controller exists to ever close them out.
+    const stranded = !live && session.status === 'active';
     const repaired =
-      events.truncatedTail && !live && session.status !== 'interrupted'
+      (events.truncatedTail || stranded) && !live && session.status !== 'interrupted'
         ? await store.updateMeta(ref, { status: 'interrupted' })
         : session;
     return {

@@ -131,11 +131,14 @@ function SessionRowItem({
         onClick={onOpen}
       >
         <span className="flex items-center gap-1">
+          {/* role="img": same reason as ChatPlanSidePanel — most screen readers
+              ignore aria-label on a generic span and announce nothing. */}
           <span
             className="session-status-dot"
             data-testid="session-status"
             data-status={row.status}
             title={STATUS_LABELS[row.status]}
+            role="img"
             aria-label={STATUS_LABELS[row.status]}
           />
           <span className="flex-1 block text-xs truncate">{row.title ?? UNTITLED_SESSION_LABEL}</span>
@@ -172,7 +175,10 @@ export function SessionList(): React.ReactElement | null {
 
   React.useEffect(() => {
     if (projectId === null || typeof window.srgnt?.chatSessionList !== 'function') {
+      // The list is intentionally off here, so a banner from the last project
+      // would be reporting a failure that no longer describes anything.
       setPersisted([]);
+      setError(null);
       return;
     }
     let cancelled = false;
@@ -185,6 +191,10 @@ export function SessionList(): React.ReactElement | null {
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
+        // Drop the rows too: they belong to whichever project last read
+        // successfully, and showing them under this project's heading claims
+        // sessions that are not there.
+        setPersisted([]);
         setError(cause instanceof Error ? cause.message : String(cause));
       });
     // Re-read on `revision`, which the chat context bumps when a session opens,
@@ -202,11 +212,13 @@ export function SessionList(): React.ReactElement | null {
     <div className="p-3 border-b border-border-default space-y-2" data-testid="session-list-panel">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="section-heading">Sessions</h2>
+        {/* No target: main picks the project's `defaultHarnessId`. Passing
+            'mock' opened a Mock session in a project configured for Pi. */}
         <button
           type="button"
           className="text-[11px] text-text-tertiary"
           data-testid="session-new"
-          onClick={() => void chat.newSession('mock')}
+          onClick={() => void chat.newSession()}
         >
           New session
         </button>

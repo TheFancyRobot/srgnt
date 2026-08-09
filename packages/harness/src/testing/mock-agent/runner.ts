@@ -1,3 +1,4 @@
+import { RequestError } from '@agentclientprotocol/sdk';
 import type {
   Agent,
   AgentSideConnection,
@@ -8,6 +9,7 @@ import type {
   InitializeRequest,
   InitializeResponse,
   LoadSessionRequest,
+  LoadSessionResponse,
   NewSessionRequest,
   NewSessionResponse,
   PromptRequest,
@@ -17,7 +19,7 @@ import type {
   SetSessionModeRequest,
   SetSessionModeResponse,
 } from '@agentclientprotocol/sdk';
-import type { Directive, InitCapabilities, Scenario } from './scenario.js';
+import type { Directive, InitCapabilities, Scenario, UnimplementedMethod } from './scenario.js';
 
 /**
  * Side effects the runner cannot perform itself, injected so the *same* scenario
@@ -126,26 +128,51 @@ export class MockAgent implements Agent {
   }
 
   async newSession(_params: NewSessionRequest): Promise<NewSessionResponse> {
-    const modes = this.scenario.initialize.modes;
-    return {
-      sessionId: this.scenario.sessionId,
-      ...(modes.length > 0
-        ? {
-            modes: {
-              currentModeId: modes[0],
-              availableModes: modes.map((id) => ({ id, name: id })),
-            },
-          }
-        : {}),
-    };
+    return { sessionId: this.scenario.sessionId, ...this.modeState() };
   }
 
-  async loadSession(_params: LoadSessionRequest): Promise<void> {
-    // Capability-gated by the client; a no-op replay is enough for the substrate.
+  /**
+   * `session/load` — replays `loadReplay` as `session/update` notifications
+   * BEFORE responding, which is what makes a client's resume-by-replay path
+   * reachable at all (the SDK's own `MockAgent` no-op could only prove the call
+   * was made). The response carries the same mode block `session/new` does, so
+   * a resumed Pi-shaped session gets its thinking-level selector back.
+   */
+  async loadSession(params: LoadSessionRequest): Promise<LoadSessionResponse> {
+    this.refuseIfUnimplemented('session/load');
+    for (const directive of this.scenario.loadReplay) {
+      await this.execute(params.sessionId, directive);
+    }
+    return this.modeState();
   }
 
   async resumeSession(_params: ResumeSessionRequest): Promise<ResumeSessionResponse> {
+    this.refuseIfUnimplemented('session/resume');
     return {};
+  }
+
+  /** The advertised mode block, or `{}` when the scenario advertises none. */
+  private modeState(): { modes?: { currentModeId: string; availableModes: { id: string; name: string }[] } } {
+    const modes = this.scenario.initialize.modes;
+    if (modes.length === 0) return {};
+    return {
+      modes: {
+        currentModeId: modes[0]!,
+        availableModes: modes.map((id) => ({ id, name: id })),
+      },
+    };
+  }
+
+  /**
+   * Answers `-32601` for a method the scenario advertised but declared
+   * unimplemented. Thrown, not returned: the SDK turns a `RequestError` into
+   * the JSON-RPC error response, which is exactly what a real mismatched
+   * harness puts on the wire.
+   */
+  private refuseIfUnimplemented(method: UnimplementedMethod): void {
+    if (this.scenario.unimplementedMethods.includes(method)) {
+      throw RequestError.methodNotFound(method);
+    }
   }
 
   async setSessionMode(params: SetSessionModeRequest): Promise<SetSessionModeResponse> {

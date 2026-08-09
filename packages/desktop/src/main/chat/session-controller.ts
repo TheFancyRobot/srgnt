@@ -8,6 +8,7 @@ import type {
   ChatSessionModes,
   ChatSessionNewResponse,
   ChatSessionPromptResponse,
+  ChatSessionReconnectResponse,
   ChatSessionSetModeResponse,
   ChatSessionStatusEvent,
   ChatSessionUpdateEvent,
@@ -24,6 +25,11 @@ import { createPermissionEngine, createProjectPolicyHook } from '@srgnt/runtime'
 import { Effect } from 'effect';
 import { createChatClientServices, type ChatClientServices } from './client-services.js';
 import { createChatPermissionHost, type ChatPermissionHost } from './permissions.js';
+import {
+  classifyReconnectFailure,
+  persistedUpdatePayloads,
+  reconcileReplay,
+} from './resume.js';
 
 /**
  * `@srgnt/harness` is ESM-only (`"type": "module"`) and desktop-main compiles to
@@ -368,6 +374,12 @@ export interface ChatSessionPersistence {
     acpSessionId?: string;
     title?: string;
     createdAt: string;
+    // Fork lineage + idempotency stamp, written by this one call so the child
+    // record is self-describing: nothing about a fork's identity depends on a
+    // second file landing after it (STEP-24-04).
+    parentSessionId?: string;
+    idempotencyKey?: string;
+    requestFingerprint?: string;
   }): Promise<unknown>;
   appendEvent(
     ref: { projectId: string; sessionId: string },
@@ -379,7 +391,24 @@ export interface ChatSessionPersistence {
     ref: { projectId: string; sessionId: string },
     patch: { status?: SessionStatus; title?: string },
   ): Promise<unknown>;
+  /**
+   * The persisted stream, for reconciling a `session/load` replay against it.
+   *
+   * Read whole, deliberately: a resume replays the entire history by
+   * definition, so there is no `fromSeq` window that would make this cheaper
+   * (and `readEvents` filters after parsing anyway — see the `ponytail:` note
+   * on `readEventLog`). If session logs ever grow past "one prompt turn at a
+   * time", the fix is a streaming reader there, not a narrower call here.
+   */
+  readEvents(ref: { projectId: string; sessionId: string }): Promise<{ events: SessionEvent[] }>;
   closeSession(ref: { projectId: string; sessionId: string }): Promise<void>;
+}
+
+/** The fork stamp written by the SAME create that commits a forked session. */
+export interface ChatSessionLineage {
+  readonly parentSessionId: string;
+  readonly idempotencyKey: string;
+  readonly requestFingerprint: string;
 }
 
 interface SessionState {
@@ -569,12 +598,112 @@ export class ChatSessionController {
   }
 
   /** initialize → session/new; starts streaming updates. Returns a chat handle. */
-  async newSession(target: ChatTarget, project: ChatSessionProject = {}): Promise<ChatSessionNewResponse> {
+  async newSession(
+    target: ChatTarget,
+    project: ChatSessionProject = {},
+    lineage?: ChatSessionLineage,
+  ): Promise<ChatSessionNewResponse> {
     // A UUID, not a counter: the handle is now also the on-disk directory name
     // and survives restarts, so it has to be unique across processes, not just
     // within one. (The mock returns a fixed ACP session id for every session —
     // that id can never be the srgnt id.)
     const handle = randomUUID();
+    const opened = await this.openConnection(handle, target, project);
+    const { connection, harness, cleanup, services, permissions, events, append, persistRef, unsubscribeStatus } =
+      opened;
+    let acpSessionId: string;
+    let modes: ChatSessionModes | undefined;
+    try {
+      const result = await Effect.runPromise(connection.newSession({ cwd: opened.cwd, mcpServers: [] }));
+      acpSessionId = result.sessionId;
+      modes = readModes(result);
+    } catch (cause) {
+      unsubscribeStatus();
+      // The connection is live but unusable — tear the process down here so a
+      // failed `session/new` (e.g. Pi missing → SpawnFailed) can never leak a
+      // supervised child with no handle to dispose it by.
+      services.disposeAll();
+      await cleanup();
+      throw toError(cause);
+    }
+    this.sessions.set(handle, {
+      connection,
+      cleanup,
+      acpSessionId,
+      pump: this.startPump(handle, connection, acpSessionId, append),
+      services,
+      permissions,
+      events,
+      append,
+      persistRef,
+      harnessId: harness.id,
+      metaChain: Promise.resolve(),
+      titled: false,
+      modeIds: new Set(modes?.availableModes.map((mode) => mode.id) ?? []),
+      unsubscribeStatus,
+    });
+    if (persistRef !== undefined) {
+      // Written only now that the identity is settled: before `session/new`
+      // there is no `acpSessionId` and a failed connect would have left a
+      // listable session that never existed. `idle` is the honest opening
+      // status — connected, no turn in flight.
+      this.chainMeta(handle, async (persistence) => {
+        await persistence.createSession({
+          id: handle,
+          projectId: persistRef.projectId,
+          harnessId: harness.id,
+          status: 'idle',
+          acpSessionId,
+          createdAt: new Date().toISOString(),
+          // One write, one commit point: lineage AND the fork's replay identity
+          // land with the record itself, so a crash straight after this leaves
+          // a fork that is still findable and still linked.
+          ...(lineage !== undefined ? { ...lineage } : {}),
+        });
+      });
+    }
+    append('client/session_created', {
+      target,
+      harnessId: harness.id,
+      cwd: opened.cwd,
+      ...(project.projectId !== undefined ? { projectId: project.projectId } : {}),
+      ...(lineage !== undefined ? { parentSessionId: lineage.parentSessionId } : {}),
+    });
+    return {
+      sessionId: handle,
+      target,
+      ...(project.projectId !== undefined ? { projectId: project.projectId } : {}),
+      harnessId: harness.id,
+      harnessName: harness.name,
+      quirks: [...harness.quirks],
+      capabilities: connection.capabilities as unknown as Record<string, unknown>,
+      ...(modes !== undefined ? { modes } : {}),
+    };
+  }
+
+  /**
+   * Everything a session needs before its first ACP call: cwd, audit sink,
+   * permission host, client services, the connection itself, and the supervisor
+   * subscription. Shared by `newSession` and `reconnect` because a reopened
+   * session needs exactly the same scaffolding — the only difference is whether
+   * `session/new` or `session/resume`/`session/load` follows.
+   */
+  private async openConnection(
+    handle: string,
+    target: ChatTarget,
+    project: ChatSessionProject,
+  ): Promise<{
+    connection: AcpAgentConnection;
+    harness: ChatHarnessIdentity;
+    cleanup: () => Promise<void>;
+    services: ChatClientServices;
+    permissions: ChatPermissionHost;
+    events: SessionEvent[];
+    append: (kind: string, payload: Record<string, unknown>) => void;
+    persistRef: { projectId: string; sessionId: string } | undefined;
+    unsubscribeStatus: () => void;
+    cwd: string;
+  }> {
     // The cwd must be known *before* connecting: client services are confined to
     // it, and their presence is what `initialize` advertises as capabilities.
     //
@@ -683,22 +812,32 @@ export class ChatSessionController {
           permissions.cancelAll('cancelled');
         }
       }) ?? (() => {});
-    let acpSessionId: string;
-    let modes: ChatSessionModes | undefined;
-    try {
-      const result = await Effect.runPromise(connection.newSession({ cwd, mcpServers: [] }));
-      acpSessionId = result.sessionId;
-      modes = readModes(result);
-    } catch (cause) {
-      unsubscribeStatus();
-      // The connection is live but unusable — tear the process down here so a
-      // failed `session/new` (e.g. Pi missing → SpawnFailed) can never leak a
-      // supervised child with no handle to dispose it by.
-      services.disposeAll();
-      await cleanup();
-      throw toError(cause);
-    }
-    const pump = (async () => {
+    return {
+      connection,
+      harness,
+      cleanup,
+      services,
+      permissions,
+      events,
+      append,
+      persistRef,
+      unsubscribeStatus,
+      cwd,
+    };
+  }
+
+  /**
+   * The one place streamed frames are persisted and pushed. Started only AFTER
+   * a `session/load` replay has been lifted off the channel, which is what
+   * keeps replayed history out of the log it was replayed from.
+   */
+  private startPump(
+    handle: string,
+    connection: AcpAgentConnection,
+    acpSessionId: string,
+    append: (kind: string, payload: Record<string, unknown>) => void,
+  ): Promise<void> {
+    return (async () => {
       try {
         for await (const update of connection.updates(acpSessionId)) {
           // Persisted verbatim, then pushed. Reopening the session replays these
@@ -711,54 +850,186 @@ export class ChatSessionController {
         /* the iterator ends when the connection closes; not an error here */
       }
     })();
-    this.sessions.set(handle, {
-      connection,
-      cleanup,
-      acpSessionId,
-      pump,
-      services,
-      permissions,
-      events,
-      append,
-      persistRef,
-      harnessId: harness.id,
-      metaChain: Promise.resolve(),
-      titled: false,
-      modeIds: new Set(modes?.availableModes.map((mode) => mode.id) ?? []),
-      unsubscribeStatus,
-    });
-    if (persistRef !== undefined) {
-      // Written only now that the identity is settled: before `session/new`
-      // there is no `acpSessionId` and a failed connect would have left a
-      // listable session that never existed. `idle` is the honest opening
-      // status — connected, no turn in flight.
-      this.chainMeta(handle, async (persistence) => {
-        await persistence.createSession({
-          id: handle,
-          projectId: persistRef.projectId,
-          harnessId: harness.id,
-          status: 'idle',
-          acpSessionId,
-          createdAt: new Date().toISOString(),
-        });
-      });
+  }
+
+  /**
+   * Puts a live agent back behind a session that was reopened from disk —
+   * lazily, on the first prompt, so browsing sessions still spawns nothing.
+   *
+   * The branch is data-driven off `NegotiatedCapabilities` and nothing else
+   * (never a harness id, never a hardcoded list), and it is a CASCADE: a
+   * capability that turns out to be advertised-but-unimplemented (`-32601`)
+   * kills that *method* for this connection, not the session, so the next
+   * untried transparent-continue path is attempted before anything degrades.
+   * Adding a harness in a later phase must require zero changes here.
+   *
+   * Only two things collapse a session to read-only: an exhausted cascade and a
+   * session the agent no longer has. A transient failure leaves it retryable.
+   * Nothing here ever fakes a continue by re-priming context.
+   */
+  async reconnect(
+    handle: string,
+    options: {
+      readonly target: ChatTarget;
+      readonly project: ChatSessionProject;
+      readonly acpSessionId?: string;
+    },
+  ): Promise<ChatSessionReconnectResponse> {
+    // Already live (two prompts raced, or the renderer asked for a session it
+    // never lost). Reconnecting again would spawn a second agent for one id.
+    if (this.sessions.has(handle)) return { outcome: 'resumed' };
+    const acpSessionId = options.acpSessionId;
+    if (acpSessionId === undefined || acpSessionId === '') {
+      // Persisted before `session/new` returned: there is no agent-side id to
+      // resume, and no capability check could change that — so this degrades
+      // WITHOUT spawning anything.
+      return {
+        outcome: 'read_only',
+        reason:
+          'This session was never registered with an agent, so it cannot be continued. Fork it to keep going.',
+      };
     }
-    append('client/session_created', {
-      target,
-      harnessId: harness.id,
-      cwd,
-      ...(project.projectId !== undefined ? { projectId: project.projectId } : {}),
-    });
-    return {
-      sessionId: handle,
-      target,
-      ...(project.projectId !== undefined ? { projectId: project.projectId } : {}),
-      harnessId: harness.id,
-      harnessName: harness.name,
-      quirks: [...harness.quirks],
-      capabilities: connection.capabilities as unknown as Record<string, unknown>,
-      ...(modes !== undefined ? { modes } : {}),
+
+    let opened;
+    try {
+      opened = await this.openConnection(handle, options.target, options.project);
+    } catch (cause) {
+      // Spawn/connect failure is transient by nature: the harness binary may be
+      // missing right now and present next time. The session is untouched.
+      return { outcome: 'retryable', reason: toError(cause).message };
+    }
+    const { connection, harness, cleanup, services, permissions, events, append, persistRef, unsubscribeStatus } =
+      opened;
+    const abandon = async (): Promise<void> => {
+      unsubscribeStatus();
+      permissions.cancelAll('cancelled');
+      services.disposeAll();
+      await cleanup();
     };
+
+    const capabilities = connection.capabilities;
+    const cascade: ('resume' | 'load')[] = [
+      ...(capabilities.resumeSession ? (['resume'] as const) : []),
+      ...(capabilities.loadSession ? (['load'] as const) : []),
+    ];
+    let mismatched: string | undefined;
+
+    for (const attempt of cascade) {
+      const request = { sessionId: acpSessionId, cwd: opened.cwd, mcpServers: [] };
+      const result = await Effect.runPromise(
+        Effect.either(
+          attempt === 'resume' ? connection.resume(request) : connection.load(request),
+        ),
+      );
+      if (result._tag === 'Left') {
+        const failure = classifyReconnectFailure(result.left);
+        if (failure === 'transient') {
+          await abandon();
+          return { outcome: 'retryable', reason: toError(result.left).message };
+        }
+        if (failure === 'missing_session') {
+          // The id is dead, not the method: trying the other path with the same
+          // id would fail identically, so the cascade stops here.
+          await abandon();
+          return {
+            outcome: 'read_only',
+            reason: 'The agent no longer has this session. Fork it to continue in a new one.',
+          };
+        }
+        // Unsupported: recorded so the eventual notice can name WHICH capability
+        // lied, then the cascade continues with whatever is left untried.
+        mismatched = attempt === 'resume' ? 'resumeSession' : 'loadSession';
+        append('client/capability_mismatch', {
+          capability: mismatched,
+          method: attempt === 'resume' ? 'session/resume' : 'session/load',
+          harnessId: harness.id,
+        });
+        continue;
+      }
+
+      let historyDiverged = false;
+      if (attempt === 'load') {
+        // The replay is fully queued by the time `load()` resolved; take it off
+        // the channel BEFORE the pump exists so replayed frames are never
+        // re-appended (the local log is canonical and already holds them).
+        const replayed = connection.takeBufferedUpdates(acpSessionId);
+        historyDiverged = await this.reconcileLoadReplay(persistRef, replayed, append);
+      }
+      const modes = readModes(result.right);
+      this.sessions.set(handle, {
+        connection,
+        cleanup,
+        acpSessionId,
+        pump: this.startPump(handle, connection, acpSessionId, append),
+        services,
+        permissions,
+        events,
+        append,
+        persistRef,
+        harnessId: harness.id,
+        metaChain: Promise.resolve(),
+        // A reopened session already has its title from the first prompt it ever
+        // took; a resumed one must not be renamed by the prompt that resumed it.
+        titled: true,
+        modeIds: new Set(modes?.availableModes.map((mode) => mode.id) ?? []),
+        unsubscribeStatus,
+      });
+      append('client/reconnected', {
+        via: attempt === 'resume' ? 'session/resume' : 'session/load',
+        harnessId: harness.id,
+        ...(mismatched !== undefined ? { after: mismatched } : {}),
+      });
+      this.persistMeta(handle, { status: 'idle' });
+      return {
+        outcome: attempt === 'resume' ? 'resumed' : 'loaded',
+        session: {
+          sessionId: handle,
+          target: options.target,
+          ...(persistRef !== undefined ? { projectId: persistRef.projectId } : {}),
+          harnessId: harness.id,
+          harnessName: harness.name,
+          quirks: [...harness.quirks],
+          capabilities: capabilities as unknown as Record<string, unknown>,
+          ...(modes !== undefined ? { modes } : {}),
+        },
+        ...(historyDiverged ? { historyDiverged: true } : {}),
+      };
+    }
+
+    await abandon();
+    return {
+      outcome: 'read_only',
+      reason:
+        mismatched !== undefined
+          ? `${harness.name} advertised ${mismatched} but does not implement it, so this session cannot be continued. Fork it to keep going.`
+          : `${harness.name} cannot continue a previous session. Fork it to keep going.`,
+    };
+  }
+
+  /**
+   * Compares a `session/load` replay against the persisted log, in full order.
+   * Returns whether they diverged; the local log is canonical either way and
+   * the renderer's transcript is never replaced.
+   */
+  private async reconcileLoadReplay(
+    persistRef: { projectId: string; sessionId: string } | undefined,
+    replayed: readonly unknown[],
+    append: (kind: string, payload: Record<string, unknown>) => void,
+  ): Promise<boolean> {
+    const store = this.options.getStore?.();
+    if (persistRef === undefined || store === undefined) return false;
+    let persisted;
+    try {
+      persisted = await store.readEvents(persistRef);
+    } catch {
+      // An unreadable log is not a reason to refuse the reconnect: the session
+      // is live, and the worst case is one un-reconciled resume.
+      return false;
+    }
+    const result = reconcileReplay(persistedUpdatePayloads(persisted.events), replayed);
+    if (!result.diverged) return false;
+    append('client/load_reconciliation', { ...result });
+    return true;
   }
 
   /**

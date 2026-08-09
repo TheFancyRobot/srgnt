@@ -51,6 +51,13 @@ let updateListeners: ((event: { sessionId: string; update: unknown }) => void)[]
 let persisted: ReturnType<typeof persistedSession>[];
 let openEvents: { seq: number; ts: string; protocolVersion: number; kind: string; payload?: unknown }[];
 let newSessionCount = 0;
+/** What `chat:session:reconnect` answers; per-test, since it drives the branch. */
+let reconnectResult: {
+  outcome: 'resumed' | 'loaded' | 'read_only' | 'retryable';
+  reason?: string;
+  session?: Record<string, unknown>;
+  historyDiverged?: boolean;
+};
 // Deliberately loose: this stands in for the whole preload bridge, whose
 // members have wildly different signatures.
 let api: Record<string, unknown>;
@@ -60,6 +67,19 @@ beforeEach(() => {
   persisted = [persistedSession()];
   openEvents = [];
   newSessionCount = 0;
+  reconnectResult = {
+    outcome: 'loaded',
+    session: {
+      sessionId: 'sess-old',
+      target: 'mock',
+      harnessId: 'mock',
+      harnessName: 'Mock Agent',
+      quirks: [],
+      capabilities: { protocolVersion: 1, loadSession: true },
+      projectId: project.id,
+      modes: { currentModeId: 'low', availableModes: [{ id: 'low', name: 'low' }] },
+    },
+  };
   api = {
     getWorkspaceRoot: vi.fn(async () => project.rootDir),
     projectList: vi.fn(async () => ({ projects: [project], skipped: [] })),
@@ -83,6 +103,21 @@ beforeEach(() => {
       };
     }),
     chatSessionPrompt: vi.fn(async () => ({ stopReason: 'end_turn' })),
+    chatSessionReconnect: vi.fn(async () => reconnectResult),
+    chatSessionFork: vi.fn(async (_projectId: string, sourceSessionId: string) => ({
+      session: {
+        sessionId: 'fork-1',
+        target: 'mock',
+        harnessId: 'mock',
+        harnessName: 'Mock Agent',
+        quirks: [],
+        capabilities: { protocolVersion: 1 },
+        projectId: project.id,
+      },
+      parentSessionId: sourceSessionId,
+      handoffText: 'Continuing from "Fix the login bug".\n',
+      reused: false,
+    })),
     chatSessionDispose: vi.fn(async () => {}),
     onChatSessionUpdate: vi.fn((listener: (event: { sessionId: string; update: unknown }) => void) => {
       updateListeners.push(listener);
@@ -138,6 +173,9 @@ describe('mergeSessionRows', () => {
     lastStopReason: null,
     title: null,
     live: true,
+    readOnlyReason: null,
+    historyDiverged: false,
+    pendingPrompt: null,
     ...overrides,
   });
 
@@ -244,20 +282,106 @@ describe('SessionList', () => {
     expect((api.chatSessionNew as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBeUndefined();
   });
 
-  it('refuses a prompt on a session replayed from disk', async () => {
-    // `live: false` means main holds no controller for that id, so the prompt
-    // would surface as a failed turn rather than an explained refusal.
+  /** Reopen `sess-old` from the list and type into its composer. */
+  async function reopenAndType(text: string): Promise<void> {
     renderPanel();
     await waitFor(() => expect(screen.getByTestId('session-list')).toBeInTheDocument());
     fireEvent.click(within(rowFor('sess-old')).getByTestId('session-open'));
     await waitFor(() => expect(screen.getByTestId('chat-input')).toBeInTheDocument());
-
-    fireEvent.change(screen.getByTestId('chat-input'), { target: { value: 'keep going' } });
+    fireEvent.change(screen.getByTestId('chat-input'), { target: { value: text } });
     await act(async () => {
       fireEvent.click(screen.getByTestId('chat-send'));
     });
-    await waitFor(() => expect(screen.getByTestId('chat-error')).toHaveTextContent(/no longer running/i));
+  }
+
+  it('reconnects a session replayed from disk on its first prompt, then sends it', async () => {
+    // Reopen is process-free; the prompt is where a process becomes worth
+    // spawning. Nothing may be sent before the reconnect resolved.
+    await reopenAndType('keep going');
+    await waitFor(() => expect(api.chatSessionReconnect).toHaveBeenCalledWith('proj-a', 'sess-old'));
+    expect(api.chatSessionPrompt).toHaveBeenCalledWith('sess-old', 'keep going');
+    expect(screen.queryByTestId('chat-read-only')).not.toBeInTheDocument();
+    // The load response's identity block lands, so a resumed Pi-shaped session
+    // gets its mode selector back instead of staying blank.
+    expect(screen.getByTestId('chat-mode-select')).toBeInTheDocument();
+  });
+
+  it('goes read-only with a fork affordance when nothing can continue the session', async () => {
+    reconnectResult = { outcome: 'read_only', reason: 'Mock Agent cannot continue a previous session.' };
+    await reopenAndType('keep going');
+    await waitFor(() => expect(screen.getByTestId('chat-read-only')).toBeInTheDocument());
+    expect(screen.getByTestId('chat-read-only-reason')).toHaveTextContent(/cannot continue/i);
+    // Read-only means read-only: nothing was prompted and the composer is inert.
     expect(api.chatSessionPrompt).not.toHaveBeenCalled();
+    expect(screen.getByTestId('chat-input')).toBeDisabled();
+  });
+
+  it('keeps a transient reconnect failure retryable instead of read-only', async () => {
+    reconnectResult = { outcome: 'retryable', reason: 'Failed to spawn ACP agent' };
+    await reopenAndType('keep going');
+    await waitFor(() => expect(screen.getByTestId('chat-error')).toHaveTextContent(/failed to spawn/i));
+    // The session is NOT written off: the composer still takes a retry.
+    expect(screen.queryByTestId('chat-read-only')).not.toBeInTheDocument();
+    expect(screen.getByTestId('chat-input')).toBeEnabled();
+    expect(api.chatSessionPrompt).not.toHaveBeenCalled();
+  });
+
+  it('forks a read-only session and pre-fills the handoff without sending it', async () => {
+    reconnectResult = { outcome: 'read_only', reason: 'Mock Agent cannot continue a previous session.' };
+    await reopenAndType('keep going');
+    await waitFor(() => expect(screen.getByTestId('chat-fork')).toBeInTheDocument());
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('chat-fork'));
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('chat-input')).toHaveValue('Continuing from "Fix the login bug".\n'),
+    );
+    // The whole point of the fork path: the user reads the handoff first.
+    expect(api.chatSessionPrompt).not.toHaveBeenCalled();
+    expect(api.chatSessionFork).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends the same idempotency key when the fork button is double-clicked', async () => {
+    reconnectResult = { outcome: 'read_only', reason: 'nope' };
+    await reopenAndType('keep going');
+    await waitFor(() => expect(screen.getByTestId('chat-fork')).toBeInTheDocument());
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('chat-fork'));
+      fireEvent.click(screen.getByTestId('chat-fork'));
+    });
+    const calls = (api.chatSessionFork as ReturnType<typeof vi.fn>).mock.calls;
+    // Whether the button's own guard swallowed the second click or not, any key
+    // that DID reach main must be the same one — that is what makes the service
+    // resolve it to the first child instead of forking twice.
+    expect(new Set(calls.map((call) => call[2] as string)).size).toBe(1);
+  });
+
+  it('shows a subtle notice when the replayed history diverged from the local log', async () => {
+    reconnectResult = { ...reconnectResult, historyDiverged: true };
+    await reopenAndType('keep going');
+    await waitFor(() => expect(screen.getByTestId('chat-history-diverged')).toBeInTheDocument());
+    // Diverging is not a failure: the turn still ran.
+    expect(api.chatSessionPrompt).toHaveBeenCalled();
+    expect(screen.queryByTestId('chat-read-only')).not.toBeInTheDocument();
+  });
+
+  it('renders navigable lineage links in both directions', async () => {
+    persisted = [
+      persistedSession({ id: 'sess-old', forkedSessionIds: ['sess-fork'] }),
+      persistedSession({ id: 'sess-fork', title: 'Continued', parentSessionId: 'sess-old' }),
+    ];
+    renderPanel();
+    await waitFor(() => expect(screen.getByTestId('session-list')).toBeInTheDocument());
+    const parentLink = within(rowFor('sess-fork')).getByTestId('session-lineage');
+    expect(parentLink).toHaveAttribute('data-target-session-id', 'sess-old');
+    const childLink = within(rowFor('sess-old')).getByTestId('session-lineage');
+    expect(childLink).toHaveAttribute('data-target-session-id', 'sess-fork');
+
+    await act(async () => {
+      fireEvent.click(childLink);
+    });
+    await waitFor(() => expect(api.chatSessionOpen).toHaveBeenCalledWith('proj-a', 'sess-fork'));
   });
 
   it('opens a persisted session and renders its transcript from disk', async () => {

@@ -2,6 +2,9 @@
 /// <reference types="vite/client" />
 
 import type {
+  ChatSessionForkResponse,
+  ChatSessionNewResponse,
+  ChatSessionReconnectResponse,
   DesktopSettings,
   DesktopSettingsResponse,
   LaunchContext,
@@ -116,18 +119,7 @@ export interface SrgntAPI {
     target?: 'mock' | 'pi',
     /** Absent derives (and auto-creates) the project from the workspace cwd. */
     projectId?: string,
-  ): Promise<{
-    sessionId: string;
-    target: 'mock' | 'pi';
-    /** The project the session was created under (PHASE-24, STEP-24-02). */
-    projectId?: string;
-    harnessId: string;
-    harnessName: string;
-    quirks: readonly string[];
-    capabilities: Record<string, unknown>;
-    /** Absent when the agent advertises no session modes → no mode selector. */
-    modes?: { currentModeId: string; availableModes: readonly { id: string; name: string }[] };
-  }>;
+  ): Promise<ChatSessionNewResponse>;
   chatSessionPrompt(sessionId: string, text: string): Promise<{ stopReason: string }>;
   chatSessionCancel(sessionId: string): Promise<void>;
   chatSessionDispose(sessionId: string): Promise<void>;
@@ -153,6 +145,19 @@ export interface SrgntAPI {
     /** Whether main still holds a live agent connection for this session. */
     live: boolean;
   }>;
+  /**
+   * Reconnect-on-first-prompt for a reopened session (STEP-24-04). Optional for
+   * the same reason the list is: an older preload must degrade to "read-only,
+   * fork unavailable", not crash the panel.
+   */
+  chatSessionReconnect?(projectId: string, sessionId: string): Promise<ChatSessionReconnectResponse>;
+  /** Continue a read-only session in a new linked one. Idempotent per key. */
+  chatSessionFork?(
+    projectId: string,
+    sourceSessionId: string,
+    idempotencyKey: string,
+    includeHandoff?: boolean,
+  ): Promise<ChatSessionForkResponse>;
   onChatSessionUpdate(callback: (event: { sessionId: string; update: unknown }) => void): () => void;
   /** Agent process lifecycle (STEP-23-04): the crash surface. */
   onChatSessionStatus?(

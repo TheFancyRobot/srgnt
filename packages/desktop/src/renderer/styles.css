@@ -2311,6 +2311,65 @@
   white-space: pre-wrap;
 }
 
+/* --- Honest resume: read-only session + fork (STEP-24-04) ----------------- */
+
+.chat-read-only {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 16px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-secondary);
+}
+
+.chat-read-only-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-read-only-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.chat-read-only-message {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+/* Subtle by design: the session still works, the agent just remembers it
+   differently. An alert-styled banner here would read as a failure. */
+.chat-history-diverged {
+  margin: 8px 16px 0;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.session-lineage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 4px 2px 18px;
+}
+
+.session-lineage-link {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.session-lineage-link:disabled {
+  text-decoration: none;
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* --- Rendered markdown inside an agent message ---------------------------- */
 
 .chat-markdown {

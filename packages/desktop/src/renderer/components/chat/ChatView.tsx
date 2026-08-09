@@ -2,6 +2,7 @@ import React from 'react';
 import { Composer } from './Composer.js';
 import { MessageList } from './MessageList.js';
 import { PermissionPrompt } from './PermissionPrompt.js';
+import { ReadOnlyBanner } from './ReadOnlyBanner.js';
 import { TrustBadge } from './TrustBadge.js';
 import { useChatSession, type ChatTarget } from './ChatSessionContext.js';
 import { useProjectsOptional } from './ProjectsContext.js';
@@ -129,6 +130,10 @@ export function ChatView(): React.ReactElement {
       {/* Between transcript and composer: the turn cannot advance until it is
           answered, so it sits where the user's attention already is. */}
       <PermissionPrompt requests={permissions} onRespond={respondToPermission} />
+
+      {/* Above the composer, which it disables: the fork button has to be the
+          next thing the eye lands on after the transcript ends. */}
+      <ReadOnlyBanner />
 
       <Composer />
     </div>

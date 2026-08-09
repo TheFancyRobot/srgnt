@@ -7,7 +7,12 @@ import { DIRECTIVE_TYPES, parseScenario, readScenario, type Scenario } from './s
 
 // ─── Helpers ───
 
-const scenario = (partial: Partial<Scenario> & { directives: Scenario['directives'] }): Scenario =>
+/**
+ * Builds a scenario from the ENCODED (on-disk) shape, so a test can set only
+ * the capability knobs it cares about — `parseScenario` fills the rest, exactly
+ * as it does for a scenario file.
+ */
+const scenario = (partial: Record<string, unknown> & { directives: unknown[] }): Scenario =>
   parseScenario({ name: 'test', ...partial });
 
 const textOf = (n: SessionNotification): string =>
@@ -361,6 +366,85 @@ describe('crash and non-default stop reasons', () => {
       1,
     );
     expect(textOf(updates[0])).toBe('no');
+  });
+});
+
+// ─── Resume substrate (STEP-24-04) ───
+
+describe('session/load replay', () => {
+  const loadable = scenario({
+    initialize: { loadSession: true, modes: ['off', 'high'] },
+    directives: [],
+    loadReplay: [
+      { type: 'emit_chunks', channel: 'user', chunks: ['what changed?'] },
+      { type: 'emit_chunks', channel: 'agent', chunks: ['Everything. ', 'Twice.'] },
+    ],
+  });
+
+  it('emits the replay before `load` resolves, so it is already queued', async () => {
+    const { connection } = await connectMockAgent(loadable);
+    expect(connection.capabilities.loadSession).toBe(true);
+
+    const response = await Effect.runPromise(
+      connection.load({ sessionId: 'mock-session-1', cwd: '/tmp', mcpServers: [] }),
+    );
+    // The whole point: a resuming client can take the replay off the channel
+    // the instant `load` returns, with no waiting and no racing live traffic.
+    const replayed = connection.takeBufferedUpdates('mock-session-1');
+    expect(replayed.map(textOf)).toEqual(['what changed?', 'Everything. ', 'Twice.']);
+    expect(connection.takeBufferedUpdates('mock-session-1')).toEqual([]);
+    // Modes come back on the load response too, so a resumed session regains
+    // its mode selector (Pi: thinking levels).
+    expect(response.modes?.availableModes.map((mode) => mode.id)).toEqual(['off', 'high']);
+  });
+
+  it('leaves loadSession a no-op when the scenario scripts no replay', async () => {
+    const { connection } = await connectMockAgent(
+      scenario({ initialize: { loadSession: true }, directives: [] } as never),
+    );
+    await Effect.runPromise(connection.load({ sessionId: 'mock-session-1', cwd: '/tmp', mcpServers: [] }));
+    expect(connection.takeBufferedUpdates('mock-session-1')).toEqual([]);
+  });
+});
+
+describe('advertise-but-unimplemented methods', () => {
+  it('answers -32601 for a method the scenario advertised but does not implement', async () => {
+    // The mismatch a client's fallback cascade exists for: the capability stays
+    // TRUE at initialize, and the call still fails.
+    const { connection } = await connectMockAgent(
+      scenario({
+        initialize: { loadSession: true, resumeSession: true },
+        directives: [],
+        unimplementedMethods: ['session/resume'],
+      }),
+    );
+    expect(connection.capabilities.resumeSession).toBe(true);
+    expect(connection.capabilities.loadSession).toBe(true);
+
+    const failure = await Effect.runPromise(
+      Effect.either(connection.resume({ sessionId: 'mock-session-1', cwd: '/tmp', mcpServers: [] })),
+    );
+    expect(failure._tag).toBe('Left');
+    expect((failure as { left: { _tag: string; code?: number } }).left._tag).toBe('ProtocolError');
+    expect((failure as { left: { code?: number } }).left.code).toBe(-32601);
+
+    // …while the other advertised path still works, which is what makes the
+    // cascade observable rather than theoretical.
+    await Effect.runPromise(connection.load({ sessionId: 'mock-session-1', cwd: '/tmp', mcpServers: [] }));
+  });
+
+  it('can refuse session/load the same way', async () => {
+    const { connection } = await connectMockAgent(
+      scenario({
+        initialize: { loadSession: true },
+        directives: [],
+        unimplementedMethods: ['session/load'],
+      }),
+    );
+    const failure = await Effect.runPromise(
+      Effect.either(connection.load({ sessionId: 'mock-session-1', cwd: '/tmp', mcpServers: [] })),
+    );
+    expect((failure as { left: { code?: number } }).left.code).toBe(-32601);
   });
 });
 

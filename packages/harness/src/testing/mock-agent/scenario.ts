@@ -239,6 +239,17 @@ const SInitCapabilities = Schema.Struct({
   agentVersion: Schema.optionalWith(Schema.String, { default: () => '0.1.0' }),
 });
 
+/**
+ * Methods the agent ADVERTISES but answers `-32601` for. The advertise/implement
+ * mismatch is not hypothetical — pinned `pi-acp@0.0.31` advertises nothing for
+ * resume and Pi answers `-32601`, and a harness that advertises a capability it
+ * never implemented is exactly the case the client's fallback cascade exists
+ * for. Without this knob that cascade is unreachable from a scenario, i.e.
+ * untestable.
+ */
+const SUnimplementedMethod = Schema.Literal('session/resume', 'session/load');
+export type UnimplementedMethod = Schema.Schema.Type<typeof SUnimplementedMethod>;
+
 export const SScenario = Schema.Struct({
   name: Schema.String,
   /** ACP session id the mock returns from `session/new`. */
@@ -249,6 +260,18 @@ export const SScenario = Schema.Struct({
   /** Stop reason for the turn once directives finish (default `end_turn`). */
   stopReason: Schema.optionalWith(SStopReason, { default: () => 'end_turn' as const }),
   directives: Schema.Array(SDirective),
+  /**
+   * Directives replayed as `session/update` notifications from INSIDE
+   * `session/load`, before its response goes back. That ordering is the
+   * contract a resuming client depends on: the frames must already be queued
+   * when `load()` resolves, or the client cannot tell replay from live traffic.
+   * Empty (the default) keeps `loadSession` the no-op it was before STEP-24-04.
+   */
+  loadReplay: Schema.optionalWith(Schema.Array(SDirective), { default: () => [] }),
+  /** Methods answered `-32601` despite the capability being advertised. */
+  unimplementedMethods: Schema.optionalWith(Schema.Array(SUnimplementedMethod), {
+    default: () => [],
+  }),
 });
 export type Scenario = Schema.Schema.Type<typeof SScenario>;
 export type InitCapabilities = Scenario['initialize'];

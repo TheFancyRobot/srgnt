@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { parseSync, safeParse } from '../shared-schemas.js';
 import {
+  ipcChannels,
   ipcChannelValues,
+  FORK_KEY_CONFLICT,
+  SChatSessionForkRequest,
+  SChatSessionForkResponse,
   SChatSessionNewRequest,
+  SChatSessionReconnectRequest,
+  SChatSessionReconnectResponse,
   SChatSessionListRequest,
   SChatSessionListResponse,
   SChatSessionOpenRequest,
@@ -762,5 +768,71 @@ describe('project IPC schemas (PHASE-24, STEP-24-02)', () => {
     expect(parseSync(SChatSessionNewRequest, {})).toEqual({});
     expect(parseSync(SChatSessionNewRequest, { projectId: 'abc' }).projectId).toBe('abc');
     expect(safeParse(SChatSessionNewRequest, { target: 'bogus' }).success).toBe(false);
+  });
+});
+
+describe('resume + fork IPC schemas (PHASE-24, STEP-24-04)', () => {
+  const identity = {
+    sessionId: 's2',
+    target: 'mock' as const,
+    projectId: 'p1',
+    harnessId: 'mock',
+    harnessName: 'Mock Agent',
+    quirks: [],
+    capabilities: { loadSession: true },
+  };
+
+  it('distinguishes every reconnect outcome, including which ACP path was taken', () => {
+    expect(parseSync(SChatSessionReconnectRequest, { projectId: 'p1', sessionId: 's1' }).sessionId).toBe('s1');
+    expect(safeParse(SChatSessionReconnectRequest, { sessionId: 's1' }).success).toBe(false);
+
+    // `resumed` and `loaded` are both "it continues" but stay separable, which
+    // is what lets a test assert the capability branch rather than the UI.
+    for (const outcome of ['resumed', 'loaded'] as const) {
+      const response = parseSync(SChatSessionReconnectResponse, { outcome, session: identity });
+      expect(response.outcome).toBe(outcome);
+      expect(response.session?.harnessId).toBe('mock');
+    }
+    const readOnly = parseSync(SChatSessionReconnectResponse, {
+      outcome: 'read_only',
+      reason: 'Mock Agent cannot continue a previous session.',
+    });
+    expect(readOnly.session).toBeUndefined();
+    expect(parseSync(SChatSessionReconnectResponse, { outcome: 'retryable' }).outcome).toBe('retryable');
+    expect(parseSync(SChatSessionReconnectResponse, { outcome: 'loaded', historyDiverged: true }).historyDiverged).toBe(true);
+    // A new outcome must be added to the union deliberately, never smuggled in.
+    expect(safeParse(SChatSessionReconnectResponse, { outcome: 'reprimed' }).success).toBe(false);
+  });
+
+  it('requires an idempotency key on fork and defaults the handoff on', () => {
+    const request = parseSync(SChatSessionForkRequest, {
+      projectId: 'p1',
+      sourceSessionId: 's1',
+      idempotencyKey: 'key-1',
+    });
+    expect(request.includeHandoff).toBe(true);
+    expect(parseSync(SChatSessionForkRequest, { ...request, includeHandoff: false }).includeHandoff).toBe(false);
+    // Without a key there is no double-click guard at all, so it is required.
+    expect(safeParse(SChatSessionForkRequest, { projectId: 'p1', sourceSessionId: 's1' }).success).toBe(false);
+  });
+
+  it('returns the child, its parent, the pre-filled handoff, and whether it was reused', () => {
+    const forked = parseSync(SChatSessionForkResponse, {
+      session: identity,
+      parentSessionId: 's1',
+      handoffText: 'Continuing from "Fix the bug".\n',
+      reused: false,
+    });
+    expect(forked.parentSessionId).toBe('s1');
+    expect(forked.reused).toBe(false);
+    expect(safeParse(SChatSessionForkResponse, { ...forked, handoffText: undefined }).success).toBe(false);
+    // The collision failure has its own marker so a caller can tell "you reused
+    // a key with different parameters" from any other fork error.
+    expect(FORK_KEY_CONFLICT).toBe('fork_key_conflict');
+  });
+
+  it('registers both channels', () => {
+    expect(ipcChannels.chatSessionReconnect).toBe('chat:session:reconnect');
+    expect(ipcChannels.chatSessionFork).toBe('chat:session:fork');
   });
 });

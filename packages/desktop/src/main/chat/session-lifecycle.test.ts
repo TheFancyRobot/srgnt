@@ -281,6 +281,30 @@ describe('idle reaping', () => {
     );
   });
 
+  it('closes a hibernated session when the user ends it', async () => {
+    // `dispose` used to return at the not-in-`sessions` check, so ending a
+    // reaped session left it `idle` with no close event while the renderer had
+    // already dropped it — and the retained record could still revive it.
+    const { fake, controller } = reapController(scenario({ directives: chunks(['ok']) }));
+    const session = await controller.newSession('mock', { projectId: 'proj-a' });
+    await controller.prompt(session.sessionId, 'go');
+
+    fake.emit({ kind: 'reaped', id: 'chat-mock', reason: 'idle' });
+    await vi.waitFor(() => expect(controller.has(session.sessionId)).toBe(false));
+
+    await controller.dispose(session.sessionId);
+
+    const meta = await store.readMeta({ projectId: 'proj-a', sessionId: session.sessionId });
+    expect(meta.status).toBe('closed');
+    const kinds = await waitForKind('proj-a', session.sessionId, 'client/session_closed');
+    expect(kinds).toContain('client/session_closed');
+
+    // And it cannot be revived by a later prompt.
+    const connectsBefore = fake.connects;
+    await expect(controller.prompt(session.sessionId, 'again')).rejects.toThrow(/no chat session/i);
+    expect(fake.connects).toBe(connectsBefore);
+  });
+
   it('respawns transparently on the next prompt through the reconnect cascade', async () => {
     const { fake, controller } = reapController(
       scenario({ initialize: { loadSession: true }, directives: chunks(['second turn']) }),

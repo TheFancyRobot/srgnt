@@ -674,7 +674,13 @@ export class ChatSessionController {
    */
   private readonly hibernated = new Map<
     string,
-    { target: ChatTarget; project: ChatSessionProject; acpSessionId: string }
+    {
+      target: ChatTarget;
+      project: ChatSessionProject;
+      acpSessionId: string;
+      /** Resolves when `hibernate` has finished its own meta/checkpoint tail. */
+      readonly settled: Promise<void>;
+    }
   >();
   private readonly connect: ChatConnectFn;
 
@@ -1342,22 +1348,33 @@ export class ChatSessionController {
     const state = this.sessions.get(handle);
     if (state === undefined) return;
     this.sessions.delete(handle);
-    this.hibernated.set(handle, { ...state.reconnectWith, acpSessionId: state.acpSessionId });
-    state.unsubscribeStatus();
-    if (state.checkpointTimer !== undefined) clearInterval(state.checkpointTimer);
-    state.permissions.cancelAll('cancelled');
-    state.services.disposeAll();
-    await state.cleanup();
-    const persistRef = state.persistRef;
-    if (persistRef === undefined) return;
-    await state.metaChain.catch(() => {});
-    await this.checkpoint(state, handle);
-    await this.options
-      .getStore?.()
-      ?.closeSession(persistRef)
-      .catch((error: unknown) => {
-        console.error(`[chat] could not close the event log for reaped session ${handle}:`, error);
-      });
+    // The record is published synchronously with a promise for the rest of this
+    // method: `dispose` can arrive the moment `has()` goes false, and writing
+    // `closed` before this tail's queued meta write would let `idle` land last.
+    let markSettled: () => void = () => {};
+    const settled = new Promise<void>((resolve) => {
+      markSettled = resolve;
+    });
+    this.hibernated.set(handle, { ...state.reconnectWith, acpSessionId: state.acpSessionId, settled });
+    try {
+      state.unsubscribeStatus();
+      if (state.checkpointTimer !== undefined) clearInterval(state.checkpointTimer);
+      state.permissions.cancelAll('cancelled');
+      state.services.disposeAll();
+      await state.cleanup();
+      const persistRef = state.persistRef;
+      if (persistRef === undefined) return;
+      await state.metaChain.catch(() => {});
+      await this.checkpoint(state, handle);
+      await this.options
+        .getStore?.()
+        ?.closeSession(persistRef)
+        .catch((error: unknown) => {
+          console.error(`[chat] could not close the event log for reaped session ${handle}:`, error);
+        });
+    } finally {
+      markSettled();
+    }
   }
 
   /** `session/cancel` — recovers a hung turn without tearing the session down. */
@@ -1399,7 +1416,31 @@ export class ChatSessionController {
   /** Kill-trees the session's process and forgets it. Idempotent. */
   async dispose(handle: string): Promise<void> {
     const state = this.sessions.get(handle);
-    if (state === undefined) return;
+    if (state === undefined) {
+      // Hibernated by an idle reap: no live process, but the session is still
+      // real. Returning here left its meta `idle` with no `client/session_closed`
+      // written, while the renderer had already removed it — and the retained
+      // record would let a later prompt revive a session the user ended.
+      const sleeping = this.hibernated.get(handle);
+      if (sleeping === undefined) return;
+      this.hibernated.delete(handle);
+      // Let the reap's own tail land first, or its queued `idle` write can
+      // overwrite the `closed` below.
+      await sleeping.settled;
+      const store = this.options.getStore?.();
+      if (store !== undefined && sleeping.project.projectId !== undefined) {
+        const persistRef = { projectId: sleeping.project.projectId, sessionId: handle };
+        await store
+          .appendEvent(persistRef, 'client/session_closed', {}, 0)
+          .then(() => store.updateMeta(persistRef, { status: 'closed' }))
+          .then(() => store.checkpointTranscript(persistRef))
+          .catch((error: unknown) => {
+            console.error(`[chat] could not close hibernated session ${handle}:`, error);
+          });
+        await store.closeSession(persistRef).catch(() => undefined);
+      }
+      return;
+    }
     // Closing the record before the map entry is dropped: `chainMeta` resolves
     // its ref through the live session, so a `closed` write queued after the
     // delete would find nothing to write to.
@@ -1467,10 +1508,12 @@ export class ChatSessionController {
 
   /** Final transcript checkpoint for every live session (app quit). */
   async checkpointAll(): Promise<void> {
+    // Iterated by entry so the handle passed is the controller handle every
+    // other call site logs, not the persisted session id.
     await Promise.all(
-      [...this.sessions.values()]
-        .filter((state) => state.persistRef !== undefined)
-        .map((state) => this.checkpoint(state, state.persistRef!.sessionId)),
+      [...this.sessions.entries()]
+        .filter(([, state]) => state.persistRef !== undefined)
+        .map(([handle, state]) => this.checkpoint(state, handle)),
     );
   }
 

@@ -15,6 +15,17 @@
 /** One overall budget for cancel + final checkpoint + kill-trees. */
 export const QUIT_CLEANUP_BUDGET_MS = 2000;
 
+/**
+ * Floor reserved for the kill stage, whatever the earlier stages consumed
+ * (capped by the total budget, so a small budget still bounds the whole quit).
+ *
+ * Without it, a slow cancel or checkpoint could leave `remaining() <= 0`, and
+ * the kill-tree would be *issued but not awaited at all* — Electron exits, the
+ * detached child never receives the escalation, and the orphan this whole
+ * design exists to prevent is exactly what ships.
+ */
+export const QUIT_KILL_FLOOR_MS = 750;
+
 export interface BoundedCleanupStages {
   /** Best-effort `session/cancel` for every in-flight turn. */
   readonly cancelInFlight: () => Promise<void>;
@@ -27,8 +38,14 @@ export interface BoundedCleanupStages {
 export interface BoundedCleanupOptions {
   /** Total wall-clock budget for all three stages. */
   readonly budgetMs?: number;
-  /** Monotonic clock. Injected in tests. */
+  /**
+   * Clock, injected in tests. Defaults to `performance.now`, which is monotonic
+   * — a wall clock could jump backwards mid-quit and hand a stage a budget it
+   * was never given.
+   */
   readonly now?: () => number;
+  /** Minimum window the kill stage is awaited for. */
+  readonly killFloorMs?: number;
 }
 
 /**
@@ -59,25 +76,31 @@ async function within(promise: Promise<unknown>, ms: number): Promise<void> {
 }
 
 /**
- * Runs the three quit stages in order under one shared deadline.
+ * Runs the three quit stages in order under one shared deadline, with a floor
+ * reserved for the kill stage so the backstop is always genuinely awaited.
  *
  * ponytail: a child that ignores SIGTERM escalates to SIGKILL on the harness's
- * own 5 s grace, which can outlive this 2 s budget — so in the pathological
- * "cancel hangs AND the agent ignores SIGTERM" case the kill is issued but may
- * not have landed by exit. Both shipped harnesses (the mock and Pi) exit on
- * SIGTERM immediately. Reserve an explicit kill budget if a real agent is ever
- * observed surviving quit.
+ * own 5 s grace, which still outlives this budget — the floor guarantees the
+ * signal is delivered and awaited, not that a SIGTERM-ignoring child is dead by
+ * exit. Both shipped harnesses (the mock and Pi) exit on SIGTERM immediately.
+ * Awaiting confirmed termination would make quit hang for up to 5 s on a wedged
+ * agent, which is the worse trade; revisit if one is ever seen surviving quit.
  */
 export async function runBoundedQuitCleanup(
   stages: BoundedCleanupStages,
   options: BoundedCleanupOptions = {},
 ): Promise<void> {
   const budgetMs = options.budgetMs ?? QUIT_CLEANUP_BUDGET_MS;
-  const now = options.now ?? Date.now;
+  const now = options.now ?? (() => performance.now());
   const deadline = now() + budgetMs;
   const remaining = (): number => deadline - now();
 
   await within(stages.cancelInFlight(), remaining());
   await within(stages.checkpoint(), remaining());
-  await within(stages.disposeAll(), remaining());
+  // The floor, not what happens to be left: the earlier stages are best-effort
+  // and this one is the guarantee. Capped by the caller's own budget, so a
+  // deliberately tiny budget still bounds the whole quit rather than being
+  // overridden by a constant sized for the default.
+  const floor = Math.min(options.killFloorMs ?? QUIT_KILL_FLOOR_MS, budgetMs);
+  await within(stages.disposeAll(), Math.max(remaining(), floor));
 }

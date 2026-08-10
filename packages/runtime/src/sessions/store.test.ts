@@ -223,6 +223,22 @@ describe('SessionStore.checkpointTranscript', () => {
   const transcriptPath = (): string =>
     path.join(root, 'projects', 'proj-1', 'sessions', 'sess-1', 'transcript.md');
 
+  it('never lets an older overlapping checkpoint overwrite a newer one', async () => {
+    // The periodic checkpoint reads at T0 and the turn-end one at T1. Without
+    // serialization the older render can land last and drop the completed turn.
+    await store.createSession(meta({ title: 'First question' }));
+    await store.appendEvent(ref, 'client/prompt', { text: 'First question' }, 1);
+
+    const early = store.checkpointTranscript(ref);
+    await store.appendEvent(ref, 'client/prompt', { text: 'Second question' }, 1);
+    const late = store.checkpointTranscript(ref);
+    await Promise.all([early, late]);
+
+    // The file reflects the newer snapshot, whichever render finished first.
+    const rendered = await fs.readFile(transcriptPath(), 'utf8');
+    expect(rendered).toContain('Second question');
+  });
+
   it('renders transcript.md from the log and rewrites it on the next checkpoint', async () => {
     await store.createSession(meta({ title: 'First question' }));
     await store.appendEvent(ref, 'client/prompt', { text: 'First question' }, 1);

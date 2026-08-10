@@ -54,6 +54,8 @@ export interface ListSessionsResult {
  */
 export class SessionStore {
   private readonly logs = new Map<string, Promise<SessionEventLog>>();
+  /** One checkpoint chain per session: see checkpointTranscript. */
+  private readonly checkpoints = new Map<string, Promise<void>>();
 
   constructor(readonly workspaceRoot: string) {}
 
@@ -167,11 +169,33 @@ export class SessionStore {
    * `events.jsonl` + `meta.json` and nothing else, and a checkpoint that
    * rendered from anything else would quietly break it.
    *
-   * No serialization: two overlapping checkpoints both derive from the same
-   * log, so last-writer-wins is correct, and the atomic rename means neither
-   * can publish a torn file.
+   * Serialized per session. Overlapping checkpoints do NOT derive from the same
+   * log — a periodic one reads at T0 and a turn-end one at T1 — so without this
+   * the older snapshot can land last and regress `transcript.md`, dropping the
+   * completed turn or reverting a `closed` status. The atomic rename prevents a
+   * torn file; it does not preserve ordering.
    */
   async checkpointTranscript(ref: SessionRef): Promise<void> {
+    const key = this.key(ref);
+    const previous = this.checkpoints.get(key) ?? Promise.resolve();
+    const next = previous.then(
+      () => this.renderAndWriteTranscript(ref),
+      () => this.renderAndWriteTranscript(ref),
+    );
+    // The chain orders work; it must not propagate one failure to every later
+    // checkpoint for the session.
+    const settled = next.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.checkpoints.set(key, settled);
+    void settled.then(() => {
+      if (this.checkpoints.get(key) === settled) this.checkpoints.delete(key);
+    });
+    await next;
+  }
+
+  private async renderAndWriteTranscript(ref: SessionRef): Promise<void> {
     const [events, meta] = await Promise.all([this.readEvents(ref), this.readMeta(ref)]);
     await writeFileAtomic(
       this.paths(ref).transcript,

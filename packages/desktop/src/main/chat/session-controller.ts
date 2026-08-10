@@ -481,6 +481,8 @@ interface SessionState {
   checkpointTimer: ReturnType<typeof setInterval> | undefined;
   /** What `reconnect` needs to put an agent back after an idle reap. */
   readonly reconnectWith: { target: ChatTarget; project: ChatSessionProject };
+  /** Turns in flight; the idle hold is released only by the last one out. */
+  activeTurns: number;
 }
 
 /**
@@ -747,6 +749,7 @@ export class ChatSessionController {
       setIdleHold,
       checkpointTimer: undefined,
       reconnectWith: { target, project },
+      activeTurns: 0,
     });
     if (persistRef !== undefined) {
       // Written only now that the identity is settled: before `session/new`
@@ -1147,6 +1150,7 @@ export class ChatSessionController {
         setIdleHold,
         checkpointTimer: undefined,
         reconnectWith: { target: options.target, project: options.project },
+        activeTurns: 0,
       });
       // A session that was reaped and has just been given an agent back is no
       // longer hibernated; leaving the record would let a later prompt try to
@@ -1272,6 +1276,11 @@ export class ChatSessionController {
    * be reaped mid-turn) and the periodic transcript checkpoint starts.
    */
   private beginTurn(handle: string, state: SessionState): void {
+    // Counted, not a flag. Two prompts can overlap on one handle — `prompt()`
+    // is not serialized and the IPC layer will deliver both — and an unnested
+    // release would drop the hold while the second turn is still live, letting
+    // the idle clock run during a turn, which is the one state it must not.
+    state.activeTurns += 1;
     state.setIdleHold(true);
     if (state.persistRef === undefined || state.checkpointTimer !== undefined) return;
     const timer = setInterval(
@@ -1287,6 +1296,13 @@ export class ChatSessionController {
 
   /** The mirror of {@link beginTurn}, plus the turn-end transcript checkpoint. */
   private endTurn(handle: string, state: SessionState): void {
+    state.activeTurns = Math.max(0, state.activeTurns - 1);
+    // Only the last turn out releases the hold and stops the periodic
+    // checkpoint; an inner one still gets its turn-end checkpoint below.
+    if (state.activeTurns > 0) {
+      if (state.persistRef !== undefined) void this.checkpoint(state, handle);
+      return;
+    }
     if (state.checkpointTimer !== undefined) {
       clearInterval(state.checkpointTimer);
       state.checkpointTimer = undefined;

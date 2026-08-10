@@ -281,6 +281,22 @@ describe('idle reaping', () => {
     );
   });
 
+  it('keeps the idle hold through overlapping turns on one session', async () => {
+    // `prompt()` is not serialized and the IPC layer will deliver two for one
+    // handle. An unnested release drops the hold while the second turn is live,
+    // which is exactly the reap-mid-turn the hold exists to prevent.
+    const { fake, controller } = reapController(scenario({ directives: chunks(['ok'], 3) }));
+    const session = await controller.newSession('mock', { projectId: 'proj-a' });
+
+    const first = controller.prompt(session.sessionId, 'one');
+    const second = controller.prompt(session.sessionId, 'two');
+    await first;
+    // The inner turn ended; the outer one has not, so the hold must still be on.
+    expect(fake.holds.at(-1)).toBe(true);
+    await second;
+    expect(fake.holds.at(-1)).toBe(false);
+  });
+
   it('closes a hibernated session when the user ends it', async () => {
     // `dispose` used to return at the not-in-`sessions` check, so ending a
     // reaped session left it `idle` with no close event while the renderer had

@@ -16,11 +16,22 @@ import * as path from 'path';
  * and always rewritten whole. `events.jsonl` is the only append-only file.
  */
 export async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
+  await writeFileAtomic(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+/**
+ * The same tmp+fsync+rename discipline for a plain text document. Used by
+ * `transcript.md` (STEP-24-05), which is markdown rather than JSON but needs
+ * the identical guarantee: a reader (memsearch, an editor) must never observe
+ * a half-written file, and a crash mid-checkpoint must leave the previous
+ * render intact.
+ */
+export async function writeFileAtomic(filePath: string, contents: string): Promise<void> {
   const tmpPath = `${filePath}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
   try {
     const handle = await fs.open(tmpPath, 'wx');
     try {
-      await handle.writeFile(`${JSON.stringify(value, null, 2)}\n`, 'utf8');
+      await handle.writeFile(contents, 'utf8');
       await handle.sync();
     } finally {
       await handle.close();

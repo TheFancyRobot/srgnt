@@ -127,6 +127,18 @@ export const knownSessionEventKinds = [
   'client/capability_mismatch',
   'client/load_reconciliation',
   'client/reconnected',
+  // Lifecycle audit surface (STEP-24-05). `agent_status` is the agent *process*
+  // transition the controller has written since STEP-23-04 — including the
+  // crash — and only now joins the shared vocabulary; `harness_reaped` records
+  // an idle reap, which is otherwise invisible (the renderer must never see it
+  // as a failure, and the session stays resumable).
+  //
+  // Deliberately NOT a separate `client/harness_crashed`, which the Execution
+  // Brief sketched: a crash already lands as `client/agent_status` with
+  // `status: 'crashed'`, and writing the same fact twice into the file that is
+  // the session's source of truth is worse than one name being less literal.
+  'client/agent_status',
+  'client/harness_reaped',
 ] as const;
 export type KnownSessionEventKind = (typeof knownSessionEventKinds)[number];
 

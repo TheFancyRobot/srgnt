@@ -46,6 +46,8 @@ function fakeController() {
     cancel: vi.fn(async () => {}),
     dispose: vi.fn(async () => {}),
     disposeAll: vi.fn(async () => {}),
+    cancelInFlight: vi.fn(async () => {}),
+    checkpointAll: vi.fn(async () => {}),
     respondToPermission: vi.fn(() => {}),
   };
 }
@@ -163,6 +165,7 @@ describe('registerChatHandlers', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
     };
     const updateMeta = vi.fn(async () => ({ ...meta, status: 'interrupted' }));
+    const checkpointTranscript = vi.fn(async () => {});
     const createController = vi.fn(() => fakeController() as unknown as ChatSessionController);
     registerChatHandlers({
       getWindow: () => null,
@@ -170,6 +173,7 @@ describe('registerChatHandlers', () => {
       sessions: {
         store: () =>
           ({
+            checkpointTranscript,
             readMeta: async () => meta,
             readEvents: async () => ({
               events: [{ seq: 0, ts: '2026-01-01T00:00:01.000Z', protocolVersion: 1, kind: 'client/prompt', payload: { text: 'hi' } }],
@@ -193,6 +197,9 @@ describe('registerChatHandlers', () => {
     expect(opened.session.status).toBe('interrupted');
     expect(opened.events).toHaveLength(1);
     expect(opened.truncatedTail).toBe(true);
+    // The derived transcript is re-rendered from the log that was just read, so
+    // a stale checkpoint written before the crash never survives a reopen.
+    expect(checkpointTranscript).toHaveBeenCalledWith({ projectId: 'p1', sessionId: 's1' });
     // Nothing is live because nothing ever constructed the controller.
     expect(opened.live).toBe(false);
     expect(createController).not.toHaveBeenCalled();

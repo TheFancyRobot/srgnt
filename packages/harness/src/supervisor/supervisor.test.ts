@@ -82,6 +82,66 @@ describe('Supervisor', () => {
     await supervisor.disposeAll();
   });
 
+  it('setIdleHold() protects a silent in-flight turn that no heartbeat could', async () => {
+    const fleet = fakeFleet();
+    const clock = new ManualClock();
+    const events: SupervisorEvent[] = [];
+    const supervisor = new Supervisor({
+      idleTimeoutMs: 1_000,
+      clock,
+      processOptions: { spawnChild: fleet.spawnChild, killTree: fleet.killTree },
+    });
+    supervisor.onEvent((event) => events.push(event));
+    supervisor.register('a', LAUNCH);
+    await supervisor.ensureRunning('a');
+    expect(clock.pendingIdle()).toBe(1);
+
+    // Turn start. The agent now thinks for longer than the idle timeout and
+    // emits NOTHING, so there is no activity to poke with — the hold is the
+    // only thing that can keep it alive.
+    supervisor.setIdleHold('a', true);
+    expect(clock.pendingIdle()).toBe(0);
+    clock.fireIdle();
+    await flush();
+    expect(supervisor.health('a')?.running).toBe(true);
+    expect(events.some((event) => event.kind === 'reaped')).toBe(false);
+
+    // Turn end: the clock re-arms from zero and the next idle window reaps.
+    supervisor.setIdleHold('a', false);
+    expect(clock.pendingIdle()).toBe(1);
+    clock.fireIdle();
+    await flush();
+    expect(supervisor.health('a')?.running).toBe(false);
+    expect(events.filter((event) => event.kind === 'reaped')).toMatchObject([
+      { kind: 'reaped', id: 'a', reason: 'idle' },
+    ]);
+
+    await supervisor.disposeAll();
+  });
+
+  it('setIdleHold() keeps the clock paused across a respawn and ignores unknown handles', async () => {
+    const fleet = fakeFleet();
+    const clock = new ManualClock();
+    const supervisor = new Supervisor({
+      idleTimeoutMs: 1_000,
+      clock,
+      processOptions: { spawnChild: fleet.spawnChild, killTree: fleet.killTree },
+    });
+    supervisor.register('a', LAUNCH);
+    await supervisor.ensureRunning('a');
+    supervisor.setIdleHold('a', true);
+
+    // A respawn mid-hold (crash + restart during a turn) must not silently
+    // re-arm the clock behind the hold.
+    fleet.last().crash('boom\n');
+    await flush();
+    await supervisor.ensureRunning('a');
+    expect(clock.pendingIdle()).toBe(0);
+
+    expect(() => supervisor.setIdleHold('nope', true)).not.toThrow();
+    await supervisor.disposeAll();
+  });
+
   it('restarts a crashed process with capped backoff, then gives up cleanly', async () => {
     const fleet = fakeFleet();
     const clock = new ManualClock();

@@ -5,17 +5,22 @@ contract_version: 1
 title: Add transcript checkpointing and lifecycle cleanup
 step_id: STEP-24-05
 phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-08-10'
 depends_on:
   - STEP-24-04
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-08-10-073925-add-transcript-checkpointing-and-lifecycle-cleanup-claude-opus-5|SESSION-2026-08-10-073925 claude-opus-5 session for Add transcript checkpointing and lifecycle cleanup]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-08-10-073925
+active_session_id: 05_Sessions/2026-08-10-073925-add-transcript-checkpointing-and-lifecycle-cleanup-claude-opus-5
+context_status: completed
+context_summary: Advance [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_05_add-transcript-checkpointing-and-lifecycle-cleanup|STEP-24-05 Add transcript checkpointing and lifecycle cleanup]].
 ---
 
 # Step 05 - Add transcript checkpointing and lifecycle cleanup
@@ -76,16 +81,22 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_05_add-transcript-checkpointing-and-lifecycle-cleanup/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_05_add-transcript-checkpointing-and-lifecycle-cleanup/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-opus-5
+- Last touched: 2026-08-10
+- Next action: None - this step and PHASE-24 are complete. Next work is [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|PHASE-25 Opencode Integration and Harness Settings]], which should promote `DEFAULT_IDLE_TIMEOUT_MS` into `settings.json`. A manual real-Pi lifecycle pass (idle reap, transparent respawn, quit mid-turn) was NOT performed and is carried as follow-up.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- `packages/runtime/src/sessions/transcript.ts` - `renderTranscript(events, meta, {truncatedTail})`. Turns are buffered and rendered at the end, so a `tool_call_update` arriving after its turn's `client/stop` still corrects the call's status instead of writing into markdown already emitted. Thoughts are a count, per the recorded assumption.
+- `SessionStore.checkpointTranscript(ref)` reads the log AND meta itself rather than taking a caller's view, which is what keeps the derived-artifact invariant honest. Written through the new `writeFileAtomic` (extracted from `writeJsonAtomic`; no second atomic writer).
+- `Supervisor.setIdleHold(id, held)` was necessary: `armIdle` only re-arms from `ensureRunning`/`markActivity`, and `ensureRunning` runs once per chat session via `spawnerFor`, so `idleTimeoutMs` alone would fire mid-turn on a silent agent. The hold is the disarm/re-arm the Execution Brief specified.
+- A reap kills the process the live `AcpAgentConnection` is bound to, so it cannot be transparent by itself. `ChatSessionController` reacts to `reaped {reason:'idle'}` by hibernating: out of `this.sessions`, log handle and lock released, status left `idle`, reconnect parameters kept. `prompt()` revives through the STEP-24-04 cascade, which also closes the "reap between `ensureRunning` and prompt send" race.
+- `packages/desktop/src/main/chat/quit.ts` holds the one 2 s deadline over cancel -> final checkpoint -> `disposeAll`. `disposeAll` is always started, even with the budget spent. Recorded ceiling in a `ponytail:` comment: the harness's 5 s SIGTERM->SIGKILL grace can outlive the budget in the pathological case.
+- Checkpoints await a per-session `drainAppends()`; nothing on the streaming path does. Without it a turn-end checkpoint could render a log that did not yet contain that turn, because controller appends are fire-and-forget.
+- `client/harness_crashed` was deliberately NOT added - a crash already lands as `client/agent_status` with `status: 'crashed'`. `client/agent_status` (previously missing from the vocabulary) and `client/harness_reaped` were added instead.
+- E2E lives in `packages/desktop/e2e/lifecycle.spec.ts`: the app is launched by hand (not via the `electronApp` fixture) because one test SIGKILLs the main process and relaunches over the same `SRGNT_DEFAULT_WORKSPACE_ROOT`. The process-tree assertion finds agents by the test's unique scenario path and is skipped on Windows.
 
 ## Human Notes
 
@@ -94,10 +105,13 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-08-10 - [[05_Sessions/2026-08-10-073925-add-transcript-checkpointing-and-lifecycle-cleanup-claude-opus-5|SESSION-2026-08-10-073925 claude-opus-5 session for Add transcript checkpointing and lifecycle cleanup]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Completed 2026-08-10. `transcript.md` is now a derived, checkpointed render of `events.jsonl` (turn end, every 30 s while a turn runs, close, quit, and session open), never dual-written per token. Idle reaping is wired as an explicit hold on the Supervisor with hibernation and transparent revive. Quit runs best-effort `session/cancel` + a final checkpoint + kill-trees under one 2 s deadline. Lifecycle audit kinds are in the shared vocabulary.
+- Validation performed: `pnpm --filter @srgnt/runtime test` (439, 5x), `pnpm --filter @srgnt/contracts test` (179, 3x), `pnpm --filter @srgnt/harness test` (120 + 2 pre-existing Pi skips, 3x), `pnpm --filter @srgnt/desktop test` (1168, 5x), repo-root `pnpm build` and `pnpm test`, and `playwright test` over `chat/projects/sessions/resume/lifecycle` (18 passed; the new lifecycle spec run 3x).
+- Validation NOT performed: the Validation Plan's manual real-Pi pass (let a real session idle past the timeout, confirm the reap with `ps`, prompt again for a transparent respawn, quit mid-turn and confirm `ps` is clean) and any manual/GUI walkthrough. No Pi binary and no GUI session were available, so idle-reaping and quit-cleanup are evidenced by mock-agent E2E and unit tests only.
+- Pre-existing, unrelated: the full `pnpm --filter @srgnt/desktop test:e2e` run has 2 failures on macOS - `app.spec.ts` PTY launch (`posix_spawnp failed`, node-pty) and `bug-0013-visual.spec.ts` (requires `release/linux-unpacked/srgnt`).
+- Follow-up: promote the idle timeout into `settings.json` in PHASE-25; a Windows equivalent of the `ps` process-tree assertion if desktop E2E ever runs there; the STEP-24-01 whole-file `readEventLog` ceiling remains (this step did not need a streaming reader - checkpoints are at turn boundaries, off the hot path).

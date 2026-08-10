@@ -1,10 +1,12 @@
 import * as path from 'path';
 import { workspaceDirectories } from '@srgnt/contracts';
 
-/** File names inside one session directory. `transcript.md` arrives in STEP-24-05. */
+/** File names inside one session directory. */
 export const sessionFileNames = {
   events: 'events.jsonl',
   meta: 'meta.json',
+  /** Derived, checkpointed markdown render of `events.jsonl` (STEP-24-05). */
+  transcript: 'transcript.md',
 } as const;
 
 /** Directory holding one project's sessions, relative to the project directory. */
@@ -65,6 +67,7 @@ export interface SessionPaths {
   directory: string;
   events: string;
   meta: string;
+  transcript: string;
 }
 
 export function sessionPaths(
@@ -77,5 +80,6 @@ export function sessionPaths(
     directory,
     events: path.join(directory, sessionFileNames.events),
     meta: path.join(directory, sessionFileNames.meta),
+    transcript: path.join(directory, sessionFileNames.transcript),
   };
 }

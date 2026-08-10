@@ -4,10 +4,10 @@ template_version: 2
 contract_version: 1
 title: Projects and Session Persistence
 phase_id: PHASE-24
-status: in_progress
+status: completed
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-27'
+updated: '2026-08-10'
 depends_on:
   - '[[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|PHASE-23 Chat UI v1 Over Ephemeral ACP Sessions]]'
 related_architecture:
@@ -65,21 +65,21 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 ## Acceptance Criteria
 
-- [ ] Scope is concrete and linked to the right durable notes.
-- [ ] Step notes exist for the first executable work units.
-- [ ] Validation and documentation expectations are explicit.
-- [ ] Killing the app mid-turn loses at most the in-flight chunk; reopening shows the persisted transcript instantly from `events.jsonl`.
-- [ ] Projects auto-create from cwd; sessions list per project with harness badges, statuses, and auto-titles; switching projects swaps session lists.
-- [ ] With a load-capable harness, reopening + prompting transparently respawns and restores via `session/load`/`session/resume`; with a non-capable harness the session is read-only with a working fork-with-handoff flow (`parentSessionId` recorded).
-- [ ] Multiple sessions run concurrently across projects; idle sessions are reaped and respawn on activity; quit leaves no agent processes.
-- [ ] `transcript.md` checkpoints on close and renders faithfully; permission decisions and lifecycle events appear in the event log.
-- [ ] Event envelope carries `protocolVersion`; store round-trip property tests pass (fast-check is already a dependency).
+- [x] Scope is concrete and linked to the right durable notes.
+- [x] Step notes exist for the first executable work units.
+- [x] Validation and documentation expectations are explicit.
+- [x] Killing the app mid-turn loses at most the in-flight chunk; reopening shows the persisted transcript instantly from `events.jsonl`. (STEP-24-05; E2E SIGKILLs the Electron main mid-stream, relaunches over the same workspace, and asserts the session comes back `interrupted` with the log and re-derived transcript intact.)
+- [x] Projects auto-create from cwd; sessions list per project with harness badges, statuses, and auto-titles; switching projects swaps session lists. (STEP-24-02/03.)
+- [x] With a load-capable harness, reopening + prompting transparently respawns and restores via `session/load`/`session/resume`; with a non-capable harness the session is read-only with a working fork-with-handoff flow (`parentSessionId` recorded). (STEP-24-04; three E2E variants.)
+- [x] Multiple sessions run concurrently across projects; idle sessions are reaped and respawn on activity; quit leaves no agent processes. (STEP-24-03 concurrency E2E; STEP-24-05 reap/revive unit tests and the `ps` process-tree assertion after a quit landing mid-turn. Idle reaping and quit cleanup are evidenced against the mock agent only - the manual real-Pi pass was not performed.)
+- [x] `transcript.md` checkpoints on close and renders faithfully; permission decisions and lifecycle events appear in the event log. (STEP-24-05; determinism is property-tested and a real-Pi fixture log is snapshot-tested.)
+- [x] Event envelope carries `protocolVersion`; store round-trip property tests pass (fast-check is already a dependency). (STEP-24-01.)
 
 ## Linear Context
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_23_chat_ui_v1_over_ephemeral_acp_sessions/Phase|PHASE-23 Chat UI v1 Over Ephemeral ACP Sessions]]
-- Current phase status: in_progress
+- Current phase status: completed
 - Next phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|PHASE-25 Opencode Integration and Harness Settings]]
 <!-- AGENT-END:phase-linear-context -->
 
@@ -108,11 +108,12 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - [x] [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_02_implement-project-auto-create-switcher-and-per-project-defaults|STEP-24-02 Implement project auto-create switcher and per-project defaults]]
 - [x] [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_03_add-session-list-auto-titles-and-concurrent-session-management|STEP-24-03 Add session list auto-titles and concurrent session management]]
 - [x] [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_04_implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff|STEP-24-04 Implement resume flows load resume read-only reopen and fork with handoff]]
-- [ ] [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_05_add-transcript-checkpointing-and-lifecycle-cleanup|STEP-24-05 Add transcript checkpointing and lifecycle cleanup]]
+- [x] [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_05_add-transcript-checkpointing-and-lifecycle-cleanup|STEP-24-05 Add transcript checkpointing and lifecycle cleanup]]
 <!-- AGENT-END:phase-steps -->
 
 ## Notes
 
+- **Phase closed 2026-08-10** with STEP-24-05. Everything under Scope shipped: `SessionStore` + JSONL event logs (01), project entities and the switcher (02), session list / auto-titles / concurrency (03), honest resume and fork-with-handoff (04), and derived-transcript checkpointing plus idle reaping and bounded quit cleanup (05). Two things are deliberately carried forward rather than done here: the idle timeout ships as a constant (`DEFAULT_IDLE_TIMEOUT_MS`, 10 min) with settings exposure deferred to PHASE-25, and no manual real-Pi lifecycle pass was run - idle reaping and quit cleanup are evidenced against the mock agent through E2E and unit tests only.
 - Add architecture, bug, and decision links as the milestone becomes more concrete.
 - Use the `Steps/` directory for the first executable units instead of expanding this note too far.
 - Storage decisions (decision log D7/D8/D17): files/JSONL over SQLite (escape hatch: SQLite as rebuildable index only); raw ACP updates stored verbatim in a versioned envelope; central workspace (`~/srgnt-workspace`) not in-repo `.srgnt/`.

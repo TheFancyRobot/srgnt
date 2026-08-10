@@ -31,7 +31,7 @@ Use this note as the directory for decision records in \`04_Decisions/\`.
 ## Decision Log
 
 <!-- AGENT-START:decisions-index -->
-_Last rebuilt: 2026-08-09._
+_Last rebuilt: 2026-08-10._
 
 - Notes indexed: 20
 - Status summary: accepted (17), proposed (3)

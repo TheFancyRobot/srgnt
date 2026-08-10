@@ -218,3 +218,124 @@ describe('SessionStore', () => {
     expect(event.seq).toBe(0);
   });
 });
+
+describe('SessionStore.checkpointTranscript', () => {
+  const transcriptPath = (): string =>
+    path.join(root, 'projects', 'proj-1', 'sessions', 'sess-1', 'transcript.md');
+
+  it('never lets an older overlapping checkpoint overwrite a newer one', async () => {
+    // The periodic checkpoint reads at T0 and the turn-end one at T1. Without
+    // serialization the older render can land last and drop the completed turn.
+    await store.createSession(meta({ title: 'First question' }));
+    await store.appendEvent(ref, 'client/prompt', { text: 'First question' }, 1);
+
+    const early = store.checkpointTranscript(ref);
+    await store.appendEvent(ref, 'client/prompt', { text: 'Second question' }, 1);
+    const late = store.checkpointTranscript(ref);
+    await Promise.all([early, late]);
+
+    // The file reflects the newer snapshot, whichever render finished first.
+    const rendered = await fs.readFile(transcriptPath(), 'utf8');
+    expect(rendered).toContain('Second question');
+  });
+
+  it('renders transcript.md from the log and rewrites it on the next checkpoint', async () => {
+    await store.createSession(meta({ title: 'First question' }));
+    await store.appendEvent(ref, 'client/prompt', { text: 'First question' }, 1);
+    await store.appendEvent(
+      ref,
+      'acp/session_update',
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'An answer.' } },
+      1
+    );
+    await store.appendEvent(ref, 'client/stop', { stopReason: 'end_turn' }, 1);
+
+    await store.checkpointTranscript(ref);
+    const first = await fs.readFile(transcriptPath(), 'utf8');
+    expect(first).toContain('# First question');
+    expect(first).toContain('An answer.');
+    expect(first).toContain('_Stopped: end_turn_');
+
+    // A second turn lands, and the derived file follows the log.
+    await store.appendEvent(ref, 'client/prompt', { text: 'Second question' }, 1);
+    await store.checkpointTranscript(ref);
+    const second = await fs.readFile(transcriptPath(), 'utf8');
+    expect(second).toContain('Second question');
+    expect(second).toContain('## Turn 2');
+  });
+
+  it('is rebuildable: deleting transcript.md loses nothing the log still holds', async () => {
+    await store.createSession(meta());
+    await store.appendEvent(ref, 'client/prompt', { text: 'hello' }, 1);
+    await store.checkpointTranscript(ref);
+    const rendered = await fs.readFile(transcriptPath(), 'utf8');
+
+    await fs.rm(transcriptPath());
+    await store.checkpointTranscript(ref);
+    expect(await fs.readFile(transcriptPath(), 'utf8')).toBe(rendered);
+  });
+
+  it('marks a truncated tail interrupted without needing the meta status', async () => {
+    await store.createSession(meta());
+    await store.appendEvent(ref, 'client/prompt', { text: 'hello' }, 1);
+    await store.closeSession(ref);
+    // The crash-mid-append shape: a half-written final line.
+    await fs.appendFile(
+      path.join(root, 'projects', 'proj-1', 'sessions', 'sess-1', 'events.jsonl'),
+      '{"seq":1,"ts":"2026-07-2'
+    );
+
+    await store.checkpointTranscript(ref);
+    expect(await fs.readFile(transcriptPath(), 'utf8')).toContain('interrupted');
+  });
+
+  it('renders a real pi-acp turn into readable markdown', async () => {
+    // Copied verbatim from the STEP-22-04 recorded corpus (see event-log.test.ts
+    // for why these lines are copied rather than imported).
+    await store.createSession(meta({ title: 'say hello', harnessId: 'pi' }));
+    const eventsPath = path.join(root, 'projects', 'proj-1', 'sessions', 'sess-1', 'events.jsonl');
+    await fs.writeFile(
+      eventsPath,
+      [
+        '{"seq":0,"ts":"2026-07-14T12:00:00.000Z","protocolVersion":1,"kind":"client/session_created","payload":{"sessionId":"sess-pi-01","cwd":"/<HOME>/dev/demo"}}',
+        '{"seq":1,"ts":"2026-07-14T12:00:00.100Z","protocolVersion":1,"kind":"client/prompt","payload":{"text":"say hello"}}',
+        '{"seq":2,"ts":"2026-07-14T12:00:00.300Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-01","update":{"sessionUpdate":"agent_thought_chunk","content":{"type":"text","text":"thinking"}}}}',
+        '{"seq":3,"ts":"2026-07-14T12:05:00.400Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-01","update":{"sessionUpdate":"tool_call","toolCallId":"call-1","title":"Run `ls -la`","kind":"execute","status":"in_progress","rawInput":{"command":"ls","args":["-la"],"cwd":"/<HOME>/dev/demo"}}}}',
+        '{"seq":4,"ts":"2026-07-14T12:05:01.400Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-01","update":{"sessionUpdate":"tool_call_update","toolCallId":"call-1","status":"completed"}}}',
+        '{"seq":5,"ts":"2026-07-14T12:05:02.000Z","protocolVersion":1,"kind":"acp/session_update","payload":{"sessionId":"sess-pi-01","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Hello!"}}}}',
+        '{"seq":6,"ts":"2026-07-14T12:05:02.100Z","protocolVersion":1,"kind":"client/stop","payload":{"stopReason":"end_turn"}}',
+        '',
+      ].join('\n')
+    );
+
+    await store.checkpointTranscript(ref);
+    expect(await fs.readFile(transcriptPath(), 'utf8')).toBe(
+      [
+        '# say hello',
+        '',
+        '- Session: `sess-1`',
+        '- Project: `proj-1`',
+        '- Harness: pi',
+        '- Status: idle',
+        '- Created: 2026-07-27T00:00:00.000Z',
+        '',
+        '## Turn 1',
+        '',
+        '**User**',
+        '',
+        'say hello',
+        '',
+        '- Tool (execute) **Run `ls -la`** — completed',
+        '',
+        '**Agent**',
+        '',
+        'Hello!',
+        '',
+        '_1 thought chunk_',
+        '',
+        '_Stopped: end_turn_',
+        '',
+      ].join('\n')
+    );
+  });
+});

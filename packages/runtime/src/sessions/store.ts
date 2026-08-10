@@ -14,6 +14,8 @@ import {
   type SessionMetaInput,
 } from './meta.js';
 import { isSafeId, projectSessionsDirectory, sessionPaths } from './paths.js';
+import { renderTranscript } from './transcript.js';
+import { writeFileAtomic } from '../shared/atomic-json.js';
 
 /** `createSession` was called for an id that already has a `meta.json`. */
 export class SessionAlreadyExistsError extends Error {
@@ -155,6 +157,26 @@ export class SessionStore {
       paths.meta
     );
     return writeSessionMeta(paths.meta, next);
+  }
+
+  /**
+   * Re-render `transcript.md` from the session's own log (STEP-24-05).
+   *
+   * Deliberately reads rather than taking the caller's in-memory view: the
+   * derived-artifact invariant is that the transcript is a function of
+   * `events.jsonl` + `meta.json` and nothing else, and a checkpoint that
+   * rendered from anything else would quietly break it.
+   *
+   * No serialization: two overlapping checkpoints both derive from the same
+   * log, so last-writer-wins is correct, and the atomic rename means neither
+   * can publish a torn file.
+   */
+  async checkpointTranscript(ref: SessionRef): Promise<void> {
+    const [events, meta] = await Promise.all([this.readEvents(ref), this.readMeta(ref)]);
+    await writeFileAtomic(
+      this.paths(ref).transcript,
+      renderTranscript(events.events, meta, { truncatedTail: events.truncatedTail })
+    );
   }
 
   /**

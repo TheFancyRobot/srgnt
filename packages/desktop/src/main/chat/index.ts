@@ -27,6 +27,7 @@ import type { SessionStore } from '@srgnt/runtime';
 // dynamic import() on first use (see getController).
 import type { ChatSessionController } from './session-controller.js';
 import { forkSession, reconcileForkLinks, type ForkStore } from './fork.js';
+import { runBoundedQuitCleanup } from './quit.js';
 
 export type { ChatSessionController } from './session-controller.js';
 export type { ChatConnectFn, ChatConnection, ChatHarnessIdentity } from './session-controller.js';
@@ -251,6 +252,15 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
       (events.truncatedTail || stranded) && !live && session.status !== 'interrupted'
         ? await store.updateMeta(ref, { status: 'interrupted' })
         : session;
+    // Re-render the derived transcript from the log we just read. This is what
+    // makes the checkpoint cadence irrelevant to crash recovery: whatever
+    // `transcript.md` held before the crash, reopening replaces it with the
+    // truth in `events.jsonl` — including the interrupted marker. Best-effort
+    // and not awaited: the renderer is fed from `events` above, so a failed
+    // cache refresh must not fail the open.
+    void store.checkpointTranscript(ref).catch((error: unknown) => {
+      console.error(`[chat] could not re-render the transcript for ${sessionId}:`, error);
+    });
     return {
       session: repaired,
       events: events.events,
@@ -361,10 +371,25 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
 
   // Teardown: only tear down if a controller was ever constructed (an app where
   // no session was ever opened has nothing to dispose).
+  //
+  // Bounded as one sequence (STEP-24-05): in-flight turns are cancelled and
+  // transcripts checkpointed as best effort, then the kill-trees run — all
+  // three sharing a single deadline so quit can never hang on an agent that
+  // will not answer.
+  //
+  // The workspace re-root hook shares this exact teardown, deliberately. What
+  // the deadline can abandon is only the *waiting*: `dispose` unregisters each
+  // session and cancels its permissions synchronously before it awaits
+  // anything, so a re-root that runs out of budget still leaves nothing writing
+  // into the workspace being left — at worst a kill-tree lands a moment late.
   return async () => {
-    if (controllerPromise !== undefined) {
-      await (await controllerPromise).disposeAll();
-    }
+    if (controllerPromise === undefined) return;
+    const controller = await controllerPromise;
+    await runBoundedQuitCleanup({
+      cancelInFlight: () => controller.cancelInFlight(),
+      checkpoint: () => controller.checkpointAll(),
+      disposeAll: () => controller.disposeAll(),
+    });
   };
 }
 

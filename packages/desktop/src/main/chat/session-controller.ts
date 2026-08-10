@@ -64,8 +64,10 @@ function loadHarness(): Promise<HarnessModule> {
  * never orphan a child. ponytail: per-session `Supervisor` kept rather than the
  * one-shared-Supervisor the Execution Brief sketched — this map plus `dispose`/
  * `disposeAll` already IS the registry a shared supervisor would provide, and
- * handles are independent either way. Revisit if STEP-24-05 needs one central
- * `idleTimeoutMs`.
+ * handles are independent either way. STEP-24-05 settled the open question: the
+ * idle timeout is per-handle arm/disarm policy driven by *this* controller's
+ * turn boundaries, not a central knob, so a shared supervisor would have bought
+ * nothing and cost the per-session kill-tree isolation.
  *
  * Unlike the dev console (which keeps auto-approve — it is a raw dev harness,
  * clearly labeled), chat sessions get the real default-ask permission engine:
@@ -97,6 +99,13 @@ export interface ChatConnection {
    * later: `crashed`, `gave-up`, `exited`.
    */
   readonly onSupervisorEvent?: (listener: (event: SupervisorEvent) => void) => () => void;
+  /**
+   * Pauses/resumes the supervisor's idle-reap clock for this session's process.
+   * Held for the whole of a turn: an agent can think silently for minutes, so
+   * activity heartbeats alone would let a live turn be reaped (STEP-24-05).
+   * Absent on an in-process test connection, which has no process to reap.
+   */
+  readonly setIdleHold?: (held: boolean) => void;
 }
 
 /**
@@ -105,7 +114,17 @@ export interface ChatConnection {
  * hands them in, because client services are scoped to the session's cwd and
  * must exist before `initialize` advertises their capabilities.
  */
-export type ChatConnectFn = (target: ChatTarget, ports: ClientPorts) => Promise<ChatConnection>;
+export type ChatConnectFn = (
+  target: ChatTarget,
+  ports: ClientPorts,
+  options?: ChatConnectOptions,
+) => Promise<ChatConnection>;
+
+/** Process-lifecycle policy the controller hands the connector (STEP-24-05). */
+export interface ChatConnectOptions {
+  /** Reap a session's agent after this long with no turn. `undefined` = never. */
+  readonly idleTimeoutMs?: number;
+}
 
 /**
  * Identity for the built-in deterministic mock. It is not a registry harness
@@ -326,7 +345,7 @@ function mockLaunchSpec(): LaunchSpec {
  * spawned process, so both targets exercise supervisor + wrapper, just
  * deterministically for the mock.
  */
-export const defaultChatConnect: ChatConnectFn = async (target, ports) => {
+export const defaultChatConnect: ChatConnectFn = async (target, ports, options = {}) => {
   const { AcpAgentConnection, Supervisor, piDefinition } = await loadHarness();
   const definition = target === 'pi' ? piDefinition : undefined;
   const launch = definition?.launch ?? mockLaunchSpec();
@@ -335,7 +354,12 @@ export const defaultChatConnect: ChatConnectFn = async (target, ports) => {
     definition !== undefined
       ? { id: definition.id, name: definition.name, quirks: definition.quirks }
       : MOCK_HARNESS_IDENTITY;
-  const supervisor = new Supervisor();
+  // ponytail: per-session `Supervisor` kept (see the class doc) — `idleTimeoutMs`
+  // turned out to be per-handle policy, not the central knob STEP-24-04 guessed
+  // it might be, so nothing here wants one shared instance.
+  const supervisor = new Supervisor(
+    options.idleTimeoutMs === undefined ? {} : { idleTimeoutMs: options.idleTimeoutMs },
+  );
   const handleId = `chat-${target}`;
   supervisor.register(handleId, launch);
   const connection = await Effect.runPromise(
@@ -352,6 +376,7 @@ export const defaultChatConnect: ChatConnectFn = async (target, ports) => {
     onSupervisorEvent: (listener) =>
       // The supervisor is per-session (one handle), so no id filtering is needed.
       supervisor.onEvent(listener),
+    setIdleHold: (held) => supervisor.setIdleHold(handleId, held),
     cleanup: async () => {
       connection.close();
       await supervisor.dispose(handleId);
@@ -402,6 +427,12 @@ export interface ChatSessionPersistence {
    */
   readEvents(ref: { projectId: string; sessionId: string }): Promise<{ events: SessionEvent[] }>;
   closeSession(ref: { projectId: string; sessionId: string }): Promise<void>;
+  /**
+   * Re-renders the session's derived `transcript.md` from its own log
+   * (STEP-24-05). Called at checkpoints only — turn end, the periodic timer
+   * while a turn runs, close, and quit — never on the streamed-append path.
+   */
+  checkpointTranscript(ref: { projectId: string; sessionId: string }): Promise<void>;
 }
 
 /** The fork stamp written by the SAME create that commits a forked session. */
@@ -427,6 +458,8 @@ interface SessionState {
   readonly events: SessionEvent[];
   /** Writes one envelope to whichever sink this session has. */
   readonly append: (kind: string, payload: Record<string, unknown>) => void;
+  /** Resolves once the queued appends have landed. Checkpoints only. */
+  readonly drainAppends: () => Promise<unknown>;
   /** Where the session persists, or `undefined` when it is memory-only. */
   readonly persistRef: { projectId: string; sessionId: string } | undefined;
   readonly harnessId: string;
@@ -442,6 +475,12 @@ interface SessionState {
   readonly modeIds: ReadonlySet<string>;
   /** Unsubscribes the supervisor listener on dispose. */
   readonly unsubscribeStatus: () => void;
+  /** Pauses the idle-reap clock while a turn is in flight (STEP-24-05). */
+  readonly setIdleHold: (held: boolean) => void;
+  /** Periodic transcript checkpoint, live only while a turn is in flight. */
+  checkpointTimer: ReturnType<typeof setInterval> | undefined;
+  /** What `reconnect` needs to put an agent back after an idle reap. */
+  readonly reconnectWith: { target: ChatTarget; project: ChatSessionProject };
 }
 
 /**
@@ -488,7 +527,36 @@ export interface ChatSessionControllerOptions {
    * memory-only, exactly as in Phase 23.
    */
   readonly getStore?: () => ChatSessionPersistence | undefined;
+  /**
+   * How long a session may sit between turns before its agent process is
+   * reaped. Defaults to {@link DEFAULT_IDLE_TIMEOUT_MS}; injected short in
+   * tests. The session itself survives — see `hibernate`.
+   */
+  readonly idleTimeoutMs?: number;
+  /**
+   * Cadence of the periodic `transcript.md` checkpoint *while a turn is in
+   * flight*. Defaults to {@link DEFAULT_CHECKPOINT_INTERVAL_MS}.
+   *
+   * This is NOT the crash-loss bound: the transcript is a derived cache that is
+   * re-rendered from `events.jsonl` on reopen, and the "lose at most the
+   * in-flight chunk" guarantee belongs to the per-event append (STEP-24-01). It
+   * bounds only how stale the on-disk file is for a live external reader
+   * (memsearch) while the app runs.
+   */
+  readonly checkpointIntervalMs?: number;
 }
+
+/**
+ * Idle-reap timeout for chat sessions: 10 minutes between turns.
+ *
+ * A constant this phase, deliberately — exposing it in `settings.json` belongs
+ * with the rest of the harness settings in Phase 25, and a knob nobody has
+ * asked to turn is not worth a settings migration now.
+ */
+export const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+
+/** Periodic transcript checkpoint cadence while a turn is running. */
+export const DEFAULT_CHECKPOINT_INTERVAL_MS = 30 * 1000;
 
 /**
  * Maps one `SupervisorEvent` onto the renderer-facing status push
@@ -598,6 +666,16 @@ export class ChatSessionController {
    * `sessions` and leave the first process unreachable by `dispose`.
    */
   private readonly reconnecting = new Map<string, Promise<ChatSessionReconnectResponse>>();
+  /**
+   * Sessions whose agent was reaped for idleness. They are gone from
+   * `sessions` (nothing is running) but are NOT closed: the next prompt puts an
+   * agent back through the STEP-24-04 reconnect cascade, which is what makes a
+   * reap invisible except for respawn latency.
+   */
+  private readonly hibernated = new Map<
+    string,
+    { target: ChatTarget; project: ChatSessionProject; acpSessionId: string }
+  >();
   private readonly connect: ChatConnectFn;
 
   constructor(private readonly options: ChatSessionControllerOptions) {
@@ -616,8 +694,19 @@ export class ChatSessionController {
     // that id can never be the srgnt id.)
     const handle = randomUUID();
     const opened = await this.openConnection(handle, target, project);
-    const { connection, harness, cleanup, services, permissions, events, append, persistRef, unsubscribeStatus } =
-      opened;
+    const {
+      connection,
+      harness,
+      cleanup,
+      services,
+      permissions,
+      events,
+      append,
+      drainAppends,
+      persistRef,
+      unsubscribeStatus,
+      setIdleHold,
+    } = opened;
     let acpSessionId: string;
     let modes: ChatSessionModes | undefined;
     try {
@@ -642,12 +731,16 @@ export class ChatSessionController {
       permissions,
       events,
       append,
+      drainAppends,
       persistRef,
       harnessId: harness.id,
       metaChain: Promise.resolve(),
       titled: false,
       modeIds: new Set(modes?.availableModes.map((mode) => mode.id) ?? []),
       unsubscribeStatus,
+      setIdleHold,
+      checkpointTimer: undefined,
+      reconnectWith: { target, project },
     });
     if (persistRef !== undefined) {
       // Written only now that the identity is settled: before `session/new`
@@ -707,8 +800,10 @@ export class ChatSessionController {
     permissions: ChatPermissionHost;
     events: SessionEvent[];
     append: (kind: string, payload: Record<string, unknown>) => void;
+    drainAppends: () => Promise<unknown>;
     persistRef: { projectId: string; sessionId: string } | undefined;
     unsubscribeStatus: () => void;
+    setIdleHold: (held: boolean) => void;
     cwd: string;
   }> {
     // The cwd must be known *before* connecting: client services are confined to
@@ -736,6 +831,7 @@ export class ChatSessionController {
         : undefined;
     const events: SessionEvent[] = [];
     let protocolVersion = 0;
+    let appendTail: Promise<unknown> = Promise.resolve();
     const append = (kind: string, payload: Record<string, unknown>): void => {
       if (persistRef === undefined) {
         events.push({ seq: events.length, ts: new Date().toISOString(), protocolVersion, kind, payload });
@@ -744,7 +840,12 @@ export class ChatSessionController {
       // Fire-and-forget: the store already serializes appends per session (one
       // chain per events.jsonl), so ordering holds without awaiting here — and
       // awaiting would put a disk write in the path of every streamed chunk.
-      void store!
+      //
+      // The tail is kept only so a *checkpoint* can wait for it: a transcript
+      // rendered while the turn's own events were still queued would be a
+      // derived cache that is behind its source, which is the one thing it may
+      // never be. Nothing on the streaming path ever awaits this.
+      appendTail = store!
         .appendEvent(persistRef, kind, payload, protocolVersion)
         .catch((error: unknown) => {
           console.error(`[chat] could not persist ${kind} for session ${handle}:`, error);
@@ -780,11 +881,15 @@ export class ChatSessionController {
     });
     let connected;
     try {
-      connected = await this.connect(target, {
-        permission: permissions.port,
-        fs: services.fs,
-        terminal: services.terminal,
-      });
+      connected = await this.connect(
+        target,
+        {
+          permission: permissions.port,
+          fs: services.fs,
+          terminal: services.terminal,
+        },
+        { idleTimeoutMs: this.options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS },
+      );
     } catch (cause) {
       // `connect` can fail before any process exists (a bad scenario override
       // throws while building the LaunchSpec). The services already own a temp
@@ -801,6 +906,15 @@ export class ChatSessionController {
     const unsubscribeStatus =
       onSupervisorEvent?.((event) => {
         if (event.kind === 'crashed') lastStderrTail = event.info.stderrTail;
+        // An idle reap is the supervisor telling us it took the process away.
+        // The session is NOT over — it stays `idle` and resumable — so it is
+        // recorded and hibernated rather than pushed as a status the renderer
+        // would read as a failure.
+        if (event.kind === 'reaped' && event.reason === 'idle') {
+          append('client/harness_reaped', { reason: 'idle', harnessId: harness.id });
+          void this.hibernate(handle);
+          return;
+        }
         const status = supervisorEventToStatus(handle, event, lastStderrTail);
         if (status === null) return;
         append('client/agent_status', { ...status });
@@ -827,8 +941,10 @@ export class ChatSessionController {
       permissions,
       events,
       append,
+      drainAppends: () => appendTail,
       persistRef,
       unsubscribeStatus,
+      setIdleHold: connected.setIdleHold ?? ((): void => {}),
       cwd,
     };
   }
@@ -923,8 +1039,19 @@ export class ChatSessionController {
       // missing right now and present next time. The session is untouched.
       return { outcome: 'retryable', reason: toError(cause).message };
     }
-    const { connection, harness, cleanup, services, permissions, events, append, persistRef, unsubscribeStatus } =
-      opened;
+    const {
+      connection,
+      harness,
+      cleanup,
+      services,
+      permissions,
+      events,
+      append,
+      drainAppends,
+      persistRef,
+      unsubscribeStatus,
+      setIdleHold,
+    } = opened;
     const abandon = async (): Promise<void> => {
       unsubscribeStatus();
       permissions.cancelAll('cancelled');
@@ -1002,6 +1129,7 @@ export class ChatSessionController {
         permissions,
         events,
         append,
+        drainAppends,
         persistRef,
         harnessId: harness.id,
         metaChain: Promise.resolve(),
@@ -1010,7 +1138,14 @@ export class ChatSessionController {
         titled: true,
         modeIds: new Set(modes?.availableModes.map((mode) => mode.id) ?? []),
         unsubscribeStatus,
+        setIdleHold,
+        checkpointTimer: undefined,
+        reconnectWith: { target: options.target, project: options.project },
       });
+      // A session that was reaped and has just been given an agent back is no
+      // longer hibernated; leaving the record would let a later prompt try to
+      // reconnect a session that is already live.
+      this.hibernated.delete(handle);
       append('client/reconnected', {
         via: attempt === 'resume' ? 'session/resume' : 'session/load',
         harnessId: harness.id,
@@ -1089,6 +1224,7 @@ export class ChatSessionController {
 
   /** One prompt turn; resolves with the stop reason. Throws on turn failure. */
   async prompt(handle: string, text: string): Promise<ChatSessionPromptResponse> {
+    await this.revive(handle);
     const state = this.require(handle);
     state.append('client/prompt', { text });
     // The FIRST prompt names the session, and only the first: `titled` is set
@@ -1097,23 +1233,131 @@ export class ChatSessionController {
     const title = state.titled ? undefined : deriveSessionTitle(text);
     state.titled = true;
     this.persistMeta(handle, { status: 'active', ...(title !== undefined ? { title } : {}) });
-    const outcome = await Effect.runPromise(
-      Effect.either(
-        state.connection.prompt({
-          sessionId: state.acpSessionId,
-          prompt: [{ type: 'text', text }],
-        }),
-      ),
-    );
-    if (outcome._tag === 'Left') {
-      const error = toError(outcome.left);
-      state.append('client/stop', { stopReason: 'error', message: error.message });
-      this.persistMeta(handle, { status: 'error' });
-      throw error;
+    this.beginTurn(handle, state);
+    try {
+      const outcome = await Effect.runPromise(
+        Effect.either(
+          state.connection.prompt({
+            sessionId: state.acpSessionId,
+            prompt: [{ type: 'text', text }],
+          }),
+        ),
+      );
+      if (outcome._tag === 'Left') {
+        const error = toError(outcome.left);
+        state.append('client/stop', { stopReason: 'error', message: error.message });
+        this.persistMeta(handle, { status: 'error' });
+        throw error;
+      }
+      state.append('client/stop', { stopReason: outcome.right.stopReason });
+      this.persistMeta(handle, { status: 'idle' });
+      return { stopReason: outcome.right.stopReason };
+    } finally {
+      // Ends the turn on EVERY exit — stop, failure, or a throw from anywhere
+      // between. A turn that ended without releasing the idle hold would keep
+      // the agent alive forever; one that left the interval running would keep
+      // re-rendering a transcript nobody is appending to.
+      this.endTurn(handle, state);
     }
-    state.append('client/stop', { stopReason: outcome.right.stopReason });
-    this.persistMeta(handle, { status: 'idle' });
-    return { stopReason: outcome.right.stopReason };
+  }
+
+  /**
+   * Marks a turn in flight: the idle clock is paused (a silent agent must never
+   * be reaped mid-turn) and the periodic transcript checkpoint starts.
+   */
+  private beginTurn(handle: string, state: SessionState): void {
+    state.setIdleHold(true);
+    if (state.persistRef === undefined || state.checkpointTimer !== undefined) return;
+    const timer = setInterval(
+      () => {
+        void this.checkpoint(state, handle);
+      },
+      this.options.checkpointIntervalMs ?? DEFAULT_CHECKPOINT_INTERVAL_MS,
+    );
+    // A pending checkpoint must never be the reason the process stays alive.
+    timer.unref?.();
+    state.checkpointTimer = timer;
+  }
+
+  /** The mirror of {@link beginTurn}, plus the turn-end transcript checkpoint. */
+  private endTurn(handle: string, state: SessionState): void {
+    if (state.checkpointTimer !== undefined) {
+      clearInterval(state.checkpointTimer);
+      state.checkpointTimer = undefined;
+    }
+    // Re-armed from zero, so the idle clock only ever runs between turns.
+    state.setIdleHold(false);
+    if (state.persistRef === undefined) return;
+    // Fire-and-forget: the caller is answering a prompt, and a stale derived
+    // cache is not worth delaying that for. Ordering against a later checkpoint
+    // does not matter — both render the same log.
+    void this.checkpoint(state, handle);
+  }
+
+  /**
+   * Renders one session's `transcript.md`, after its queued appends have
+   * landed. The drain is what makes "after a completed turn the transcript
+   * matches the log" true: appends are fire-and-forget, so without it a
+   * turn-end checkpoint could render a log that is still missing that turn.
+   */
+  private async checkpoint(state: SessionState, handle: string): Promise<void> {
+    const ref = state.persistRef;
+    if (ref === undefined) return;
+    try {
+      await state.drainAppends();
+      await this.options.getStore?.()?.checkpointTranscript(ref);
+    } catch (error) {
+      // A transcript is derived: failing to write one loses nothing that is not
+      // still in `events.jsonl`, so it is logged and never propagated.
+      console.error(`[chat] could not checkpoint the transcript for ${handle}:`, error);
+    }
+  }
+
+  /**
+   * Puts an agent back behind a session that was reaped for idleness, before
+   * the prompt that needs it. Also covers the tiny race where the reap fires
+   * between a session being looked up and its prompt being sent.
+   */
+  private async revive(handle: string): Promise<void> {
+    if (this.sessions.has(handle)) return;
+    const hibernating = this.hibernated.get(handle);
+    if (hibernating === undefined) return;
+    const outcome = await this.reconnect(handle, hibernating);
+    if (outcome.outcome === 'resumed' || outcome.outcome === 'loaded') return;
+    throw new Error(
+      outcome.reason ?? 'The idle agent for this session could not be restarted. Fork it to keep going.',
+    );
+  }
+
+  /**
+   * Tears the live half of a session down after an idle reap, keeping the
+   * session itself alive on disk.
+   *
+   * Not `dispose`: the status stays `idle` (not `closed`), no
+   * `client/session_closed` is written, and the reconnect parameters are kept
+   * so the next prompt is transparent. The event log IS closed — it holds a
+   * descriptor and the advisory lock, and a reaped session may sit for hours.
+   */
+  private async hibernate(handle: string): Promise<void> {
+    const state = this.sessions.get(handle);
+    if (state === undefined) return;
+    this.sessions.delete(handle);
+    this.hibernated.set(handle, { ...state.reconnectWith, acpSessionId: state.acpSessionId });
+    state.unsubscribeStatus();
+    if (state.checkpointTimer !== undefined) clearInterval(state.checkpointTimer);
+    state.permissions.cancelAll('cancelled');
+    state.services.disposeAll();
+    await state.cleanup();
+    const persistRef = state.persistRef;
+    if (persistRef === undefined) return;
+    await state.metaChain.catch(() => {});
+    await this.checkpoint(state, handle);
+    await this.options
+      .getStore?.()
+      ?.closeSession(persistRef)
+      .catch((error: unknown) => {
+        console.error(`[chat] could not close the event log for reaped session ${handle}:`, error);
+      });
   }
 
   /** `session/cancel` — recovers a hung turn without tearing the session down. */
@@ -1165,6 +1409,11 @@ export class ChatSessionController {
     const metaChain = state.metaChain;
     const store = this.options.getStore?.();
     this.sessions.delete(handle);
+    this.hibernated.delete(handle);
+    if (state.checkpointTimer !== undefined) {
+      clearInterval(state.checkpointTimer);
+      state.checkpointTimer = undefined;
+    }
     // Before the kill-tree: the reap would otherwise be reported as a status
     // transition for a session the renderer has already forgotten.
     state.unsubscribeStatus();
@@ -1180,6 +1429,10 @@ export class ChatSessionController {
       // Last, and only after `cleanup` ended the pump: closing the log while
       // updates were still streaming would refuse the tail of the session.
       await metaChain.catch(() => {});
+      // The final checkpoint, before the log is closed and while `closed` is
+      // already the persisted status, so the transcript's header matches the
+      // session the user will see in the list.
+      await this.checkpoint(state, handle);
       await store?.closeSession(persistRef).catch((error: unknown) => {
         console.error(`[chat] could not close the event log for session ${handle}:`, error);
       });
@@ -1190,6 +1443,35 @@ export class ChatSessionController {
   async disposeAll(): Promise<void> {
     const handles = [...this.sessions.keys()];
     await Promise.all(handles.map((handle) => this.dispose(handle)));
+  }
+
+  /**
+   * Best-effort `session/cancel` for every live session (app quit).
+   *
+   * Every session, not only the ones with a turn observably in flight: a prompt
+   * that has been sent but has not yet registered would be exactly the turn
+   * worth cancelling, and per the ACP spec a cancel for an idle session is a
+   * harmless notification. Tracking "is a turn running" precisely enough to
+   * filter on would buy a no-op saved and cost a race at the one moment that
+   * matters.
+   *
+   * Never rejects: this runs inside the bounded quit sequence, where one agent
+   * refusing to answer must not stop the others from being cancelled or the
+   * kill-trees from running.
+   */
+  async cancelInFlight(): Promise<void> {
+    await Promise.all(
+      [...this.sessions.keys()].map((handle) => this.cancel(handle).catch(() => undefined)),
+    );
+  }
+
+  /** Final transcript checkpoint for every live session (app quit). */
+  async checkpointAll(): Promise<void> {
+    await Promise.all(
+      [...this.sessions.values()]
+        .filter((state) => state.persistRef !== undefined)
+        .map((state) => this.checkpoint(state, state.persistRef!.sessionId)),
+    );
   }
 
   has(handle: string): boolean {

@@ -167,6 +167,11 @@ disposeLiveChatSessions = disposeChat;
 // running when it fires, or the process tree is orphaned. The guard lets the
 // re-issued quit through so this is not a loop (and never `app.exit()`, which
 // skips the quit hooks entirely).
+//
+// Deferring the quit is only safe because the awaited work is bounded:
+// `disposeChat` runs best-effort `session/cancel` → final transcript
+// checkpoint → kill-trees under ONE deadline (see `chat/quit.ts`), so an agent
+// that never answers cannot wedge the quit here.
 let teardownComplete = false;
 
 app.on('before-quit', (event) => {

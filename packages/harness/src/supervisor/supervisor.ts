@@ -19,7 +19,8 @@ export interface SupervisorOptions {
   /**
    * Idle-reap timeout in ms. When set, a `ready` handle with no `markActivity()`
    * for this long is reaped; the next `ensureRunning()` respawns it transparently.
-   * Off by default (Phase 24 wires the real policy) — the mechanism ships now.
+   * Off by default. STEP-24-05 wires the chat policy (see {@link setIdleHold} —
+   * activity pokes alone cannot protect a turn that streams nothing).
    */
   readonly idleTimeoutMs?: number;
   /** Per-process spawn/kill knobs forwarded to each {@link HarnessProcess}. */
@@ -37,6 +38,8 @@ interface Entry {
   /** In-flight `ensureRunning` — coalesces concurrent callers onto one spawn. */
   starting: Promise<HarnessProcess> | undefined;
   cancelIdle: (() => void) | undefined;
+  /** While true the idle clock is paused entirely (a turn is in flight). */
+  idleHeld: boolean;
   /** Consecutive crash count since the last clean start/reap. */
   restarts: number;
   lastExit: ExitInfo | undefined;
@@ -87,6 +90,7 @@ export class Supervisor {
       process: undefined,
       starting: undefined,
       cancelIdle: undefined,
+      idleHeld: false,
       restarts: 0,
       lastExit: undefined,
       disposed: false,
@@ -204,10 +208,36 @@ export class Supervisor {
     this.emit({ kind: 'exited', id, info });
   }
 
+  /**
+   * Pauses (`held`) or resumes the idle clock for a handle.
+   *
+   * `markActivity()` alone CANNOT keep a long turn alive: an agent that thinks
+   * silently for longer than `idleTimeoutMs` emits nothing to poke with, and
+   * would be reaped mid-flight. Correctness therefore comes from this explicit
+   * transition — held on turn start, released on turn end or failure — and the
+   * activity pokes are only a supplemental heartbeat.
+   *
+   * Releasing re-arms from zero, so the idle clock only ever runs between turns.
+   * Unknown ids are ignored: a caller racing `dispose` is normal.
+   */
+  setIdleHold(id: string, held: boolean): void {
+    const entry = this.entries.get(id);
+    if (entry === undefined) {
+      return;
+    }
+    entry.idleHeld = held;
+    if (held) {
+      entry.cancelIdle?.();
+      entry.cancelIdle = undefined;
+      return;
+    }
+    this.armIdle(entry);
+  }
+
   private armIdle(entry: Entry): void {
     entry.cancelIdle?.();
     entry.cancelIdle = undefined;
-    if (this.idleTimeoutMs === undefined) {
+    if (this.idleTimeoutMs === undefined || entry.idleHeld) {
       return;
     }
     entry.cancelIdle = this.clock.schedule(this.idleTimeoutMs, () => {

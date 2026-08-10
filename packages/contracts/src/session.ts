@@ -31,6 +31,28 @@ export const SSession = Schema.Struct({
   acpSessionId: Schema.optional(Schema.String),
   /** Set on fork-with-handoff: links a forked session to the session it continues. */
   parentSessionId: Schema.optional(Schema.String),
+  /**
+   * The other end of {@link parentSessionId}: children forked from this session.
+   *
+   * A **rebuildable cache**, never the source of truth. The child's
+   * `parentSessionId` is written first and is the fork's commit point, so a
+   * crash between the two writes leaves lineage one-way; the session list
+   * rebuilds this list from the children it already reads and writes it back
+   * (STEP-24-04). Never trust it over a scan of children.
+   */
+  forkedSessionIds: Schema.optional(Schema.Array(Schema.String)),
+  /**
+   * Client-supplied fork idempotency key, stamped on the CHILD by the same
+   * write that commits the fork. Replaying a fork resolves to this record, so
+   * nothing about the guarantee depends on a second file landing.
+   */
+  idempotencyKey: Schema.optional(Schema.String),
+  /**
+   * Digest over the normalized fork request the {@link idempotencyKey} answered.
+   * A repeat with the same key but different parameters is a client bug and is
+   * rejected (`FORK_KEY_CONFLICT`) rather than answered with this child.
+   */
+  requestFingerprint: Schema.optional(Schema.String),
   createdAt: Schema.String.pipe(Schema.pattern(datetimePattern)),
   updatedAt: Schema.optional(Schema.String.pipe(Schema.pattern(datetimePattern))),
 });
@@ -96,6 +118,15 @@ export const knownSessionEventKinds = [
   'client/fs_write_text_file',
   'client/fs_denied',
   'client/session_closed',
+  // Resume surface (STEP-24-04). `capability_mismatch` records a harness that
+  // advertised `loadSession`/`resumeSession` and then answered -32601, so a
+  // read-only notice can say *why*; `load_reconciliation` records the position
+  // and sequence digests of a `session/load` replay that diverged from the
+  // local log (the local log stays canonical either way); `reconnected` marks
+  // the turn boundary where a reopened session got a live agent back.
+  'client/capability_mismatch',
+  'client/load_reconciliation',
+  'client/reconnected',
 ] as const;
 export type KnownSessionEventKind = (typeof knownSessionEventKinds)[number];
 

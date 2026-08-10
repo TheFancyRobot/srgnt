@@ -58,6 +58,29 @@ describe('SSession', () => {
     const { projectId: _omitted, ...rest } = validSession;
     expect(safeParse(SSession, rest).success).toBe(false);
   });
+
+  it('carries fork lineage both ways plus the child-side idempotency stamp', () => {
+    // The stamp lives on the CHILD and is written by the same call that commits
+    // the fork, so a crash cannot separate a fork from its identity.
+    const child = parseSync(SSession, {
+      ...validSession,
+      id: 'sess-2',
+      parentSessionId: 'sess-1',
+      idempotencyKey: 'key-1',
+      requestFingerprint: 'abc123',
+    });
+    expect(child.parentSessionId).toBe('sess-1');
+    expect(child.idempotencyKey).toBe('key-1');
+    expect(child.requestFingerprint).toBe('abc123');
+
+    // The parent's side is a list — a session can be forked more than once.
+    const parent = parseSync(SSession, { ...validSession, forkedSessionIds: ['sess-2', 'sess-3'] });
+    expect(parent.forkedSessionIds).toEqual(['sess-2', 'sess-3']);
+    // Absent, not empty, on a session nobody forked: the field is a cache and
+    // "never written" must stay distinguishable from "rebuilt as empty".
+    expect(parseSync(SSession, validSession).forkedSessionIds).toBeUndefined();
+    expect(safeParse(SSession, { ...validSession, forkedSessionIds: 'sess-2' }).success).toBe(false);
+  });
 });
 
 describe('SSessionEvent envelope', () => {

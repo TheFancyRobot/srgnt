@@ -5,18 +5,23 @@ contract_version: 1
 title: Implement resume flows load resume read-only reopen and fork with handoff
 step_id: STEP-24-04
 phase: '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|Phase 24 projects and session persistence]]'
-status: planned
-owner: ''
+status: completed
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-08-09'
 depends_on:
   - STEP-24-02
   - STEP-24-03
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-08-09-215255-implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff-claude-opus-5|SESSION-2026-08-09-215255 claude-opus-5 session for Implement resume flows load resume read-only reopen and fork with handoff]]'
 related_bugs: []
 tags:
   - agent-vault
   - step
+context_id: SESSION-2026-08-09-215255
+active_session_id: 05_Sessions/2026-08-09-215255-implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff-claude-opus-5
+context_status: completed
+context_summary: 'STEP-24-04 complete: honest resume (capability cascade, load-replay reconciliation) and fork-with-handoff shipped and validated. Manual real-Pi check NOT performed.'
 ---
 
 # Step 04 - Implement resume flows load resume read-only reopen and fork with handoff
@@ -79,16 +84,24 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_04_implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_04_implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff/Validation_Plan|Validation Plan]].
+- Status: completed
+- Current owner: claude-opus-5
+- Last touched: 2026-08-09
+- Next action: None for this step. Proceed to [[02_Phases/Phase_24_projects_and_session_persistence/Steps/Step_05_add-transcript-checkpointing-and-lifecycle-cleanup|STEP-24-05 Add transcript checkpointing and lifecycle cleanup]].
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- Reconnect is lazy and renderer-driven: `chat:session:reconnect` (new IPC) is called by `sendPrompt` only when a reopened session has `live === false`. `chat:session:open` stays a pure disk read. `chat:session:list` still never constructs the controller — the "UI-open ≠ process-running" invariant from STEP-24-03 is untouched — but it is no longer read-only: it repairs `forkedSessionIds` through `reconcileForkLinks` and reconciles a stranded `active` status, both best-effort metadata writes.
+- The cascade lives in `ChatSessionController.reconnect` (`packages/desktop/src/main/chat/session-controller.ts`), driven entirely off `connection.capabilities`: `resumeSession` → `loadSession` → read-only. A `-32601` at any step records a `client/capability_mismatch` event and falls through to the next untried path.
+- Failure classes are a pure function (`classifyReconnectFailure` in `resume.ts`): `-32601` → unsupported (cascade continues), `-32002`/"session not found" → missing session (degrade immediately, no second call), everything else → transient (session stays retryable, NOT read-only).
+- Replay isolation needed one new harness seam: `SessionUpdateHub.takeBuffered` / `AcpAgentConnection.takeBufferedUpdates`. The `updates()` iterator parks on an empty buffer, so "read the replay and stop" could not be expressed with it. The replay is lifted off the channel before `startPump` exists, which is why replayed frames are never re-appended.
+- Reconciliation is a full ordered digest comparison (`reconcileReplay`), not count+last: a middle-only divergence is covered by a unit test and an assertion on the appended `client/load_reconciliation` payload.
+- Fork commits with the CHILD meta (`parentSessionId` + `idempotencyKey` + `requestFingerprint` in the same `createSession` write). The parent's `forkedSessionIds` is a rebuildable cache repaired during `chat:session:list` via `reconcileForkLinks`, so a crash between the two writes self-heals at the moment lineage is displayed.
+- Deliberate deviation from the brief: NO `forks/<key>` index file. The brief permitted one only as a rebuildable cache; the scan it would accelerate is `listSessions`, which the list already performs, and forking is human-paced. Recorded as a `ponytail:` comment on `findByKey` in `fork.ts`. Consequence: the Validation Plan's "delete the index file and re-assert" check is vacuous here — the child record is the only truth, asserted by the crash-retry test instead.
+- Two guards, not one: the durable idempotency guard is the key stamped on the child; an in-flight `Map` in `registerChatHandlers` closes the window before that record exists (double-click). The renderer mints one key per session (`useMemo` on `sessionId`), so both clicks carry the same key.
+- `chat:session:reconnect` refuses a session whose persisted `harnessId` is not drivable here (`opencode`), without spawning: resuming on a *different* agent would be the fake-continue the phase forbids.
+- A resumed session is marked `titled: true`, so the prompt that resumed it never renames a session titled by its original first prompt.
 
 ## Human Notes
 
@@ -97,10 +110,13 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- 2026-08-09 - [[05_Sessions/2026-08-09-215255-implement-resume-flows-load-resume-read-only-reopen-and-fork-with-handoff-claude-opus-5|SESSION-2026-08-09-215255 claude-opus-5 session for Implement resume flows load resume read-only reopen and fork with handoff]] - Session created.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Complete. Reopening a persisted session still spawns nothing; the first prompt reconnects through a capability-driven cascade (`session/resume` → `session/load` → read-only + fork), replay is reconciled by full ordered comparison against the canonical local log, and a session that cannot be continued gets a read-only banner whose only way on is a linked fork with a deterministic, pre-filled (never auto-sent) handoff.
+- Validation run in the foreground: `pnpm --filter @srgnt/harness test` (118 passed, 2 skipped), `pnpm --filter @srgnt/contracts test` (179 passed), `pnpm --filter @srgnt/runtime test` (419 passed), `pnpm --filter @srgnt/desktop test` (1149 passed, 64 files), `pnpm -r lint` (clean), and Playwright `e2e/resume.spec.ts` (3/3) plus `chat/sessions/projects` regression (13/13). Randomized suites (`event-log.property.test.ts`, contracts fast-check) run 5x total, stable.
+- NOT performed: the manual real-Pi check (Execution Checklist item 7 / `SRGNT_IT_PI=1`) — no Pi install was exercised in this session, so "Pi continues via `session/load` and the thinking-level selector repopulates" remains unverified against a real agent. The mock covers the same code path including `LoadSessionResponse.modes`.
+- Known pre-existing/environmental E2E failures, unrelated to this step: `e2e/bug-0013-visual.spec.ts` needs a packaged `release/linux-unpacked` build, and `e2e/app.spec.ts` "exercises preload APIs" fails inside `terminal:launch-with-context` with `posix_spawnp failed` (the IPC round trip succeeds; the PTY spawn does not). Neither touches chat, resume or fork code.
+- Follow-up: see the session note's Follow-Up Work.

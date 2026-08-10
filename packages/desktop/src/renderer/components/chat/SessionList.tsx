@@ -29,6 +29,10 @@ export interface SessionRow {
   readonly updatedAt: string;
   /** True while this renderer holds it open (live connection or replayed). */
   readonly open: boolean;
+  /** The session this one was forked from, when it continues another. */
+  readonly parentSessionId: string | null;
+  /** Sessions forked from this one. Rebuilt from children by main on every list. */
+  readonly forkedSessionIds: readonly string[];
 }
 
 const STATUS_LABELS: Record<SessionRowStatus, string> = {
@@ -57,6 +61,8 @@ export function mergeSessionRows(
     status: 'active' | 'idle' | 'interrupted' | 'error' | 'closed';
     createdAt: string;
     updatedAt?: string;
+    parentSessionId?: string;
+    forkedSessionIds?: readonly string[];
   }[],
   open: readonly OpenSession[],
   projectId: string | null,
@@ -73,6 +79,8 @@ export function mergeSessionRows(
       status: live === undefined ? session.status : liveStatusOf(live, session.status),
       updatedAt: session.updatedAt ?? session.createdAt,
       open: live !== undefined,
+      parentSessionId: session.parentSessionId ?? null,
+      forkedSessionIds: session.forkedSessionIds ?? [],
     };
   });
   // A session created moments ago may not be on disk yet (or belongs to another
@@ -88,6 +96,8 @@ export function mergeSessionRows(
       status: liveStatusOf(entry, 'idle'),
       updatedAt: '',
       open: true,
+      parentSessionId: null,
+      forkedSessionIds: [],
     });
   }
   return rows;
@@ -106,14 +116,49 @@ function liveStatusOf(entry: OpenSession, persisted: SessionRowStatus): SessionR
   return persisted === 'closed' ? 'idle' : persisted === 'active' ? 'idle' : persisted;
 }
 
+/**
+ * One lineage hop, in whichever direction. Rendered from the row data alone, so
+ * a fork chain (fork of a fork) is navigable stepwise without the list knowing
+ * anything about depth.
+ */
+function LineageLink({
+  label,
+  targetId,
+  known,
+  onOpen,
+}: {
+  readonly label: string;
+  readonly targetId: string;
+  /** False when the linked session is not in this project's list any more. */
+  readonly known: boolean;
+  readonly onOpen: () => void;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      className="session-lineage-link"
+      data-testid="session-lineage"
+      data-target-session-id={targetId}
+      disabled={!known}
+      onClick={onOpen}
+    >
+      {label}
+    </button>
+  );
+}
+
 function SessionRowItem({
   row,
   active,
+  knownIds,
   onOpen,
+  onOpenSibling,
 }: {
   readonly row: SessionRow;
   readonly active: boolean;
+  readonly knownIds: ReadonlySet<string>;
   readonly onOpen: () => void;
+  readonly onOpenSibling: (sessionId: string) => void;
 }): React.ReactElement {
   return (
     <li
@@ -148,6 +193,27 @@ function SessionRowItem({
           </span>
         </span>
       </button>
+      {(row.parentSessionId !== null || row.forkedSessionIds.length > 0) && (
+        <span className="session-lineage" data-testid="session-lineage-row">
+          {row.parentSessionId !== null && (
+            <LineageLink
+              label="continues…"
+              targetId={row.parentSessionId}
+              known={knownIds.has(row.parentSessionId)}
+              onOpen={() => onOpenSibling(row.parentSessionId!)}
+            />
+          )}
+          {row.forkedSessionIds.map((childId) => (
+            <LineageLink
+              key={childId}
+              label="continued by…"
+              targetId={childId}
+              known={knownIds.has(childId)}
+              onOpen={() => onOpenSibling(childId)}
+            />
+          ))}
+        </span>
+      )}
     </li>
   );
 }
@@ -169,6 +235,8 @@ export function SessionList(): React.ReactElement | null {
       status: 'active' | 'idle' | 'interrupted' | 'error' | 'closed';
       createdAt: string;
       updatedAt?: string;
+      parentSessionId?: string;
+      forkedSessionIds?: readonly string[];
     }[]
   >([]);
   const [error, setError] = React.useState<string | null>(null);
@@ -207,6 +275,10 @@ export function SessionList(): React.ReactElement | null {
 
   if (chat === null) return null;
   const rows = mergeSessionRows(persisted, chat.openSessions, projectId);
+  // Lineage points at ids, not rows: a link whose target is not in this
+  // project's list (an older read, another project) is shown but inert rather
+  // than silently doing nothing when clicked.
+  const knownIds = new Set(rows.map((row) => row.id));
 
   return (
     <div className="p-3 border-b border-border-default space-y-2" data-testid="session-list-panel">
@@ -241,7 +313,9 @@ export function SessionList(): React.ReactElement | null {
               key={row.id}
               row={row}
               active={row.id === chat.activeSessionId}
+              knownIds={knownIds}
               onOpen={() => void chat.openPersistedSession(row.projectId, row.id)}
+              onOpenSibling={(sessionId) => void chat.openPersistedSession(row.projectId, sessionId)}
             />
           ))}
         </ul>

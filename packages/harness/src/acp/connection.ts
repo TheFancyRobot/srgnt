@@ -313,6 +313,18 @@ export class AcpAgentConnection {
     return this.hub.updates(sessionId);
   }
 
+  /**
+   * Takes the frames already queued for a session without waiting for more.
+   *
+   * Called right after {@link load} resolves to lift the replayed history off
+   * the channel before a live pump is attached: the replay must NOT reach a
+   * persistence tap (the local log is canonical and already holds it), and the
+   * iterator alone cannot separate the two — it would park on an empty buffer.
+   */
+  takeBufferedUpdates(sessionId: string): SessionNotification[] {
+    return this.hub.takeBuffered(sessionId);
+  }
+
   /** The same updates as a typed Effect Stream. */
   updateStream(sessionId: string): Stream.Stream<SessionNotification, ConnectionLost> {
     return this.hub.updateStream(sessionId);

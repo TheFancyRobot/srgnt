@@ -40,6 +40,7 @@ function fakeController() {
       quirks: [],
       capabilities: {},
     })),
+    reconnect: vi.fn(async () => ({ outcome: 'loaded' as const })),
     prompt: vi.fn(async () => ({ stopReason: 'end_turn' })),
     setMode: vi.fn(async (_handle: string, modeId: string) => ({ ok: true as const, currentModeId: modeId })),
     cancel: vi.fn(async () => {}),
@@ -365,6 +366,183 @@ describe('registerChatHandlers', () => {
       ipcChannels.chatPermissionRequest,
       ipcChannels.chatPermissionClose,
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Honest resume + fork (PHASE-24, STEP-24-04)
+// ---------------------------------------------------------------------------
+
+describe('registerChatHandlers resume and fork', () => {
+  const meta = {
+    id: 's1',
+    projectId: 'p1',
+    harnessId: 'mock',
+    kind: 'single',
+    status: 'closed',
+    title: 'Fix the bug',
+    acpSessionId: 'acp-1',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    handlers.clear();
+  });
+
+  /** A store fake over one mutable project's session records. */
+  function storeFor(records: Record<string, unknown>[]) {
+    const updateMeta = vi.fn(async (ref: { sessionId: string }, patch: Record<string, unknown>) => {
+      const index = records.findIndex((record) => record.id === ref.sessionId);
+      records[index] = { ...records[index], ...patch };
+      return records[index];
+    });
+    return {
+      updateMeta,
+      store: {
+        readMeta: async (ref: { sessionId: string }) => records.find((record) => record.id === ref.sessionId),
+        readEvents: async () => ({ events: [] }),
+        listSessions: async () => ({ sessions: records, skipped: [] }),
+        updateMeta,
+      },
+    };
+  }
+
+  it('reconnects a persisted session using the harness and ACP id off its meta', async () => {
+    const controller = fakeController();
+    const { store } = storeFor([{ ...meta }]);
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+      sessions: { store: () => store as never },
+    });
+
+    const result = await handlers.get(ipcChannels.chatSessionReconnect)!({}, { projectId: 'p1', sessionId: 's1' });
+
+    expect(result).toEqual({ outcome: 'loaded' });
+    expect(controller.reconnect).toHaveBeenCalledWith('s1', {
+      target: 'mock',
+      project: {},
+      acpSessionId: 'acp-1',
+    });
+  });
+
+  it('refuses to resume a session on a harness this build cannot drive', async () => {
+    // harnesses.json is user data. Quietly resuming on a DIFFERENT agent would
+    // be the exact fake-continue the phase forbids.
+    const createController = vi.fn(() => fakeController() as unknown as ChatSessionController);
+    const { store } = storeFor([{ ...meta, harnessId: 'opencode' }]);
+    registerChatHandlers({
+      getWindow: () => null,
+      createController,
+      sessions: { store: () => store as never },
+    });
+
+    const result = (await handlers.get(ipcChannels.chatSessionReconnect)!(
+      {},
+      { projectId: 'p1', sessionId: 's1' },
+    )) as { outcome: string; reason: string };
+
+    expect(result.outcome).toBe('read_only');
+    expect(result.reason).toMatch(/opencode/);
+    // And nothing was spawned to reach that conclusion.
+    expect(createController).not.toHaveBeenCalled();
+  });
+
+  it('forks a session, stamping lineage into the child session-creation call', async () => {
+    const controller = fakeController();
+    const records = [{ ...meta }];
+    const { store, updateMeta } = storeFor(records);
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+      sessions: { store: () => store as never },
+    });
+
+    const forked = (await handlers.get(ipcChannels.chatSessionFork)!(
+      {},
+      { projectId: 'p1', sourceSessionId: 's1', idempotencyKey: 'key-1' },
+    )) as { parentSessionId: string; handoffText: string; reused: boolean };
+
+    expect(forked.reused).toBe(false);
+    expect(forked.parentSessionId).toBe('s1');
+    expect(forked.handoffText).toContain('Continuing from "Fix the bug".');
+    // The stamp rides along with the child's FIRST meta write.
+    expect(controller.newSession).toHaveBeenCalledWith('mock', {}, {
+      parentSessionId: 's1',
+      idempotencyKey: 'key-1',
+      requestFingerprint: expect.any(String),
+    });
+    expect(updateMeta).toHaveBeenCalledWith(
+      { projectId: 'p1', sessionId: 's1' },
+      { forkedSessionIds: ['chat-x-1'] },
+    );
+  });
+
+  it('collapses two simultaneous forks with one key into a single child', async () => {
+    // The durable guard is the key stamped on the child, but that record does
+    // not exist until session/new returns — this covers exactly that window.
+    const controller = fakeController();
+    const { store } = storeFor([{ ...meta }]);
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+      sessions: { store: () => store as never },
+    });
+
+    const payload = { projectId: 'p1', sourceSessionId: 's1', idempotencyKey: 'key-1' };
+    const [first, second] = await Promise.all([
+      handlers.get(ipcChannels.chatSessionFork)!({}, payload),
+      handlers.get(ipcChannels.chatSessionFork)!({}, payload),
+    ]);
+
+    expect(first).toEqual(second);
+    expect(controller.newSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a fork request with no idempotency key before it reaches the service', async () => {
+    const controller = fakeController();
+    const { store } = storeFor([{ ...meta }]);
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+      sessions: { store: () => store as never },
+    });
+    await expect(
+      handlers.get(ipcChannels.chatSessionFork)!({}, { projectId: 'p1', sourceSessionId: 's1' }),
+    ).rejects.toThrow();
+    expect(controller.newSession).not.toHaveBeenCalled();
+  });
+
+  it('rebuilds a parent forkedSessionIds list from its children when listing', async () => {
+    // The crash-between-writes shape: the child names its parent, the parent
+    // never learned about it. The list is where lineage is displayed, so it is
+    // where the repair belongs.
+    const records = [
+      { ...meta, id: 'parent', status: 'idle' },
+      { ...meta, id: 'child', status: 'idle', parentSessionId: 'parent' },
+    ];
+    const { store, updateMeta } = storeFor(records);
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => fakeController() as unknown as ChatSessionController,
+      sessions: { store: () => store as never },
+    });
+
+    const listed = (await handlers.get(ipcChannels.chatSessionList)!({}, { projectId: 'p1' })) as {
+      sessions: { id: string; forkedSessionIds?: string[] }[];
+    };
+
+    expect(listed.sessions.find((session) => session.id === 'parent')!.forkedSessionIds).toEqual(['child']);
+    expect(updateMeta).toHaveBeenCalledWith(
+      { projectId: 'p1', sessionId: 'parent' },
+      { forkedSessionIds: ['child'] },
+    );
+
+    // Idempotent: a second read repairs nothing, so `updatedAt` does not churn.
+    updateMeta.mockClear();
+    await handlers.get(ipcChannels.chatSessionList)!({}, { projectId: 'p1' });
+    expect(updateMeta).not.toHaveBeenCalled();
   });
 });
 

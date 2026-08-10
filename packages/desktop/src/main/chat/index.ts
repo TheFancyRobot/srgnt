@@ -4,14 +4,18 @@ import {
   ipcChannels,
   parseSync,
   SChatPermissionResponse,
+  SChatSessionForkRequest,
   SChatSessionListRequest,
   SChatSessionNewRequest,
   SChatSessionOpenRequest,
   SChatSessionPromptRequest,
+  SChatSessionReconnectRequest,
   SChatSessionRef,
   SChatSessionSetModeRequest,
+  type ChatSessionForkResponse,
   type ChatSessionListResponse,
   type ChatSessionOpenResponse,
+  type ChatSessionReconnectResponse,
   type ChatTarget,
   type Project,
 } from '@srgnt/contracts';
@@ -22,6 +26,7 @@ import type { SessionStore } from '@srgnt/runtime';
 // (ERR_REQUIRE_ESM) at app startup. The concrete controller is loaded lazily via
 // dynamic import() on first use (see getController).
 import type { ChatSessionController } from './session-controller.js';
+import { forkSession, reconcileForkLinks, type ForkStore } from './fork.js';
 
 export type { ChatSessionController } from './session-controller.js';
 export type { ChatConnectFn, ChatConnection, ChatHarnessIdentity } from './session-controller.js';
@@ -128,10 +133,15 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
     return controllerPromise;
   };
 
-  ipcMain.handle(ipcChannels.chatSessionNew, async (_event, payload: unknown) => {
-    const { target, projectId } = parseSync(SChatSessionNewRequest, payload);
-    // "Project = directory": with no explicit id the workspace cwd materializes
-    // one, so a user who never thinks about projects still gets theirs.
+  /**
+   * "Project = directory": with no explicit id the workspace cwd materializes
+   * one, so a user who never thinks about projects still gets theirs.
+   *
+   * A project outlives its checkout: it must keep listing after the directory
+   * is deleted, but a session there would hand the agent a cwd that is not a
+   * directory. Fail with something a user can act on instead.
+   */
+  const resolveProject = async (projectId: string | undefined): Promise<Project | undefined> => {
     const cwd = wiring.getCwd?.();
     const project =
       wiring.projects === undefined
@@ -141,25 +151,33 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
           : cwd !== undefined && cwd !== ''
             ? await wiring.projects.ensureForDir(cwd)
             : undefined;
-    // A project outlives its checkout: it must keep listing after the directory
-    // is deleted, but a session there would hand the agent a cwd that is not a
-    // directory. Fail with something a user can act on instead.
     if (project !== undefined && !existsSync(project.rootDir)) {
       throw new Error(
         `Project "${project.name}" points at ${project.rootDir}, which no longer exists. Restore the directory or switch projects.`,
       );
     }
-    return (await getController()).newSession(resolveChatTarget(target, project?.defaultHarnessId), {
-      ...(project !== undefined
-        ? {
-            projectId: project.id,
-            cwd: project.rootDir,
-            ...(project.permissionPolicy !== undefined
-              ? { permissionPolicy: project.permissionPolicy }
-              : {}),
-          }
-        : {}),
-    });
+    return project;
+  };
+
+  /** The controller-facing view of a project: cwd, id, standing permissions. */
+  const sessionProject = (project: Project | undefined) =>
+    project === undefined
+      ? {}
+      : {
+          projectId: project.id,
+          cwd: project.rootDir,
+          ...(project.permissionPolicy !== undefined
+            ? { permissionPolicy: project.permissionPolicy }
+            : {}),
+        };
+
+  ipcMain.handle(ipcChannels.chatSessionNew, async (_event, payload: unknown) => {
+    const { target, projectId } = parseSync(SChatSessionNewRequest, payload);
+    const project = await resolveProject(projectId);
+    return (await getController()).newSession(
+      resolveChatTarget(target, project?.defaultHarnessId),
+      sessionProject(project),
+    );
   });
 
   // List + open are pure disk reads. Neither constructs the controller, so
@@ -183,11 +201,27 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
           .catch(() => session);
       }),
     );
+    // Lineage reconciliation. A fork commits with the CHILD's meta and updates
+    // the parent's `forkedSessionIds` after, so a crash in between leaves
+    // lineage navigable one way only. Rebuilding it here — the one pass that
+    // already reads every record in the project — heals it at the moment it is
+    // about to be displayed, which also covers a crash that happened long after
+    // startup. Writes are best-effort: broken lineage must never break the list.
+    const repairs = reconcileForkLinks(reconciled);
+    const linked = await Promise.all(
+      reconciled.map(async (session) => {
+        const forkedSessionIds = repairs.get(session.id);
+        if (forkedSessionIds === undefined) return session;
+        return store
+          .updateMeta({ projectId, sessionId: session.id }, { forkedSessionIds })
+          .catch(() => ({ ...session, forkedSessionIds }));
+      }),
+    );
     return {
       // Newest activity first. `updatedAt` is absent until the first meta
       // rewrite, so a never-prompted session sorts by its creation time rather
       // than to the bottom of the list.
-      sessions: [...reconciled].sort((left, right) =>
+      sessions: [...linked].sort((left, right) =>
         (right.updatedAt ?? right.createdAt).localeCompare(left.updatedAt ?? left.createdAt),
       ),
       skipped,
@@ -223,6 +257,77 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
       truncatedTail: events.truncatedTail,
       live,
     } satisfies ChatSessionOpenResponse;
+  });
+
+  /**
+   * Puts an agent back behind a reopened session, on its first prompt. This is
+   * the ONLY chat channel that may spawn for a session that already exists on
+   * disk — `list` and `open` stay pure reads, which is what keeps "UI-open ≠
+   * process-running" true.
+   */
+  ipcMain.handle(ipcChannels.chatSessionReconnect, async (_event, payload: unknown) => {
+    const { projectId, sessionId } = parseSync(SChatSessionReconnectRequest, payload);
+    const store = wiring.sessions?.store();
+    if (store === undefined) throw new Error('No workspace root: sessions are not persisted yet.');
+    const meta = await store.readMeta({ projectId, sessionId });
+    // The session was recorded against a harness this build cannot drive
+    // (harnesses.json is user data). Silently resuming it on a *different*
+    // agent would be the exact "fake continue" the phase forbids.
+    if (!CHAT_TARGETS.includes(meta.harnessId)) {
+      return {
+        outcome: 'read_only',
+        reason: `This session ran on "${meta.harnessId}", which is not available here. Fork it to continue with another agent.`,
+      } satisfies ChatSessionReconnectResponse;
+    }
+    const project = await resolveProject(projectId);
+    return (await getController()).reconnect(sessionId, {
+      target: meta.harnessId as ChatTarget,
+      project: sessionProject(project),
+      ...(meta.acpSessionId !== undefined ? { acpSessionId: meta.acpSessionId } : {}),
+    });
+  });
+
+  /**
+   * In-flight forks, keyed by project + idempotency key. The durable guard is
+   * the key stamped on the child record, but that record does not exist until
+   * the child's `session/new` returns — so two clicks landing inside that window
+   * would both scan, both miss, and both spawn. This closes exactly that window;
+   * everything longer-lived is answered by the scan in `forkSession`.
+   */
+  const forksInFlight = new Map<string, Promise<ChatSessionForkResponse>>();
+
+  ipcMain.handle(ipcChannels.chatSessionFork, async (_event, payload: unknown) => {
+    const request = parseSync(SChatSessionForkRequest, payload);
+    const store = wiring.sessions?.store();
+    if (store === undefined) throw new Error('No workspace root: sessions are not persisted yet.');
+    const key = `${request.projectId}/${request.idempotencyKey}`;
+    const inflight = forksInFlight.get(key);
+    if (inflight !== undefined) return inflight;
+    // Registered in the SAME synchronous turn as the lookup above: an `await`
+    // before this would let two clicks both pass the check and both fork.
+    const run = (async () => {
+      const project = await resolveProject(request.projectId);
+      return forkSession(
+        {
+          store: store as unknown as ForkStore,
+          createChild: async (lineage, source) =>
+            (await getController()).newSession(
+              // The fork continues the same agent by default; an unknown harness
+              // id degrades to the mock exactly as session creation does.
+              resolveChatTarget(undefined, source.harnessId),
+              sessionProject(project),
+              lineage,
+            ),
+        },
+        request,
+      );
+    })();
+    forksInFlight.set(key, run);
+    try {
+      return await run;
+    } finally {
+      forksInFlight.delete(key);
+    }
   });
 
   ipcMain.handle(ipcChannels.chatSessionPrompt, async (_event, payload: unknown) => {

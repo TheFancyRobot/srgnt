@@ -62,6 +62,8 @@ const ipcChannels = {
   chatSessionSetMode: 'chat:session:set-mode',
   chatSessionList: 'chat:session:list',
   chatSessionOpen: 'chat:session:open',
+  chatSessionReconnect: 'chat:session:reconnect',
+  chatSessionFork: 'chat:session:fork',
   chatSessionUpdate: 'chat:session:update',
   chatSessionStatus: 'chat:session:status',
   chatTerminalOutput: 'chat:terminal:output',
@@ -99,8 +101,24 @@ interface SrgntSession {
   title?: string;
   acpSessionId?: string;
   parentSessionId?: string;
+  /** Children forked from this session. A cache the list rebuilds; see SSession. */
+  forkedSessionIds?: readonly string[];
   createdAt: string;
   updatedAt?: string;
+}
+
+/** Mirrors `SChatSessionNewResponse`: the identity block for one open session. */
+interface SrgntChatSession {
+  sessionId: string;
+  target: 'mock' | 'pi';
+  /** The project the session was created under (PHASE-24). */
+  projectId?: string;
+  harnessId: string;
+  harnessName: string;
+  quirks: readonly string[];
+  capabilities: Record<string, unknown>;
+  /** Absent when the agent advertises no session modes → no mode selector. */
+  modes?: { currentModeId: string; availableModes: readonly { id: string; name: string }[] };
 }
 
 const api = {
@@ -252,18 +270,7 @@ const api = {
     target?: 'mock' | 'pi',
     /** Absent derives (and auto-creates) the project from the workspace cwd. */
     projectId?: string,
-  ): Promise<{
-    sessionId: string;
-    target: 'mock' | 'pi';
-    /** The project the session was created under (PHASE-24). */
-    projectId?: string;
-    harnessId: string;
-    harnessName: string;
-    quirks: readonly string[];
-    capabilities: Record<string, unknown>;
-    /** Absent when the agent advertises no session modes → no mode selector. */
-    modes?: { currentModeId: string; availableModes: readonly { id: string; name: string }[] };
-  }> => ipcRenderer.invoke(ipcChannels.chatSessionNew, { target, projectId }),
+  ): Promise<SrgntChatSession> => ipcRenderer.invoke(ipcChannels.chatSessionNew, { target, projectId }),
   chatSessionPrompt: (sessionId: string, text: string): Promise<{ stopReason: string }> =>
     ipcRenderer.invoke(ipcChannels.chatSessionPrompt, { sessionId, text }),
   chatSessionCancel: (sessionId: string): Promise<void> =>
@@ -301,6 +308,45 @@ const api = {
     /** Whether main still holds a live agent connection for this session. */
     live: boolean;
   }> => ipcRenderer.invoke(ipcChannels.chatSessionOpen, { projectId, sessionId }),
+  /**
+   * Puts a live agent back behind a reopened session (STEP-24-04). Called on the
+   * FIRST prompt, never on open: `resumed`/`loaded` mean the session continues
+   * transparently, `read_only` means fork is the only way on, and `retryable`
+   * means a transient failure the next prompt can try again.
+   */
+  chatSessionReconnect: (
+    projectId: string,
+    sessionId: string,
+  ): Promise<{
+    outcome: 'resumed' | 'loaded' | 'read_only' | 'retryable';
+    reason?: string;
+    session?: SrgntChatSession;
+    /** The agent's replayed history diverged from the local log (local wins). */
+    historyDiverged?: boolean;
+  }> => ipcRenderer.invoke(ipcChannels.chatSessionReconnect, { projectId, sessionId }),
+  /**
+   * Continues a read-only session in a new, linked one. `idempotencyKey` is
+   * REQUIRED and must be stable per intent: a double-click or a retry with the
+   * same key returns the same child instead of forking twice.
+   */
+  chatSessionFork: (
+    projectId: string,
+    sourceSessionId: string,
+    idempotencyKey: string,
+    includeHandoff = true,
+  ): Promise<{
+    session: SrgntChatSession;
+    parentSessionId: string;
+    /** Pre-filled composer text. Never sent for you. */
+    handoffText: string;
+    reused: boolean;
+  }> =>
+    ipcRenderer.invoke(ipcChannels.chatSessionFork, {
+      projectId,
+      sourceSessionId,
+      idempotencyKey,
+      includeHandoff,
+    }),
   onChatSessionUpdate: (callback: (event: { sessionId: string; update: unknown }) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, payload: { sessionId: string; update: unknown }) => callback(payload);
     ipcRenderer.on(ipcChannels.chatSessionUpdate, handler);

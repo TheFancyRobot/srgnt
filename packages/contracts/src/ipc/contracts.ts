@@ -68,6 +68,14 @@ export const ipcChannels = {
   // renders instantly from disk, still without spawning an agent.
   chatSessionList: 'chat:session:list',
   chatSessionOpen: 'chat:session:open',
+  // Honest resume (STEP-24-04). `reconnect` is the LAZY half of "UI-open ≠
+  // process-running": reopening still spawns nothing, and only the first prompt
+  // on a reopened session asks main to put an agent behind it — transparently
+  // via `session/resume`/`session/load` when the harness genuinely supports it,
+  // read-only + fork when it does not. `fork` is the one and only continue path
+  // for a read-only session; it never re-primes context behind the user's back.
+  chatSessionReconnect: 'chat:session:reconnect',
+  chatSessionFork: 'chat:session:fork',
   // Main→renderer push channel for streamed session/update frames.
   chatSessionUpdate: 'chat:session:update',
   // Main→renderer push channel for agent *process* lifecycle (STEP-23-04). This
@@ -650,6 +658,96 @@ export const SChatSessionOpenResponse = Schema.Struct({
   live: Schema.Boolean,
 });
 export type ChatSessionOpenResponse = Schema.Schema.Type<typeof SChatSessionOpenResponse>;
+
+// Honest resume + fork (STEP-24-04).
+
+export const SChatSessionReconnectRequest = Schema.Struct({
+  projectId: Schema.String,
+  sessionId: Schema.String,
+});
+export type ChatSessionReconnectRequest = Schema.Schema.Type<typeof SChatSessionReconnectRequest>;
+
+/**
+ * What a reconnect attempt actually did. `resumed`/`loaded` are BOTH "the
+ * session continues transparently" but stay distinct so a test (and a support
+ * log) can tell which ACP path the cascade took, which is the whole point of a
+ * capability-driven branch.
+ *
+ * - `resumed`   — `session/resume`, no replay.
+ * - `loaded`    — `session/load`, replay consumed and reconciled.
+ * - `read_only` — no transparent-continue path survives; fork is the only way on.
+ * - `retryable` — a transient failure (spawn, transport). The session is
+ *   unchanged and the NEXT prompt re-attempts; this is deliberately NOT
+ *   `read_only`, because degrading on a flaky spawn would strand a session that
+ *   the harness can still resume.
+ */
+export const SChatSessionReconnectOutcome = Schema.Literal(
+  'resumed',
+  'loaded',
+  'read_only',
+  'retryable',
+);
+export type ChatSessionReconnectOutcome = Schema.Schema.Type<typeof SChatSessionReconnectOutcome>;
+
+export const SChatSessionReconnectResponse = Schema.Struct({
+  outcome: SChatSessionReconnectOutcome,
+  /** Human-readable why, for the read-only banner or the retry error. */
+  reason: Schema.optional(Schema.String),
+  /**
+   * The session identity block, exactly as `chat:session:new` returns it, so a
+   * reconnected session regains its harness badge, capabilities and — for a Pi
+   * `session/load` — its advertised modes (the thinking-level selector).
+   */
+  session: Schema.optional(SChatSessionNewResponse),
+  /**
+   * The `session/load` replay diverged from the persisted log. The local log
+   * stays canonical and the render is unchanged; this only drives a subtle
+   * "history may differ on the agent side" notice.
+   */
+  historyDiverged: Schema.optional(Schema.Boolean),
+});
+export type ChatSessionReconnectResponse = Schema.Schema.Type<typeof SChatSessionReconnectResponse>;
+
+/**
+ * Error marker for a reused fork `idempotencyKey` that arrived with DIFFERENT
+ * parameters. A distinct failure on purpose: answering it with the first
+ * request's child would hand back a fork of the wrong session, and forking
+ * again would break the guarantee the key exists to provide.
+ */
+export const FORK_KEY_CONFLICT = 'fork_key_conflict';
+
+export const SChatSessionForkRequest = Schema.Struct({
+  projectId: Schema.String,
+  /** The session being continued. It may still be live; forking never touches it. */
+  sourceSessionId: Schema.String,
+  /**
+   * Seed the new session's composer with the deterministic handoff summary.
+   * Part of the request fingerprint: it changes what the fork *is*.
+   */
+  includeHandoff: Schema.optionalWith(Schema.Boolean, { default: () => true }),
+  /**
+   * Client-generated, REQUIRED. A double-click, or a retry after a crash
+   * mid-fork, must resolve to the same child rather than creating a second one.
+   */
+  idempotencyKey: Schema.String,
+});
+export type ChatSessionForkRequest = Schema.Schema.Type<typeof SChatSessionForkRequest>;
+
+export const SChatSessionForkResponse = Schema.Struct({
+  /** The new live session, in the same shape `chat:session:new` returns. */
+  session: SChatSessionNewResponse,
+  parentSessionId: Schema.String,
+  /**
+   * Deterministic, LLM-free handoff text for the composer. Pre-filled and
+   * editable, NEVER auto-sent: the user sees exactly what context the new
+   * session gets. Empty when `includeHandoff` was false or the source had no
+   * turns to quote.
+   */
+  handoffText: Schema.String,
+  /** True when an earlier call with the same key already created this child. */
+  reused: Schema.Boolean,
+});
+export type ChatSessionForkResponse = Schema.Schema.Type<typeof SChatSessionForkResponse>;
 
 /** Renderer→main: switch the session's mode. */
 export const SChatSessionSetModeRequest = Schema.Struct({

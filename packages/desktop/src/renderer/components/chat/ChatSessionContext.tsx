@@ -79,10 +79,20 @@ export interface OpenSession {
   readonly title: string | null;
   /**
    * False for a session replayed from disk with no live connection in main.
-   * A read-only session renders its transcript but cannot take a prompt —
-   * reconnect-on-prompt is STEP-24-04.
+   * The first prompt on one of these asks main to reconnect (STEP-24-04); it
+   * only becomes live if the harness genuinely resumed or loaded it.
    */
   readonly live: boolean;
+  /**
+   * Set once a reconnect concluded the session cannot be continued: the
+   * composer is disabled and forking is the one way on. `null` means "not
+   * established" — a reopened session is NOT read-only until something tried.
+   */
+  readonly readOnlyReason: string | null;
+  /** The agent's replayed history diverged from the local log (local wins). */
+  readonly historyDiverged: boolean;
+  /** Composer text seeded by a fork handoff; consumed once, never auto-sent. */
+  readonly pendingPrompt: string | null;
 }
 
 export interface ChatSessionContextValue {
@@ -134,12 +144,61 @@ export interface ChatSessionContextValue {
   readonly dispose: () => Promise<void>;
   readonly respondToPermission: (requestId: string, optionId: string | undefined) => void;
   readonly dismissError: () => void;
+  /**
+   * Why the ACTIVE session cannot take a prompt, or `null` when it can. Set by
+   * a reconnect that found no transparent-continue path; the banner shows it
+   * verbatim so the user learns *why*, not just that.
+   */
+  readonly readOnlyReason: string | null;
+  /** The active session's replayed history disagreed with the local log. */
+  readonly historyDiverged: boolean;
+  /**
+   * Continues the active read-only session in a new linked one. The handoff
+   * text lands in the composer as a draft — this NEVER sends it.
+   * `idempotencyKey` must be stable per intent so a double-click forks once.
+   */
+  readonly fork: (idempotencyKey: string) => Promise<void>;
+  /** False when the preload predates `chat:session:fork`: no fork affordance. */
+  readonly canFork: boolean;
+  /** Composer seed from a fork handoff, cleared once the composer adopts it. */
+  readonly pendingPrompt: string | null;
+  readonly clearPendingPrompt: () => void;
 }
 
 const ChatSessionContext = React.createContext<ChatSessionContextValue | null>(null);
 
 function messageOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+/** The identity block main returns for an opened, reconnected or forked session. */
+interface OpenedSessionIdentity {
+  readonly sessionId: string;
+  readonly target: ChatTarget;
+  readonly projectId?: string;
+  readonly harnessId: string;
+  readonly harnessName: string;
+  readonly quirks: readonly string[];
+  readonly capabilities: Record<string, unknown>;
+  readonly modes?: { readonly currentModeId: string; readonly availableModes: readonly ChatSessionMode[] };
+}
+
+/**
+ * Main's session identity → the renderer's. Shared by open, reconnect and fork
+ * so a reconnected session ends up with exactly the same shape a fresh one has
+ * — a second mapping is how a resumed session would end up subtly different.
+ */
+function identityOf(session: OpenedSessionIdentity): ChatSessionInfo {
+  return {
+    sessionId: session.sessionId,
+    target: session.target,
+    harnessId: session.harnessId,
+    harnessName: session.harnessName,
+    quirks: session.quirks,
+    capabilities: session.capabilities,
+    projectId: session.projectId ?? null,
+    modes: session.modes ?? null,
+  };
 }
 
 /** rAF when the environment has one (real app), a timer otherwise (jsdom/tests). */
@@ -207,6 +266,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const activeIdRef = React.useRef<string | null>(null);
   /** Mirrors `sessions` so callbacks can read `live` without re-binding. */
   const liveById = React.useRef<ReadonlyMap<string, boolean>>(new Map());
+  /** Same mirror for the whole record, when a callback needs more than `live`. */
+  const sessionsRef = React.useRef<readonly OpenSession[]>([]);
   const pending = React.useRef(new Map<string, unknown[]>());
   const cancelFlush = React.useRef<(() => void) | null>(null);
   /**
@@ -222,6 +283,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   React.useEffect(() => {
     knownIds.current = new Set(sessions.map((entry) => entry.info.sessionId));
     liveById.current = new Map(sessions.map((entry) => [entry.info.sessionId, entry.live]));
+    sessionsRef.current = sessions;
     activeIdRef.current = activeSessionId;
   }, [sessions, activeSessionId]);
 
@@ -385,16 +447,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
         const { [result.sessionId]: _adopted, ...remainingStatuses } = earlyStatuses.current;
         earlyStatuses.current = remainingStatuses;
         const opened: OpenSession = {
-          info: {
-            sessionId: result.sessionId,
-            target: result.target,
-            harnessId: result.harnessId,
-            harnessName: result.harnessName,
-            quirks: result.quirks,
-            capabilities: result.capabilities,
-            projectId: result.projectId ?? null,
-            modes: result.modes ?? null,
-          },
+          info: identityOf(result),
           status: 'ready',
           transcript: initialTranscriptState,
           permissions: held,
@@ -402,6 +455,9 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
           lastStopReason: null,
           title: null,
           live: true,
+          readOnlyReason: null,
+          historyDiverged: false,
+          pendingPrompt: null,
         };
         // Set before the state lands: frames for this session can arrive in the
         // same tick, and the router drops anything it does not recognise.
@@ -459,9 +515,12 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
           agentStatus: null,
           lastStopReason: null,
           title: result.session.title ?? null,
-          // A reopened session with no live connection is read-only until
-          // STEP-24-04 lands reconnect-on-prompt.
+          // Not live does NOT mean read-only: the first prompt asks main to
+          // reconnect, and only a failed cascade sets `readOnlyReason`.
           live: result.live,
+          readOnlyReason: null,
+          historyDiverged: false,
+          pendingPrompt: null,
         };
         knownIds.current = new Set([...knownIds.current, sessionId]);
         // `knownIds` is only written after the read resolves, so two clicks on
@@ -478,16 +537,74 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     [],
   );
 
+  /**
+   * Puts an agent back behind a reopened session, on the prompt that needs one.
+   *
+   * Reopening stays process-free; this is the lazy half of that bargain. It
+   * resolves `true` only when the session genuinely continues — a harness that
+   * cannot resume marks the session read-only (fork is then the only way on)
+   * and a transient failure leaves it retryable, so the NEXT prompt tries again
+   * rather than the session being written off.
+   */
+  const reconnect = React.useCallback(
+    async (sessionId: string, projectId: string | null): Promise<boolean> => {
+      if (projectId === null || typeof window.srgnt?.chatSessionReconnect !== 'function') {
+        // No route to reconnect at all (older preload, or a session with no
+        // project). Leaving only an error would keep the composer enabled and
+        // let the user keep sending into nothing — the read-only state IS the
+        // honest one here.
+        const reason = 'This session cannot be reconnected here. Fork it to keep going.';
+        patch(sessionId, (entry) => ({ ...entry, live: false, readOnlyReason: reason }));
+        setError(reason);
+        return false;
+      }
+      let result;
+      try {
+        result = await window.srgnt.chatSessionReconnect(projectId, sessionId);
+      } catch (cause) {
+        setError(messageOf(cause));
+        return false;
+      }
+      if (result.outcome === 'read_only') {
+        patch(sessionId, (entry) => ({
+          ...entry,
+          live: false,
+          readOnlyReason: result.reason ?? 'This session cannot be continued.',
+        }));
+        return false;
+      }
+      if (result.outcome === 'retryable') {
+        // Deliberately NOT read-only: the harness may resume it fine next time.
+        setError(result.reason ?? 'Could not reach the agent. Try again.');
+        return false;
+      }
+      patch(sessionId, (entry) => ({
+        ...entry,
+        live: true,
+        readOnlyReason: null,
+        historyDiverged: result.historyDiverged === true,
+        // A resumed session regains its real harness identity, capabilities and
+        // — for a `session/load` — its advertised modes, so the thinking-level
+        // selector comes back instead of staying blank.
+        info: result.session === undefined ? entry.info : { ...entry.info, ...identityOf(result.session) },
+      }));
+      liveById.current = new Map(liveById.current).set(sessionId, true);
+      return true;
+    },
+    [patch],
+  );
+
   const sendPrompt = React.useCallback(
     async (text: string): Promise<boolean> => {
       const current = activeIdRef.current;
       if (current === null || text.trim() === '') return false;
-      // A session replayed from disk has no process behind it. Main holds no
-      // controller entry for that id, so the prompt would surface as a failed
-      // turn; refusing here is the honest version until STEP-24-04 reconnects.
+      // A session replayed from disk has no process behind it yet. Ask main for
+      // one HERE rather than refusing: reopen is process-free by design, and the
+      // first prompt is exactly when a process becomes worth spawning.
       if (liveById.current.get(current) === false) {
-        setError('This session is no longer running. Start a new session to continue it.');
-        return false;
+        const projectId = sessionsRef.current.find((entry) => entry.info.sessionId === current)
+          ?.info.projectId ?? null;
+        if (!(await reconnect(current, projectId))) return false;
       }
       setError(null);
       patch(current, (entry) => ({
@@ -525,6 +642,74 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
     },
     [flush, patch, bumpList],
   );
+
+  /**
+   * Continues the active session in a new, linked one.
+   *
+   * The handoff text is installed as a DRAFT and nothing is sent: the whole
+   * point of the fork path is that the user sees the context the new session
+   * gets. A reused fork (double-click, retry after a crash) resolves to the
+   * child that already exists and is simply opened from disk.
+   */
+  const fork = React.useCallback(
+    async (idempotencyKey: string) => {
+      const current = activeIdRef.current;
+      if (current === null || typeof window.srgnt?.chatSessionFork !== 'function') return;
+      const source = sessionsRef.current.find((entry) => entry.info.sessionId === current);
+      const projectId = source?.info.projectId ?? null;
+      if (projectId === null) {
+        setError('This session has no project, so it cannot be forked.');
+        return;
+      }
+      try {
+        const result = await window.srgnt.chatSessionFork(projectId, current, idempotencyKey);
+        if (result.reused) {
+          // The child already exists (and may no longer be live). Open it the
+          // ordinary way rather than installing a second record for one id.
+          await openPersistedSession(projectId, result.session.sessionId);
+          // `openPersistedSession` clears `pendingPrompt`, so without this a
+          // retry or double-click drops the handoff the user was meant to read
+          // before sending — the whole point of seeding it as a draft.
+          if (result.handoffText !== '') {
+            patch(result.session.sessionId, (entry) => ({ ...entry, pendingPrompt: result.handoffText }));
+          }
+          return;
+        }
+        const opened: OpenSession = {
+          info: identityOf(result.session),
+          status: 'ready',
+          transcript: initialTranscriptState,
+          permissions: [],
+          agentStatus: null,
+          lastStopReason: null,
+          title: null,
+          live: true,
+          readOnlyReason: null,
+          historyDiverged: false,
+          pendingPrompt: result.handoffText === '' ? null : result.handoffText,
+        };
+        knownIds.current = new Set([...knownIds.current, result.session.sessionId]);
+        activeIdRef.current = result.session.sessionId;
+        setSessions((currentList) =>
+          currentList.some((entry) => entry.info.sessionId === result.session.sessionId)
+            ? currentList
+            : [...currentList, opened],
+        );
+        setActiveSessionId(result.session.sessionId);
+        setError(null);
+        bumpList();
+      } catch (cause) {
+        setError(messageOf(cause));
+      }
+    },
+    [bumpList, openPersistedSession],
+  );
+
+  const clearPendingPrompt = React.useCallback(() => {
+    const current = activeIdRef.current;
+    if (current === null) return;
+    patch(current, (entry) => (entry.pendingPrompt === null ? entry : { ...entry, pendingPrompt: null }));
+  }, [patch]);
 
   const setMode = React.useCallback(
     async (modeId: string) => {
@@ -625,6 +810,12 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       dispose,
       respondToPermission,
       dismissError,
+      readOnlyReason: active?.readOnlyReason ?? null,
+      historyDiverged: active?.historyDiverged ?? false,
+      fork,
+      canFork: typeof window.srgnt?.chatSessionFork === 'function',
+      pendingPrompt: active?.pendingPrompt ?? null,
+      clearPendingPrompt,
     }),
     [
       active,
@@ -642,6 +833,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       dispose,
       respondToPermission,
       dismissError,
+      fork,
+      clearPendingPrompt,
     ],
   );
 

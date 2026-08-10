@@ -116,6 +116,24 @@ export class SessionUpdateHub {
     );
   }
 
+  /**
+   * Takes everything currently queued for a session, synchronously, without
+   * waiting for more.
+   *
+   * The `updates()` iterator cannot do this: on an empty buffer its `next()`
+   * parks until the next live frame, so "read the replay and stop" would block
+   * on traffic that may never come. A `session/load` replay is fully queued by
+   * the time `load()` resolves (the notifications precede the response on the
+   * wire), so a client can take exactly the replay here and then hand the same
+   * channel to its live pump — which is what keeps replayed frames out of the
+   * persistence tap.
+   */
+  takeBuffered(sessionId: string): SessionNotification[] {
+    const channel = this.channels.get(sessionId);
+    if (channel === undefined || channel.buffer.length === 0) return [];
+    return channel.buffer.splice(0, channel.buffer.length);
+  }
+
   /** Marks a session's stream complete; buffered updates still drain. */
   end(sessionId: string): void {
     const channel = this.channels.get(sessionId);

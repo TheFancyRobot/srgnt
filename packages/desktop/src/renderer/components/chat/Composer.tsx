@@ -74,6 +74,9 @@ export function Composer(): React.ReactElement {
     setMode,
     cancel,
     dispose,
+    readOnlyReason,
+    pendingPrompt,
+    clearPendingPrompt,
   } = useChatSession();
 
   const [draft, setDraft] = React.useState('');
@@ -89,7 +92,24 @@ export function Composer(): React.ReactElement {
   // Send stays disabled until the prompt promise itself settles.
   const busy = status === 'prompting' || cancelling;
   const agentDead = agentStatus !== null && DEAD_STATUSES.includes(agentStatus.status);
-  const canSend = hasSession && !busy && !agentDead && draft.trim() !== '';
+  // Read-only means read-only (STEP-24-04): the composer is inert and forking
+  // is the only way on. Anything else here would be a hidden re-prompt.
+  const readOnly = readOnlyReason !== null;
+  const canSend = hasSession && !busy && !agentDead && !readOnly && draft.trim() !== '';
+
+  // A fork hands its session a pre-filled, EDITABLE draft — never a sent
+  // prompt. Adopted once and cleared, so re-selecting the session later does
+  // not resurrect a handoff the user deliberately deleted.
+  //
+  // It overwrites whatever is in the box, and must: the composer's draft is
+  // shared across sessions, and a fork arrives precisely when the ACTIVE
+  // session changed to a new one — so anything still in there is the prompt the
+  // read-only session refused, which is the text this handoff replaces.
+  React.useEffect(() => {
+    if (pendingPrompt === null) return;
+    setDraft(pendingPrompt);
+    clearPendingPrompt();
+  }, [pendingPrompt, clearPendingPrompt]);
 
   const commands = React.useMemo(
     () => parseCommands(transcript.availableCommands),
@@ -275,8 +295,14 @@ export function Composer(): React.ReactElement {
             className="chat-input"
             value={draft}
             rows={2}
-            disabled={!hasSession}
-            placeholder={hasSession ? 'Send a message…  (/ for commands)' : 'Start a session to send a message'}
+            disabled={!hasSession || readOnly}
+            placeholder={
+              readOnly
+                ? 'This session is read-only. Continue it in a new session.'
+                : hasSession
+                  ? 'Send a message…  (/ for commands)'
+                  : 'Start a session to send a message'
+            }
             aria-label="Message"
             onChange={handleChange}
             onKeyDown={handleKeyDown}

@@ -11,7 +11,8 @@ created: '2026-07-10'
 updated: '2026-08-14'
 depends_on:
   - STEP-25-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-08-14-014500-build-harness-settings-ui-with-per-project-defaults-claude-opus-5|SESSION-2026-08-14-014500]]'
 related_bugs: []
 tags:
   - agent-vault

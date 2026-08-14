@@ -148,11 +148,51 @@ describe('save-override', () => {
     expect(entryFor(response, 'pi')?.definition.launch.command).toBe('/opt/bin/npx');
   });
 
-  it('writes harnesses.json owner-only (0600)', async () => {
+  // POSIX-only: Windows does not map `stat().mode` onto POSIX permission bits,
+  // and the desktop suite also runs on the windows-latest lane in
+  // desktop-release.yml. The guarantee itself is unconditional; only the way to
+  // observe it is platform-specific.
+  it.skipIf(process.platform === 'win32')('writes harnesses.json owner-only (0600)', async () => {
     service();
     const pi = await builtinPi();
     await save('pi', { ...pi, launch: { ...pi.launch, command: '/opt/bin/npx' } });
     expect((await fs.stat(harnessesJson())).mode & 0o777).toBe(0o600);
+  });
+
+  it('canonicalizes a duplicate custom id against the LAST entry, and replaces only that one', async () => {
+    // `HarnessRegistry.create` is last-write-wins, so with a hand-edited file
+    // carrying the same id twice the last entry is what the registry resolves
+    // and what the UI rendered. Basing on the first would revert protected
+    // fields the user's command edit never mentioned.
+    const shadowed = {
+      id: 'inhouse',
+      name: 'Old name',
+      source: 'custom',
+      launch: { command: 'old', args: [], env: {} },
+      quirks: [],
+      capabilityOverrides: {},
+    };
+    const effective = {
+      ...shadowed,
+      name: 'Real name',
+      capabilityOverrides: { mcpServers: false },
+      launch: { command: 'real', args: ['serve'], env: {} },
+    };
+    await writeFile({ version: 1, harnesses: [shadowed, effective] });
+    service();
+
+    await save('inhouse', { ...effective, launch: { ...effective.launch, command: '/opt/bin/real' } });
+
+    const { harnesses } = await readFile();
+    expect(harnesses).toHaveLength(2);
+    // The shadowed entry is inert but still the user's data: untouched.
+    expect(harnesses[0]).toMatchObject({ name: 'Old name', launch: { command: 'old' } });
+    // The effective entry keeps its own protected fields, not the first one's.
+    expect(harnesses[1]).toMatchObject({
+      name: 'Real name',
+      capabilityOverrides: { mcpServers: false },
+      launch: { command: '/opt/bin/real', args: ['serve'] },
+    });
   });
 
   it('takes ONLY the allowlisted fields from a complete-but-tampered payload', async () => {

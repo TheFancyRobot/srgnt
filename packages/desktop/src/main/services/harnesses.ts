@@ -218,7 +218,13 @@ export function createHarnessesService(deps: {
 
       const { BUILTIN_HARNESSES } = await loadHarness();
       const builtin = BUILTIN_HARNESSES.find((entry) => entry.id === harnessId);
-      const existing = load.file.harnesses.find((entry) => entry.id === harnessId);
+      // Last, not first: `HarnessRegistry.create` is last-write-wins, so with
+      // duplicate ids in a hand-edited file the last entry is the effective one
+      // — the definition the UI rendered and the user actually edited. Basing on
+      // the first would canonicalize protected fields (name, quirks, capability
+      // overrides) back to a shadowed record a command edit never mentioned.
+      const duplicates = load.file.harnesses.filter((entry) => entry.id === harnessId);
+      const existing = duplicates.at(-1);
       const base = builtin ?? existing;
       if (base === undefined) {
         return { ok: false, error: `There is no harness "${harnessId}" to configure.` };
@@ -231,9 +237,15 @@ export function createHarnessesService(deps: {
       if (sensitive !== undefined) return { ok: false, error: sensitive };
 
       const record = canonicalize(base, payload);
-      const harnesses = load.file.harnesses.some((entry) => entry.id === harnessId)
-        ? load.file.harnesses.map((entry) => (entry.id === harnessId ? record : entry))
-        : [...load.file.harnesses, record];
+      // Replace only the effective occurrence. Earlier duplicates are already
+      // inert under last-write-wins, and they are the user's file: collapsing
+      // them into copies of this record would delete data the save never
+      // referred to.
+      const lastIndex = load.file.harnesses.map((entry) => entry.id).lastIndexOf(harnessId);
+      const harnesses =
+        lastIndex === -1
+          ? [...load.file.harnesses, record]
+          : load.file.harnesses.map((entry, index) => (index === lastIndex ? record : entry));
       await fs.mkdir(root, { recursive: true });
       await writeJsonAtomic(
         harnessesPath(root),

@@ -23,6 +23,9 @@ describe('writeJsonAtomic', () => {
   });
 
   it('gives the published file the requested mode, tmp window included', async () => {
+    // See the harnesses service tests: `stat().mode` is not POSIX permission
+    // bits on Windows, where this suite also runs.
+    if (process.platform === 'win32') return;
     const file = path.join(dir, 'private.json');
     await writeJsonAtomic(file, { secret: false }, 0o600);
     // `rename` moves the temp file's inode, so the mode read here IS the mode
@@ -32,6 +35,7 @@ describe('writeJsonAtomic', () => {
   });
 
   it('leaves the mode to the process default when none is requested', async () => {
+    if (process.platform === 'win32') return;
     const file = path.join(dir, 'plain.json');
     await writeJsonAtomic(file, { a: 1 });
     expect((await fs.stat(file)).mode & 0o600).toBe(0o600);

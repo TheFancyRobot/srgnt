@@ -315,10 +315,24 @@ export function HarnessSettings(): React.ReactElement | null {
           <HarnessCard
             key={entry.definition.id}
             entry={entry}
+            // Checked rather than asserted: the section renders whenever
+            // `harnessList` exists, so a preload that exposes the read bridge
+            // without the mutation ones would throw on click instead of saying
+            // what is wrong.
             onSave={(definition) =>
-              mutate(() => window.srgnt.harnessSaveOverride!(entry.definition.id, definition))
+              mutate(async () =>
+                window.srgnt.harnessSaveOverride === undefined
+                  ? { ok: false as const, error: 'This build cannot save harness overrides. Restart srgnt, or update it if the problem persists.' }
+                  : window.srgnt.harnessSaveOverride(entry.definition.id, definition),
+              )
             }
-            onReset={() => mutate(() => window.srgnt.harnessResetOverride!(entry.definition.id))}
+            onReset={() =>
+              mutate(async () =>
+                window.srgnt.harnessResetOverride === undefined
+                  ? { ok: false as const, error: 'This build cannot reset harness overrides. Restart srgnt, or update it if the problem persists.' }
+                  : window.srgnt.harnessResetOverride(entry.definition.id),
+              )
+            }
             onOpenDocs={(url) => void window.srgnt.openExternal(url)}
           />
         ))}

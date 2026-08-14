@@ -404,8 +404,14 @@ function AppContent({
             }} />
             {/* Its own section rather than a `SettingsSection`: harness cards are
                 per-record editors with detection state and inline errors, not
-                label/value rows (STEP-25-02). */}
-            <HarnessSettings />
+                label/value rows (STEP-25-02).
+
+                Keyed by the workspace root so switching workspaces while sitting
+                in Settings remounts it. Re-fetching alone would not be enough:
+                the cards hold half-edited definitions from the old workspace,
+                and saving one of those would write its command and env into the
+                new workspace's `harnesses.json`. */}
+            <HarnessSettings key={workspaceRoot} />
             <SettingsUtilityPanel
               statusMessage={statusMessage}
               updateStatus={updateStatus}

@@ -10,7 +10,8 @@ owner: ''
 created: '2026-07-10'
 updated: '2026-08-13'
 depends_on: []
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-08-13-224500-add-opencode-harness-definition-with-runtime-capability-detection-claude-opus-5|SESSION-2026-08-13-224500]]'
 related_bugs: []
 tags:
   - agent-vault

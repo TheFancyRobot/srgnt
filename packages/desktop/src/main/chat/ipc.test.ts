@@ -221,7 +221,9 @@ describe('registerChatHandlers', () => {
       getWindow: () => null,
       createController: () => controller as unknown as ChatSessionController,
     });
-    await expect(handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'bogus' })).rejects.toThrow();
+    // Targets are registry data since STEP-25-02, so a bogus *string* is no
+    // longer a schema failure — a non-string still is.
+    await expect(handlers.get(ipcChannels.chatSessionNew)!({}, { target: 42 })).rejects.toThrow();
     expect(controller.newSession).not.toHaveBeenCalled();
   });
 
@@ -558,19 +560,35 @@ describe('registerChatHandlers resume and fork', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolveChatTarget', () => {
-  it('prefers an explicit choice over the project default', () => {
-    expect(resolveChatTarget('mock', 'pi')).toBe('mock');
-    expect(resolveChatTarget('pi', 'mock')).toBe('pi');
+  const configured = async (id: string): Promise<boolean> => id === 'pi' || id === 'opencode';
+
+  it('prefers an explicit choice over the project default', async () => {
+    await expect(resolveChatTarget('mock', 'pi', configured)).resolves.toBe('mock');
+    await expect(resolveChatTarget('pi', 'mock', configured)).resolves.toBe('pi');
   });
 
-  it('falls back to the project default, then to mock', () => {
-    expect(resolveChatTarget(undefined, 'pi')).toBe('pi');
-    expect(resolveChatTarget(undefined, undefined)).toBe('mock');
+  it('falls back to the project default, then to mock', async () => {
+    await expect(resolveChatTarget(undefined, 'pi', configured)).resolves.toBe('pi');
+    await expect(resolveChatTarget(undefined, undefined, configured)).resolves.toBe('mock');
   });
 
-  it('ignores a default naming a harness this surface cannot drive', () => {
-    // harnesses.json is user data; an unknown default must degrade, not crash.
-    expect(resolveChatTarget(undefined, 'opencode')).toBe('mock');
+  it('uses any configured harness as the project default', async () => {
+    await expect(resolveChatTarget(undefined, 'opencode', configured)).resolves.toBe('opencode');
+  });
+
+  it('BLOCKS on a dangling default instead of silently spawning another agent', async () => {
+    await expect(resolveChatTarget(undefined, 'deleted-harness', configured)).rejects.toThrow(
+      /default harness "deleted-harness" .* no longer configured/,
+    );
+    // Same for an explicit choice that no longer resolves.
+    await expect(resolveChatTarget('deleted-harness', undefined, configured)).rejects.toThrow(
+      /No harness "deleted-harness" is configured/,
+    );
+  });
+
+  it('degrades to mock with no registry wired (Phase-23 behaviour)', async () => {
+    await expect(resolveChatTarget(undefined, 'opencode')).resolves.toBe('mock');
+    await expect(resolveChatTarget(undefined, 'pi')).resolves.toBe('pi');
   });
 });
 
@@ -661,6 +679,53 @@ describe('registerChatHandlers project resolution', () => {
       'mock',
       expect.objectContaining({ permissionPolicy: { read: 'allow' } }),
     );
+  });
+
+  // Registry-backed target resolution (PHASE-25, STEP-25-02). The stub stands in
+  // for the harnesses service: `harnesses.json` is what decides which ids exist.
+  const harnessesStub = (configured: readonly string[]) => ({
+    resolveDefinition: vi.fn(async (id: string) =>
+      configured.includes(id)
+        ? { id, name: id, source: 'builtin' as const, launch: { command: id, args: [], env: {} }, quirks: [], capabilityOverrides: {} }
+        : undefined,
+    ),
+  });
+
+  it('runs a session on any configured harness the project defaults to', async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      getCwd: () => '/ws',
+      projects: projectsStub({ defaultHarnessId: 'opencode' } as Partial<typeof project>),
+      harnesses: harnessesStub(['pi', 'opencode']),
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await handlers.get(ipcChannels.chatSessionNew)!({}, {});
+
+    expect(controller.newSession).toHaveBeenCalledWith('opencode', expect.objectContaining({ projectId: 'abc123' }));
+  });
+
+  it('BLOCKS on a dangling project default: no session, no spawn, an actionable error', async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      getCwd: () => '/ws',
+      projects: projectsStub({ defaultHarnessId: 'deleted-harness' } as Partial<typeof project>),
+      harnesses: harnessesStub(['pi']),
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await expect(handlers.get(ipcChannels.chatSessionNew)!({}, {})).rejects.toThrow(
+      /default harness "deleted-harness" .* no longer configured/,
+    );
+    // Substituting a built-in here would be a session bound to an agent the
+    // user never chose.
+    expect(controller.newSession).not.toHaveBeenCalled();
+
+    // ...and an explicit choice still works.
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'pi' });
+    expect(controller.newSession).toHaveBeenCalledWith('pi', expect.objectContaining({ projectId: 'abc123' }));
   });
 
   it('fails with a readable error when the project rootDir no longer exists', async () => {

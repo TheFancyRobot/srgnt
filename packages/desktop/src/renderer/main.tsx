@@ -13,6 +13,7 @@ import { navIcons } from './components/icons.js';
 import { NotesView } from './components/NotesView.js';
 import { NotesSidePanel } from './components/sidepanels/NotesSidePanel.js';
 import { SettingsSidePanel } from './components/sidepanels/SettingsSidePanel.js';
+import { HarnessSettings } from './components/settings/HarnessSettings.js';
 import { ChatPlanSidePanel } from './components/sidepanels/ChatPlanSidePanel.js';
 import { NotesProvider } from './components/notes/NotesContext.js';
 import { DevConsoleGate } from './components/DevConsole.js';
@@ -401,6 +402,10 @@ function AppContent({
             <SettingsPanel sections={settingsSections} theme={settings.theme} onThemeChange={(theme) => {
               void patchSettings({ theme });
             }} />
+            {/* Its own section rather than a `SettingsSection`: harness cards are
+                per-record editors with detection state and inline errors, not
+                label/value rows (STEP-25-02). */}
+            <HarnessSettings />
             <SettingsUtilityPanel
               statusMessage={statusMessage}
               updateStatus={updateStatus}

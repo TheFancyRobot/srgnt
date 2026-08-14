@@ -13,6 +13,11 @@ import {
   SChatSessionListResponse,
   SChatSessionOpenRequest,
   SChatSessionOpenResponse,
+  SHarnessListRequest,
+  SHarnessListResponse,
+  SHarnessMutationResponse,
+  SHarnessRef,
+  SHarnessSaveOverrideRequest,
   SProjectEnsureRequest,
   SProjectMergeRequest,
   SProjectRenameRequest,
@@ -419,13 +424,17 @@ describe('Chat session IPC (PHASE-23)', () => {
   });
 
   describe('new session', () => {
-    it('accepts both targets', () => {
+    it('accepts any registry id as a target, including the reserved mock', () => {
       expect(parseSync(SChatSessionNewRequest, { target: 'mock' }).target).toBe('mock');
       expect(parseSync(SChatSessionNewRequest, { target: 'pi' }).target).toBe('pi');
+      // STEP-25-02: `harnesses.json` can name anything, so which ids are valid
+      // is registry data. Main rejects a dangling one with an actionable error
+      // rather than the schema pretending to know the set.
+      expect(parseSync(SChatSessionNewRequest, { target: 'opencode' }).target).toBe('opencode');
     });
 
-    it('rejects an unknown target', () => {
-      expect(() => parseSync(SChatSessionNewRequest, { target: 'bogus' })).toThrow();
+    it('still rejects a target that is not a string', () => {
+      expect(() => parseSync(SChatSessionNewRequest, { target: 42 })).toThrow();
     });
 
     it('carries harness identity and quirks to the renderer', () => {
@@ -766,7 +775,9 @@ describe('project IPC schemas (PHASE-24, STEP-24-02)', () => {
   it('makes chat:session:new target and projectId optional (project defaults fill in)', () => {
     expect(parseSync(SChatSessionNewRequest, {})).toEqual({});
     expect(parseSync(SChatSessionNewRequest, { projectId: 'abc' }).projectId).toBe('abc');
-    expect(safeParse(SChatSessionNewRequest, { target: 'bogus' }).success).toBe(false);
+    // Any string is schema-valid since STEP-25-02 (targets are registry data);
+    // a non-string still is not.
+    expect(safeParse(SChatSessionNewRequest, { target: 42 }).success).toBe(false);
   });
 });
 
@@ -833,5 +844,84 @@ describe('resume + fork IPC schemas (PHASE-24, STEP-24-04)', () => {
   it('registers both channels', () => {
     expect(ipcChannels.chatSessionReconnect).toBe('chat:session:reconnect');
     expect(ipcChannels.chatSessionFork).toBe('chat:session:fork');
+  });
+});
+
+describe('harness configuration IPC (STEP-25-02)', () => {
+  const definition = {
+    id: 'pi',
+    name: 'Pi',
+    source: 'builtin' as const,
+    launch: { command: 'npx', args: ['pi-acp@0.0.31'], env: {} },
+    detectCommand: 'pi',
+    quirks: ['adapter-mediated' as const],
+    capabilityOverrides: { mcpServers: false },
+  };
+
+  it('registers the three harness channels', () => {
+    expect(ipcChannels.harnessList).toBe('harness:list');
+    expect(ipcChannels.harnessSaveOverride).toBe('harness:save-override');
+    expect(ipcChannels.harnessResetOverride).toBe('harness:reset-override');
+  });
+
+  it('defaults the list request to the cached probe', () => {
+    expect(parseSync(SHarnessListRequest, {}).refresh).toBe(false);
+    expect(parseSync(SHarnessListRequest, { refresh: true }).refresh).toBe(true);
+  });
+
+  it('keeps the workspace load result distinct from an empty harness list', () => {
+    const healthy = parseSync(SHarnessListResponse, { workspaceLoad: { ok: true }, harnesses: [] });
+    expect(healthy.workspaceLoad).toEqual({ ok: true });
+
+    const broken = parseSync(SHarnessListResponse, {
+      workspaceLoad: { ok: false, error: 'harnesses.json is not valid' },
+      harnesses: [{ definition, overridden: false, detection: { status: 'not-installed', command: 'pi' } }],
+    });
+    // Same empty-custom-entries surface, different meaning — the field says which.
+    expect(broken.workspaceLoad).toEqual({ ok: false, error: 'harnesses.json is not valid' });
+    // A failure without its message would render as a blank error banner.
+    expect(safeParse(SHarnessListResponse, { workspaceLoad: { ok: false }, harnesses: [] }).success).toBe(false);
+  });
+
+  it('carries all three detection states', () => {
+    const states = [
+      { status: 'ok', command: 'opencode', version: '1.18.18' },
+      { status: 'probe-failed', command: 'pi', reason: 'timeout' },
+      { status: 'not-installed', command: 'pi' },
+    ];
+    for (const detection of states) {
+      expect(
+        parseSync(SHarnessListResponse, {
+          workspaceLoad: { ok: true },
+          harnesses: [{ definition, overridden: true, detection }],
+        }).harnesses[0]?.detection.status,
+      ).toBe(detection.status);
+    }
+    // An invented reason must not reach the UI as an unrenderable chip.
+    expect(
+      safeParse(SHarnessListResponse, {
+        workspaceLoad: { ok: true },
+        harnesses: [{ definition, overridden: false, detection: { status: 'probe-failed', command: 'pi', reason: 'vibes' } }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('requires a COMPLETE definition on save, never a patch', () => {
+    const request = parseSync(SHarnessSaveOverrideRequest, { harnessId: 'pi', definition });
+    expect(request.definition.quirks).toEqual(['adapter-mediated']);
+    // A patch-shaped payload would silently delete `launch` on a wholesale replace.
+    expect(safeParse(SHarnessSaveOverrideRequest, { harnessId: 'pi', definition: { id: 'pi', name: 'Pi' } }).success).toBe(false);
+    // Clearing the detect command must round-trip as ABSENT; `''` would spawn
+    // nothing and throw ERR_INVALID_ARG_VALUE at probe time.
+    const { detectCommand: _cleared, ...withoutDetect } = definition;
+    expect(parseSync(SHarnessSaveOverrideRequest, { harnessId: 'pi', definition: withoutDetect }).definition.detectCommand).toBeUndefined();
+    expect(safeParse(SHarnessSaveOverrideRequest, { harnessId: 'pi', definition: { ...definition, detectCommand: '' } }).success).toBe(false);
+  });
+
+  it('names the harness on reset and answers mutations with a typed result', () => {
+    expect(parseSync(SHarnessRef, { harnessId: 'pi' }).harnessId).toBe('pi');
+    expect(parseSync(SHarnessMutationResponse, { ok: true })).toEqual({ ok: true });
+    expect(parseSync(SHarnessMutationResponse, { ok: false, error: 'nope' })).toEqual({ ok: false, error: 'nope' });
+    expect(safeParse(SHarnessMutationResponse, { ok: false }).success).toBe(false);
   });
 });

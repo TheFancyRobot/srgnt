@@ -20,7 +20,10 @@ import { useProjectsOptional } from './ProjectsContext.js';
  * navigating to Notes and back neither kills the session nor loses transcript.
  */
 
-const TARGET_LABELS: Record<ChatTarget, string> = {
+// The explicitly pickable targets. A project's default harness (Settings →
+// Harnesses) is what selects anything else, so this list stays short rather
+// than becoming a second harness registry in the renderer.
+const TARGET_LABELS: Record<string, string> = {
   mock: 'Mock agent',
   pi: 'Pi',
 };

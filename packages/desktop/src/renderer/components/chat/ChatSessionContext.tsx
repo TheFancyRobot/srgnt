@@ -31,7 +31,12 @@ import {
  * for text the user cannot read that fast anyway.
  */
 
-export type ChatTarget = 'mock' | 'pi';
+/**
+ * `mock`, or any harness id the registry resolves — STEP-25-02 made the target
+ * set registry data rather than a compile-time union, so main is the only place
+ * that can say whether an id is real.
+ */
+export type ChatTarget = string;
 
 export type ChatStatus = 'idle' | 'connecting' | 'ready' | 'prompting' | 'cancelling' | 'error';
 

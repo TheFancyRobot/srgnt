@@ -5,10 +5,10 @@ contract_version: 1
 title: Build harness settings UI with per-project defaults
 step_id: STEP-25-02
 phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]]'
-status: planned
+status: done
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-08-14'
 depends_on:
   - STEP-25-01
 related_sessions: []
@@ -77,16 +77,16 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: done
 - Current owner: 
-- Last touched: 2026-07-17
-- Next action: Read [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults/Validation_Plan|Validation Plan]].
+- Last touched: 2026-08-14
+- Next action: None for this step. STEP-25-03 renders the capability matrix beside `settings-section-harnesses` and owns `harness:capabilities` (this step's `harness:list` deliberately carries none).
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- Full findings live in [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults/Implementation_Notes|Implementation Notes]].
+- Sharpest three: `SChatTarget` had to widen from a literal union to `Schema.String` (valid targets are registry data, so only main can tell dangling from unknown); the `Function('return import(...)')` ESM dance is untestable under vitest, so the harnesses service takes an injectable `loadHarness`; a real workspace SEEDS `harnesses.json`, so "file missing" is a unit-test-only state.
 
 ## Human Notes
 
@@ -100,5 +100,5 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Done. Settings → Harnesses lists every registry entry with detection state and edits binary path / detect command / env; overrides land in `harnesses.json` (`0600`, canonicalized against the base, serialized writes) and are what the next spawn launches. Per-project default harness writes through `project:set-defaults`; a dangling default now blocks with an actionable error instead of degrading to the mock.
+- Validation and follow-up: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults/Outcome|Outcome]]. Two pre-existing e2e failures on this machine (node-pty `posix_spawnp`, and the Linux-package-only visual spec) are unrelated to the diff.

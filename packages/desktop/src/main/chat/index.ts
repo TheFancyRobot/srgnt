@@ -33,23 +33,35 @@ import { runBoundedQuitCleanup } from './quit.js';
 export type { ChatSessionController } from './session-controller.js';
 export type { ChatConnectFn, ChatConnection, ChatHarnessIdentity } from './session-controller.js';
 
-/**
- * Which harnesses the chat surface can actually drive. A project's stored
- * `defaultHarnessId` is free-form (harnesses.json can name anything), so it is
- * checked against this before being used as a target — an unknown default must
- * degrade to the mock, not crash session creation.
- */
-const CHAT_TARGETS: readonly string[] = ['mock', 'pi'];
+/** The deterministic in-tree agent. Not a registry harness — its id is reserved. */
+const MOCK_TARGET = 'mock';
 
-export function resolveChatTarget(
+/**
+ * Resolves which harness a session runs on: an explicit choice, else the
+ * project's stored `defaultHarnessId`, else the mock.
+ *
+ * `isConfigured` is the registry check (STEP-25-02). A stored default can point
+ * at an entry that was reset or deleted, and the honest answer there is to
+ * BLOCK with an actionable error: quietly spawning some other agent because the
+ * configured one vanished is the same class of dishonesty as silent context
+ * re-priming. Absent (headless, tests, no harnesses service wired) keeps the
+ * Phase-23 behaviour of degrading an unresolvable default to the mock.
+ */
+export async function resolveChatTarget(
   requested: ChatTarget | undefined,
   defaultHarnessId: string | undefined,
-): ChatTarget {
-  if (requested !== undefined) return requested;
-  if (defaultHarnessId !== undefined && CHAT_TARGETS.includes(defaultHarnessId)) {
-    return defaultHarnessId as ChatTarget;
+  isConfigured?: (id: string) => Promise<boolean>,
+): Promise<ChatTarget> {
+  const chosen = requested ?? defaultHarnessId;
+  if (chosen === undefined || chosen === MOCK_TARGET) return MOCK_TARGET;
+  if (isConfigured === undefined) return chosen === 'pi' ? chosen : MOCK_TARGET;
+  if (await isConfigured(chosen)) return chosen;
+  if (requested !== undefined) {
+    throw new Error(`No harness "${chosen}" is configured. Pick another harness, or add it in Settings → Harnesses.`);
   }
-  return 'mock';
+  throw new Error(
+    `The default harness "${chosen}" for this project is no longer configured. Pick a harness for this session, or set a new default in Settings → Harnesses.`,
+  );
 }
 
 export interface ChatWiring {
@@ -73,6 +85,15 @@ export interface ChatWiring {
    */
   readonly sessions?: {
     store(): SessionStore | undefined;
+  };
+  /**
+   * The merged harness registry (STEP-25-02). It decides which target ids are
+   * real and hands the connector the *effective* definition, so a saved binary
+   * path or env override is what the next spawn launches. Absent (tests,
+   * headless) falls back to the built-in Pi definition, as in Phase 23.
+   */
+  readonly harnesses?: {
+    resolveDefinition(id: string): Promise<HarnessDefinition | undefined>;
   };
   /** Overrides controller construction (tests). */
   readonly createController?: (options: {
@@ -132,6 +153,11 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
       push(wiring, ipcChannels.chatPermissionClose, event);
     },
     ...(wiring.getCwd !== undefined ? { getCwd: wiring.getCwd } : {}),
+    // Definitions come from the registry, not a hardcoded built-in, so an
+    // override saved in Settings is what the next spawn launches (STEP-25-02).
+    ...(wiring.harnesses !== undefined
+      ? { resolveDefinition: (id: string) => wiring.harnesses!.resolveDefinition(id) }
+      : {}),
     // Read per call, never captured: the store is rebuilt when the workspace
     // root changes, and a captured one would keep appending into the workspace
     // the user left.
@@ -206,13 +232,24 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
             : {}),
         };
 
+  /** Whether the registry can actually produce a definition for an id. */
+  const isConfigured =
+    wiring.harnesses === undefined
+      ? undefined
+      : async (id: string): Promise<boolean> =>
+          (await wiring.harnesses!.resolveDefinition(id)) !== undefined;
+
+  /** Whether this build can put an agent behind a recorded harness id at all. */
+  const canDrive = async (id: string): Promise<boolean> =>
+    id === MOCK_TARGET || (isConfigured === undefined ? id === 'pi' : await isConfigured(id));
+
   ipcMain.handle(ipcChannels.chatSessionNew, async (_event, payload: unknown) => {
     const { target, projectId } = parseSync(SChatSessionNewRequest, payload);
     const project = await resolveProject(projectId);
-    return (await getController()).newSession(
-      resolveChatTarget(target, project?.defaultHarnessId),
-      sessionProject(project),
-    );
+    // Resolved BEFORE the controller is constructed: a dangling default must
+    // create no session and spawn no process, only a readable error.
+    const resolvedTarget = await resolveChatTarget(target, project?.defaultHarnessId, isConfigured);
+    return (await getController()).newSession(resolvedTarget, sessionProject(project));
   });
 
   // List + open are pure disk reads. Neither constructs the controller, so
@@ -317,7 +354,7 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
     // The session was recorded against a harness this build cannot drive
     // (harnesses.json is user data). Silently resuming it on a *different*
     // agent would be the exact "fake continue" the phase forbids.
-    if (!CHAT_TARGETS.includes(meta.harnessId)) {
+    if (!(await canDrive(meta.harnessId))) {
       return {
         outcome: 'read_only',
         reason: `This session ran on "${meta.harnessId}", which is not available here. Fork it to continue with another agent.`,
@@ -356,9 +393,10 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
           store: store as unknown as ForkStore,
           createChild: async (lineage, source) =>
             (await getController()).newSession(
-              // The fork continues the same agent by default; an unknown harness
-              // id degrades to the mock exactly as session creation does.
-              resolveChatTarget(undefined, source.harnessId),
+              // The fork continues the same agent; a harness that is no longer
+              // configured blocks exactly as session creation does, rather than
+              // continuing the conversation on a different agent.
+              await resolveChatTarget(undefined, source.harnessId, isConfigured),
               sessionProject(project),
               lineage,
             ),

@@ -14,6 +14,7 @@ import type {
   ChatSessionUpdateEvent,
   ChatTarget,
   ChatTerminalOutputEvent,
+  HarnessDefinition,
   LaunchSpec,
   ProjectPermissionPolicy,
   SessionEvent,
@@ -87,6 +88,14 @@ export interface ChatHarnessIdentity {
 export interface ChatConnection {
   readonly connection: AcpAgentConnection;
   readonly harness: ChatHarnessIdentity;
+  /**
+   * The *effective* registry definition behind this connection, when the target
+   * is a registry harness. Absent for the built-in mock, which is not one. Only
+   * the capability cache reads it: its fingerprint keys the cached row, so an
+   * old negotiation cannot look current after the definition changed under the
+   * same id.
+   */
+  readonly definition?: HarnessDefinition;
   readonly cleanup: () => Promise<void>;
   /**
    * Subscribes to the supervisor's process lifecycle for this session, so the
@@ -373,6 +382,7 @@ export const defaultChatConnect: ChatConnectFn = async (target, ports, options =
   return {
     connection,
     harness,
+    ...(definition !== undefined ? { definition } : {}),
     onSupervisorEvent: (listener) =>
       // The supervisor is per-session (one handle), so no id filtering is needed.
       supervisor.onEvent(listener),
@@ -519,6 +529,16 @@ export interface ChatSessionControllerOptions {
   readonly getCwd?: () => string | undefined;
   /** Builds the client services for a session. Injected in tests. */
   readonly createClientServices?: typeof createChatClientServices;
+  /**
+   * Called after every successful connect to a registry harness, with what was
+   * negotiated and what the definition's overrides made of it. The wiring
+   * persists it as the last-negotiated capability row Settings renders between
+   * runs; absent (headless, tests) simply means nothing is cached.
+   */
+  readonly onCapabilities?: (
+    definition: HarnessDefinition,
+    capture: { negotiated: Record<string, unknown>; effective: Record<string, unknown> },
+  ) => void;
   /** Permission prompt deadline. Injected in tests. */
   readonly permissionDeadlineMs?: number;
   /**
@@ -644,6 +664,21 @@ export function readModes(response: unknown): ChatSessionModes | undefined {
   return { currentModeId: current, availableModes: parsed };
 }
 
+/** Exported for tests: the agent owns this payload, so it is parsed defensively.
+ *
+ * Whether a streamed update is an `available_commands_update` carrying at least
+ * one command. Parsed defensively: the agent owns this payload, and an empty
+ * list is an agent saying it has none, not a capability.
+ */
+export function hasAvailableCommands(update: unknown): boolean {
+  const inner = (update as { update?: { sessionUpdate?: unknown; availableCommands?: unknown } })?.update;
+  return (
+    inner?.sessionUpdate === 'available_commands_update' &&
+    Array.isArray(inner.availableCommands) &&
+    inner.availableCommands.length > 0
+  );
+}
+
 function toError(cause: unknown): Error {
   if (cause instanceof Error) return cause;
   if (cause !== null && typeof cause === 'object' && 'message' in cause) {
@@ -721,6 +756,8 @@ export class ChatSessionController {
       const result = await Effect.runPromise(connection.newSession({ cwd: opened.cwd, mcpServers: [] }));
       acpSessionId = result.sessionId;
       modes = readModes(result);
+      // `modes` exists only on the session/new response — observed, never negotiated.
+      if (modes !== undefined) opened.reportCapabilities({ modes: true });
     } catch (cause) {
       unsubscribeStatus();
       // The connection is live but unusable — tear the process down here so a
@@ -734,7 +771,7 @@ export class ChatSessionController {
       connection,
       cleanup,
       acpSessionId,
-      pump: this.startPump(handle, connection, acpSessionId, append),
+      pump: this.startPump(handle, connection, acpSessionId, append, opened.reportCapabilities),
       services,
       permissions,
       events,
@@ -813,6 +850,14 @@ export class ChatSessionController {
     persistRef: { projectId: string; sessionId: string } | undefined;
     unsubscribeStatus: () => void;
     setIdleHold: (held: boolean) => void;
+    /**
+     * Caches the harness's capabilities, folding in what the session has
+     * revealed so far. Called at connect (baseline), after `session/new`
+     * (modes), and the first time slash commands show up — the merge rule
+     * STEP-25-01 establishes. No-op for the mock, which is not a registry
+     * harness, and for a headless controller with no cache wired.
+     */
+    reportCapabilities: (observed: { modes?: boolean; slashCommands?: boolean }) => void;
     cwd: string;
   }> {
     // The cwd must be known *before* connecting: client services are confined to
@@ -909,6 +954,25 @@ export class ChatSessionController {
     }
     const { connection, harness, cleanup, onSupervisorEvent } = connected;
     protocolVersion = Number(connection.capabilities.protocolVersion ?? 0);
+    // Last-negotiated write-through (STEP-25-01). Display data only, so it is
+    // fire-and-forget: a failed cache write must never fail a session.
+    // Observations accumulate, because `initialize` cannot report them and a
+    // later write must not drop what an earlier one already saw.
+    const { definition } = connected;
+    const seen: { modes?: boolean; slashCommands?: boolean } = {};
+    const reportCapabilities = (observed: { modes?: boolean; slashCommands?: boolean }): void => {
+      if (definition === undefined || this.options.onCapabilities === undefined) return;
+      if (observed.modes === true) seen.modes = true;
+      if (observed.slashCommands === true) seen.slashCommands = true;
+      // The merge lives in the harness package; reached through the connection
+      // because desktop-main is CommonJS and cannot statically import ESM.
+      const merged = connection.withObserved(seen);
+      this.options.onCapabilities(definition, {
+        negotiated: merged.negotiated as unknown as Record<string, unknown>,
+        effective: merged.effective as unknown as Record<string, unknown>,
+      });
+    };
+    reportCapabilities({});
     // `gave-up` reports only a restart count, so the tail of the crash that
     // exhausted the budget is remembered here and threaded into it.
     let lastStderrTail = '';
@@ -954,6 +1018,7 @@ export class ChatSessionController {
       persistRef,
       unsubscribeStatus,
       setIdleHold: connected.setIdleHold ?? ((): void => {}),
+      reportCapabilities,
       cwd,
     };
   }
@@ -968,10 +1033,18 @@ export class ChatSessionController {
     connection: AcpAgentConnection,
     acpSessionId: string,
     append: (kind: string, payload: Record<string, unknown>) => void,
+    reportCapabilities: (observed: { modes?: boolean; slashCommands?: boolean }) => void = () => {},
   ): Promise<void> {
+    let slashCommandsSeen = false;
     return (async () => {
       try {
         for await (const update of connection.updates(acpSessionId)) {
+          // Slash commands are announced mid-turn and nowhere else, so this
+          // pump is the only place the capability can ever be observed.
+          if (!slashCommandsSeen && hasAvailableCommands(update)) {
+            slashCommandsSeen = true;
+            reportCapabilities({ slashCommands: true });
+          }
           // Persisted verbatim, then pushed. Reopening the session replays these
           // payloads through the renderer's transcript reducer — the same
           // reducer the live push feeds — so disk and live render identically.
@@ -1129,11 +1202,12 @@ export class ChatSessionController {
         historyDiverged = await this.reconcileLoadReplay(persistRef, replayed, append);
       }
       const modes = readModes(result.right);
+      if (modes !== undefined) opened.reportCapabilities({ modes: true });
       this.sessions.set(handle, {
         connection,
         cleanup,
         acpSessionId,
-        pump: this.startPump(handle, connection, acpSessionId, append),
+        pump: this.startPump(handle, connection, acpSessionId, append, opened.reportCapabilities),
         services,
         permissions,
         events,

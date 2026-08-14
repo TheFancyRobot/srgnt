@@ -3,7 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { detectCommand, nodeVersionProbe, type ProbeOutcome, type VersionProbe } from './detect.js';
+import { OPENCODE_TESTED_VERSION, opencodeDefinition, piDefinition } from './builtins.js';
+import {
+  detectCommand,
+  detectHarness,
+  nodeVersionProbe,
+  type ProbeOutcome,
+  type VersionProbe,
+} from './detect.js';
 
 const fakeProbe =
   (outcome: ProbeOutcome): VersionProbe =>
@@ -86,5 +93,52 @@ describe('nodeVersionProbe (real processes)', () => {
       else process.env.HANG_PID_FILE = previous;
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('detectHarness (definition-driven probing)', () => {
+  const seen: string[] = [];
+  const recordingProbe: VersionProbe = (command) => {
+    seen.push(command);
+    return Promise.resolve({ kind: 'exit', code: 0, stdout: '1.18.18\n' });
+  };
+
+  it('probes `detectCommand` when the launcher is not the prerequisite binary', async () => {
+    seen.length = 0;
+    const result = await detectHarness(piDefinition, { probe: recordingProbe });
+    // Never `npx`: npx is always present, so probing it would report every
+    // machine as having pi installed.
+    expect(seen).toEqual(['pi']);
+    expect(result).toMatchObject({ status: 'ok', command: 'pi' });
+  });
+
+  it('falls back to `launch.command` when no detectCommand is declared', async () => {
+    seen.length = 0;
+    const result = await detectHarness(opencodeDefinition, { probe: recordingProbe });
+    expect(seen).toEqual(['opencode']);
+    expect(result).toEqual({ status: 'ok', command: 'opencode', version: OPENCODE_TESTED_VERSION });
+  });
+
+  it('reports a missing binary as not-installed — a product state, not an error', async () => {
+    const result = await detectHarness(opencodeDefinition, {
+      probe: fakeProbe({ kind: 'spawn-error', code: 'ENOENT' }),
+    });
+    expect(result).toEqual({ status: 'not-installed', command: 'opencode' });
+  });
+
+  it('reports a hanging probe as probe-failed/timeout (injected, never by uninstalling)', async () => {
+    const fixture = fileURLToPath(new URL('./__fixtures__/hang-probe.mjs', import.meta.url));
+    const result = await detectHarness(
+      { ...opencodeDefinition, launch: { ...opencodeDefinition.launch, command: fixture } },
+      { probe: nodeVersionProbe, timeoutMs: 300 },
+    );
+    expect(result).toMatchObject({ status: 'probe-failed', reason: 'timeout' });
+  });
+
+  it('parses a bare `1.18.18` — opencode needs no special-casing', async () => {
+    const result = await detectCommand('opencode', {
+      probe: fakeProbe({ kind: 'exit', code: 0, stdout: '1.18.18\n' }),
+    });
+    expect(result).toEqual({ status: 'ok', command: 'opencode', version: '1.18.18' });
   });
 });

@@ -1,4 +1,5 @@
 import { spawn as nodeSpawn } from 'node:child_process';
+import type { HarnessDefinition } from '@srgnt/contracts';
 
 const IS_WINDOWS = process.platform === 'win32';
 
@@ -138,5 +139,20 @@ export async function detectCommand(command: string, options: DetectOptions = {}
   }
 }
 
+/**
+ * Detects the CLI a definition needs, from the definition's own data:
+ * `detectCommand` when the launcher differs from the prerequisite binary
+ * (Pi launches `npx` but needs `pi`), otherwise `launch.command`. This is the
+ * generic entry point the settings UI consumes — nothing per-harness here.
+ */
+export const detectHarness = (
+  definition: HarnessDefinition,
+  options?: DetectOptions,
+): Promise<DetectionResult> => detectCommand(definition.detectCommand ?? definition.launch.command, options);
+
 /** Detects the `pi` CLI backing the built-in Pi harness. */
 export const detectPi = (options?: DetectOptions): Promise<DetectionResult> => detectCommand('pi', options);
+
+/** Detects the `opencode` CLI backing the built-in opencode harness. */
+export const detectOpencode = (options?: DetectOptions): Promise<DetectionResult> =>
+  detectCommand('opencode', options);

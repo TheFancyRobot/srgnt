@@ -17,9 +17,10 @@ import {
   type ChatSessionOpenResponse,
   type ChatSessionReconnectResponse,
   type ChatTarget,
+  type HarnessDefinition,
   type Project,
 } from '@srgnt/contracts';
-import type { SessionStore } from '@srgnt/runtime';
+import { createHarnessCapabilityCache, type SessionStore } from '@srgnt/runtime';
 // Type-only import: `session-controller` statically imports the ESM-only
 // `@srgnt/harness`, and the desktop main is compiled to CommonJS, so a *value*
 // import here would become a top-level `require()` of an ESM package
@@ -118,6 +119,22 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
     // root changes, and a captured one would keep appending into the workspace
     // the user left.
     getStore: () => wiring.sessions?.store(),
+    // Last-negotiated capabilities for the settings/matrix surface. Rooted at
+    // the *current* workspace for the same reason as `getStore`, and
+    // fire-and-forget: this is display data, and losing a row must never fail
+    // the session that produced it.
+    onCapabilities: (
+      definition: HarnessDefinition,
+      capture: { negotiated: Record<string, unknown>; effective: Record<string, unknown> },
+    ) => {
+      const root = wiring.getCwd?.();
+      if (root === undefined || root === '') return;
+      void createHarnessCapabilityCache(root)
+        .record(definition, capture)
+        .catch((error: unknown) => {
+          console.error('[chat] could not cache harness capabilities:', error);
+        });
+    },
   };
 
   // Memoized so all handlers and the teardown share one controller.

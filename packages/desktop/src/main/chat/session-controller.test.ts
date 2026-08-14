@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createChatClientServices, type TerminalSpawn } from './client-services.js';
 import {
   ChatSessionController,
+  hasAvailableCommands,
   MOCK_DEMO_SCENARIO,
   MOCK_SCENARIO_ENV,
   readModes,
@@ -644,5 +645,94 @@ describe('ChatSessionController — client services (STEP-23-02)', () => {
     await captured?.terminal?.createTerminal({ sessionId: 'mock-session-1', command: 'sleep', args: ['600'] });
     await controller.dispose(session.sessionId);
     expect(killed).toBe(1);
+  });
+});
+
+describe('capability write-through (STEP-25-01)', () => {
+  const definition = {
+    id: 'opencode',
+    name: 'opencode',
+    source: 'builtin',
+    launch: { command: 'opencode', args: ['acp'], env: {} },
+    quirks: [],
+    capabilityOverrides: {},
+  } as const;
+
+  it('reports the negotiated and effective views for a registry harness', async () => {
+    const captured: Array<{ id: string; negotiated: Record<string, unknown> }> = [];
+    const connect: ChatConnectFn = async () => {
+      const { connection } = await connectMockAgent(demoScenario);
+      return {
+        connection,
+        harness: { id: 'opencode', name: 'opencode', quirks: [] },
+        definition,
+        cleanup: async () => connection.close(),
+      };
+    };
+    const controller = new ChatSessionController({
+      connect,
+      onUpdate: () => {},
+      onCapabilities: (def, capture) =>
+        captured.push({ id: def.id, negotiated: capture.negotiated }),
+    });
+
+    const session = await controller.newSession('mock');
+    expect(captured).toHaveLength(1);
+    expect(captured[0].id).toBe('opencode');
+    expect(captured[0].negotiated.protocolVersion).toBeGreaterThan(0);
+    await controller.dispose(session.sessionId);
+  });
+
+  it('folds a mid-session mode discovery into the cached row', async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const modedScenario = withScenario({
+      initialize: { ...demoScenario.initialize, modes: ['low', 'high'] },
+      directives: [],
+    });
+    const connect: ChatConnectFn = async () => {
+      const { connection } = await connectMockAgent(modedScenario);
+      return {
+        connection,
+        harness: { id: 'opencode', name: 'opencode', quirks: [] },
+        definition,
+        cleanup: async () => connection.close(),
+      };
+    };
+    const controller = new ChatSessionController({
+      connect,
+      onUpdate: () => {},
+      onCapabilities: (_def, capture) => captured.push(capture.negotiated),
+    });
+
+    const session = await controller.newSession('mock');
+    // Baseline at connect (modes cannot be known at initialize), then the
+    // session/new discovery — the merge rule, observed rather than declared.
+    expect(captured.map((c) => c.modes)).toEqual([false, true]);
+    await controller.dispose(session.sessionId);
+  });
+
+  it('recognizes a non-empty available_commands_update as the slash-command signal', () => {
+    const commandsUpdate = (availableCommands: unknown): unknown => ({
+      update: { sessionUpdate: 'available_commands_update', availableCommands },
+    });
+    expect(hasAvailableCommands(commandsUpdate([{ name: 'init' }]))).toBe(true);
+    // An agent reporting an empty list is saying it has none.
+    expect(hasAvailableCommands(commandsUpdate([]))).toBe(false);
+    expect(hasAvailableCommands({ update: { sessionUpdate: 'agent_message_chunk' } })).toBe(false);
+    expect(hasAvailableCommands(undefined)).toBe(false);
+  });
+
+  it('reports nothing for the mock, which is not a registry harness', async () => {
+    let calls = 0;
+    const controller = new ChatSessionController({
+      connect: mockConnect,
+      onUpdate: () => {},
+      onCapabilities: () => {
+        calls += 1;
+      },
+    });
+    const session = await controller.newSession('mock');
+    expect(calls).toBe(0);
+    await controller.dispose(session.sessionId);
   });
 });

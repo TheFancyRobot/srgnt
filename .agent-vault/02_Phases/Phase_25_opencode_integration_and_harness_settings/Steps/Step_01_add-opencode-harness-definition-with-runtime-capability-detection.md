@@ -5,7 +5,7 @@ contract_version: 1
 title: Add opencode harness definition with runtime capability detection
 step_id: STEP-25-01
 phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]]'
-status: planned
+status: done
 owner: ''
 created: '2026-07-10'
 updated: '2026-08-13'
@@ -80,10 +80,10 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
+- Status: done
 - Current owner: 
-- Last touched: 2026-07-17
-- Next action: Read [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection/Validation_Plan|Validation Plan]].
+- Last touched: 2026-08-13
+- Next action: None for this step. STEP-25-02 consumes `detectHarness(definition)`; STEP-25-03 consumes `HarnessCapabilityCache.get()` (a `stale` result renders "re-connect to refresh"); STEP-25-04's inputs are in [[06_Shared_Knowledge/opencode-acp-capture|opencode ACP Capture]].
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
@@ -103,5 +103,7 @@ Use this note for one executable step inside a phase. This note is the source of
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- **Done (2026-08-13).** opencode is a built-in `HarnessDefinition` (`opencode acp`, zero quirks, zero overrides) beside pi; `detectHarness(definition)` probes `detectCommand ?? launch.command` (pi now declares `detectCommand: 'pi'`); `NegotiatedCapabilities` carries `authMethods` (full SDK metadata) and `sessionList`; `mergeSessionCapabilities` folds session-discovered `modes`/`slashCommands` into the negotiated baseline; and `HarnessCapabilityCache` persists both views to `harness-capabilities.json` at the workspace root, fingerprinted by the effective definition, last-write-wins through one write queue. Desktop main writes through on every connect and on each new observation.
+- Validation: contracts 186, harness 136 (+3 skipped ITs), runtime 454, desktop 1174 tests green; `pnpm lint` and `pnpm build` clean; gated `SRGNT_IT_OPENCODE=1` run completed `initialize` + a real prompt turn to `end_turn` against opencode 1.18.18, and the `SRGNT_IT_PI=1` regression still passes with the extended model. Details in [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection/Outcome|Outcome]].
+- Output note written: [[06_Shared_Knowledge/opencode-acp-capture|opencode ACP Capture (STEP-25-01)]]; fixtures committed under `packages/harness/src/testing/fixtures/opencode/`.
+- Deliberately unmeasured (would need a tool-invoking, token-spending probe): opencode's `session/request_permission` round-trip, live `session/load`/`session/resume`, MCP passthrough, and the unauthenticated failure shape.

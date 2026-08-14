@@ -1,4 +1,4 @@
-import type { InitializeResponse } from '@agentclientprotocol/sdk';
+import type { AuthMethod, InitializeResponse } from '@agentclientprotocol/sdk';
 import type { HarnessCapabilityOverrides } from '@srgnt/contracts';
 
 /**
@@ -17,6 +17,15 @@ export interface NegotiatedCapabilities {
   readonly loadSession: boolean;
   /** `session/resume` (continue without replay) support. */
   readonly resumeSession: boolean;
+  /** `session/list` support (`sessionCapabilities.list`). */
+  readonly sessionList: boolean;
+  /**
+   * Auth methods advertised at initialize, preserved **whole**. Not projected
+   * to `{id, name}`: the auth UI has to tell an external-terminal flow
+   * (`type: 'terminal'`, with `args`/`env`) from a non-interactive one and
+   * build the login command from data rather than from a harness id.
+   */
+  readonly authMethods: readonly AuthMethod[];
   /**
    * Session modes. Not advertised at initialize time — agents reveal modes via
    * `session/new`'s `modes` field — so the negotiated default is false until a
@@ -60,6 +69,8 @@ export function negotiateCapabilities(init: InitializeResponse): NegotiatedCapab
     ...(init.agentInfo ? { agentName: init.agentInfo.name, agentVersion: init.agentInfo.version } : {}),
     loadSession: agent.loadSession === true,
     resumeSession: advertised(session.resume),
+    sessionList: advertised(session.list),
+    authMethods: init.authMethods ?? [],
     modes: false,
     slashCommands: false,
     images: prompt.image === true,
@@ -72,6 +83,28 @@ export function negotiateCapabilities(init: InitializeResponse): NegotiatedCapab
 }
 
 /**
+ * Merges capabilities the protocol only reveals *mid-session* into a negotiated
+ * baseline: `modes` arrives with `session/new`, `slashCommands` with an
+ * `available_commands_update` notification. Neither can be known at
+ * `initialize` time, so the baseline says `false` until one is observed.
+ *
+ * Observation-only, and one-way: an absent field leaves the baseline alone, and
+ * nothing here can un-observe a capability the agent already demonstrated.
+ * This is the merge rule the capability matrix renders (STEP-25-01/03) — it is
+ * the reason no harness needs a hardcoded capability list.
+ */
+export function mergeSessionCapabilities(
+  base: NegotiatedCapabilities,
+  observed: { readonly modes?: boolean; readonly slashCommands?: boolean },
+): NegotiatedCapabilities {
+  return {
+    ...base,
+    modes: base.modes || observed.modes === true,
+    slashCommands: base.slashCommands || observed.slashCommands === true,
+  };
+}
+
+/**
  * Applies per-definition overrides (contracts `HarnessCapabilityOverrides`) on
  * top of negotiated capabilities. Absent fields trust negotiation; booleans win.
  */
@@ -80,6 +113,8 @@ export function applyCapabilityOverrides(
   overrides: HarnessCapabilityOverrides,
 ): NegotiatedCapabilities {
   return {
+    // `authMethods`/`sessionList` fall through untouched: they are observed
+    // facts about the agent, not toggles a definition may assert.
     ...negotiated,
     loadSession: overrides.loadSession ?? negotiated.loadSession,
     resumeSession: overrides.resumeSession ?? negotiated.resumeSession,

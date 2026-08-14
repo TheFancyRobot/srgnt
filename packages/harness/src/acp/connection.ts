@@ -39,7 +39,12 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { LaunchSpec } from '@srgnt/contracts';
 import { Effect, Stream } from 'effect';
-import { applyCapabilityOverrides, negotiateCapabilities, type NegotiatedCapabilities } from './capabilities.js';
+import {
+  applyCapabilityOverrides,
+  mergeSessionCapabilities,
+  negotiateCapabilities,
+  type NegotiatedCapabilities,
+} from './capabilities.js';
 import {
   ConnectionLost,
   fromSdkError,
@@ -203,15 +208,26 @@ const buildClient = (ports: ClientPorts, hub: SessionUpdateHub): Client => {
  * update stream. All failures are tagged errors from `errors.ts`.
  */
 export class AcpAgentConnection {
+  /** Effective capabilities: negotiation with the definition's overrides applied. */
   readonly capabilities: NegotiatedCapabilities;
+  /**
+   * What the agent actually advertised, before any override. Same object as
+   * {@link capabilities} when the definition declares none. Kept because the
+   * capability cache stores both views — an override is a srgnt decision, and
+   * a matrix that only remembers the clamped result cannot show what was
+   * measured.
+   */
+  readonly negotiated: NegotiatedCapabilities;
 
   private constructor(
     private readonly inner: ClientSideConnection,
     private readonly hub: SessionUpdateHub,
     capabilities: NegotiatedCapabilities,
     private readonly spawned: SpawnedAgent,
+    negotiated: NegotiatedCapabilities,
   ) {
     this.capabilities = capabilities;
+    this.negotiated = negotiated;
     void this.inner.closed.then(() => this.hub.endAll());
   }
 
@@ -257,8 +273,25 @@ export class AcpAgentConnection {
         options.capabilityOverrides !== undefined
           ? applyCapabilityOverrides(negotiated, options.capabilityOverrides)
           : negotiated;
-      return new AcpAgentConnection(inner, hub, capabilities, spawned);
+      return new AcpAgentConnection(inner, hub, capabilities, spawned, negotiated);
     });
+  }
+
+  /**
+   * Both capability views with mid-session observations folded in — what a
+   * capability cache or matrix should store after `session/new` reported modes
+   * or an `available_commands_update` arrived. A method rather than an exported
+   * helper so the Electron main process (CommonJS) can reach the merge through
+   * a connection it already holds, without statically importing this ESM package.
+   */
+  withObserved(observed: { modes?: boolean; slashCommands?: boolean }): {
+    negotiated: NegotiatedCapabilities;
+    effective: NegotiatedCapabilities;
+  } {
+    return {
+      negotiated: mergeSessionCapabilities(this.negotiated, observed),
+      effective: mergeSessionCapabilities(this.capabilities, observed),
+    };
   }
 
   /** `session/new` — registers the returned sessionId with the update hub. */

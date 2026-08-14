@@ -47,6 +47,8 @@ export const piDefinition: HarnessDefinition = {
     args: [`pi-acp@${PI_ACP_VERSION}`],
     env: {},
   },
+  // `npx` is always present; the prerequisite the user must install is `pi`.
+  detectCommand: 'pi',
   quirks: ['adapter-mediated', 'permission-routing-gaps', 'mcp-passthrough-gaps'],
   // The adapter cannot be trusted to forward injected MCP servers, so clamp the
   // protocol-baseline `mcpServers` capability off regardless of negotiation.
@@ -54,5 +56,43 @@ export const piDefinition: HarnessDefinition = {
   docsUrl: 'https://github.com/mariozechner/pi',
 };
 
+/** Canonical id for the built-in opencode harness. */
+export const OPENCODE_HARNESS_ID = 'opencode';
+
+/**
+ * opencode version every STEP-25-01 capture was measured against
+ * (`opencode --version` → `1.18.18`, 2026-08-13). Unlike Pi's pinned adapter,
+ * opencode is a user-installed binary, so srgnt cannot pin the launch — this
+ * constant is documentation and test evidence, never a launch input.
+ */
+export const OPENCODE_TESTED_VERSION = '1.18.18';
+
+/**
+ * opencode speaks ACP **natively** (`opencode acp`), with no adapter in
+ * between — the contrast that makes it the reality check on the ARCH-0009
+ * data-not-code invariant.
+ *
+ * Deliberately zero quirks and zero overrides: capabilities come exclusively
+ * from runtime observation (the live `initialize` response, plus fields the
+ * protocol only reveals mid-session). Pi's quirks were pre-declared from
+ * research; opencode earns any of its own only from a measured probe, because
+ * an unearned clamp is the mirror image of a silent gap.
+ */
+export const opencodeDefinition: HarnessDefinition = {
+  id: OPENCODE_HARNESS_ID,
+  name: 'opencode',
+  description:
+    'opencode coding agent over its native ACP mode (`opencode acp`). Requires the `opencode` CLI on PATH — install with `npm i -g opencode-ai` or see the docs.',
+  source: 'builtin',
+  launch: {
+    command: 'opencode',
+    args: ['acp'],
+    env: {},
+  },
+  quirks: [],
+  capabilityOverrides: {},
+  docsUrl: 'https://opencode.ai/docs/acp',
+};
+
 /** All harness definitions srgnt ships with. Keyed by id downstream. */
-export const BUILTIN_HARNESSES: readonly HarnessDefinition[] = [piDefinition];
+export const BUILTIN_HARNESSES: readonly HarnessDefinition[] = [piDefinition, opencodeDefinition];

@@ -148,7 +148,10 @@ export async function detectCommand(command: string, options: DetectOptions = {}
 export const detectHarness = (
   definition: HarnessDefinition,
   options?: DetectOptions,
-): Promise<DetectionResult> => detectCommand(definition.detectCommand ?? definition.launch.command, options);
+  // `||`, not `??`: the schema rejects an empty `detectCommand`, but built-ins
+  // and test fixtures reach here unparsed, and `''` would spawn nothing and
+  // throw ERR_INVALID_ARG_VALUE rather than falling back.
+): Promise<DetectionResult> => detectCommand(definition.detectCommand || definition.launch.command, options);
 
 /** Detects the `pi` CLI backing the built-in Pi harness. */
 export const detectPi = (options?: DetectOptions): Promise<DetectionResult> => detectCommand('pi', options);

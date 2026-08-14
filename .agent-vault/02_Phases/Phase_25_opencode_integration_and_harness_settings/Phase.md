@@ -4,7 +4,7 @@ template_version: 2
 contract_version: 1
 title: Opencode Integration and Harness Settings
 phase_id: PHASE-25
-status: planned
+status: in_progress
 owner: ''
 created: '2026-07-10'
 updated: '2026-08-13'

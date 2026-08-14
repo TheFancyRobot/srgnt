@@ -138,6 +138,13 @@ describe('SHarnessDefinition.detectCommand', () => {
   it('rejects a non-string detectCommand', () => {
     expect(safeParse(SHarnessDefinition, { ...piDefinition, detectCommand: 42 }).success).toBe(false);
   });
+
+  it('rejects an empty detectCommand', () => {
+    // `detectHarness` falls back with `??`, so `''` would reach the probe and
+    // throw instead of detecting. Clearing the field in the settings editor
+    // must round-trip as absent, not as an empty string.
+    expect(safeParse(SHarnessDefinition, { ...piDefinition, detectCommand: '' }).success).toBe(false);
+  });
 });
 
 describe('SHarnessCapabilitiesFile', () => {

@@ -57,8 +57,13 @@ export const SHarnessDefinition = Schema.Struct({
    * `launch.command`. Pi launches via `npx pi-acp@…` but its real prerequisite
    * is the `pi` CLI; opencode needs none because its launch command IS the
    * binary. Absent → probe `launch.command`.
+   *
+   * Non-empty when present: `detectHarness` falls back with `??`, which only
+   * catches `undefined`, so an empty string would reach the probe and throw
+   * `ERR_INVALID_ARG_VALUE` instead of detecting. STEP-25-02's editor lets a
+   * user clear this field, and clearing it must mean absent, not `''`.
    */
-  detectCommand: Schema.optional(Schema.String),
+  detectCommand: Schema.optional(Schema.String.pipe(Schema.minLength(1))),
   quirks: Schema.optionalWith(Schema.Array(SHarnessQuirk), { default: () => [] }),
   capabilityOverrides: Schema.optionalWith(SHarnessCapabilityOverrides, { default: () => ({}) }),
   docsUrl: Schema.optional(Schema.String),

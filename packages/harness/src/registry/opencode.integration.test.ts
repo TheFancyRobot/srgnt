@@ -49,17 +49,26 @@ const denyAllPermissions: PermissionPort = {
   },
 };
 
-/** Tees every JSON-RPC frame into `frames` (same technique as the Pi spike). */
-function recordingSpawner(inner: AgentSpawner, frames: AnyMessage[]): AgentSpawner {
+/**
+ * Tees every JSON-RPC frame into `frames` (same technique as the Pi spike).
+ * Returns the reader's completion promise through `done` so the caller can await
+ * a fully drained tap before writing fixtures — otherwise the committed capture
+ * varies run to run with however much the reader happened to consume.
+ */
+function recordingSpawner(
+  inner: AgentSpawner,
+  frames: AnyMessage[],
+  done: { promise?: Promise<void> },
+): AgentSpawner {
   return async (launch): Promise<SpawnedAgent> => {
     const spawned = await inner(launch);
     const [inPass, inTap] = spawned.stream.readable.tee();
-    void (async () => {
+    done.promise = (async () => {
       const reader = inTap.getReader();
       try {
         for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
+          const { value, done: finished } = await reader.read();
+          if (finished) break;
           frames.push(value);
         }
       } catch {
@@ -71,33 +80,56 @@ function recordingSpawner(inner: AgentSpawner, frames: AnyMessage[]): AgentSpawn
 }
 
 /**
- * opencode's `available_commands_update` advertises the *user's* whole local
- * command catalog (90+ entries on the capture machine). The fixture only needs
- * to prove the shape and that the capability is observed, so the list is capped
- * — committing a developer's personal command names is noise and needless
- * exposure. The original count is preserved as evidence.
+ * opencode reports the *user's own* local catalogs over ACP: `configOptions`
+ * carries their configured model and every model/agent available to them, and
+ * `available_commands_update` carries their whole slash-command catalog (93
+ * entries on the capture machine, including project-local agent descriptions).
+ *
+ * Capping those lists is not enough — the retained entries are still the
+ * developer's configuration, and these fixtures are committed. What STEP-25-03
+ * asserts against is the *shape* (which keys exist, how deep the catalog nests,
+ * that the capability was observed at all), never the values. So every leaf
+ * string is replaced with a positional placeholder and the true length is kept
+ * beside it as evidence.
  */
 const FIXTURE_COMMAND_LIMIT = 3;
 
-/** Same cap for the `configOptions` catalogs on the session/new response. */
-function trimConfigOptions(session: unknown): unknown {
+/** Replaces a catalog entry's identifying strings, preserving which keys exist. */
+function placeholderEntry(entry: unknown, kind: string, index: number): unknown {
+  if (entry === null || typeof entry !== 'object') return entry;
+  const source = entry as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) {
+    out[key] = typeof value === 'string' ? `<${kind}-${index}-${key}>` : value;
+  }
+  return out;
+}
+
+function redactConfigOptions(session: unknown): unknown {
   const options = (session as { configOptions?: unknown }).configOptions;
   if (!Array.isArray(options)) return session;
   return {
     ...(session as Record<string, unknown>),
-    configOptions: options.map((option) => {
-      const all = (option as { options?: unknown }).options;
+    configOptions: options.map((option, groupIndex) => {
+      const group = option as Record<string, unknown>;
+      const all = group.options;
       if (!Array.isArray(all)) return option;
       return {
-        ...(option as Record<string, unknown>),
-        options: all.slice(0, FIXTURE_COMMAND_LIMIT),
+        ...group,
+        // The user's current selection is their configuration, not protocol shape.
+        ...(typeof group.currentValue === 'string'
+          ? { currentValue: `<group-${groupIndex}-currentValue>` }
+          : {}),
+        options: all
+          .slice(0, FIXTURE_COMMAND_LIMIT)
+          .map((entry, i) => placeholderEntry(entry, `group-${groupIndex}-option`, i)),
         optionsTrimmedFrom: all.length,
       };
     }),
   };
 }
 
-function trimCommandCatalog(jsonl: string): string {
+function redactCommandCatalog(jsonl: string): string {
   return `${jsonl
     .split('\n')
     .filter((line) => line.trim().length > 0)
@@ -106,11 +138,32 @@ function trimCommandCatalog(jsonl: string): string {
       const update = event.payload?.update;
       if (!Array.isArray(update?.availableCommands)) return line;
       const all = update.availableCommands as unknown[];
-      update.availableCommands = all.slice(0, FIXTURE_COMMAND_LIMIT);
+      update.availableCommands = all
+        .slice(0, FIXTURE_COMMAND_LIMIT)
+        .map((entry, i) => placeholderEntry(entry, 'command', i));
       update.availableCommandsTrimmedFrom = all.length;
       return JSON.stringify(event);
     })
     .join('\n')}\n`;
+}
+
+/** Logs a catalog's shape without its contents (see `redactConfigOptions`). */
+function describeShape(session: {
+  sessionId: string;
+  modes?: unknown;
+  configOptions?: unknown;
+}): string {
+  const groups = Array.isArray(session.configOptions) ? session.configOptions : [];
+  return JSON.stringify({
+    keys: Object.keys(session).sort(),
+    hasModes: session.modes !== undefined,
+    configOptionGroups: groups.map((g) => ({
+      id: (g as { id?: unknown }).id,
+      optionCount: Array.isArray((g as { options?: unknown }).options)
+        ? ((g as { options: unknown[] }).options.length as number)
+        : 0,
+    })),
+  });
 }
 
 describeOpencode('opencode definition (integration, SRGNT_IT_OPENCODE=1)', () => {
@@ -119,15 +172,18 @@ describeOpencode('opencode definition (integration, SRGNT_IT_OPENCODE=1)', () =>
     async () => {
       const cwd = mkdtempSync(join(tmpdir(), 'srgnt-opencode-it-'));
       const inbound: AnyMessage[] = [];
-      const connection = await Effect.runPromise(
-        AcpAgentConnection.connect({
-          launch: { ...opencodeDefinition.launch, cwd },
-          spawn: recordingSpawner(childProcessSpawner, inbound),
-          ports: { permission: denyAllPermissions },
-        }),
-      );
-
+      const tap: { promise?: Promise<void> } = {};
+      // `connect` inside the scope: a rejected connect must still remove the
+      // temp workspace rather than leaving one behind in the system tmpdir.
+      let connection: AcpAgentConnection | undefined;
       try {
+        connection = await Effect.runPromise(
+          AcpAgentConnection.connect({
+            launch: { ...opencodeDefinition.launch, cwd },
+            spawn: recordingSpawner(childProcessSpawner, inbound, tap),
+            ports: { permission: denyAllPermissions },
+          }),
+        );
         const negotiated = connection.capabilities;
         const effective = effectiveCapabilities(opencodeDefinition, negotiated);
 
@@ -143,7 +199,9 @@ describeOpencode('opencode definition (integration, SRGNT_IT_OPENCODE=1)', () =>
 
         const session = await Effect.runPromise(connection.newSession({ cwd, mcpServers: [] }));
         // eslint-disable-next-line no-console -- evidence: modes are session-discovered, not negotiated.
-        console.log('[SRGNT_IT_OPENCODE] session/new response:', JSON.stringify(session, null, 2));
+        // Shape only: the raw response carries the user's configured model and
+        // their local agent catalog, and test logs are as public as fixtures.
+        console.log('[SRGNT_IT_OPENCODE] session/new shape:', describeShape(session));
 
         const recorder = new FrameRecorder({ protocolVersion: negotiated.protocolVersion });
         const pump = (async () => {
@@ -162,6 +220,13 @@ describeOpencode('opencode definition (integration, SRGNT_IT_OPENCODE=1)', () =>
         );
         expect(turn.stopReason).toBe('end_turn');
 
+        // Drain first, write second. Closing the connection ends the update
+        // stream and the teed tap; writing before they settle commits whatever
+        // each happened to have consumed, so the fixtures differ per run.
+        connection.close();
+        await pump;
+        await tap.promise;
+
         // The capture: raw initialize + the turn's redacted update envelopes.
         const initialize = inbound.find(
           (msg) =>
@@ -172,21 +237,18 @@ describeOpencode('opencode definition (integration, SRGNT_IT_OPENCODE=1)', () =>
           join(FIXTURE_DIR, 'initialize.json'),
           `${JSON.stringify(
             redactHomePaths({
-              README: `STEP-25-01 opencode capture — raw ACP initialize result. opencode ${OPENCODE_TESTED_VERSION}, launched as \`opencode acp\`.`,
+              README: `STEP-25-01 opencode capture — raw ACP initialize result. opencode ${OPENCODE_TESTED_VERSION}, launched as \`opencode acp\`. Catalog values are positional placeholders: these fixtures pin protocol shape, and the real values are the capture machine's own configuration.`,
               agentVersion: OPENCODE_TESTED_VERSION,
               result: (initialize as { result?: unknown } | undefined)?.result,
-              sessionNew: trimConfigOptions(session),
+              sessionNew: redactConfigOptions(session),
             }),
             null,
             2,
           )}\n`,
         );
-        writeFileSync(join(FIXTURE_DIR, 'simple-prompt.jsonl'), trimCommandCatalog(recorder.toJsonl()));
-
-        connection.close();
-        await pump;
+        writeFileSync(join(FIXTURE_DIR, 'simple-prompt.jsonl'), redactCommandCatalog(recorder.toJsonl()));
       } finally {
-        connection.close();
+        connection?.close();
         rmSync(cwd, { recursive: true, force: true });
       }
     },

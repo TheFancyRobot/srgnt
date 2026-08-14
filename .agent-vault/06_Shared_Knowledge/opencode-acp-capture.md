@@ -35,8 +35,13 @@ generic-support requirements.
 - Model during the capture: `opencode/big-pickle` (OpenCode Zen), one trivial
   prompt ("Reply with the single word: ok"). Cost rule honored.
 - Committed evidence: `packages/harness/src/testing/fixtures/opencode/`
-  (`initialize.json`, `simple-prompt.jsonl`, `README.md`). Home paths redacted;
-  command/model/agent catalogs capped at 3 entries with the original count kept.
+  (`initialize.json`, `simple-prompt.jsonl`, `README.md`). Home paths redacted.
+  The command/model/agent catalogs are the capture machine's own configuration,
+  so they are capped at 3 entries **and every leaf string is replaced with a
+  positional placeholder** (`<group-0-option-0-name>`); the true length is kept
+  as `optionsTrimmedFrom` / `availableCommandsTrimmedFrom`. STEP-25-03 asserts
+  against the shape — which keys exist, how the catalog nests, that the
+  capability was observed — never against the values.
 
 ## Baseline: negotiated capabilities
 

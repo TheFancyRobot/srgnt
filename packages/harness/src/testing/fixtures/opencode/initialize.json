@@ -1,5 +1,5 @@
 {
-  "README": "STEP-25-01 opencode capture — raw ACP initialize result. opencode 1.18.18, launched as `opencode acp`.",
+  "README": "STEP-25-01 opencode capture — raw ACP initialize result. opencode 1.18.18, launched as `opencode acp`. Catalog values are positional placeholders: these fixtures pin protocol shape, and the real values are the capture machine's own configuration.",
   "agentVersion": "1.18.18",
   "result": {
     "protocolVersion": 1,
@@ -33,26 +33,26 @@
     }
   },
   "sessionNew": {
-    "sessionId": "ses_001a02059ffeAu4kQ26Q3V1r0t",
+    "sessionId": "ses_00184d1e2ffegezAiVYSL5DiQv",
     "configOptions": [
       {
         "id": "model",
         "name": "Model",
         "category": "model",
         "type": "select",
-        "currentValue": "opencode/big-pickle",
+        "currentValue": "<group-0-currentValue>",
         "options": [
           {
-            "value": "opencode/big-pickle",
-            "name": "OpenCode Zen/Big Pickle"
+            "value": "<group-0-option-0-value>",
+            "name": "<group-0-option-0-name>"
           },
           {
-            "value": "opencode/deepseek-v4-flash-free",
-            "name": "OpenCode Zen/DeepSeek V4 Flash Free"
+            "value": "<group-0-option-1-value>",
+            "name": "<group-0-option-1-name>"
           },
           {
-            "value": "opencode/hy3-free",
-            "name": "OpenCode Zen/Hy3 Free"
+            "value": "<group-0-option-2-value>",
+            "name": "<group-0-option-2-name>"
           }
         ],
         "optionsTrimmedFrom": 7
@@ -62,22 +62,22 @@
         "name": "Session Mode",
         "category": "mode",
         "type": "select",
-        "currentValue": "build",
+        "currentValue": "<group-1-currentValue>",
         "options": [
           {
-            "value": "build",
-            "name": "build",
-            "description": "The default agent. Executes tools based on configured permissions."
+            "value": "<group-1-option-0-value>",
+            "name": "<group-1-option-0-name>",
+            "description": "<group-1-option-0-description>"
           },
           {
-            "value": "argent-environment-inspector",
-            "name": "argent-environment-inspector",
-            "description": "Inspects a mobile app project's environment and returns structured JSON covering project type, platform support, build and startup commands, bundler config, env resolution, key packages, QA/feedback-loop tooling, and Argent-specific workflow commands. Works on any project — determines whether it is React Native, Expo, Flutter, native iOS/Android, or another stack, and provides environment context regardless. Has deeper React Native introspection via gather-workspace-data but also reports useful information for non-RN projects. Use proactively at session start when required to gather the environment information. If subagent delegation is not available, run the steps in the main thread instead. The main agent is responsible for persisting the result to project memory.\n"
+            "value": "<group-1-option-1-value>",
+            "name": "<group-1-option-1-name>",
+            "description": "<group-1-option-1-description>"
           },
           {
-            "value": "plan",
-            "name": "plan",
-            "description": "Plan mode. Disallows all edit tools."
+            "value": "<group-1-option-2-value>",
+            "name": "<group-1-option-2-name>",
+            "description": "<group-1-option-2-description>"
           }
         ],
         "optionsTrimmedFrom": 4

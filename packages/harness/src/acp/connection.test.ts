@@ -298,6 +298,17 @@ describe('AcpAgentConnection.connect', () => {
     expect(merged.effective.slashCommands).toBe(true); // unclamped fields still merge
   });
 
+  it('accumulates observations across separate withObserved calls', async () => {
+    // The real sequence: modes come back from `session/new`, slash commands
+    // from a later `available_commands_update`. The second call must not drop
+    // what the first one discovered.
+    const { connection } = await connectInProcess({});
+    connection.withObserved({ modes: true });
+    const merged = connection.withObserved({ slashCommands: true });
+    expect(merged.negotiated.modes).toBe(true);
+    expect(merged.negotiated.slashCommands).toBe(true);
+  });
+
   it('fails with SpawnFailed when the injected spawner rejects', async () => {
     const error = await Effect.runPromise(
       Effect.flip(

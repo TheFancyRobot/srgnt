@@ -219,6 +219,9 @@ export class AcpAgentConnection {
    */
   readonly negotiated: NegotiatedCapabilities;
 
+  /** Mid-session discoveries so far; see `withObserved`. */
+  private observed: { modes?: boolean; slashCommands?: boolean };
+
   private constructor(
     private readonly inner: ClientSideConnection,
     private readonly hub: SessionUpdateHub,
@@ -230,6 +233,9 @@ export class AcpAgentConnection {
     // initialize row. See `withObserved`.
     private readonly capabilityOverrides?: Parameters<typeof applyCapabilityOverrides>[1],
   ) {
+    // Everything mid-session discovery has told us so far, accumulated across
+    // notifications. One-way: nothing here un-observes a demonstrated capability.
+    this.observed = {};
     this.capabilities = capabilities;
     this.negotiated = negotiated;
     void this.inner.closed.then(() => this.hub.endAll());
@@ -299,12 +305,17 @@ export class AcpAgentConnection {
     negotiated: NegotiatedCapabilities;
     effective: NegotiatedCapabilities;
   } {
-    // Merge into the negotiated view, then re-derive effective by reapplying the
-    // definition's overrides. Merging straight into the already-overridden view
-    // would OR an observed `true` over a deliberate `false` clamp and quietly
-    // re-enable a capability the definition disabled — the matrix would then
-    // render as supported exactly what the override exists to turn off.
-    const negotiated = mergeSessionCapabilities(this.negotiated, observed);
+    // Accumulate, because discoveries arrive in separate notifications: modes
+    // come back from `session/new` and slash commands from a later
+    // `available_commands_update`. Merging each call against the immutable
+    // initialize baseline would let the second call drop the first one's
+    // finding, and the cache would then persist the incomplete row and disable
+    // UI the agent actually supports.
+    this.observed = { ...this.observed, ...observed };
+    // Overrides are reapplied last: merging an observed `true` into the
+    // already-overridden view would OR over a deliberate `false` clamp and
+    // re-enable exactly what the definition exists to turn off.
+    const negotiated = mergeSessionCapabilities(this.negotiated, this.observed);
     return {
       negotiated,
       effective:

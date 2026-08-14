@@ -24,7 +24,7 @@ generic-support requirements.
 
 - `opencode --version` → **1.18.18** (bare token, no banner — the existing
   `parseVersion` first-semver rule handles it unchanged). Installed at
-  `/Users/dino/.nvm/versions/node/v24.15.0/bin/opencode` (nvm-global: shares
+  `~/.nvm/versions/node/v24.15.0/bin/opencode` (nvm-global: shares
   pi's PATH caveat — a GUI-launched Electron build will not see it without a
   login shell).
 - Launch: `opencode acp` (native ACP mode, no adapter). ACP protocol version
@@ -125,7 +125,7 @@ Recorded so nobody reads silence as evidence:
 
 ## Reproduce
 
-```
+```bash
 opencode --version                                   # expect 1.18.18
 SRGNT_IT_OPENCODE=1 pnpm --filter @srgnt/harness test opencode
 ```

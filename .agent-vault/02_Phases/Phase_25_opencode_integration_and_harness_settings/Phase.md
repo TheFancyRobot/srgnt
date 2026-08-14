@@ -60,7 +60,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - Depends on [[02_Phases/Phase_24_projects_and_session_persistence/Phase|PHASE-24 Projects and Session Persistence]].
 - Must stay aligned with [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (capability-driven UI invariant).
 - Requires PHASE-24's per-project defaults and persistence (harness settings write into project/workspace stores).
-- Prerequisite tooling: opencode installed locally — SATISFIED 2026-08-13, `opencode 1.18.18` at `/Users/dino/.nvm/versions/node/v24.15.0/bin/opencode`. All phase captures are measured against that version. srgnt the product still only detects and guides (non-goal intact); the `not-installed` state must still be exercised via injected probes, not by uninstalling.
+- Prerequisite tooling: opencode installed locally — SATISFIED 2026-08-13, `opencode 1.18.18` at `~/.nvm/versions/node/v24.15.0/bin/opencode`. All phase captures are measured against that version. srgnt the product still only detects and guides (non-goal intact); the `not-installed` state must still be exercised via injected probes, not by uninstalling.
 
 ## Acceptance Criteria
 

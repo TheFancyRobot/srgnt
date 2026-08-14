@@ -6,7 +6,7 @@
 
 **Environment**
 
-- `opencode --version` -> `1.18.18` at `/Users/dino/.nvm/versions/node/v24.15.0/bin/opencode`; recorded as `OPENCODE_TESTED_VERSION` in `packages/harness/src/registry/builtins.ts`.
+- `opencode --version` -> `1.18.18` at `~/.nvm/versions/node/v24.15.0/bin/opencode`; recorded as `OPENCODE_TESTED_VERSION` in `packages/harness/src/registry/builtins.ts`.
 - `pi --version` -> `0.84.1` (adapter still pinned at `pi-acp@0.0.31`); the gated pi IT is green with the new `detectCommand: 'pi'` field.
 - **Trap hit:** `packages/*/dist/` held a stale build from an earlier abandoned attempt at this step (its `SHarnessCapabilityEntry` still carried the removed `generation` counter). runtime/desktop resolve `@srgnt/contracts` and `@srgnt/harness` through `dist`, so new schema code is invisible to them until `pnpm --filter <pkg> build`. Six runtime tests failed misleadingly before rebuilding. Rebuild contracts + harness after touching their schemas, before running runtime/desktop suites.
 

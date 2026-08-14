@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Pha
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-08-13'
 depends_on: []
 related_sessions: []
 related_bugs: []
@@ -26,19 +26,19 @@ Use this note for one executable step inside a phase. This note is the source of
 - Outcome: Add opencode harness definition with runtime capability detection.
 - Parent phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]].
 - Exact outcome: opencode is a built-in HarnessDefinition (`opencode acp`) with PATH/binary detection and version probing; capabilities come exclusively from runtime observation — the live `initialize` response as baseline, session-discovered fields merged in — and are persisted as last-negotiated for UI display, establishing the runtime-detection rule for all harnesses.
-- Starting files: `packages/harness/src/registry/` (beside the Pi definition); prerequisite: install opencode locally — it is not on this machine's PATH (see "Why This Step Exists" for the dated verification).
+- Starting files: `packages/harness/src/registry/` (beside the Pi definition). Install prerequisite is already satisfied: `opencode 1.18.18` on PATH as of 2026-08-13.
 - Validate: with opencode installed, a session completes a real prompt round-trip; capability matrix data matches the `initialize` payload captured in fixtures.
 
 ## Why This Step Exists
 
 - opencode is the first **native** ACP harness (`opencode acp`) — the reality check on ARCH-0009's data-not-code invariant after adapter-mediated Pi; every code-not-data delta found here feeds STEP-25-04's Phase-26 requirements.
 - Establishes the runtime-detection rule for all harnesses: capabilities exclusively from runtime observation, never hardcoded — the live `initialize` response is the baseline (captured the way STEP-22-03's `SRGNT_IT_PI=1` gated test did for Pi → new `SRGNT_IT_OPENCODE=1`), and session-discovered fields (`modes` via `session/new`, `slashCommands` via `available_commands_update`) merge into that baseline as observed; the merged result is persisted as last-negotiated for UI display (same rule stated in the Execution Brief — keep the two in sync). opencode starts with zero quirks/overrides and earns them only from measured probes.
-- Not-installed is a first-class precondition, not an error: `which opencode` is still empty on this machine (verified 2026-07-17); `registry/detect.ts` already types the `ok`/`probe-failed`/`not-installed` states for this. The *executor* installs opencode locally and records the version (srgnt itself never installs — detection + guidance only).
+- Not-installed is a first-class *product* state, not an error: `registry/detect.ts` already types `ok`/`probe-failed`/`not-installed`. On this machine opencode IS installed (`1.18.18`, 2026-08-13), so exercise the not-installed and probe-failed paths with injected probes (`registry/__fixtures__/hang-probe.mjs`) — do not uninstall opencode to test them. srgnt itself never installs (detection + guidance only).
 
 ## Prerequisites
 
 - PHASE-24 merged; Phase-22 harness package is the real technical base.
-- Executor installs opencode locally (default `npm i -g opencode-ai`; record method + exact `opencode --version` in Implementation Notes — all captures are measured against it).
+- opencode installed: DONE (`1.18.18`, on PATH 2026-08-13). Record that exact version in Implementation Notes and set `OPENCODE_TESTED_VERSION` to it — all captures are measured against it. Re-run `opencode --version` before capturing in case it moved.
 - Read the spike report first: it defines the capture discipline and what a measured capability row looks like.
 
 ## Relevant Code Paths

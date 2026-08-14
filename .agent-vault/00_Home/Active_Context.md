@@ -28,10 +28,10 @@ Keep this note short, current, and safe to overwrite as the repo focus changes.
 ## Current Objective
 
 <!-- AGENT-START:current-focus -->
-_Last refreshed: 2026-08-10._
+_Last refreshed: 2026-08-14._
 - Session in progress: none.
-- Current step: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Steps/Step_01_build-custom-harness-editor-with-launch-specs-and-capability-overrides|STEP-26-01 Build custom harness editor with launch specs and capability overrides]] - status: planned - phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase 26 generic harness support and conformance]]
-- Active phase: [[02_Phases/Phase_29_polish_packaging_and_release/Phase|PHASE-29 Polish Packaging and Release]] - status: planned - updated: 2026-07-21
+- Current step: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01 Add opencode harness definition with runtime capability detection]] - status: planned - phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]]
+- Active phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|PHASE-25 Opencode Integration and Harness Settings]] - status: planned - updated: 2026-08-13
 - Also active: 31 more additional steps.
 <!-- AGENT-END:current-focus -->
 

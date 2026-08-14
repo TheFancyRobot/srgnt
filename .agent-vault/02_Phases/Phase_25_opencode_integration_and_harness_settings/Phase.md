@@ -7,7 +7,7 @@ phase_id: PHASE-25
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-08-13'
 depends_on:
   - '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|PHASE-24 Projects and Session Persistence]]'
 related_architecture:
@@ -60,7 +60,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - Depends on [[02_Phases/Phase_24_projects_and_session_persistence/Phase|PHASE-24 Projects and Session Persistence]].
 - Must stay aligned with [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]] (capability-driven UI invariant).
 - Requires PHASE-24's per-project defaults and persistence (harness settings write into project/workspace stores).
-- Prerequisite tooling: opencode installed locally by the executor (re-verified NOT on PATH 2026-07-17; STEP-25-01 treats installation as a real precondition — srgnt the product only detects and guides).
+- Prerequisite tooling: opencode installed locally — SATISFIED 2026-08-13, `opencode 1.18.18` at `/Users/dino/.nvm/versions/node/v24.15.0/bin/opencode`. All phase captures are measured against that version. srgnt the product still only detects and guides (non-goal intact); the `not-installed` state must still be exercised via injected probes, not by uninstalling.
 
 ## Acceptance Criteria
 
@@ -113,12 +113,12 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 - Add architecture, bug, and decision links as the milestone becomes more concrete.
 - Use the `Steps/` directory for the first executable units instead of expanding this note too far.
-- opencode ground truth (2026-07-10): native `opencode acp` subprocess over stdio; supports its tools, MCP servers, permission system via ACP; `session/load` not documented — capability detection at runtime is the rule this phase establishes for all harnesses. Not installed locally yet (install is a step prerequisite).
+- opencode ground truth (2026-07-10): native `opencode acp` subprocess over stdio; supports its tools, MCP servers, permission system via ACP; `session/load` not documented — capability detection at runtime is the rule this phase establishes for all harnesses. Installed 2026-08-13 (`1.18.18`).
 - This phase is deliberately small: its real product is the *pattern* — second-harness reality check + the lessons-learned note that turns anecdotes into Phase 26 requirements.
 - Step order: opencode definition + detection (01) → settings UI (02) and capability matrix + auth surfacing (03) in parallel → lessons-learned note (04, last).
 - Validation: side-by-side Pi + opencode sessions in one project; capability matrix cross-checked against each harness's `initialize` response; fixtures for opencode traffic added to contract tests.
 - Refinement pass 2026-07-17 (post-DEC-0018 reconciliation) — grounded facts, recorded assumptions, and open decisions; details live in each step's Execution Brief:
-  - `which opencode` re-verified empty on this machine (2026-07-17). STEP-25-01 treats install as an executor precondition (default `npm i -g opencode-ai`, method + exact version recorded) and renders the product-side reality through `registry/detect.ts`'s typed `ok`/`probe-failed`/`not-installed` states. srgnt never installs (non-goal intact).
+  - `which opencode` re-verified empty on this machine (2026-07-17); **superseded 2026-08-13 — opencode `1.18.18` is now on PATH**, so STEP-25-01's install checklist item collapses to "record the version". The product-side reality still renders through `registry/detect.ts`'s typed `ok`/`probe-failed`/`not-installed` states, and the not-installed path is unit-tested with injected probes. srgnt never installs (non-goal intact).
   - Capability capture copies the STEP-22-03 pattern: gated `opencode.integration.test.ts` behind `SRGNT_IT_OPENCODE=1` (mirrors `SRGNT_IT_PI=1`), fixtures under `testing/fixtures/opencode/`, findings written to a new `06_Shared_Knowledge/opencode-acp-capture.md` that feeds STEP-25-04. opencode starts with zero quirks/overrides — earned only from measured probes (deliberate contrast with Pi's research-pre-declared quirks).
   - Grounded model gaps to close in STEP-25-01: `NegotiatedCapabilities` lacks `authMethods` and `sessionList` (both observed in the pi spike); `SHarnessDefinition` lacks a `detectCommand` field (Pi launches `npx` but detects `pi` — currently hardcoded in `detectPi`).
   - Capabilities persistence (matrix data source): new runtime capability cache writing workspace `harness-capabilities.json` (assumption — separate file beside `harnesses.json`, not inside the `SDesktopSettings`-schema'd `settings.json`); desktop main writes through after each successful connect; cache is display data only, never a live-session source of truth.

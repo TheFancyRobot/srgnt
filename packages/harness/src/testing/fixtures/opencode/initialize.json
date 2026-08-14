@@ -1,0 +1,87 @@
+{
+  "README": "STEP-25-01 opencode capture — raw ACP initialize result. opencode 1.18.18, launched as `opencode acp`. Catalog values are positional placeholders: these fixtures pin protocol shape, and the real values are the capture machine's own configuration.",
+  "agentVersion": "1.18.18",
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "loadSession": true,
+      "mcpCapabilities": {
+        "http": true,
+        "sse": true
+      },
+      "promptCapabilities": {
+        "embeddedContext": true,
+        "image": true
+      },
+      "sessionCapabilities": {
+        "close": {},
+        "fork": {},
+        "list": {},
+        "resume": {}
+      }
+    },
+    "authMethods": [
+      {
+        "description": "Run `opencode auth login` in the terminal",
+        "name": "Login with opencode",
+        "id": "opencode-login"
+      }
+    ],
+    "agentInfo": {
+      "name": "OpenCode",
+      "version": "1.18.18"
+    }
+  },
+  "sessionNew": {
+    "sessionId": "ses_00184d1e2ffegezAiVYSL5DiQv",
+    "configOptions": [
+      {
+        "id": "model",
+        "name": "Model",
+        "category": "model",
+        "type": "select",
+        "currentValue": "<group-0-currentValue>",
+        "options": [
+          {
+            "value": "<group-0-option-0-value>",
+            "name": "<group-0-option-0-name>"
+          },
+          {
+            "value": "<group-0-option-1-value>",
+            "name": "<group-0-option-1-name>"
+          },
+          {
+            "value": "<group-0-option-2-value>",
+            "name": "<group-0-option-2-name>"
+          }
+        ],
+        "optionsTrimmedFrom": 7
+      },
+      {
+        "id": "mode",
+        "name": "Session Mode",
+        "category": "mode",
+        "type": "select",
+        "currentValue": "<group-1-currentValue>",
+        "options": [
+          {
+            "value": "<group-1-option-0-value>",
+            "name": "<group-1-option-0-name>",
+            "description": "<group-1-option-0-description>"
+          },
+          {
+            "value": "<group-1-option-1-value>",
+            "name": "<group-1-option-1-name>",
+            "description": "<group-1-option-1-description>"
+          },
+          {
+            "value": "<group-1-option-2-value>",
+            "name": "<group-1-option-2-name>",
+            "description": "<group-1-option-2-description>"
+          }
+        ],
+        "optionsTrimmedFrom": 4
+      }
+    ]
+  }
+}

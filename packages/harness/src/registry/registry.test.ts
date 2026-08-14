@@ -1,7 +1,13 @@
 import type { HarnessDefinition } from '@srgnt/contracts';
 import { describe, expect, it } from 'vitest';
 import { negotiateCapabilities } from '../acp/capabilities.js';
-import { PI_ACP_VERSION, PI_HARNESS_ID, piDefinition } from './builtins.js';
+import {
+  OPENCODE_HARNESS_ID,
+  opencodeDefinition,
+  PI_ACP_VERSION,
+  PI_HARNESS_ID,
+  piDefinition,
+} from './builtins.js';
 import {
   effectiveCapabilities,
   HarnessRegistry,
@@ -151,5 +157,35 @@ describe('effectiveCapabilities (negotiated ∩ definition overrides)', () => {
     const caps = registry.effectiveCapabilities(PI_HARNESS_ID, negotiated);
     expect(caps.mcpServers).toBe(false);
     expect(() => registry.effectiveCapabilities('missing', negotiated)).toThrow(UnknownHarness);
+  });
+});
+
+describe('opencodeDefinition (built-in, native ACP)', () => {
+  it('launches `opencode acp` and needs no separate detect command', () => {
+    expect(opencodeDefinition.id).toBe(OPENCODE_HARNESS_ID);
+    expect(opencodeDefinition.source).toBe('builtin');
+    expect(opencodeDefinition.launch.command).toBe('opencode');
+    expect(opencodeDefinition.launch.args).toEqual(['acp']);
+    expect(opencodeDefinition.detectCommand).toBeUndefined();
+  });
+
+  it('declares zero quirks and zero overrides — nothing is assumed, only measured', () => {
+    expect(opencodeDefinition.quirks).toEqual([]);
+    expect(opencodeDefinition.capabilityOverrides).toEqual({});
+  });
+
+  it('is registered beside pi', () => {
+    const registry = HarnessRegistry.create();
+    expect(registry.list().map((d) => d.id)).toEqual([PI_HARNESS_ID, OPENCODE_HARNESS_ID]);
+  });
+
+  it('effectiveCapabilities is a pure passthrough (contrast: pi clamps mcpServers)', () => {
+    const negotiated = negotiateCapabilities({
+      protocolVersion: 1,
+      agentCapabilities: { loadSession: true, sessionCapabilities: { list: {} } },
+    });
+    const registry = HarnessRegistry.create();
+    expect(registry.effectiveCapabilities(OPENCODE_HARNESS_ID, negotiated)).toEqual(negotiated);
+    expect(registry.effectiveCapabilities(PI_HARNESS_ID, negotiated).mcpServers).toBe(false);
   });
 });

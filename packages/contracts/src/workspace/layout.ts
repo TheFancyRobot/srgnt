@@ -58,6 +58,11 @@ export const workspaceDirectories = {
 export const workspaceFiles = {
   harnesses: 'harnesses.json',
   settings: 'settings.json',
+  /**
+   * Last-negotiated harness capabilities (STEP-25-01). Generated, not seeded:
+   * it only exists once something has actually connected.
+   */
+  harnessCapabilities: 'harness-capabilities.json',
 } as const;
 
 export const defaultWorkspaceLayout: WorkspaceLayout = {

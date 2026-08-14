@@ -288,6 +288,36 @@ describe('AcpAgentConnection.connect', () => {
     expect(connection.capabilities.resumeSession).toBe(true);
   });
 
+  it('re-clamps mid-session observations through capabilityOverrides', async () => {
+    // A definition that disables `modes` means disabled for the whole session,
+    // not just at initialize: observing modes later must not re-enable it.
+    const { connection } = await connectInProcess({}, { capabilityOverrides: { modes: false } });
+    const merged = connection.withObserved({ modes: true, slashCommands: true });
+    expect(merged.negotiated.modes).toBe(true); // the agent really does support it
+    expect(merged.effective.modes).toBe(false); // ...and the override still wins
+    expect(merged.effective.slashCommands).toBe(true); // unclamped fields still merge
+  });
+
+  it('accumulates observations across separate withObserved calls', async () => {
+    // The real sequence: modes come back from `session/new`, slash commands
+    // from a later `available_commands_update`. The second call must not drop
+    // what the first one discovered.
+    const { connection } = await connectInProcess({});
+    connection.withObserved({ modes: true });
+    const merged = connection.withObserved({ slashCommands: true });
+    expect(merged.negotiated.modes).toBe(true);
+    expect(merged.negotiated.slashCommands).toBe(true);
+  });
+
+  it('never un-observes a capability the agent already demonstrated', async () => {
+    const { connection } = await connectInProcess({});
+    connection.withObserved({ modes: true });
+    // A later report that says false — or simply omits the field — is not
+    // evidence the capability went away.
+    expect(connection.withObserved({ modes: false }).negotiated.modes).toBe(true);
+    expect(connection.withObserved({ slashCommands: true }).negotiated.modes).toBe(true);
+  });
+
   it('fails with SpawnFailed when the injected spawner rejects', async () => {
     const error = await Effect.runPromise(
       Effect.flip(

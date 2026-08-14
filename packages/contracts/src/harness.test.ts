@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseSync, safeParse } from './shared-schemas.js';
 import {
+  SHarnessCapabilitiesFile,
   SHarnessCapabilityOverrides,
   SHarnessDefinition,
   SHarnessQuirk,
@@ -121,5 +122,59 @@ describe('SHarnessesFile', () => {
   it('rejects a zero or missing version', () => {
     expect(safeParse(SHarnessesFile, { version: 0, harnesses: [] }).success).toBe(false);
     expect(safeParse(SHarnessesFile, { harnesses: [] }).success).toBe(false);
+  });
+});
+
+describe('SHarnessDefinition.detectCommand', () => {
+  it('is optional — absent means "probe launch.command"', () => {
+    expect(parseSync(SHarnessDefinition, piDefinition).detectCommand).toBeUndefined();
+  });
+
+  it('carries the real prerequisite binary when the launcher differs', () => {
+    // Pi launches via `npx` but the user must install `pi` itself.
+    expect(parseSync(SHarnessDefinition, { ...piDefinition, detectCommand: 'pi' }).detectCommand).toBe('pi');
+  });
+
+  it('rejects a non-string detectCommand', () => {
+    expect(safeParse(SHarnessDefinition, { ...piDefinition, detectCommand: 42 }).success).toBe(false);
+  });
+
+  it('rejects an empty detectCommand', () => {
+    // `detectHarness` falls back with `??`, so `''` would reach the probe and
+    // throw instead of detecting. Clearing the field in the settings editor
+    // must round-trip as absent, not as an empty string.
+    expect(safeParse(SHarnessDefinition, { ...piDefinition, detectCommand: '' }).success).toBe(false);
+  });
+});
+
+describe('SHarnessCapabilitiesFile', () => {
+  const entry = {
+    negotiated: { protocolVersion: 1, loadSession: true },
+    effective: { protocolVersion: 1, loadSession: false },
+    agentVersion: '1.18.18',
+    capturedAt: '2026-08-13T10:00:00.000Z',
+    definitionFingerprint: 'abc123',
+  };
+
+  it('decodes a file with one entry', () => {
+    const file = parseSync(SHarnessCapabilitiesFile, { version: 1, entries: { opencode: entry } });
+    expect(file.entries.opencode?.definitionFingerprint).toBe('abc123');
+    // The capability shape stays opaque — owned by @srgnt/harness.
+    expect(file.entries.opencode?.negotiated.loadSession).toBe(true);
+  });
+
+  it('defaults entries to empty', () => {
+    expect(parseSync(SHarnessCapabilitiesFile, { version: 1 }).entries).toEqual({});
+  });
+
+  it('rejects another file version so a bumped file decodes as "no cache"', () => {
+    expect(safeParse(SHarnessCapabilitiesFile, { version: 2, entries: {} }).success).toBe(false);
+  });
+
+  it('rejects an entry missing its fingerprint', () => {
+    const { definitionFingerprint: _dropped, ...incomplete } = entry;
+    expect(
+      safeParse(SHarnessCapabilitiesFile, { version: 1, entries: { pi: incomplete } }).success,
+    ).toBe(false);
   });
 });

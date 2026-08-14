@@ -39,7 +39,12 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { LaunchSpec } from '@srgnt/contracts';
 import { Effect, Stream } from 'effect';
-import { applyCapabilityOverrides, negotiateCapabilities, type NegotiatedCapabilities } from './capabilities.js';
+import {
+  applyCapabilityOverrides,
+  mergeSessionCapabilities,
+  negotiateCapabilities,
+  type NegotiatedCapabilities,
+} from './capabilities.js';
 import {
   ConnectionLost,
   fromSdkError,
@@ -203,15 +208,36 @@ const buildClient = (ports: ClientPorts, hub: SessionUpdateHub): Client => {
  * update stream. All failures are tagged errors from `errors.ts`.
  */
 export class AcpAgentConnection {
+  /** Effective capabilities: negotiation with the definition's overrides applied. */
   readonly capabilities: NegotiatedCapabilities;
+  /**
+   * What the agent actually advertised, before any override. Same object as
+   * {@link capabilities} when the definition declares none. Kept because the
+   * capability cache stores both views — an override is a srgnt decision, and
+   * a matrix that only remembers the clamped result cannot show what was
+   * measured.
+   */
+  readonly negotiated: NegotiatedCapabilities;
+
+  /** Mid-session discoveries so far; see `withObserved`. */
+  private observed: { modes?: boolean; slashCommands?: boolean };
 
   private constructor(
     private readonly inner: ClientSideConnection,
     private readonly hub: SessionUpdateHub,
     capabilities: NegotiatedCapabilities,
     private readonly spawned: SpawnedAgent,
+    negotiated: NegotiatedCapabilities,
+    // Retained so mid-session observations can be re-clamped: an override is a
+    // standing instruction about the whole session, not a one-time edit of the
+    // initialize row. See `withObserved`.
+    private readonly capabilityOverrides?: Parameters<typeof applyCapabilityOverrides>[1],
   ) {
+    // Everything mid-session discovery has told us so far, accumulated across
+    // notifications. One-way: nothing here un-observes a demonstrated capability.
+    this.observed = {};
     this.capabilities = capabilities;
+    this.negotiated = negotiated;
     void this.inner.closed.then(() => this.hub.endAll());
   }
 
@@ -257,8 +283,53 @@ export class AcpAgentConnection {
         options.capabilityOverrides !== undefined
           ? applyCapabilityOverrides(negotiated, options.capabilityOverrides)
           : negotiated;
-      return new AcpAgentConnection(inner, hub, capabilities, spawned);
+      return new AcpAgentConnection(
+        inner,
+        hub,
+        capabilities,
+        spawned,
+        negotiated,
+        options.capabilityOverrides,
+      );
     });
+  }
+
+  /**
+   * Both capability views with mid-session observations folded in — what a
+   * capability cache or matrix should store after `session/new` reported modes
+   * or an `available_commands_update` arrived. A method rather than an exported
+   * helper so the Electron main process (CommonJS) can reach the merge through
+   * a connection it already holds, without statically importing this ESM package.
+   */
+  withObserved(observed: { modes?: boolean; slashCommands?: boolean }): {
+    negotiated: NegotiatedCapabilities;
+    effective: NegotiatedCapabilities;
+  } {
+    // Accumulate, because discoveries arrive in separate notifications: modes
+    // come back from `session/new` and slash commands from a later
+    // `available_commands_update`. Merging each call against the immutable
+    // initialize baseline would let the second call drop the first one's
+    // finding, and the cache would then persist the incomplete row and disable
+    // UI the agent actually supports.
+    // OR per field, not a spread: observation is one-way, so a later report
+    // that omits or negates a capability must not un-observe what the agent
+    // already demonstrated. A spread would let `{modes: false}` overwrite an
+    // earlier `true` and drop it from the persisted row.
+    this.observed = {
+      modes: this.observed.modes === true || observed.modes === true,
+      slashCommands: this.observed.slashCommands === true || observed.slashCommands === true,
+    };
+    // Overrides are reapplied last: merging an observed `true` into the
+    // already-overridden view would OR over a deliberate `false` clamp and
+    // re-enable exactly what the definition exists to turn off.
+    const negotiated = mergeSessionCapabilities(this.negotiated, this.observed);
+    return {
+      negotiated,
+      effective:
+        this.capabilityOverrides !== undefined
+          ? applyCapabilityOverrides(negotiated, this.capabilityOverrides)
+          : negotiated,
+    };
   }
 
   /** `session/new` — registers the returned sessionId with the update hub. */

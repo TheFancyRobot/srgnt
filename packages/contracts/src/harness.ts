@@ -52,6 +52,18 @@ export const SHarnessDefinition = Schema.Struct({
   description: Schema.optional(Schema.String),
   source: Schema.optionalWith(Schema.Literal('builtin', 'custom'), { default: () => 'custom' as const }),
   launch: SLaunchSpec,
+  /**
+   * Binary probed by installation detection, when it differs from
+   * `launch.command`. Pi launches via `npx pi-acp@…` but its real prerequisite
+   * is the `pi` CLI; opencode needs none because its launch command IS the
+   * binary. Absent → probe `launch.command`.
+   *
+   * Non-empty when present: `detectHarness` falls back with `??`, which only
+   * catches `undefined`, so an empty string would reach the probe and throw
+   * `ERR_INVALID_ARG_VALUE` instead of detecting. STEP-25-02's editor lets a
+   * user clear this field, and clearing it must mean absent, not `''`.
+   */
+  detectCommand: Schema.optional(Schema.String.pipe(Schema.minLength(1))),
   quirks: Schema.optionalWith(Schema.Array(SHarnessQuirk), { default: () => [] }),
   capabilityOverrides: Schema.optionalWith(SHarnessCapabilityOverrides, { default: () => ({}) }),
   docsUrl: Schema.optional(Schema.String),
@@ -64,3 +76,34 @@ export const SHarnessesFile = Schema.Struct({
   harnesses: Schema.optionalWith(Schema.Array(SHarnessDefinition), { default: () => [] }),
 });
 export type HarnessesFile = Schema.Schema.Type<typeof SHarnessesFile>;
+
+/**
+ * One harness's last-negotiated capabilities, cached for display between runs
+ * (STEP-25-01). Capability shape is opaque here for the same reason the IPC
+ * contract keeps it opaque: the model is owned by `@srgnt/harness`, and
+ * contracts must not fork it.
+ */
+export const SHarnessCapabilityEntry = Schema.Struct({
+  /** Live `initialize` negotiation, merged with session-discovered fields. */
+  negotiated: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  /** The same after the definition's `capabilityOverrides` were applied. */
+  effective: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  agentVersion: Schema.optional(Schema.String),
+  /** Human-readable provenance ("measured 2h ago"). Never used to order writes. */
+  capturedAt: Schema.String,
+  /**
+   * Hash of the *effective* definition this was measured against. A mismatch
+   * means the definition changed under the same id, so the entry is stale.
+   */
+  definitionFingerprint: Schema.String,
+});
+export type HarnessCapabilityEntry = Schema.Schema.Type<typeof SHarnessCapabilityEntry>;
+
+/** Shape of the workspace `harness-capabilities.json` file (generated, not user-edited). */
+export const SHarnessCapabilitiesFile = Schema.Struct({
+  version: Schema.Literal(1),
+  entries: Schema.optionalWith(Schema.Record({ key: Schema.String, value: SHarnessCapabilityEntry }), {
+    default: () => ({}),
+  }),
+});
+export type HarnessCapabilitiesFile = Schema.Schema.Type<typeof SHarnessCapabilitiesFile>;

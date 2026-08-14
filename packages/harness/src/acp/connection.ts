@@ -311,7 +311,14 @@ export class AcpAgentConnection {
     // initialize baseline would let the second call drop the first one's
     // finding, and the cache would then persist the incomplete row and disable
     // UI the agent actually supports.
-    this.observed = { ...this.observed, ...observed };
+    // OR per field, not a spread: observation is one-way, so a later report
+    // that omits or negates a capability must not un-observe what the agent
+    // already demonstrated. A spread would let `{modes: false}` overwrite an
+    // earlier `true` and drop it from the persisted row.
+    this.observed = {
+      modes: this.observed.modes === true || observed.modes === true,
+      slashCommands: this.observed.slashCommands === true || observed.slashCommands === true,
+    };
     // Overrides are reapplied last: merging an observed `true` into the
     // already-overridden view would OR over a deliberate `false` clamp and
     // re-enable exactly what the definition exists to turn off.

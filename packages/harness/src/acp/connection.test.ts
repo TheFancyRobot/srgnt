@@ -309,6 +309,15 @@ describe('AcpAgentConnection.connect', () => {
     expect(merged.negotiated.slashCommands).toBe(true);
   });
 
+  it('never un-observes a capability the agent already demonstrated', async () => {
+    const { connection } = await connectInProcess({});
+    connection.withObserved({ modes: true });
+    // A later report that says false — or simply omits the field — is not
+    // evidence the capability went away.
+    expect(connection.withObserved({ modes: false }).negotiated.modes).toBe(true);
+    expect(connection.withObserved({ slashCommands: true }).negotiated.modes).toBe(true);
+  });
+
   it('fails with SpawnFailed when the injected spawner rejects', async () => {
     const error = await Effect.runPromise(
       Effect.flip(

@@ -288,6 +288,16 @@ describe('AcpAgentConnection.connect', () => {
     expect(connection.capabilities.resumeSession).toBe(true);
   });
 
+  it('re-clamps mid-session observations through capabilityOverrides', async () => {
+    // A definition that disables `modes` means disabled for the whole session,
+    // not just at initialize: observing modes later must not re-enable it.
+    const { connection } = await connectInProcess({}, { capabilityOverrides: { modes: false } });
+    const merged = connection.withObserved({ modes: true, slashCommands: true });
+    expect(merged.negotiated.modes).toBe(true); // the agent really does support it
+    expect(merged.effective.modes).toBe(false); // ...and the override still wins
+    expect(merged.effective.slashCommands).toBe(true); // unclamped fields still merge
+  });
+
   it('fails with SpawnFailed when the injected spawner rejects', async () => {
     const error = await Effect.runPromise(
       Effect.flip(

@@ -96,6 +96,23 @@ export interface ChatWiring {
  * Returns a teardown that disposes every live session (kill-tree), for app quit.
  */
 export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
+  // One cache per workspace root, not one per report. The cache serializes
+  // writes on an instance-local queue and each write is a read-modify-write of
+  // the whole file, so separate instances race: two harnesses connecting in the
+  // same workspace would each rewrite from their own stale read and drop the
+  // other's entry. Keyed by root (not a single slot) because the workspace can
+  // change under a running app — the old root's queue stays intact for writes
+  // still draining against it.
+  const caches = new Map<string, ReturnType<typeof createHarnessCapabilityCache>>();
+  const cacheFor = (root: string): ReturnType<typeof createHarnessCapabilityCache> => {
+    let cache = caches.get(root);
+    if (cache === undefined) {
+      cache = createHarnessCapabilityCache(root);
+      caches.set(root, cache);
+    }
+    return cache;
+  };
+
   const controllerOptions = {
     onUpdate: (event: { sessionId: string; update: unknown }) =>
       push(wiring, ipcChannels.chatSessionUpdate, event),
@@ -129,7 +146,7 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
     ) => {
       const root = wiring.getCwd?.();
       if (root === undefined || root === '') return;
-      void createHarnessCapabilityCache(root)
+      void cacheFor(root)
         .record(definition, capture)
         .catch((error: unknown) => {
           console.error('[chat] could not cache harness capabilities:', error);

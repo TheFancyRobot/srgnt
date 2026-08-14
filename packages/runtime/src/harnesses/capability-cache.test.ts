@@ -97,6 +97,19 @@ describe('HarnessCapabilityCache', () => {
     expect(readFile()).toMatchObject({ version: 1 });
   });
 
+  it('keeps both entries when two harnesses are recorded concurrently', async () => {
+    // The read-modify-write is only safe while every writer shares one queue.
+    // Two harnesses connecting at once through separate cache instances would
+    // each rewrite the file from its own stale read and drop the other's row —
+    // so callers must reuse one instance per workspace root, and this asserts
+    // the shared-queue path they depend on.
+    const pi: HarnessDefinition = { ...definition, id: 'pi', name: 'Pi' };
+    await Promise.all([cache.record(definition, capture(1)), cache.record(pi, capture(2))]);
+    expect((await cache.get(definition)).status).toBe('measured');
+    expect((await cache.get(pi)).status).toBe('measured');
+    expect(readFile()).toMatchObject({ entries: { pi: {}, opencode: {} } });
+  });
+
   it('leaves no temp files behind', async () => {
     await cache.record(definition, capture(1));
     const { readdirSync } = await import('fs');

@@ -225,6 +225,10 @@ export class AcpAgentConnection {
     capabilities: NegotiatedCapabilities,
     private readonly spawned: SpawnedAgent,
     negotiated: NegotiatedCapabilities,
+    // Retained so mid-session observations can be re-clamped: an override is a
+    // standing instruction about the whole session, not a one-time edit of the
+    // initialize row. See `withObserved`.
+    private readonly capabilityOverrides?: Parameters<typeof applyCapabilityOverrides>[1],
   ) {
     this.capabilities = capabilities;
     this.negotiated = negotiated;
@@ -273,7 +277,14 @@ export class AcpAgentConnection {
         options.capabilityOverrides !== undefined
           ? applyCapabilityOverrides(negotiated, options.capabilityOverrides)
           : negotiated;
-      return new AcpAgentConnection(inner, hub, capabilities, spawned, negotiated);
+      return new AcpAgentConnection(
+        inner,
+        hub,
+        capabilities,
+        spawned,
+        negotiated,
+        options.capabilityOverrides,
+      );
     });
   }
 
@@ -288,9 +299,18 @@ export class AcpAgentConnection {
     negotiated: NegotiatedCapabilities;
     effective: NegotiatedCapabilities;
   } {
+    // Merge into the negotiated view, then re-derive effective by reapplying the
+    // definition's overrides. Merging straight into the already-overridden view
+    // would OR an observed `true` over a deliberate `false` clamp and quietly
+    // re-enable a capability the definition disabled — the matrix would then
+    // render as supported exactly what the override exists to turn off.
+    const negotiated = mergeSessionCapabilities(this.negotiated, observed);
     return {
-      negotiated: mergeSessionCapabilities(this.negotiated, observed),
-      effective: mergeSessionCapabilities(this.capabilities, observed),
+      negotiated,
+      effective:
+        this.capabilityOverrides !== undefined
+          ? applyCapabilityOverrides(negotiated, this.capabilityOverrides)
+          : negotiated,
     };
   }
 

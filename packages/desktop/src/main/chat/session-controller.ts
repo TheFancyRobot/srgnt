@@ -133,7 +133,16 @@ export type ChatConnectFn = (
 export interface ChatConnectOptions {
   /** Reap a session's agent after this long with no turn. `undefined` = never. */
   readonly idleTimeoutMs?: number;
+  /**
+   * The effective registry definition for a target id, `${env:…}` resolved
+   * (STEP-25-02). Absent falls back to the built-in Pi definition — the
+   * Phase-23 behaviour for a controller wired without a harnesses service.
+   */
+  readonly resolveDefinition?: (id: string) => Promise<HarnessDefinition | undefined>;
 }
+
+/** The reserved id of the deterministic in-tree agent (not a registry harness). */
+const MOCK_TARGET = 'mock';
 
 /**
  * Identity for the built-in deterministic mock. It is not a registry harness
@@ -354,9 +363,38 @@ function mockLaunchSpec(): LaunchSpec {
  * spawned process, so both targets exercise supervisor + wrapper, just
  * deterministically for the mock.
  */
+/**
+ * The definition a target spawns against: `undefined` for the mock (which is
+ * not a registry harness), otherwise the registry's *effective* record — so a
+ * binary path or env saved in Settings is what this spawn actually launches
+ * (STEP-25-02). An id the registry cannot produce is an error, never a quiet
+ * fallback to some other agent.
+ *
+ * Exported because it is the whole decision: everything else in
+ * `defaultChatConnect` spawns a real supervised process, which a unit test
+ * cannot drive (it would need a working ACP handshake on the other end).
+ */
+export async function resolveConnectDefinition(
+  target: ChatTarget,
+  options: ChatConnectOptions,
+  piDefinition: HarnessDefinition,
+): Promise<HarnessDefinition | undefined> {
+  if (target === MOCK_TARGET) return undefined;
+  const definition =
+    options.resolveDefinition !== undefined
+      ? await options.resolveDefinition(target)
+      : target === 'pi'
+        ? piDefinition
+        : undefined;
+  if (definition === undefined) {
+    throw new Error(`No harness "${target}" is configured. Check Settings → Harnesses.`);
+  }
+  return definition;
+}
+
 export const defaultChatConnect: ChatConnectFn = async (target, ports, options = {}) => {
   const { AcpAgentConnection, Supervisor, piDefinition } = await loadHarness();
-  const definition = target === 'pi' ? piDefinition : undefined;
+  const definition = await resolveConnectDefinition(target, options, piDefinition);
   const launch = definition?.launch ?? mockLaunchSpec();
   const capabilityOverrides = definition?.capabilityOverrides;
   const harness: ChatHarnessIdentity =
@@ -529,6 +567,12 @@ export interface ChatSessionControllerOptions {
   readonly getCwd?: () => string | undefined;
   /** Builds the client services for a session. Injected in tests. */
   readonly createClientServices?: typeof createChatClientServices;
+  /**
+   * Resolves a target id to its effective registry definition (STEP-25-02).
+   * Threaded straight through to the connector; absent keeps the built-in
+   * Pi definition, as in Phase 23.
+   */
+  readonly resolveDefinition?: (id: string) => Promise<HarnessDefinition | undefined>;
   /**
    * Called after every successful connect to a registry harness, with what was
    * negotiated and what the definition's overrides made of it. The wiring
@@ -942,7 +986,12 @@ export class ChatSessionController {
           fs: services.fs,
           terminal: services.terminal,
         },
-        { idleTimeoutMs: this.options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS },
+        {
+          idleTimeoutMs: this.options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS,
+          ...(this.options.resolveDefinition !== undefined
+            ? { resolveDefinition: this.options.resolveDefinition }
+            : {}),
+        },
       );
     } catch (cause) {
       // `connect` can fail before any process exists (a bad scenario override

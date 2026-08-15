@@ -28,6 +28,7 @@ import { createUpdaterService } from './services/updater.js';
 import { createTerminalService } from './services/terminal.js';
 import { createSemanticSearchService } from './services/semantic-search.js';
 import { createProjectsService } from './services/projects.js';
+import { createHarnessesService } from './services/harnesses.js';
 import { createSessionsService } from './services/sessions.js';
 import { registerCrashHandlers } from './services/crash.js';
 import { registerShellHandlers } from './services/shell.js';
@@ -82,6 +83,13 @@ const projects = createProjectsService({
   getWorkspaceRoot: () => workspace.getRoot(),
 });
 
+// Harness configuration (PHASE-25, STEP-25-02). Owns `harnesses.json` and the
+// merged registry, so a saved binary-path/env override is what the NEXT session
+// spawns. Re-rooted with the workspace: the file lives inside it.
+const harnesses = createHarnessesService({
+  getWorkspaceRoot: () => workspace.getRoot(),
+});
+
 // Session persistence (PHASE-24, STEP-24-03). Re-rooted with the workspace for
 // the same reason projects are: an event log opened under the previous root
 // holds its file descriptor and advisory lock against a workspace nobody is in.
@@ -110,6 +118,7 @@ const workspace = createWorkspaceService({
       crashReporter.setWorkspaceRoot(root);
       registerNotesHandlers(root);
       await projects.setWorkspaceRoot(root);
+      harnesses.setWorkspaceRoot(root);
       await sessions.setWorkspaceRoot(root);
       await semanticSearch.initialize(root);
     },
@@ -136,6 +145,7 @@ registerSettingsHandlers(workspace);
 terminal.registerIpcHandlers();
 semanticSearch.registerIpcHandlers();
 projects.registerIpcHandlers();
+harnesses.registerIpcHandlers();
 registerShellHandlers();
 registerCrashHandlers({ crashReporter, getWorkspaceRoot: () => workspace.getRoot() });
 windowManager.registerIpcHandlers();
@@ -156,6 +166,7 @@ const disposeChat = registerChatHandlers({
   getCwd: () => workspace.getRoot() || undefined,
   projects,
   sessions,
+  harnesses,
 });
 
 disposeLiveChatSessions = disposeChat;

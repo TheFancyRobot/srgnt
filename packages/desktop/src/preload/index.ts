@@ -77,6 +77,10 @@ const ipcChannels = {
   projectRename: 'project:rename',
   projectMerge: 'project:merge',
   projectSetDefaults: 'project:set-defaults',
+  // Harness configuration (PHASE-25, STEP-25-02).
+  harnessList: 'harness:list',
+  harnessSaveOverride: 'harness:save-override',
+  harnessResetOverride: 'harness:reset-override',
 } as const;
 
 /** Mirrors `SProject` from @srgnt/contracts, which the sandboxed preload cannot import. */
@@ -107,10 +111,30 @@ interface SrgntSession {
   updatedAt?: string;
 }
 
+/** Mirrors `SHarnessDefinition`, which the sandboxed preload cannot import. */
+interface SrgntHarnessDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  source: 'builtin' | 'custom';
+  launch: { command: string; args: readonly string[]; env: Record<string, string>; cwd?: string };
+  detectCommand?: string;
+  quirks: readonly string[];
+  capabilityOverrides: Record<string, boolean>;
+  docsUrl?: string;
+}
+
+/** Mirrors `SHarnessDetection`: the three states the settings chip renders. */
+type SrgntHarnessDetection =
+  | { status: 'ok'; command: string; version: string }
+  | { status: 'probe-failed'; command: string; reason: string; detail?: string }
+  | { status: 'not-installed'; command: string };
+
 /** Mirrors `SChatSessionNewResponse`: the identity block for one open session. */
 interface SrgntChatSession {
   sessionId: string;
-  target: 'mock' | 'pi';
+  /** `mock`, or any configured harness id (STEP-25-02 made targets registry data). */
+  target: string;
   /** The project the session was created under (PHASE-24). */
   projectId?: string;
   harnessId: string;
@@ -267,7 +291,7 @@ const api = {
   // available — unlike the dev console these are not flag-gated.
   chatSessionNew: (
     /** Absent falls back to the project's `defaultHarnessId`, then to `mock`. */
-    target?: 'mock' | 'pi',
+    target?: string,
     /** Absent derives (and auto-creates) the project from the workspace cwd. */
     projectId?: string,
   ): Promise<SrgntChatSession> => ipcRenderer.invoke(ipcChannels.chatSessionNew, { target, projectId }),
@@ -459,6 +483,29 @@ const api = {
     },
   ): Promise<SrgntProject> =>
     ipcRenderer.invoke(ipcChannels.projectSetDefaults, { projectId, ...defaults }),
+
+  // Harness configuration (PHASE-25, STEP-25-02). `harnessList` carries the
+  // `harnesses.json` load result as its own field, so an unreadable file is
+  // distinguishable from a workspace with no custom entries. Mutations answer
+  // with a typed `{ ok }` rather than throwing, because their failures (a
+  // rejected secret literal, a broken file) are things to render next to the
+  // field the user was editing.
+  harnessList: (refresh = false): Promise<{
+    workspaceLoad: { ok: true } | { ok: false; error: string };
+    harnesses: readonly {
+      definition: SrgntHarnessDefinition;
+      overridden: boolean;
+      detection: SrgntHarnessDetection;
+    }[];
+  }> => ipcRenderer.invoke(ipcChannels.harnessList, { refresh }),
+  /** Takes a COMPLETE definition; main canonicalizes everything outside launch/detectCommand. */
+  harnessSaveOverride: (
+    harnessId: string,
+    definition: SrgntHarnessDefinition,
+  ): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke(ipcChannels.harnessSaveOverride, { harnessId, definition }),
+  harnessResetOverride: (harnessId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke(ipcChannels.harnessResetOverride, { harnessId }),
 
   platform: process.platform,
 };

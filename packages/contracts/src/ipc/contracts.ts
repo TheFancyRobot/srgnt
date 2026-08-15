@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { PositiveInt } from '../shared-schemas.js';
 import { SLaunchContext } from '../entities/launch.js';
+import { SHarnessDefinition } from '../harness.js';
 import { SProject, SProjectPermissionPolicy } from '../project.js';
 import { SSession, SSessionEvent } from '../session.js';
 
@@ -100,6 +101,14 @@ export const ipcChannels = {
   projectRename: 'project:rename',
   projectMerge: 'project:merge',
   projectSetDefaults: 'project:set-defaults',
+  // Harness configuration (PHASE-25, STEP-25-02). `list` is the read side —
+  // merged registry + per-definition detection + the `harnesses.json` load
+  // result. `save-override`/`reset-override` are the ONLY writers the product
+  // has: they canonicalize against the base definition, refuse to run against a
+  // `harnesses.json` they could not read, and never store a secret literal.
+  harnessList: 'harness:list',
+  harnessSaveOverride: 'harness:save-override',
+  harnessResetOverride: 'harness:reset-override',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -528,8 +537,16 @@ export type DevSessionUpdateEvent = Schema.Schema.Type<typeof SDevSessionUpdateE
 // and `session/update` payloads still cross the wire as opaque JSON — their
 // authoritative shapes live in @srgnt/harness, which desktop-main owns.
 
-/** Which harness the chat surface drives: the deterministic mock, or real Pi. */
-export const SChatTarget = Schema.Literal('mock', 'pi');
+/**
+ * Which harness the chat surface drives: the reserved `mock` id, or any harness
+ * id the registry resolves (STEP-25-02).
+ *
+ * Not a literal union any more: `harnesses.json` can name anything, so the set
+ * of valid targets is registry data, not a schema constant. Validity is decided
+ * where the registry lives (main), which is also the only place that can tell a
+ * *dangling* id from a merely unknown-to-this-schema one.
+ */
+export const SChatTarget = Schema.String;
 export type ChatTarget = Schema.Schema.Type<typeof SChatTarget>;
 
 export const SChatSessionNewRequest = Schema.Struct({
@@ -899,3 +916,82 @@ export const SProjectListResponse = Schema.Struct({
   skipped: Schema.Array(Schema.Struct({ projectId: Schema.String, reason: Schema.String })),
 });
 export type ProjectListResponse = Schema.Schema.Type<typeof SProjectListResponse>;
+
+// Harness configuration IPC (PHASE-25, STEP-25-02). The wire mirror of
+// `DetectionResult` in @srgnt/harness — the states are onboarding-facing copy,
+// so they cross the boundary as data the renderer can switch on rather than a
+// pre-rendered string.
+
+export const SHarnessDetection = Schema.Union(
+  Schema.Struct({ status: Schema.Literal('ok'), command: Schema.String, version: Schema.String }),
+  Schema.Struct({
+    status: Schema.Literal('probe-failed'),
+    command: Schema.String,
+    reason: Schema.Literal('timeout', 'nonzero-exit', 'no-version-output', 'spawn-error'),
+    detail: Schema.optional(Schema.String),
+  }),
+  Schema.Struct({ status: Schema.Literal('not-installed'), command: Schema.String }),
+);
+export type HarnessDetection = Schema.Schema.Type<typeof SHarnessDetection>;
+
+/**
+ * Whether `harnesses.json` itself could be read, as a field of its own.
+ * "Invalid file" and "valid file with no custom entries" both render built-ins,
+ * so the difference must be stated rather than inferred from an empty list.
+ */
+export const SHarnessWorkspaceLoad = Schema.Union(
+  Schema.Struct({ ok: Schema.Literal(true) }),
+  Schema.Struct({ ok: Schema.Literal(false), error: Schema.String }),
+);
+export type HarnessWorkspaceLoad = Schema.Schema.Type<typeof SHarnessWorkspaceLoad>;
+
+export const SHarnessListEntry = Schema.Struct({
+  /** The effective (post-shadow) definition, with `${env:…}` references left unresolved. */
+  definition: SHarnessDefinition,
+  /** A workspace entry shadows this id. For a built-in that means "overridden". */
+  overridden: Schema.Boolean,
+  detection: SHarnessDetection,
+});
+export type HarnessListEntry = Schema.Schema.Type<typeof SHarnessListEntry>;
+
+export const SHarnessListRequest = Schema.Struct({
+  /** Re-probe instead of answering from this run's detection cache. */
+  refresh: Schema.optionalWith(Schema.Boolean, { default: () => false }),
+});
+export type HarnessListRequest = Schema.Schema.Type<typeof SHarnessListRequest>;
+
+export const SHarnessListResponse = Schema.Struct({
+  workspaceLoad: SHarnessWorkspaceLoad,
+  harnesses: Schema.Array(SHarnessListEntry),
+});
+export type HarnessListResponse = Schema.Schema.Type<typeof SHarnessListResponse>;
+
+/**
+ * A save carries a COMPLETE definition, never a patch: the registry replaces a
+ * shadowed built-in wholesale, so a record missing `quirks` or
+ * `capabilityOverrides` is a deletion of them, not "unchanged".
+ *
+ * Completeness is not integrity — the service still canonicalizes every field
+ * outside its allowlist (`launch.*`, `detectCommand`) from the base definition,
+ * so a tampered-but-complete payload cannot rewrite `quirks`, `source`, or a
+ * capability clamp.
+ */
+export const SHarnessSaveOverrideRequest = Schema.Struct({
+  harnessId: Schema.String,
+  definition: SHarnessDefinition,
+});
+export type HarnessSaveOverrideRequest = Schema.Schema.Type<typeof SHarnessSaveOverrideRequest>;
+
+export const SHarnessRef = Schema.Struct({ harnessId: Schema.String });
+export type HarnessRef = Schema.Schema.Type<typeof SHarnessRef>;
+
+/**
+ * Mutations answer with a typed failure instead of throwing so the renderer can
+ * render the message next to the field the user was editing (an unreadable
+ * `harnesses.json`, a rejected secret literal, an id mismatch).
+ */
+export const SHarnessMutationResponse = Schema.Union(
+  Schema.Struct({ ok: Schema.Literal(true) }),
+  Schema.Struct({ ok: Schema.Literal(false), error: Schema.String }),
+);
+export type HarnessMutationResponse = Schema.Schema.Type<typeof SHarnessMutationResponse>;

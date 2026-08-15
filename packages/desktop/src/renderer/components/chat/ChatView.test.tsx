@@ -146,9 +146,10 @@ describe('ChatView — session lifecycle', () => {
     expect(screen.getByTestId('chat-session-badge')).toHaveTextContent('Pi');
   });
 
-  it("opens the active project's default harness when the user has not chosen", async () => {
-    // The selector always sent an explicit target, so main's defaultHarnessId
-    // resolution was unreachable: a project set to Pi still opened Mock.
+  it("shows the active project's default harness and lets main resolve it", async () => {
+    // The renderer must NOT send the default as an explicit target: only main
+    // holds the registry, so only main can tell a configured harness from a
+    // dangling one and refuse rather than substitute.
     render(
       <ProjectsProvider>
         <ChatSessionProvider>
@@ -158,7 +159,37 @@ describe('ChatView — session lifecycle', () => {
     );
     await waitFor(() => expect((screen.getByTestId('chat-target') as HTMLSelectElement).value).toBe('pi'));
     await startSession();
-    expect(harness.api.chatSessionNew).toHaveBeenCalledWith('pi', 'proj-1');
+    expect(harness.api.chatSessionNew).toHaveBeenCalledWith(undefined, 'proj-1');
+  });
+
+  it('does not collapse a non-builtin project default to the mock', async () => {
+    // The regression: any default that was not `pi`/`mock` was rewritten to
+    // `mock` and then sent explicitly, so a project set to opencode silently
+    // started the Mock agent and Settings → Harnesses appeared to do nothing.
+    harness = installSrgntStub({
+      // rootDir must match the stubbed workspace root: ProjectsProvider picks
+      // the active project by matching it.
+      projectList: vi.fn(async () => ({
+        projects: [
+          { id: 'proj-2', name: 'two', rootDir: '/w/one', additionalDirectories: [], defaultHarnessId: 'opencode' },
+        ],
+        skipped: [],
+      })),
+    });
+    render(
+      <ProjectsProvider>
+        <ChatSessionProvider>
+          <ChatView />
+        </ChatSessionProvider>
+      </ProjectsProvider>,
+    );
+    await waitFor(() =>
+      expect((screen.getByTestId('chat-target') as HTMLSelectElement).value).toBe('opencode'),
+    );
+    await startSession();
+    const [target] = (harness.api.chatSessionNew as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+    expect(target).not.toBe('mock');
+    expect(target).toBeUndefined();
   });
 
   it('surfaces declared harness quirks from the new-session response', async () => {

@@ -20,7 +20,10 @@ import { useProjectsOptional } from './ProjectsContext.js';
  * navigating to Notes and back neither kills the session nor loses transcript.
  */
 
-const TARGET_LABELS: Record<ChatTarget, string> = {
+// The explicitly pickable targets. A project's default harness (Settings →
+// Harnesses) is what selects anything else, so this list stays short rather
+// than becoming a second harness registry in the renderer.
+const TARGET_LABELS: Record<string, string> = {
   mock: 'Mock agent',
   pi: 'Pi',
 };
@@ -47,8 +50,15 @@ export function ChatView(): React.ReactElement {
   // still opened Mock unless the user touched the dropdown.
   const [chosenTarget, setChosenTarget] = React.useState<ChatTarget | null>(null);
   const projectDefault = useProjectsOptional()?.activeProject?.defaultHarnessId;
-  const target: ChatTarget =
-    chosenTarget ?? (projectDefault === 'pi' || projectDefault === 'mock' ? projectDefault : 'mock');
+  // Displayed selection: the project's default is shown as-is, whatever it is.
+  // Collapsing an unrecognized default to `mock` here would silently contradict
+  // Settings → Harnesses, which is the surface that set it.
+  const target: ChatTarget = chosenTarget ?? projectDefault ?? 'mock';
+  // Sent to main: `undefined` until the user actually picks, so main resolves
+  // the project default itself — it is the only side that can tell a configured
+  // harness from a dangling one, and it must be allowed to say so. Passing an
+  // explicit value here is what made a project set to opencode start the mock.
+  const requestedTarget: ChatTarget | undefined = chosenTarget ?? undefined;
   const setTarget = setChosenTarget;
 
   const hasSession = session !== null;
@@ -82,9 +92,12 @@ export function ChatView(): React.ReactElement {
                 value={target}
                 onChange={(event) => setTarget(event.target.value as ChatTarget)}
               >
-                {(Object.keys(TARGET_LABELS) as ChatTarget[]).map((value) => (
+                {/* The project's default is offered even when it is not one of
+                    the two built-in labels — otherwise the select would render
+                    a value it has no option for and appear to reset itself. */}
+                {(Object.keys({ ...TARGET_LABELS, [target]: target }) as ChatTarget[]).map((value) => (
                   <option key={value} value={value}>
-                    {TARGET_LABELS[value]}
+                    {TARGET_LABELS[value] ?? value}
                   </option>
                 ))}
               </select>
@@ -98,7 +111,7 @@ export function ChatView(): React.ReactElement {
               type="button"
               data-testid="chat-new-session"
               className="chat-button chat-button-primary"
-              onClick={() => void newSession(target)}
+              onClick={() => void newSession(requestedTarget)}
               disabled={connecting}
             >
               {connecting ? 'Starting…' : 'Start session'}

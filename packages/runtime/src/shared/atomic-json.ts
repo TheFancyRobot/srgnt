@@ -15,8 +15,8 @@ import * as path from 'path';
  * Shared by `meta.json` (sessions) and `project.json` (projects); both are tiny
  * and always rewritten whole. `events.jsonl` is the only append-only file.
  */
-export async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> {
-  await writeFileAtomic(filePath, `${JSON.stringify(value, null, 2)}\n`);
+export async function writeJsonAtomic(filePath: string, value: unknown, mode?: number): Promise<void> {
+  await writeFileAtomic(filePath, `${JSON.stringify(value, null, 2)}\n`, mode);
 }
 
 /**
@@ -26,11 +26,17 @@ export async function writeJsonAtomic(filePath: string, value: unknown): Promise
  * a half-written file, and a crash mid-checkpoint must leave the previous
  * render intact.
  */
-export async function writeFileAtomic(filePath: string, contents: string): Promise<void> {
+export async function writeFileAtomic(filePath: string, contents: string, mode?: number): Promise<void> {
   const tmpPath = `${filePath}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
   try {
-    const handle = await fs.open(tmpPath, 'wx');
+    // The mode is applied to the TEMP file, which is the file the contents ever
+    // live in: creating it world-readable and tightening the permissions after
+    // the rename would leave exactly the window `0600` exists to close. The
+    // explicit `chmod` is because `open`'s mode is masked by the process umask,
+    // and "at most 0600" is not the same promise as "0600".
+    const handle = await fs.open(tmpPath, 'wx', mode);
     try {
+      if (mode !== undefined) await handle.chmod(mode);
       await handle.writeFile(contents, 'utf8');
       await handle.sync();
     } finally {

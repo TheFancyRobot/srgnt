@@ -110,14 +110,36 @@ Decisions taken during execution:
 
 <!-- AGENT-START:session-changed-paths -->
 - `packages/contracts/src/harness.ts` — `SAuthMethod`, `SAuthMethodCommand`, the pure `normalizeAuthMethod`, and the `no-client-delegation` quirk.
-- `packages/contracts/src/ipc/contracts.ts` — `harness:capabilities` channel, `SHarnessCapabilityRow`/`SHarnessCapabilitiesResponse`, `SChatAuthRequired`, `SChatSessionNewResult`, `authMethodId` on session-new.
-- `packages/harness/src/acp/capabilities.ts` — exported `SESSION_DISCOVERED_CAPABILITIES`; `acp/connection.ts` — `authenticate()`.
+- `packages/contracts/src/harness.test.ts`
+- `packages/contracts/src/ipc/contracts.ts` — `harness:capabilities` channel, `SHarnessCapabilityRow`, `SHarnessCapabilitiesResponse`, `SChatAuthRequired`, `SChatSessionNewResult`, `authMethodId` on session-new.
+- `packages/contracts/src/ipc/contracts.test.ts`
+- `packages/harness/src/acp/capabilities.ts` — exported `SESSION_DISCOVERED_CAPABILITIES`.
+- `packages/harness/src/acp/capabilities.test.ts`
+- `packages/harness/src/acp/connection.ts` — `authenticate()`.
 - `packages/harness/src/registry/builtins.ts` — pi declares `no-client-delegation` (STEP-22-05 probe 4).
-- `packages/harness/src/testing/mock-agent/{scenario,runner}.ts` — `authRequired` block: advertises methods verbatim, `session/new` throws `-32000` until `authenticate`.
+- `packages/harness/src/registry/registry.test.ts`
+- `packages/harness/src/testing/mock-agent/scenario.ts` — `authRequired` scenario block.
+- `packages/harness/src/testing/mock-agent/runner.ts` — advertises methods verbatim; `session/new` throws `-32000` until `authenticate`.
+- `packages/harness/src/testing/mock-agent/mock-agent.test.ts`
 - `packages/desktop/src/main/services/harnesses.ts` — `capabilities()` + IPC handler.
-- `packages/desktop/src/main/chat/session-controller.ts` — `ChatAuthRequiredError`, `-32000` detection via `Effect.tapError`, `newSession(..., authMethodId?)`; `chat/index.ts` answers the wall as data.
-- `packages/desktop/src/renderer/components/settings/CapabilityMatrix.tsx` (new), `components/chat/AuthPanel.tsx` (new), both with tests; `e2e/auth.spec.ts` (new, in all three `test:e2e*` lists).
-- `ChatSessionContext.tsx`, `ChatView.tsx`, `main.tsx`, `preload/index.ts`, `env.d.ts`, `styles.css`.
+- `packages/desktop/src/main/services/harnesses.test.ts`
+- `packages/desktop/src/main/chat/session-controller.ts` — `ChatAuthRequiredError`, `-32000` detection via `Effect.tapError`, `newSession(..., authMethodId?)`.
+- `packages/desktop/src/main/chat/session-controller.test.ts`
+- `packages/desktop/src/main/chat/index.ts` — answers the auth wall as data.
+- `packages/desktop/src/main/chat/ipc.test.ts`
+- `packages/desktop/src/renderer/components/settings/CapabilityMatrix.tsx` (new)
+- `packages/desktop/src/renderer/components/settings/CapabilityMatrix.test.tsx` (new)
+- `packages/desktop/src/renderer/components/chat/AuthPanel.tsx` (new)
+- `packages/desktop/src/renderer/components/chat/AuthPanel.test.tsx` (new)
+- `packages/desktop/src/renderer/components/chat/ChatView.tsx` — auth actions bound to the wall's harness id.
+- `packages/desktop/src/renderer/components/chat/ChatView.test.tsx`
+- `packages/desktop/src/renderer/components/chat/ChatSessionContext.tsx`
+- `packages/desktop/src/renderer/main.tsx`
+- `packages/desktop/src/renderer/env.d.ts`
+- `packages/desktop/src/renderer/styles.css`
+- `packages/desktop/src/preload/index.ts`
+- `packages/desktop/e2e/auth.spec.ts` (new; registered in all three `test:e2e*` lists)
+- `packages/desktop/package.json`
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run
@@ -137,8 +159,12 @@ Decisions taken during execution:
 
 <!-- AGENT-START:session-follow-up-work -->
 - STEP-25-04 (next): the lessons-learned note. Evidence from this step — auth metadata is not reliably machine-actionable (opencode advertises no command), `configOptions` is an unmodeled generic surface, `session/close` and `session/fork` are unmodeled, and `no-client-delegation` was needed as a fourth quirk.
-- Mid-conversation auth failure should reach the same panel from the prompt-failure surface.
+- opencode's `configOptions` (mode *and* model) remain invisible: `readModes` reads only a `modes` block, and `session/set_config_option` is the method that applies. Deliberately not chased here — it is a new generic surface and a STEP-25-04 input.
+- Mid-conversation auth failure should reach the same panel from the prompt-failure surface; today it uses the STEP-23-04 prompt-error path.
+- Drive the in-chat harness picker from the registry rather than `mock`, `pi` and the project default (carried from STEP-25-02).
 - Manual verification against a real unauthenticated harness, and the GUI pass carried since Phase 23.
+
+This block is the complete follow-up list; `## Follow-Ups` below restates it in prose.
 <!-- AGENT-END:session-follow-up-work -->
 
 ## Follow-Ups

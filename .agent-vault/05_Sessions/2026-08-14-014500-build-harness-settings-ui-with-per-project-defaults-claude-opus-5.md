@@ -97,13 +97,26 @@ CodeRabbit raised seven live findings on PR #33; all were real:
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- `packages/desktop/src/main/services/harnesses.ts` (new) + tests — registry build, per-definition detection, canonicalized saves, load-failure abort, `0600` serialized writes, secret rejection across env and argv.
-- `packages/contracts/src/ipc/contracts.ts` — three `harness:*` channels; `SChatTarget` widened to a string.
+- `packages/desktop/src/main/services/harnesses.ts` (new) — registry build, per-definition detection, base-canonicalized saves, abort-on-load-failure, `0600` serialized writes, secret rejection across env and argv.
+- `packages/desktop/src/main/services/harnesses.test.ts` (new)
+- `packages/contracts/src/ipc/contracts.ts` — `harness:list`, `harness:save-override`, `harness:reset-override`; `SChatTarget` widened to a string.
+- `packages/contracts/src/ipc/contracts.test.ts`
 - `packages/runtime/src/shared/atomic-json.ts` — optional `mode`, applied to the temp file.
+- `packages/runtime/src/shared/atomic-json.test.ts` (new)
 - `packages/desktop/src/main/chat/index.ts` — async `resolveChatTarget` with an `isConfigured` probe, `resolveForkTarget`, dangling defaults block.
+- `packages/desktop/src/main/chat/ipc.test.ts`
 - `packages/desktop/src/main/chat/session-controller.ts` — `resolveDefinition`, `resolveConnectDefinition`.
-- `packages/desktop/src/renderer/components/settings/HarnessSettings.tsx` (new) + tests; `ChatView.tsx` sends `undefined` until the user picks; `main.tsx` keys the section by workspace root.
-- `packages/desktop/e2e/harnesses.spec.ts` (new, in all three `test:e2e*` lists).
+- `packages/desktop/src/main/index.ts`
+- `packages/desktop/src/preload/index.ts`
+- `packages/desktop/src/renderer/components/settings/HarnessSettings.tsx` (new)
+- `packages/desktop/src/renderer/components/settings/HarnessSettings.test.tsx` (new)
+- `packages/desktop/src/renderer/components/chat/ChatView.tsx` — sends `undefined` until the user picks a target.
+- `packages/desktop/src/renderer/components/chat/ChatView.test.tsx`
+- `packages/desktop/src/renderer/components/chat/ChatSessionContext.tsx`
+- `packages/desktop/src/renderer/main.tsx` — harness section keyed by workspace root.
+- `packages/desktop/src/renderer/env.d.ts`
+- `packages/desktop/e2e/harnesses.spec.ts` (new; registered in all three `test:e2e*` lists)
+- `packages/desktop/package.json`
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run

@@ -103,15 +103,29 @@ now positional placeholders with the true counts kept.
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
-- `packages/contracts/src/harness.ts` — optional non-empty `detectCommand`; `SHarnessCapabilityEntry`/`SHarnessCapabilitiesFile`.
+- `packages/contracts/src/harness.ts` — optional non-empty `detectCommand`; `SHarnessCapabilityEntry`; `SHarnessCapabilitiesFile`.
+- `packages/contracts/src/harness.test.ts`
 - `packages/contracts/src/workspace/layout.ts` — `workspaceFiles.harnessCapabilities`.
 - `packages/harness/src/registry/builtins.ts` — `opencodeDefinition`, `OPENCODE_HARNESS_ID`, `OPENCODE_TESTED_VERSION = '1.18.18'`, `piDefinition.detectCommand = 'pi'`.
 - `packages/harness/src/registry/detect.ts` — `detectHarness`, `detectOpencode`.
-- `packages/harness/src/acp/capabilities.ts` — `authMethods`, `sessionList`, `mergeSessionCapabilities`; `acp/connection.ts` — `negotiated`, `withObserved()`.
-- `packages/runtime/src/harnesses/capability-cache.ts` (new) + tests — last-write-wins behind one write queue, `harnessDefinitionFingerprint`.
-- `packages/desktop/src/main/chat/{session-controller,index}.ts` — write-through on connect, one cache per workspace root.
-- `packages/harness/src/registry/opencode.integration.test.ts` (new), `testing/fixtures/opencode/` (new, placeholder-redacted).
-- `06_Shared_Knowledge/opencode-acp-capture.md` (new).
+- `packages/harness/src/registry/detect.test.ts`
+- `packages/harness/src/registry/registry.test.ts`
+- `packages/harness/src/registry/opencode.integration.test.ts` (new; gated behind `SRGNT_IT_OPENCODE=1`)
+- `packages/harness/src/acp/capabilities.ts` — `authMethods`, `sessionList`, `mergeSessionCapabilities`.
+- `packages/harness/src/acp/capabilities.test.ts`
+- `packages/harness/src/acp/connection.ts` — `negotiated`, `withObserved()` accumulating one-way observations.
+- `packages/harness/src/acp/connection.test.ts`
+- `packages/harness/src/testing/fixtures/opencode/initialize.json` (new; catalog values are positional placeholders)
+- `packages/harness/src/testing/fixtures/opencode/simple-prompt.jsonl` (new)
+- `packages/harness/src/testing/fixtures/opencode/README.md` (new)
+- `packages/runtime/src/harnesses/capability-cache.ts` (new) — last-write-wins behind one write queue; `harnessDefinitionFingerprint`.
+- `packages/runtime/src/harnesses/capability-cache.test.ts` (new)
+- `packages/runtime/src/harnesses/index.ts` (new)
+- `packages/runtime/src/index.ts`
+- `packages/desktop/src/main/chat/index.ts` — one capability cache per workspace root.
+- `packages/desktop/src/main/chat/session-controller.ts` — `onCapabilities` write-through on connect.
+- `packages/desktop/src/main/chat/session-controller.test.ts`
+- `.agent-vault/06_Shared_Knowledge/opencode-acp-capture.md` (new)
 <!-- AGENT-END:session-changed-paths -->
 
 ## Validation Run

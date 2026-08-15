@@ -78,7 +78,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_24_projects_and_session_persistence/Phase|PHASE-24 Projects and Session Persistence]]
-- Current phase status: planned
+- Current phase status: completed
 - Next phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|PHASE-26 Generic Harness Support and Conformance]]
 <!-- AGENT-END:phase-linear-context -->
 

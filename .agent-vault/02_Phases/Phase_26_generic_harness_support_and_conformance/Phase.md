@@ -57,7 +57,13 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 - Depends on [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|PHASE-25 Opencode Integration and Harness Settings]].
 - Must stay aligned with [[01_Architecture/ACP_Command_Center_Target_Architecture|ACP Command Center Target Architecture]].
-- Requires PHASE-25's lessons-learned note — [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned (STEP-25-04)]] — as the requirements input, and its capability matrix/settings surfaces to extend. **Delivered 2026-08-15:** REQ-26-01…18, each carrying an evidence pointer and a deliverable mapping (editor / runner / catalog / docs), plus PROP-A…D recorded as explicitly unowned. The gate named in the refinement pass below is now open.
+- Requires PHASE-25's lessons-learned note — [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned (STEP-25-04)]] — as the requirements input, and its capability matrix/settings surfaces to extend. **Delivered 2026-08-15:** REQ-26-01…18, each carrying an evidence pointer and a deliverable mapping (editor / runner / catalog / docs), plus PROP-A…D. **The four proposals are held back for different reasons, and flattening them into "unowned" would drop real work:**
+  - **PROP-A — a generic `session/set_config_option` surface.** Evidenced by *both* harnesses (opencode returns modes and model as `configOptions`; pi returns `configOptions` from `session/load`), but owned by no PHASE-26 deliverable. **Needs an owner before Step 01 assumes config options are out of scope** — this is the one that changes what the editor and runner must cover.
+  - **PROP-B — `session/close` and `session/fork`.** Evidenced only as *advertisement*: opencode declares both and neither was driven. Needs a behavioral probe before any requirement is written from it.
+  - **PROP-C — per-harness permission-policy defaults.** Deferred by decision in STEP-25-02. The *need* is measured, not speculative — pi self-approves — but no shape is evidenced by anything Phase 25 built, so it is a proposal rather than a requirement.
+  - **PROP-D — mid-conversation auth failure.** Auth detection covers session creation only; a token expiring during a turn still surfaces through the prompt-error path. No shipped harness has demonstrated it.
+  Keychain-backed secret storage and an ACP registry feed are named in the note as explicitly unevidenced.
+  The gate named in the refinement pass below is now open.
 
 ## Acceptance Criteria
 

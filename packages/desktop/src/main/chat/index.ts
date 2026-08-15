@@ -64,6 +64,26 @@ export async function resolveChatTarget(
   );
 }
 
+/**
+ * Resolves the harness a fork must continue on. Separate from
+ * `resolveChatTarget` only for the message: the id comes from the session being
+ * forked, so routing it through the `defaultHarnessId` argument would tell the
+ * user their *project default* is broken and send them to change a setting that
+ * has nothing to do with it.
+ */
+export async function resolveForkTarget(
+  harnessId: string,
+  isConfigured?: (id: string) => Promise<boolean>,
+): Promise<ChatTarget> {
+  if (harnessId === MOCK_TARGET) return MOCK_TARGET;
+  if (isConfigured === undefined) return harnessId === 'pi' ? harnessId : MOCK_TARGET;
+  if (await isConfigured(harnessId)) return harnessId;
+  throw new Error(
+    `This session ran on "${harnessId}", which is no longer configured, so it cannot be forked. ` +
+      `Restore that harness in Settings → Harnesses, or start a new session on a different one.`,
+  );
+}
+
 export interface ChatWiring {
   /** The active window; the controller pushes `chat:session:update` frames to it. */
   readonly getWindow: () => BrowserWindow | null;
@@ -396,7 +416,7 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
               // The fork continues the same agent; a harness that is no longer
               // configured blocks exactly as session creation does, rather than
               // continuing the conversation on a different agent.
-              await resolveChatTarget(undefined, source.harnessId, isConfigured),
+              await resolveForkTarget(source.harnessId, isConfigured),
               sessionProject(project),
               lineage,
             ),

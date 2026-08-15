@@ -92,7 +92,8 @@ CodeRabbit raised seven live findings on PR #33; all were real:
 
 ## Follow-Ups
 
-- The in-chat picker still lists only `mock`/`pi`; opencode is reached via the
-  per-project default. Extending it belongs with STEP-25-03.
+- The in-chat picker lists `mock`, `pi`, and the active project's default
+  (whatever it is) — it does not yet list every configured harness. Driving it
+  from the registry belongs with STEP-25-03.
 - Per-harness permission-policy defaults stay deferred to Phase 26.
 - Manual GUI verification remains owed across phases 23-25.

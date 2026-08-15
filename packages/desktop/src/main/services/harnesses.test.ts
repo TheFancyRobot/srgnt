@@ -293,6 +293,47 @@ describe('secret handling', () => {
     await expect(fs.stat(harnessesJson())).rejects.toThrow();
   });
 
+  it('refuses a secret passed through launch args, in either argv form', async () => {
+    // `canonicalize` copies argv verbatim, and the threat model here is a
+    // scripted IPC caller — so scanning only the env left the one rule that
+    // exists to keep secrets off disk trivially bypassable.
+    service();
+    const pi = await builtinPi();
+    const withArgs = (args: string[]): HarnessDefinition => ({ ...pi, launch: { ...pi.launch, args } });
+
+    for (const args of [
+      ['--api-key', 'sk-live-1234'],
+      ['--api-key=sk-live-1234'],
+      ['serve', '--auth-token', 'ghp_abc123'],
+      ['--password=hunter2'],
+    ]) {
+      const result = await save('pi', withArgs(args));
+      expect(result).toMatchObject({ ok: false });
+      expect((result as { error: string }).error).toMatch(/secret/i);
+    }
+    await expect(fs.stat(harnessesJson())).rejects.toThrow();
+  });
+
+  it('allows ordinary args and a flag whose value is another flag', async () => {
+    service();
+    const pi = await builtinPi();
+    // `--key` immediately followed by another option is a boolean flag, not a
+    // secret being passed; refusing it would block legitimate launch specs.
+    const result = await save('pi', {
+      ...pi,
+      launch: { ...pi.launch, args: ['acp', '--verbose', '--keyring', '--stdio'] },
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('lets a sensitive key be cleared to an empty value', async () => {
+    // Refusing '' would leave someone who pasted a secret unable to remove it
+    // through the editor that accepted it.
+    service();
+    const result = await save('pi', await withEnv({ GITHUB_TOKEN: '' }));
+    expect(result).toEqual({ ok: true });
+  });
+
   it('stores a ${env:…} reference literally and resolves it only at spawn', async () => {
     const harnesses = service();
     const result = await save('pi', await withEnv({ GITHUB_TOKEN: '${env:MY_TOKEN}' }));

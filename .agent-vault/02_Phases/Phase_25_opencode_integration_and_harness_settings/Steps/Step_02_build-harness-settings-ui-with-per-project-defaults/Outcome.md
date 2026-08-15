@@ -4,7 +4,14 @@
 
 ## Result
 
-Done. Settings gains a Harnesses section: every registry entry (pi, opencode, plus any `harnesses.json` customs) renders with its detection chip, an editable binary path / detect command / env, an "Overridden" badge with Reset (Delete for customs), and a per-project default-harness selector writing through `project:set-defaults`. Overrides are stored as a full canonicalized copy in `harnesses.json` (`0600`) and are what the NEXT session spawns - session creation now resolves definitions through the harnesses service instead of the hardcoded built-in, and a dangling project default blocks with an actionable error rather than silently spawning the mock.
+Done by automated checks; two claims below carry a narrower evidence scope than the word "done" implies, and no manual/GUI pass was performed.
+
+Settings gains a Harnesses section: every registry entry (pi, opencode, plus any `harnesses.json` customs) renders with its detection chip, an editable binary path / detect command / env, an "Overridden" badge with Reset (Delete for customs), and a per-project default-harness selector writing through `project:set-defaults`. Overrides are stored as a full canonicalized copy in `harnesses.json` (`0600`); session creation resolves definitions through the harnesses service instead of the hardcoded built-in, and a dangling project default blocks with an actionable error rather than silently spawning the mock.
+
+**Not fully verified as stated:**
+
+- *"...and are what the NEXT session spawns."* Asserted at the service→connector seam (`resolveConnectDefinition`), not by spawning a binary and observing its argv — `defaultChatConnect` completes a real ACP handshake, so a stub script cannot substitute for an agent.
+- *Full e2e green.* Two specs did not pass on this machine (see Validation performed): one fails inside node-pty, the other needs a built `release/linux-unpacked/srgnt` artifact that does not exist locally. Both are believed pre-existing and unrelated to this diff; the Linux e2e job on the PR is the check that actually settles it.
 
 ## Validation performed
 

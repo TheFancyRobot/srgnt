@@ -233,7 +233,7 @@ export function createHarnessesService(deps: {
         return { ok: false, error: `"${harnessId}" is not a built-in harness.` };
       }
 
-      const sensitive = findSensitiveLiteral(payload.launch.env);
+      const sensitive = findSensitiveLiteral(payload.launch);
       if (sensitive !== undefined) return { ok: false, error: sensitive };
 
       const record = canonicalize(base, payload);
@@ -327,14 +327,46 @@ function canonicalize(base: HarnessDefinition, payload: HarnessDefinition): Harn
   };
 }
 
-/** The actionable rejection for a secret-shaped literal, or `undefined` if the env is fine. */
-function findSensitiveLiteral(env: Readonly<Record<string, string>>): string | undefined {
-  for (const [key, value] of Object.entries(env)) {
-    if (!SENSITIVE_KEY.test(key) || ENV_REFERENCE.test(value)) continue;
+const WHY_NOT_ON_DISK =
+  'harnesses.json travels with the workspace (source control, backups, shared filesystems)';
+
+/**
+ * The actionable rejection for a secret-shaped literal anywhere the save would
+ * persist, or `undefined` if the launch spec is clean.
+ *
+ * Covers `launch.args` and `launch.command` as well as the env: `canonicalize`
+ * copies the argv through verbatim, and the threat model in this file's header
+ * is a scripted IPC caller, not just the renderer — so `args: ['--api-key',
+ * 'sk-live-...']` would otherwise land on disk through the one rule written to
+ * prevent exactly that.
+ */
+function findSensitiveLiteral(launch: HarnessDefinition['launch']): string | undefined {
+  for (const [key, value] of Object.entries(launch.env)) {
+    // An empty value clears the variable. Refusing it would leave a user who
+    // pasted a secret unable to take it back out through the editor.
+    if (value === '' || !SENSITIVE_KEY.test(key) || ENV_REFERENCE.test(value)) continue;
     return (
-      `"${key}" looks like a secret, and harnesses.json travels with the workspace ` +
-      `(source control, backups, shared filesystems). Reference it instead: \${env:${key}} — ` +
+      `"${key}" looks like a secret, and ${WHY_NOT_ON_DISK}. Reference it instead: \${env:${key}} — ` +
       `srgnt resolves that from your environment when the agent is spawned and never writes the value to disk.`
+    );
+  }
+
+  // argv carries secrets as `--flag value` or `--flag=value`. Note the remedy
+  // differs from the env case: `${env:...}` is resolved for env values only, so
+  // telling someone to put a reference in an argument would hand the agent a
+  // literal placeholder.
+  const argv = [launch.command, ...launch.args];
+  for (const [index, arg] of argv.entries()) {
+    if (!arg.startsWith('-')) continue;
+    const eq = arg.indexOf('=');
+    const flag = eq === -1 ? arg : arg.slice(0, eq);
+    if (!SENSITIVE_KEY.test(flag)) continue;
+    const value = eq === -1 ? argv[index + 1] : arg.slice(eq + 1);
+    if (value === undefined || value === '' || value.startsWith('-')) continue;
+    return (
+      `"${flag}" looks like it passes a secret on the command line, and ${WHY_NOT_ON_DISK} ` +
+      `(process arguments are also visible to other processes). Put the value in an environment ` +
+      `variable and reference it there with \${env:NAME}, or let the harness read its own credentials.`
     );
   }
   return undefined;

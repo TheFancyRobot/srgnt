@@ -254,6 +254,7 @@ export function HarnessSettings(): React.ReactElement | null {
   const projects = useProjectsOptional();
   const [response, setResponse] = React.useState<HarnessListResponse | null>(null);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [defaultError, setDefaultError] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async (reprobe = false) => {
     // An older preload has no harness bridge: hide the section rather than
@@ -285,6 +286,13 @@ export function HarnessSettings(): React.ReactElement | null {
   };
 
   const activeProject = projects?.activeProject ?? null;
+  // A stored default that no configured harness answers to. Computed from the
+  // same list the select renders, so it cannot disagree with the options.
+  const storedDefault = activeProject?.defaultHarnessId ?? null;
+  const danglingDefault =
+    storedDefault !== null && !(response?.harnesses ?? []).some((e) => e.definition.id === storedDefault)
+      ? storedDefault
+      : null;
 
   return (
     <section id="settings-section-harnesses" data-testid="harness-settings">
@@ -352,10 +360,18 @@ export function HarnessSettings(): React.ReactElement | null {
               onChange={(event) => {
                 const value = event.target.value;
                 void (async () => {
-                  await window.srgnt.projectSetDefaults!(activeProject.id, {
-                    defaultHarnessId: value === '' ? null : value,
-                  });
-                  await projects?.refresh();
+                  setDefaultError(null);
+                  try {
+                    const setDefaults = window.srgnt.projectSetDefaults;
+                    if (setDefaults === undefined) throw new Error('This build cannot change project defaults.');
+                    await setDefaults(activeProject.id, { defaultHarnessId: value === '' ? null : value });
+                    await projects?.refresh();
+                  } catch (cause) {
+                    // Silence here would leave the select showing a default the
+                    // project never stored — the same lie as the dangling case
+                    // below, arrived at from the other direction.
+                    setDefaultError(cause instanceof Error ? cause.message : String(cause));
+                  }
                 })();
               }}
             >
@@ -365,7 +381,25 @@ export function HarnessSettings(): React.ReactElement | null {
                   {entry.definition.name}
                 </option>
               ))}
+              {/* The stored id may name a harness that has since been reset,
+                  deleted or renamed. Without an option carrying it the browser
+                  falls back to the first one, so this screen would read "No
+                  default" while the project still stores the dangling id and
+                  every new session in it fails. */}
+              {danglingDefault !== null && (
+                <option value={danglingDefault}>{danglingDefault} — not configured</option>
+              )}
             </select>
+            {danglingDefault !== null && (
+              <p className="text-xs text-status-warning mt-2" data-testid="harness-default-dangling">
+                {`"${danglingDefault}" is no longer configured, so new sessions in this project will fail. Pick another harness, or restore it above.`}
+              </p>
+            )}
+            {defaultError !== null && (
+              <p className="text-xs text-status-error mt-2" data-testid="harness-default-error">
+                {defaultError}
+              </p>
+            )}
           </div>
         )}
       </div>

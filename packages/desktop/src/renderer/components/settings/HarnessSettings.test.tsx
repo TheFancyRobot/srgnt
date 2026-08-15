@@ -193,6 +193,34 @@ describe('HarnessSettings', () => {
     );
   });
 
+  it('surfaces a stored default that no configured harness answers to', async () => {
+    // Without an option carrying the dangling id the browser falls back to the
+    // first one, so the screen reads "No default" while the project still
+    // stores it and every new session in that project fails.
+    api.projectList = vi.fn(async () => ({
+      projects: [{ ...project, defaultHarnessId: 'deleted-harness' }],
+      skipped: [],
+    })) as AnyMock;
+    renderSection();
+
+    await waitFor(() => expect(screen.getByTestId('harness-default-dangling')).toBeInTheDocument());
+    expect(screen.getByTestId('harness-default-dangling')).toHaveTextContent('deleted-harness');
+    expect((screen.getByLabelText(/Default harness for app/) as HTMLSelectElement).value).toBe('deleted-harness');
+  });
+
+  it('reports a failed project:set-defaults instead of showing a value it did not store', async () => {
+    api.projectSetDefaults = vi.fn(async (): Promise<unknown> => {
+      throw new Error('projects store is read-only');
+    }) as AnyMock;
+    renderSection();
+    await waitFor(() => expect(screen.getByTestId('harness-project-default')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText(/Default harness for app/), { target: { value: 'opencode' } });
+    await waitFor(() =>
+      expect(screen.getByTestId('harness-default-error')).toHaveTextContent('projects store is read-only'),
+    );
+  });
+
   it('re-probes on demand', async () => {
     renderSection();
     await waitFor(() => expect(api.harnessList).toHaveBeenCalled());

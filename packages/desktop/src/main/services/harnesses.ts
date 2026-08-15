@@ -3,18 +3,23 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import {
   ipcChannels,
+  normalizeAuthMethod,
   parseSync,
   SHarnessListRequest,
   SHarnessRef,
   SHarnessSaveOverrideRequest,
   workspaceFiles,
+  type AuthMethod,
+  type CapabilityProvenance,
+  type HarnessCapabilitiesResponse,
+  type HarnessCapabilityRow,
   type HarnessDefinition,
   type HarnessDetection,
   type HarnessListResponse,
   type HarnessMutationResponse,
   type HarnessesFile,
 } from '@srgnt/contracts';
-import { writeJsonAtomic } from '@srgnt/runtime';
+import { createHarnessCapabilityCache, writeJsonAtomic } from '@srgnt/runtime';
 
 /**
  * Main-process owner of harness configuration (PHASE-25, STEP-25-02).
@@ -85,6 +90,8 @@ export interface HarnessesService {
    * because passing `${env:X}` through to the agent verbatim is worse.
    */
   resolveDefinition(id: string): Promise<HarnessDefinition | undefined>;
+  /** One row per registry harness, from the last-negotiated cache (STEP-25-03). */
+  capabilities(): Promise<HarnessCapabilitiesResponse>;
   registerIpcHandlers(): void;
 }
 
@@ -274,6 +281,54 @@ export function createHarnessesService(deps: {
     });
   }
 
+  /**
+   * The capability matrix's data (STEP-25-03).
+   *
+   * Rows come from the registry, cells from the STEP-25-01 cache — so a harness
+   * that never connected renders as *not yet measured* rather than as a wall of
+   * "no", and a cache entry for a definition that was deleted produces no ghost
+   * row at all. Nothing is keyed on a harness id anywhere in this function.
+   */
+  async function capabilities(): Promise<HarnessCapabilitiesResponse> {
+    const root = deps.getWorkspaceRoot();
+    const { definitions } = await buildRegistry(root);
+    // The rule for which fields the protocol only reveals mid-session lives with
+    // the merge that applies it; re-listing them here would drift from it.
+    const { SESSION_DISCOVERED_CAPABILITIES } = await loadHarness();
+    // No workspace root yet → nothing has been measured *here*, which is exactly
+    // what an empty cache renders as.
+    const cache = root === '' ? undefined : createHarnessCapabilityCache(root);
+    const entries = await Promise.all(
+      definitions.map(async (definition): Promise<HarnessCapabilityRow> => {
+        const cached = cache === undefined ? ({ status: 'missing' } as const) : await cache.get(definition);
+        const row = {
+          harnessId: definition.id,
+          name: definition.name,
+          ...(definition.docsUrl !== undefined ? { docsUrl: definition.docsUrl } : {}),
+          quirks: definition.quirks,
+          provenance: provenanceOf(cached.status === 'missing' ? {} : cached.entry.negotiated, [
+            ...SESSION_DISCOVERED_CAPABILITIES,
+          ]),
+        };
+        if (cached.status === 'missing') {
+          return { ...row, state: 'not-yet-measured', negotiated: {}, effective: {}, authMethods: [] };
+        }
+        const { entry } = cached;
+        return {
+          ...row,
+          state: cached.status === 'stale' ? 'stale' : 'measured',
+          negotiated: entry.negotiated,
+          effective: entry.effective,
+          authMethods: normalizeAuthMethods(entry.negotiated['authMethods'], definition),
+          ...(entry.agentVersion !== undefined ? { agentVersion: entry.agentVersion } : {}),
+          capturedAt: entry.capturedAt,
+          definitionFingerprint: entry.definitionFingerprint,
+        };
+      }),
+    );
+    return { entries };
+  }
+
   async function resolveDefinition(id: string): Promise<HarnessDefinition | undefined> {
     const { definitions } = await buildRegistry(deps.getWorkspaceRoot());
     const definition = definitions.find((entry) => entry.id === id);
@@ -296,13 +351,47 @@ export function createHarnessesService(deps: {
       const { harnessId } = parseSync(SHarnessRef, payload);
       return resetOverride(harnessId);
     });
+
+    // Read-only, and no request payload: "what did we measure?" takes no options.
+    ipcMain.handle(ipcChannels.harnessCapabilities, async () => capabilities());
   }
 
   return {
     setWorkspaceRoot: () => detections.clear(),
     resolveDefinition,
+    capabilities,
     registerIpcHandlers,
   };
+}
+
+/**
+ * Per-field measurement provenance. The session-discovered fields are marked
+ * even for a harness with no cache entry, because the *rule* ("this one cannot
+ * be known at initialize") holds whether or not anything was measured — and a
+ * matrix that only learned it from a measured row would print a hard "no" for
+ * exactly the harnesses it knows least about.
+ */
+function provenanceOf(
+  negotiated: Record<string, unknown>,
+  sessionDiscovered: readonly string[],
+): Record<string, CapabilityProvenance> {
+  const provenance: Record<string, CapabilityProvenance> = {};
+  for (const key of Object.keys(negotiated)) provenance[key] = 'initialize';
+  for (const key of sessionDiscovered) provenance[key] = 'session';
+  return provenance;
+}
+
+/**
+ * Raw cached auth methods → the normalized form the panel branches on. The
+ * fallback executable is the harness's own binary, which is what pi's
+ * `type: 'terminal'` method means by an argv it never names a command for.
+ */
+function normalizeAuthMethods(raw: unknown, definition: HarnessDefinition): readonly AuthMethod[] {
+  if (!Array.isArray(raw)) return [];
+  const fallback = definition.detectCommand ?? definition.launch.command;
+  return raw
+    .map((method) => normalizeAuthMethod(method, fallback))
+    .filter((method): method is AuthMethod => method !== undefined);
 }
 
 /**

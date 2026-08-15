@@ -3,10 +3,11 @@
 
 import type {
   ChatSessionForkResponse,
-  ChatSessionNewResponse,
+  ChatSessionNewResult,
   ChatSessionReconnectResponse,
   DesktopSettings,
   DesktopSettingsResponse,
+  HarnessCapabilitiesResponse,
   HarnessDefinition,
   HarnessListResponse,
   HarnessMutationResponse,
@@ -125,7 +126,12 @@ export interface SrgntAPI {
     target?: string,
     /** Absent derives (and auto-creates) the project from the workspace cwd. */
     projectId?: string,
-  ): Promise<ChatSessionNewResponse>;
+    /**
+     * Authenticate with this method id on the fresh connection before
+     * `session/new` — the auth panel's `rpc-authenticate` retry (STEP-25-03).
+     */
+    authMethodId?: string,
+  ): Promise<ChatSessionNewResult>;
   chatSessionPrompt(sessionId: string, text: string): Promise<{ stopReason: string }>;
   chatSessionCancel(sessionId: string): Promise<void>;
   chatSessionDispose(sessionId: string): Promise<void>;
@@ -234,6 +240,11 @@ export interface SrgntAPI {
   ): Promise<HarnessMutationResponse>;
   /** Removes the workspace entry: a built-in returns to its shipped definition. */
   harnessResetOverride?(harnessId: string): Promise<HarnessMutationResponse>;
+  /**
+   * Last-negotiated capabilities per harness (STEP-25-03). Optional for the same
+   * reason: an older preload hides the matrix instead of crashing Settings.
+   */
+  harnessCapabilities?(): Promise<HarnessCapabilitiesResponse>;
 
   platform: string;
 }

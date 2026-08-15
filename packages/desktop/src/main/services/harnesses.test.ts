@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ipcChannels,
   type HarnessDefinition,
+  type HarnessCapabilitiesResponse,
   type HarnessDetection,
   type HarnessListResponse,
   type HarnessMutationResponse,
@@ -101,7 +102,12 @@ describe('createHarnessesService', () => {
   it('registers every harness channel', () => {
     service();
     expect([...handlers.keys()].sort()).toEqual(
-      [ipcChannels.harnessList, ipcChannels.harnessSaveOverride, ipcChannels.harnessResetOverride].sort(),
+      [
+        ipcChannels.harnessList,
+        ipcChannels.harnessSaveOverride,
+        ipcChannels.harnessResetOverride,
+        ipcChannels.harnessCapabilities,
+      ].sort(),
     );
   });
 
@@ -573,5 +579,151 @@ describe('an override reaching the spawn', () => {
     await expect(resolveConnectDefinition('deleted-harness', connectOptions, pi)).rejects.toThrow(
       /No harness "deleted-harness" is configured/,
     );
+  });
+});
+
+/**
+ * The capability matrix's data (STEP-25-03). Written against the file the cache
+ * actually produces, because the point of the channel is that rows describe
+ * *measurements*, not the definitions the settings list already shows.
+ */
+describe('harness:capabilities', () => {
+  const capabilities = (): Promise<HarnessCapabilitiesResponse> => invoke(ipcChannels.harnessCapabilities);
+  const rowFor = (response: HarnessCapabilitiesResponse, id: string) =>
+    response.entries.find((entry) => entry.harnessId === id);
+
+  /** Writes a cache entry the way a real connect would, fingerprint included. */
+  const writeCache = async (entries: Record<string, unknown>): Promise<void> =>
+    fs.writeFile(
+      path.join(workspaceRoot, 'harness-capabilities.json'),
+      JSON.stringify({ version: 1, entries }),
+      'utf8',
+    );
+
+  const piEntry = async (overrides: Record<string, unknown> = {}) => {
+    const { harnessDefinitionFingerprint } = await import('@srgnt/runtime');
+    return {
+      negotiated: {
+        loadSession: true,
+        mcpServers: true,
+        modes: false,
+        slashCommands: false,
+        authMethods: [
+          {
+            id: 'pi_terminal_login',
+            name: 'Launch pi in the terminal',
+            type: 'terminal',
+            args: ['--terminal-login'],
+            env: {},
+          },
+        ],
+      },
+      effective: { loadSession: true, mcpServers: false, modes: false, slashCommands: false },
+      agentVersion: '0.0.31',
+      capturedAt: '2026-08-15T09:00:00.000Z',
+      definitionFingerprint: harnessDefinitionFingerprint(await builtinPi()),
+      ...overrides,
+    };
+  };
+
+  it('renders every registry harness, measured or not', async () => {
+    service();
+    await writeCache({ pi: await piEntry() });
+    const response = await capabilities();
+
+    expect(response.entries.map((entry) => entry.harnessId)).toEqual(['pi', 'opencode']);
+    expect(rowFor(response, 'pi')?.state).toBe('measured');
+    // Never connected: honestly unmeasured, NOT a wall of "no".
+    const opencode = rowFor(response, 'opencode');
+    expect(opencode?.state).toBe('not-yet-measured');
+    expect(opencode?.negotiated).toEqual({});
+    expect(opencode?.authMethods).toEqual([]);
+  });
+
+  it('passes the cache fields through unchanged and names the harness from its definition', async () => {
+    service();
+    const entry = await piEntry();
+    await writeCache({ pi: entry });
+    const row = rowFor(await capabilities(), 'pi');
+
+    expect(row?.negotiated).toEqual(entry.negotiated);
+    expect(row?.effective).toEqual(entry.effective);
+    expect(row?.agentVersion).toBe('0.0.31');
+    expect(row?.capturedAt).toBe('2026-08-15T09:00:00.000Z');
+    // Rows are labelled and linked from definition data, never from the id.
+    expect(row?.name).toBe('Pi');
+    expect(row?.docsUrl).toBe((await builtinPi()).docsUrl);
+    expect(row?.quirks).toContain('mcp-passthrough-gaps');
+  });
+
+  it('normalizes auth methods with the harness binary as the fallback executable', async () => {
+    service();
+    await writeCache({ pi: await piEntry() });
+    // pi's method names args but no executable: the command is built from the
+    // definition's own `detectCommand`, so nothing here is a hardcoded login line.
+    expect(rowFor(await capabilities(), 'pi')?.authMethods).toEqual([
+      {
+        id: 'pi_terminal_login',
+        name: 'Launch pi in the terminal',
+        kind: 'external-command',
+        command: { command: 'pi', args: ['--terminal-login'], env: {} },
+      },
+    ]);
+  });
+
+  it('marks the session-discovered fields even for a harness that never connected', async () => {
+    service();
+    const response = await capabilities();
+    for (const row of response.entries) {
+      expect(row.provenance['slashCommands']).toBe('session');
+      expect(row.provenance['modes']).toBe('session');
+    }
+    await writeCache({ pi: await piEntry() });
+    const pi = rowFor(await capabilities(), 'pi');
+    expect(pi?.provenance['loadSession']).toBe('initialize');
+    expect(pi?.provenance['slashCommands']).toBe('session');
+  });
+
+  it('marks a row stale when the definition changed under the same id', async () => {
+    service();
+    await writeCache({ pi: await piEntry({ definitionFingerprint: 'measured-against-something-else' }) });
+    const row = rowFor(await capabilities(), 'pi');
+    expect(row?.state).toBe('stale');
+    // The measurement is still carried so the row can say what it USED to be.
+    expect(row?.negotiated['loadSession']).toBe(true);
+  });
+
+  it('drops a cache entry for a harness the registry no longer knows', async () => {
+    service();
+    await writeCache({ pi: await piEntry(), 'deleted-harness': await piEntry() });
+    const response = await capabilities();
+    expect(response.entries.map((entry) => entry.harnessId)).toEqual(['pi', 'opencode']);
+  });
+
+  it('produces a row for a harness that only exists in harnesses.json — no component changes needed', async () => {
+    // The no-hardcoding constraint, tested where it can actually be broken.
+    await writeFile({
+      version: 1,
+      harnesses: [{ id: 'invented', name: 'Invented', launch: { command: 'invented' }, quirks: ['no-client-delegation'] }],
+    });
+    service();
+    const row = rowFor(await capabilities(), 'invented');
+    expect(row).toMatchObject({ harnessId: 'invented', name: 'Invented', state: 'not-yet-measured' });
+    expect(row?.quirks).toEqual(['no-client-delegation']);
+  });
+
+  it('survives a missing or corrupt cache file with every row unmeasured', async () => {
+    service();
+    expect((await capabilities()).entries.every((entry) => entry.state === 'not-yet-measured')).toBe(true);
+    await fs.writeFile(path.join(workspaceRoot, 'harness-capabilities.json'), '{ not json', 'utf8');
+    expect((await capabilities()).entries.every((entry) => entry.state === 'not-yet-measured')).toBe(true);
+  });
+
+  it('answers with unmeasured rows before a workspace root exists', async () => {
+    currentRoot = '';
+    service();
+    const response = await capabilities();
+    expect(response.entries.length).toBeGreaterThan(0);
+    expect(response.entries.every((entry) => entry.state === 'not-yet-measured')).toBe(true);
   });
 });

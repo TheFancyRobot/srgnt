@@ -1663,6 +1663,92 @@
   cursor: pointer;
 }
 
+/* Auth wall (STEP-25-03). Shaped like the error surface it replaces, but roomier:
+   it is a set of instructions to act on, not a line to dismiss. */
+
+.chat-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 16px 0;
+  padding: 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-primary);
+}
+
+.chat-auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-auth-title {
+  font-weight: 600;
+}
+
+.chat-auth-body {
+  color: var(--color-text-secondary);
+}
+
+.chat-auth-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-auth-method {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.chat-auth-method-name {
+  font-weight: 600;
+}
+
+.chat-auth-method-description,
+.chat-auth-method-hint {
+  color: var(--color-text-secondary);
+}
+
+.chat-auth-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.chat-auth-command-text {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--color-surface-secondary);
+  font-family: var(--font-mono, monospace);
+  overflow-x: auto;
+}
+
+.chat-auth-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-auth-detail {
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 /* Permission surface (STEP-23-03). */
 
 .chat-trust-badge {

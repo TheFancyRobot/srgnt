@@ -13,6 +13,7 @@ import { navIcons } from './components/icons.js';
 import { NotesView } from './components/NotesView.js';
 import { NotesSidePanel } from './components/sidepanels/NotesSidePanel.js';
 import { SettingsSidePanel } from './components/sidepanels/SettingsSidePanel.js';
+import { CapabilityMatrix } from './components/settings/CapabilityMatrix.js';
 import { HarnessSettings } from './components/settings/HarnessSettings.js';
 import { ChatPlanSidePanel } from './components/sidepanels/ChatPlanSidePanel.js';
 import { NotesProvider } from './components/notes/NotesContext.js';
@@ -412,6 +413,10 @@ function AppContent({
                 and saving one of those would write its command and env into the
                 new workspace's `harnesses.json`. */}
             <HarnessSettings key={workspaceRoot} />
+            {/* Directly under the harness cards, and keyed the same way: it reads
+                the workspace's capability cache, so a workspace switch must
+                re-read it rather than keep showing the old one's rows. */}
+            <CapabilityMatrix key={`capabilities:${workspaceRoot}`} />
             <SettingsUtilityPanel
               statusMessage={statusMessage}
               updateStatus={updateStatus}

@@ -736,3 +736,104 @@ describe('capability write-through (STEP-25-01)', () => {
     await controller.dispose(session.sessionId);
   });
 });
+
+/**
+ * The auth wall (STEP-25-03), driven by the mock agent's `authRequired` gate —
+ * the real `-32000` shape on a real connection, not a stubbed rejection.
+ */
+describe('auth-required session creation', () => {
+  const authScenario = (methods: readonly Record<string, unknown>[]): Scenario => {
+    const result = readScenario({
+      name: 'auth-gate',
+      directives: [],
+      authRequired: { methods },
+    });
+    if (!result.success) throw new Error(result.error);
+    return result.scenario;
+  };
+
+  /** A pi-shaped harness: an advertised terminal login with args but no executable. */
+  const piMethod = { id: 'terminal-login', name: 'Log in', type: 'terminal', args: ['--terminal-login'] };
+  const proseMethod = { id: 'prose', name: 'Log in', description: 'Run `agent auth login`' };
+
+  /** Counts closed connections so an auth failure can be proven not to leak one. */
+  const gatedConnect = (
+    methods: readonly Record<string, unknown>[],
+    closed: { count: number },
+  ): ChatConnectFn => async () => {
+    const { connection } = await connectMockAgent(authScenario(methods));
+    return {
+      connection,
+      harness: { id: 'gated', name: 'Gated Agent', quirks: [] },
+      // A registry definition is what supplies the docs link and the fallback
+      // executable a terminal method never names.
+      definition: {
+        id: 'gated',
+        name: 'Gated Agent',
+        source: 'builtin',
+        launch: { command: 'gated-agent', args: [], env: {} },
+        detectCommand: 'gated-cli',
+        quirks: [],
+        capabilityOverrides: {},
+        docsUrl: 'https://example.test/gated',
+      },
+      cleanup: async () => {
+        closed.count += 1;
+        connection.close();
+      },
+    };
+  };
+
+  it('throws the wall as data, normalized from what the agent advertised', async () => {
+    const closed = { count: 0 };
+    const controller = new ChatSessionController({ connect: gatedConnect([piMethod, proseMethod], closed) });
+
+    const failure = await controller.newSession('gated').catch((cause: unknown) => cause);
+    const payload = (failure as { authRequired?: unknown }).authRequired as {
+      harnessName: string;
+      docsUrl?: string;
+      authMethods: { id: string; kind: string; command?: { command: string; args: string[] } }[];
+      detail: string;
+    };
+    expect(payload.harnessName).toBe('Gated Agent');
+    expect(payload.docsUrl).toBe('https://example.test/gated');
+    // Kind is derived from each method's own metadata: the terminal one becomes
+    // a runnable command against the definition's binary, the prose one cannot.
+    expect(payload.authMethods.map((method) => method.kind)).toEqual(['external-command', 'docs-only']);
+    expect(payload.authMethods[0]?.command).toEqual({
+      command: 'gated-cli',
+      args: ['--terminal-login'],
+      env: {},
+    });
+    expect(payload.detail).toMatch(/Authentication required/);
+
+    // No session, and no orphaned agent behind it.
+    expect(controller.has('gated')).toBe(false);
+    expect(closed.count).toBe(1);
+  });
+
+  it('opens the session when the retry authenticates first', async () => {
+    const closed = { count: 0 };
+    const controller = new ChatSessionController({ connect: gatedConnect([piMethod], closed) });
+    await expect(controller.newSession('gated')).rejects.toThrow(/Authentication required/);
+
+    // The retry is a FRESH connection that runs `authenticate` before
+    // `session/new` — the failed one is already torn down.
+    const session = await controller.newSession('gated', {}, undefined, 'terminal-login');
+    expect(controller.has(session.sessionId)).toBe(true);
+    await controller.dispose(session.sessionId);
+  });
+
+  it('leaves a non-auth failure on its existing path', async () => {
+    // Auth detection is narrow (code -32000 only): every other failure must
+    // still surface as the plain error the Phase-23 surfaces already render.
+    const controller = new ChatSessionController({
+      connect: async () => {
+        throw new Error('spawn failed');
+      },
+    });
+    const failure = await controller.newSession('gated').catch((cause: unknown) => cause);
+    expect((failure as { authRequired?: unknown }).authRequired).toBeUndefined();
+    expect((failure as Error).message).toMatch(/spawn failed/);
+  });
+});

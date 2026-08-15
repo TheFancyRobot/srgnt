@@ -33,11 +33,15 @@ describe('piDefinition (built-in)', () => {
     expect(piDefinition.launch.args).toEqual([`pi-acp@${PI_ACP_VERSION}`]);
   });
 
-  it('declares the adapter-mediated quirks from the ACP research', () => {
+  it('declares the adapter-mediated quirks from the ACP research and the spike', () => {
     expect(piDefinition.quirks).toEqual([
       'adapter-mediated',
       'permission-routing-gaps',
       'mcp-passthrough-gaps',
+      // Measured by STEP-22-05 probe 4: the adapter runs pi's tools in its own
+      // process and calls none of srgnt's fs/terminal services. Declared so the
+      // capability matrix can say so instead of leaving the column blank.
+      'no-client-delegation',
     ]);
     // mcp-passthrough-gaps ⇒ clamp mcpServers off.
     expect(piDefinition.capabilityOverrides.mcpServers).toBe(false);

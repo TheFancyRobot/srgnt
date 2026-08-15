@@ -71,7 +71,7 @@ describe('registerChatHandlers', () => {
 
     await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
     // No `projects` wiring → no project resolved, exactly as in Phase 23.
-    expect(controller.newSession).toHaveBeenCalledWith('mock', {});
+    expect(controller.newSession).toHaveBeenCalledWith('mock', {}, undefined, undefined);
 
     await handlers.get(ipcChannels.chatSessionPrompt)!({}, { sessionId: 'chat-x-1', text: 'hi' });
     expect(controller.prompt).toHaveBeenCalledWith('chat-x-1', 'hi');
@@ -628,10 +628,14 @@ describe('registerChatHandlers project resolution', () => {
 
     expect(projects.ensureForDir).toHaveBeenCalledWith('/ws');
     expect(projects.get).not.toHaveBeenCalled();
-    expect(controller.newSession).toHaveBeenCalledWith('mock', {
-      projectId: 'abc123',
-      cwd: project.rootDir,
-    });
+    expect(controller.newSession).toHaveBeenCalledWith(
+      'mock',
+      { projectId: 'abc123', cwd: project.rootDir },
+      // No lineage, and no auth method: session creation carries both only when
+      // a fork or the auth panel asked for them (STEP-25-03).
+      undefined,
+      undefined,
+    );
   });
 
   it('looks the project up by id when the renderer named one', async () => {
@@ -661,7 +665,7 @@ describe('registerChatHandlers project resolution', () => {
 
     await handlers.get(ipcChannels.chatSessionNew)!({}, {});
 
-    expect(controller.newSession).toHaveBeenCalledWith('pi', expect.objectContaining({ projectId: 'abc123' }));
+    expect(controller.newSession).toHaveBeenCalledWith('pi', expect.objectContaining({ projectId: 'abc123' }), undefined, undefined);
   });
 
   it("passes the project's permission policy through to the controller", async () => {
@@ -678,6 +682,8 @@ describe('registerChatHandlers project resolution', () => {
     expect(controller.newSession).toHaveBeenCalledWith(
       'mock',
       expect.objectContaining({ permissionPolicy: { read: 'allow' } }),
+      undefined,
+      undefined,
     );
   });
 
@@ -703,7 +709,7 @@ describe('registerChatHandlers project resolution', () => {
 
     await handlers.get(ipcChannels.chatSessionNew)!({}, {});
 
-    expect(controller.newSession).toHaveBeenCalledWith('opencode', expect.objectContaining({ projectId: 'abc123' }));
+    expect(controller.newSession).toHaveBeenCalledWith('opencode', expect.objectContaining({ projectId: 'abc123' }), undefined, undefined);
   });
 
   it('BLOCKS on a dangling project default: no session, no spawn, an actionable error', async () => {
@@ -725,7 +731,7 @@ describe('registerChatHandlers project resolution', () => {
 
     // ...and an explicit choice still works.
     await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'pi' });
-    expect(controller.newSession).toHaveBeenCalledWith('pi', expect.objectContaining({ projectId: 'abc123' }));
+    expect(controller.newSession).toHaveBeenCalledWith('pi', expect.objectContaining({ projectId: 'abc123' }), undefined, undefined);
   });
 
   it('fails with a readable error when the project rootDir no longer exists', async () => {
@@ -741,5 +747,53 @@ describe('registerChatHandlers project resolution', () => {
       /no longer exists/,
     );
     expect(controller.newSession).not.toHaveBeenCalled();
+  });
+});
+
+describe('the auth wall on chat:session:new (STEP-25-03)', () => {
+  const payload = {
+    authRequired: true as const,
+    harnessId: 'gated',
+    harnessName: 'Gated Agent',
+    docsUrl: 'https://example.test/gated',
+    authMethods: [{ id: 'prose', name: 'Log in', kind: 'docs-only' as const }],
+    detail: 'ACP request session/new failed: Authentication required',
+  };
+
+  /** What the controller throws: an Error carrying the wall as a property. */
+  const wall = (): Error => Object.assign(new Error(payload.detail), { authRequired: payload });
+
+  it('answers with the payload instead of throwing a raw JSON-RPC string', async () => {
+    const controller = fakeController();
+    controller.newSession.mockRejectedValueOnce(wall());
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    const response = await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' });
+    expect(response).toEqual(payload);
+  });
+
+  it('passes an authenticate-with method id through to the controller', async () => {
+    const controller = fakeController();
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock', authMethodId: 'prose' });
+    expect(controller.newSession).toHaveBeenCalledWith('mock', {}, undefined, 'prose');
+  });
+
+  it('rethrows every other failure unchanged', async () => {
+    const controller = fakeController();
+    controller.newSession.mockRejectedValueOnce(new Error('spawn failed'));
+    registerChatHandlers({
+      getWindow: () => null,
+      createController: () => controller as unknown as ChatSessionController,
+    });
+
+    await expect(handlers.get(ipcChannels.chatSessionNew)!({}, { target: 'mock' })).rejects.toThrow('spawn failed');
   });
 });

@@ -12,6 +12,7 @@ import {
   SChatSessionReconnectRequest,
   SChatSessionRef,
   SChatSessionSetModeRequest,
+  type ChatAuthRequired,
   type ChatSessionForkResponse,
   type ChatSessionListResponse,
   type ChatSessionOpenResponse,
@@ -264,12 +265,26 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
     id === MOCK_TARGET || (isConfigured === undefined ? id === 'pi' : await isConfigured(id));
 
   ipcMain.handle(ipcChannels.chatSessionNew, async (_event, payload: unknown) => {
-    const { target, projectId } = parseSync(SChatSessionNewRequest, payload);
+    const { target, projectId, authMethodId } = parseSync(SChatSessionNewRequest, payload);
     const project = await resolveProject(projectId);
     // Resolved BEFORE the controller is constructed: a dangling default must
     // create no session and spawn no process, only a readable error.
     const resolvedTarget = await resolveChatTarget(target, project?.defaultHarnessId, isConfigured);
-    return (await getController()).newSession(resolvedTarget, sessionProject(project));
+    try {
+      return await (await getController()).newSession(
+        resolvedTarget,
+        sessionProject(project),
+        undefined,
+        authMethodId,
+      );
+    } catch (cause) {
+      // The auth wall answers as DATA, not as a thrown string: an Error message
+      // cannot carry the harness's advertised methods, and a raw JSON-RPC error
+      // is the first thing an unauthenticated user would otherwise see.
+      const authRequired = authRequiredPayload(cause);
+      if (authRequired === undefined) throw cause;
+      return authRequired satisfies ChatAuthRequired;
+    }
   });
 
   // List + open are pure disk reads. Neither constructs the controller, so
@@ -483,6 +498,19 @@ export function registerChatHandlers(wiring: ChatWiring): () => Promise<void> {
       disposeAll: () => controller.disposeAll(),
     });
   };
+}
+
+/**
+ * The auth-wall payload a `ChatAuthRequiredError` carries, or `undefined` for
+ * any other failure. Duck-typed rather than `instanceof`: the controller is
+ * imported type-only here (it statically imports the ESM-only `@srgnt/harness`,
+ * and this file is CommonJS), so its classes have no value binding to test.
+ */
+function authRequiredPayload(cause: unknown): ChatAuthRequired | undefined {
+  if (cause === null || typeof cause !== 'object') return undefined;
+  const payload = (cause as { authRequired?: unknown }).authRequired;
+  if (payload === null || typeof payload !== 'object') return undefined;
+  return (payload as ChatAuthRequired).authRequired === true ? (payload as ChatAuthRequired) : undefined;
 }
 
 /** Returns whether a live window actually received the frame. */

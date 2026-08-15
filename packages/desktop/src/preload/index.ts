@@ -81,6 +81,7 @@ const ipcChannels = {
   harnessList: 'harness:list',
   harnessSaveOverride: 'harness:save-override',
   harnessResetOverride: 'harness:reset-override',
+  harnessCapabilities: 'harness:capabilities',
 } as const;
 
 /** Mirrors `SProject` from @srgnt/contracts, which the sandboxed preload cannot import. */
@@ -129,6 +130,41 @@ type SrgntHarnessDetection =
   | { status: 'ok'; command: string; version: string }
   | { status: 'probe-failed'; command: string; reason: string; detail?: string }
   | { status: 'not-installed'; command: string };
+
+/** Mirrors `SAuthMethod`: one advertised login route, normalized in main. */
+interface SrgntAuthMethod {
+  id: string;
+  name: string;
+  description?: string;
+  kind: 'external-command' | 'rpc-authenticate' | 'docs-only';
+  command?: { command: string; args: readonly string[]; env: Record<string, string> };
+}
+
+/** Mirrors `SHarnessCapabilityRow`: one row of the capability matrix. */
+interface SrgntHarnessCapabilityRow {
+  harnessId: string;
+  name: string;
+  docsUrl?: string;
+  quirks: readonly string[];
+  state: 'measured' | 'stale' | 'not-yet-measured';
+  negotiated: Record<string, unknown>;
+  effective: Record<string, unknown>;
+  provenance: Record<string, 'initialize' | 'session'>;
+  authMethods: readonly SrgntAuthMethod[];
+  agentVersion?: string;
+  capturedAt?: string;
+  definitionFingerprint?: string;
+}
+
+/** Mirrors `SChatAuthRequired`: the agent demanded auth instead of a session. */
+interface SrgntChatAuthRequired {
+  authRequired: true;
+  harnessId: string;
+  harnessName: string;
+  docsUrl?: string;
+  authMethods: readonly SrgntAuthMethod[];
+  detail: string;
+}
 
 /** Mirrors `SChatSessionNewResponse`: the identity block for one open session. */
 interface SrgntChatSession {
@@ -294,7 +330,10 @@ const api = {
     target?: string,
     /** Absent derives (and auto-creates) the project from the workspace cwd. */
     projectId?: string,
-  ): Promise<SrgntChatSession> => ipcRenderer.invoke(ipcChannels.chatSessionNew, { target, projectId }),
+    /** Authenticate with this method id first (the auth panel's RPC retry). */
+    authMethodId?: string,
+  ): Promise<SrgntChatSession | SrgntChatAuthRequired> =>
+    ipcRenderer.invoke(ipcChannels.chatSessionNew, { target, projectId, authMethodId }),
   chatSessionPrompt: (sessionId: string, text: string): Promise<{ stopReason: string }> =>
     ipcRenderer.invoke(ipcChannels.chatSessionPrompt, { sessionId, text }),
   chatSessionCancel: (sessionId: string): Promise<void> =>
@@ -506,6 +545,12 @@ const api = {
     ipcRenderer.invoke(ipcChannels.harnessSaveOverride, { harnessId, definition }),
   harnessResetOverride: (harnessId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke(ipcChannels.harnessResetOverride, { harnessId }),
+  /**
+   * Last-negotiated capabilities per harness (STEP-25-03). Takes no options:
+   * it answers "what did we measure?", which has nothing to re-probe.
+   */
+  harnessCapabilities: (): Promise<{ entries: readonly SrgntHarnessCapabilityRow[] }> =>
+    ipcRenderer.invoke(ipcChannels.harnessCapabilities),
 
   platform: process.platform,
 };

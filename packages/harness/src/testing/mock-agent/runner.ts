@@ -71,10 +71,15 @@ function promptText(prompt: readonly ContentBlock[]): string {
 function buildInitializeResponse(
   requestedProtocolVersion: number,
   caps: InitCapabilities,
+  authMethods: InitializeResponse['authMethods'],
 ): InitializeResponse {
   return {
     protocolVersion: requestedProtocolVersion,
     agentInfo: { name: caps.agentName, version: caps.agentVersion },
+    // Advertised verbatim, extension fields included: the client's normalizer is
+    // what decides whether a method is machine-actionable, and trimming the
+    // payload here would decide it for them.
+    ...(authMethods !== undefined && authMethods.length > 0 ? { authMethods } : {}),
     agentCapabilities: {
       loadSession: caps.loadSession,
       ...(caps.resumeSession ? { sessionCapabilities: { resume: {} } } : {}),
@@ -101,6 +106,13 @@ export class MockAgent implements Agent {
   readonly assertionErrors: string[] = [];
   /** Directive `type`s actually executed — coverage evidence for tests. */
   readonly executed: Directive['type'][] = [];
+  /**
+   * The method id `authenticate` was last called with, or `undefined` while the
+   * agent is unauthenticated. Per PROCESS, which is the honest model: a real
+   * agent's login outlives one session but not one launch, and srgnt's retry
+   * after an external login is a fresh spawn either way.
+   */
+  authenticatedWith: string | undefined;
 
   private readonly delay: (ms: number) => Promise<void>;
   /** Pending `expect_cancel` resolvers, keyed by sessionId so cancelling one
@@ -119,15 +131,36 @@ export class MockAgent implements Agent {
   }
 
   async initialize(params: InitializeRequest): Promise<InitializeResponse> {
-    return buildInitializeResponse(params.protocolVersion, this.scenario.initialize);
+    return buildInitializeResponse(
+      params.protocolVersion,
+      this.scenario.initialize,
+      this.scenario.authRequired?.methods as InitializeResponse['authMethods'],
+    );
   }
 
-  async authenticate(_params: AuthenticateRequest): Promise<AuthenticateResponse> {
-    // The substrate never gates on auth; scenarios exercise capability paths.
+  async authenticate(params: AuthenticateRequest): Promise<AuthenticateResponse> {
+    // Unconditionally `{}` without an `authRequired` block — the substrate's
+    // long-standing behaviour, which every capability-path scenario relies on.
+    if (this.scenario.authRequired === undefined) return {};
+    const known = this.scenario.authRequired.methods;
+    // An id nobody advertised is a client bug, and answering `{}` to it would
+    // let a wrong method id look like a successful login.
+    if (known.length > 0 && !known.some((method) => method.id === params.methodId)) {
+      throw RequestError.invalidParams({ methodId: params.methodId }, 'unknown auth method');
+    }
+    this.authenticatedWith = params.methodId;
     return {};
   }
 
   async newSession(_params: NewSessionRequest): Promise<NewSessionResponse> {
+    // The real shape: JSON-RPC -32000, which is what `RequestError.authRequired`
+    // puts on the wire in @agentclientprotocol/sdk 1.2.1.
+    if (this.scenario.authRequired?.gateSessionNew === true && this.authenticatedWith === undefined) {
+      throw RequestError.authRequired(
+        { methods: this.scenario.authRequired.methods.map((method) => method.id) },
+        'log in first',
+      );
+    }
     return { sessionId: this.scenario.sessionId, ...this.modeState() };
   }
 

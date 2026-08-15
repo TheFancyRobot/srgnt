@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ChatAuthRequired } from '@srgnt/contracts';
 import { ChatTerminalProvider } from './ChatTerminalContext.js';
 import { useProjectsOptional } from './ProjectsContext.js';
 import type { PendingPermission } from './PermissionPrompt.js';
@@ -138,8 +139,17 @@ export interface ChatSessionContextValue {
    * Opens a session. An absent `target` lets main pick the project's
    * `defaultHarnessId` — the list's "New session" affordance never second-
    * guesses the project's own default.
+   *
+   * `authMethodId` is the auth panel's retry: main authenticates with it on the
+   * fresh connection before `session/new`.
    */
-  readonly newSession: (target?: ChatTarget) => Promise<void>;
+  readonly newSession: (target?: ChatTarget, authMethodId?: string) => Promise<void>;
+  /**
+   * The harness demanded authentication instead of opening a session. Rendered
+   * as guidance, not as an error string — see `AuthPanel`.
+   */
+  readonly authRequired: ChatAuthRequired | null;
+  readonly dismissAuth: () => void;
   /** Resolves `true` when the turn ran; `false` when it failed (draft is kept). */
   readonly sendPrompt: (text: string) => Promise<boolean>;
   readonly setMode: (modeId: string) => Promise<void>;
@@ -258,6 +268,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   const [sessions, setSessions] = React.useState<readonly OpenSession[]>([]);
   const [activeSessionId, setActiveSessionId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [authRequired, setAuthRequired] = React.useState<ChatAuthRequired | null>(null);
   // Session creation has no session to hang a status on yet, so it lives here.
   const [connecting, setConnecting] = React.useState(false);
   const [listRevision, setListRevision] = React.useState(0);
@@ -426,14 +437,21 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   );
 
   const newSession = React.useCallback(
-    async (target?: ChatTarget) => {
+    async (target?: ChatTarget, authMethodId?: string) => {
       setError(null);
       setConnecting(true);
       try {
         // `undefined` is meaningful: it tells main to derive (and auto-create) the
         // project from the workspace cwd, which is what happens before the user
         // has ever opened the switcher.
-        const result = await window.srgnt.chatSessionNew(target, activeProjectId ?? undefined);
+        const result = await window.srgnt.chatSessionNew(target, activeProjectId ?? undefined, authMethodId);
+        // The agent answered the auth wall instead of a session. Nothing was
+        // opened and nothing is running: this is guidance, not a failed session.
+        if ('authRequired' in result) {
+          setAuthRequired(result);
+          return;
+        }
+        setAuthRequired(null);
         // Adopt anything the agent asked during startup; drop the rest, which
         // belonged to sessions that never became this one.
         const held = earlyPermissions.current
@@ -785,6 +803,7 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
   }, [patch, bumpList]);
 
   const dismissError = React.useCallback(() => setError(null), []);
+  const dismissAuth = React.useCallback(() => setAuthRequired(null), []);
 
   const active = sessions.find((entry) => entry.info.sessionId === activeSessionId) ?? null;
 
@@ -809,6 +828,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       openPersistedSession,
       listRevision,
       newSession,
+      authRequired,
+      dismissAuth,
       sendPrompt,
       setMode,
       cancel,
@@ -832,6 +853,8 @@ export function ChatSessionProvider({ children }: { readonly children: React.Rea
       selectSession,
       openPersistedSession,
       newSession,
+      authRequired,
+      dismissAuth,
       sendPrompt,
       setMode,
       cancel,

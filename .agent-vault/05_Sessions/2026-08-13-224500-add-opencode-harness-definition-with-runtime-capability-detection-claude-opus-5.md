@@ -22,6 +22,10 @@ context:
   context_id: SESSION-2026-08-13-224500
   status: completed
   updated_at: '2026-08-14T00:30:00.000Z'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults|STEP-25-02 Build harness settings UI with per-project defaults]]'
+    section: Context Handoff
   context_summary: >-
     STEP-25-01 complete and merged as PR #32 (squash a87894e). opencode 1.18.18
     is a built-in HarnessDefinition launching `opencode acp` with zero quirks
@@ -95,6 +99,52 @@ Also: a fresh capability-cache instance per report defeated the write queue and
 could drop sibling harness entries; and the committed fixtures held the capture
 machine's configured model, model list and local agent descriptions, which are
 now positional placeholders with the true counts kept.
+
+## Changed Paths
+
+<!-- AGENT-START:session-changed-paths -->
+- `packages/contracts/src/harness.ts` — optional non-empty `detectCommand`; `SHarnessCapabilityEntry`; `SHarnessCapabilitiesFile`.
+- `packages/contracts/src/harness.test.ts`
+- `packages/contracts/src/workspace/layout.ts` — `workspaceFiles.harnessCapabilities`.
+- `packages/harness/src/registry/builtins.ts` — `opencodeDefinition`, `OPENCODE_HARNESS_ID`, `OPENCODE_TESTED_VERSION = '1.18.18'`, `piDefinition.detectCommand = 'pi'`.
+- `packages/harness/src/registry/detect.ts` — `detectHarness`, `detectOpencode`.
+- `packages/harness/src/registry/detect.test.ts`
+- `packages/harness/src/registry/registry.test.ts`
+- `packages/harness/src/registry/opencode.integration.test.ts` (new; gated behind `SRGNT_IT_OPENCODE=1`)
+- `packages/harness/src/acp/capabilities.ts` — `authMethods`, `sessionList`, `mergeSessionCapabilities`.
+- `packages/harness/src/acp/capabilities.test.ts`
+- `packages/harness/src/acp/connection.ts` — `negotiated`, `withObserved()` accumulating one-way observations.
+- `packages/harness/src/acp/connection.test.ts`
+- `packages/harness/src/testing/fixtures/opencode/initialize.json` (new; catalog values are positional placeholders)
+- `packages/harness/src/testing/fixtures/opencode/simple-prompt.jsonl` (new)
+- `packages/harness/src/testing/fixtures/opencode/README.md` (new)
+- `packages/runtime/src/harnesses/capability-cache.ts` (new) — last-write-wins behind one write queue; `harnessDefinitionFingerprint`.
+- `packages/runtime/src/harnesses/capability-cache.test.ts` (new)
+- `packages/runtime/src/harnesses/index.ts` (new)
+- `packages/runtime/src/index.ts`
+- `packages/desktop/src/main/chat/index.ts` — one capability cache per workspace root.
+- `packages/desktop/src/main/chat/session-controller.ts` — `onCapabilities` write-through on connect.
+- `packages/desktop/src/main/chat/session-controller.test.ts`
+- `.agent-vault/06_Shared_Knowledge/opencode-acp-capture.md` (new)
+<!-- AGENT-END:session-changed-paths -->
+
+## Validation Run
+
+<!-- AGENT-START:session-validation-run -->
+- contracts 187, harness 138 (+3 skipped), runtime 455, desktop 1174 — all green at merge.
+- `SRGNT_IT_OPENCODE=1` — real initialize + prompt turn to `end_turn`, `permissionRequests=0`.
+- `SRGNT_IT_PI=1` — green; pi surfaces `sessionList: true` and the full `pi_terminal_login` method.
+- `pnpm lint`, `pnpm build` — clean.
+- **Not run:** opencode's `session/request_permission` round-trip, live `session/load`/`session/resume`, MCP passthrough, and the unauthenticated failure shape. Each needs a tool-invoking, token-spending probe; recorded as unmeasured in the capture note so silence is not read as absence. No manual GUI pass.
+<!-- AGENT-END:session-validation-run -->
+
+## Follow-Up Work
+
+<!-- AGENT-START:session-follow-up-work -->
+- STEP-25-02 (next at the time): the settings UI listing these definitions.
+- The `session-lifecycle` transcript-checkpoint test flakes under full-suite parallel load (passes 3/3 in isolation). Pre-existing; worth a bug note if it recurs.
+- Manual GUI verification remains owed across phases 23-25.
+<!-- AGENT-END:session-follow-up-work -->
 
 ## Follow-Ups
 

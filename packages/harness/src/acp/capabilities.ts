@@ -83,6 +83,15 @@ export function negotiateCapabilities(init: InitializeResponse): NegotiatedCapab
 }
 
 /**
+ * Capability fields the protocol only reveals mid-session — the exact set
+ * {@link mergeSessionCapabilities} folds in. Exported so a surface rendering a
+ * negotiated row (STEP-25-03's matrix) can tell "measured absent" from "cannot
+ * be known at initialize yet", without re-deriving that rule from this file's
+ * comments and drifting from it.
+ */
+export const SESSION_DISCOVERED_CAPABILITIES = ['modes', 'slashCommands'] as const;
+
+/**
  * Merges capabilities the protocol only reveals *mid-session* into a negotiated
  * baseline: `modes` arrives with `session/new`, `slashCommands` with an
  * `available_commands_update` notification. Neither can be known at

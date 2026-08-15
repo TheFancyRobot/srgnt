@@ -250,6 +250,38 @@ const SInitCapabilities = Schema.Struct({
 const SUnimplementedMethod = Schema.Literal('session/resume', 'session/load');
 export type UnimplementedMethod = Schema.Schema.Type<typeof SUnimplementedMethod>;
 
+/**
+ * One advertised auth method, in the SHAPE agents really use — `id`/`name`/
+ * `description` are the ACP fields, `type`/`args`/`env` the extension pi-acp
+ * carries. Both are needed because the two shipped harnesses disagree: pi's
+ * method is machine-actionable, opencode's is prose only, and the client's
+ * normalizer has to be exercised against both.
+ */
+const SAuthMethodSpec = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  description: Schema.optional(Schema.String),
+  type: Schema.optional(Schema.String),
+  args: Schema.optional(Schema.Array(Schema.String)),
+  env: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+});
+
+/**
+ * The auth gate. Without it `authenticate` is unconditionally `{}` and the
+ * client's whole auth path — the failure, the panel, the retry — is unreachable
+ * from a scenario, i.e. untestable without a real unauthenticated provider.
+ */
+const SAuthRequired = Schema.Struct({
+  /** Advertised at `initialize`, verbatim. Empty models an agent that demands auth and names no method. */
+  methods: Schema.optionalWith(Schema.Array(SAuthMethodSpec), { default: () => [] }),
+  /**
+   * `session/new` answers `-32000` until `authenticate` lands (the real
+   * auth-required shape). Set false to advertise methods without gating —
+   * an already-authenticated agent still lists how it was authenticated.
+   */
+  gateSessionNew: Schema.optionalWith(Schema.Boolean, { default: () => true }),
+});
+
 export const SScenario = Schema.Struct({
   name: Schema.String,
   /** ACP session id the mock returns from `session/new`. */
@@ -272,6 +304,8 @@ export const SScenario = Schema.Struct({
   unimplementedMethods: Schema.optionalWith(Schema.Array(SUnimplementedMethod), {
     default: () => [],
   }),
+  /** Auth methods to advertise, and whether `session/new` is gated on them. */
+  authRequired: Schema.optional(SAuthRequired),
 });
 export type Scenario = Schema.Schema.Type<typeof SScenario>;
 export type InitCapabilities = Scenario['initialize'];

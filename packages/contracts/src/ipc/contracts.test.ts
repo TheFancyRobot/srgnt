@@ -49,6 +49,9 @@ import {
   SChatPermissionRequestEvent,
   SChatPermissionResponse,
   SChatSessionNewResponse,
+  SChatSessionNewResult,
+  SHarnessCapabilitiesResponse,
+  SHarnessListEntry,
   SChatSessionPromptRequest,
   SChatSessionPromptResponse,
   SChatSessionRef,
@@ -923,5 +926,120 @@ describe('harness configuration IPC (STEP-25-02)', () => {
     expect(parseSync(SHarnessMutationResponse, { ok: true })).toEqual({ ok: true });
     expect(parseSync(SHarnessMutationResponse, { ok: false, error: 'nope' })).toEqual({ ok: false, error: 'nope' });
     expect(safeParse(SHarnessMutationResponse, { ok: false }).success).toBe(false);
+  });
+});
+
+describe('harness capability matrix IPC (STEP-25-03)', () => {
+  const row = {
+    harnessId: 'pi',
+    name: 'Pi',
+    docsUrl: 'https://example.test/pi',
+    quirks: ['adapter-mediated', 'no-client-delegation'],
+    state: 'measured',
+    negotiated: { loadSession: true, mcpServers: true, slashCommands: false },
+    effective: { loadSession: true, mcpServers: false, slashCommands: false },
+    provenance: { loadSession: 'initialize', slashCommands: 'session' },
+    authMethods: [
+      {
+        id: 'pi_terminal_login',
+        name: 'Launch pi in the terminal',
+        kind: 'external-command',
+        command: { command: 'pi', args: ['--terminal-login'], env: {} },
+      },
+    ],
+    agentVersion: '0.0.31',
+    capturedAt: '2026-08-15T10:00:00.000Z',
+    definitionFingerprint: 'abc123',
+  };
+
+  it('carries the STEP-25-01 cache fields through unchanged', () => {
+    const parsed = parseSync(SHarnessCapabilitiesResponse, { entries: [row] });
+    const entry = parsed.entries[0]!;
+    // Opaque records: the capability model is owned by @srgnt/harness and must
+    // not be forked into a second shape here.
+    expect(entry.negotiated).toEqual(row.negotiated);
+    expect(entry.effective).toEqual(row.effective);
+    expect(entry.definitionFingerprint).toBe('abc123');
+    expect(entry.authMethods[0]?.command?.args).toEqual(['--terminal-login']);
+  });
+
+  it('renders a never-connected harness as not-yet-measured, not as a wall of no', () => {
+    const parsed = parseSync(SHarnessCapabilitiesResponse, {
+      entries: [
+        {
+          harnessId: 'opencode',
+          name: 'opencode',
+          quirks: [],
+          state: 'not-yet-measured',
+          negotiated: {},
+          effective: {},
+          provenance: { modes: 'session', slashCommands: 'session' },
+          authMethods: [],
+        },
+      ],
+    });
+    const entry = parsed.entries[0]!;
+    expect(entry.state).toBe('not-yet-measured');
+    expect(entry.capturedAt).toBeUndefined();
+    // The session-discovery rule survives even with nothing measured, so the
+    // matrix cannot print a hard "no" for a field that cannot be known yet.
+    expect(entry.provenance['slashCommands']).toBe('session');
+  });
+
+  it('rejects an unknown state or provenance', () => {
+    expect(safeParse(SHarnessCapabilitiesResponse, { entries: [{ ...row, state: 'probably' }] }).success).toBe(false);
+    expect(
+      safeParse(SHarnessCapabilitiesResponse, { entries: [{ ...row, provenance: { loadSession: 'vibes' } }] }).success,
+    ).toBe(false);
+  });
+
+  it('keeps capabilities on exactly one channel: harness:list is unchanged', () => {
+    // The list entry shape has no capability fields — adding them there is what
+    // this step deliberately did not do.
+    const listEntry = parseSync(SHarnessListEntry, {
+      definition: { id: 'pi', name: 'Pi', launch: { command: 'npx' } },
+      overridden: false,
+      detection: { status: 'ok', command: 'pi', version: '0.84.1' },
+    });
+    expect(Object.keys(listEntry).sort()).toEqual(['definition', 'detection', 'overridden']);
+    expect(ipcChannels.harnessCapabilities).toBe('harness:capabilities');
+  });
+});
+
+describe('the auth wall as data (STEP-25-03)', () => {
+  const authRequired = {
+    authRequired: true,
+    harnessId: 'opencode',
+    harnessName: 'opencode',
+    docsUrl: 'https://opencode.ai/docs/acp',
+    authMethods: [
+      { id: 'opencode-login', name: 'Login with opencode', description: 'Run `opencode auth login`', kind: 'docs-only' },
+    ],
+    detail: 'ACP request session/new failed: Authentication required',
+  };
+
+  it('decodes as the second member of the session-new result', () => {
+    const parsed = parseSync(SChatSessionNewResult, authRequired);
+    expect('authRequired' in parsed).toBe(true);
+    expect((parsed as typeof authRequired).authMethods[0]?.kind).toBe('docs-only');
+  });
+
+  it('still decodes an opened session as the first member', () => {
+    const parsed = parseSync(SChatSessionNewResult, {
+      sessionId: 's1',
+      target: 'mock',
+      harnessId: 'mock',
+      harnessName: 'Mock Agent',
+      quirks: [],
+      capabilities: {},
+    });
+    expect('authRequired' in parsed).toBe(false);
+  });
+
+  it('carries an authenticate-with method id on the request', () => {
+    expect(parseSync(SChatSessionNewRequest, { target: 'pi', authMethodId: 'pi_terminal_login' }).authMethodId).toBe(
+      'pi_terminal_login',
+    );
+    expect(parseSync(SChatSessionNewRequest, {}).authMethodId).toBeUndefined();
   });
 });

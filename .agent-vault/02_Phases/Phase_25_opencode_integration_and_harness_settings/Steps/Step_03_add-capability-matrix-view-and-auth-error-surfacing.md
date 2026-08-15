@@ -8,7 +8,7 @@ phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Pha
 status: planned
 owner: ''
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-08-14'
 depends_on:
   - STEP-25-01
 related_sessions: []

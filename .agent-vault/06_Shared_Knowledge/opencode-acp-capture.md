@@ -143,5 +143,6 @@ deliberately: the committed files are what STEP-25-03's matrix asserts against.
 - Step: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01 Add opencode harness definition with runtime capability detection]]
 - Phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]]
 - Contrast capture: [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report (STEP-22-05)]]
+- Consumer: [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned (STEP-25-04)]] — the distillation of this capture against the Pi spike, carrying the REQ-26-xx list. The "Explicitly not measured" section above is what REQ-26-09 through REQ-26-12 hand to the PHASE-26 conformance runner.
 - Architecture: [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009 ACP Command Center Target Architecture]]
 - Decision: [[04_Decisions/DEC-0018_pi-acp-adapter-strategy-adopt-pinned-pi-acp-fork-into-a-shim-or-contribute-native-mode-acp|DEC-0018 Pi ACP adapter strategy]]

@@ -22,6 +22,9 @@ context:
   context_id: SESSION-2026-08-13-224500
   status: completed
   updated_at: '2026-08-14T00:30:00.000Z'
+  current_focus:
+    summary: Advance [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01 Add opencode harness definition with runtime capability detection]].
+    target: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01 Add opencode harness definition with runtime capability detection]]'
   resume_target:
     type: step
     target: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults|STEP-25-02 Build harness settings UI with per-project defaults]]'
@@ -44,6 +47,8 @@ context:
     MCP passthrough and unauthenticated failure shape were deliberately not
     probed (each needs a tool-invoking, token-spending run) and are recorded as
     unmeasured in the capture note rather than left to look like absences.
+  last_action:
+    type: saved
 ---
 
 # Session — STEP-25-01 opencode harness definition with runtime capability detection
@@ -58,7 +63,18 @@ had stopped producing session notes, which every step through PHASE-24 had.
 - Step: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01]]
 - Output note: [[06_Shared_Knowledge/opencode-acp-capture|opencode ACP capture]]
 
-## What Happened
+## Objective
+
+Make opencode a built-in harness whose capabilities come from runtime observation rather than per-harness hardcoding, establishing the detection rule for every harness that follows.
+
+## Planned Scope
+
+- opencode HarnessDefinition + `detectCommand` + definition-driven detection.
+- `authMethods` and `sessionList` on `NegotiatedCapabilities`; mid-session merge rule.
+- Display-only capability cache persisted at the workspace root.
+- Gated integration test against the real binary, plus captured fixtures and a capture note.
+
+## Execution Log
 
 - Refined PHASE-25 first (commit 328583f): the install precondition was a month
   stale (opencode had since been installed), and the capability cache's
@@ -100,6 +116,10 @@ could drop sibling harness entries; and the committed fixtures held the capture
 machine's configured model, model list and local agent descriptions, which are
 now positional placeholders with the true counts kept.
 
+## Context Handoff
+
+STEP-25-02 builds the settings UI over `detectHarness` and the definitions listed here. Two measured facts constrain it: opencode is nvm-global, so a GUI-launched Electron build sees neither binary without a login shell (that is what the binary-path override is for), and the schema rejects an empty `detectCommand`, so clearing that field in an editor must round-trip as absent.
+
 ## Changed Paths
 
 <!-- AGENT-START:session-changed-paths -->
@@ -138,6 +158,14 @@ now positional placeholders with the true counts kept.
 - **Not run:** opencode's `session/request_permission` round-trip, live `session/load`/`session/resume`, MCP passthrough, and the unauthenticated failure shape. Each needs a tool-invoking, token-spending probe; recorded as unmeasured in the capture note so silence is not read as absence. No manual GUI pass.
 <!-- AGENT-END:session-validation-run -->
 
+## Bugs Encountered
+
+None filed. Three defects were found and fixed during review of PR #32 rather than deferred; see Review Corrections.
+
+## Decisions Made or Updated
+
+The capability cache is last-write-wins behind a single write queue, not a generation-ordered store. It is display-only data no live session reads, so ordering machinery was cut before implementation; the upgrade path is recorded in the source and the step brief.
+
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
@@ -152,3 +180,7 @@ now positional placeholders with the true counts kept.
   parallel load (passes 3/3 in isolation). Pre-existing; worth a bug note if it
   recurs.
 - Manual GUI verification remains owed across phases 23-25.
+
+## Completion Summary
+
+STEP-25-01 complete, merged as a87894e (PR #32). All four unit suites, lint, build, and both gated integration tests green against the real binaries. Not verified: any manual GUI pass, and the four opencode behaviours listed under Validation Run as deliberately unmeasured.

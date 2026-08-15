@@ -21,6 +21,9 @@ context:
   context_id: SESSION-2026-08-15-130000
   status: completed
   updated_at: '2026-08-15T13:30:00.000Z'
+  current_focus:
+    summary: Advance [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing|STEP-25-03 Add capability matrix view and auth error surfacing]].
+    target: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing|STEP-25-03 Add capability matrix view and auth error surfacing]]'
   resume_target:
     type: step
     target: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements|STEP-25-04 Write cross-harness lessons-learned note driving generic support requirements]]'
@@ -48,6 +51,8 @@ context:
     real unauthenticated opencode (the machine's provider is configured and
     un-configuring a developer's credentials was out of scope), and no manual
     GUI pass of the matrix against a live Pi session.
+  last_action:
+    type: saved
 ---
 
 # Session — STEP-25-03 capability matrix and auth error surfacing
@@ -59,7 +64,17 @@ context:
 - Builds on: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01]] (the cache and `authMethods` this renders) and [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults|STEP-25-02]] (the harnesses service this extends)
 - Evidence read first: [[06_Shared_Knowledge/opencode-acp-capture|opencode ACP Capture]] and [[06_Shared_Knowledge/pi-acp-adapter-spike-report|Pi ACP Adapter Spike Report]]
 
-## What Happened
+## Objective
+
+Make per-harness capability differences legible, and turn an auth failure from a raw JSON-RPC error into guidance a user can act on.
+
+## Planned Scope
+
+- A read-only `harness:capabilities` channel and a capability matrix in Settings.
+- `SAuthMethod` plus a pure normalizer deciding what srgnt can do about an advertised method.
+- An auth panel branching solely on the normalized kind, and an `authRequired` mock scenario.
+
+## Execution Log
 
 Executed in a fresh subagent with the orchestrator holding git. Implementation
 detail lives in the step's Implementation Notes and Outcome; this note records
@@ -90,7 +105,11 @@ Decisions taken during execution:
   exported next to `mergeSessionCapabilities`, rather than from a second list of
   field names in main or in the renderer.
 
-## Deviations From The Brief
+## Findings
+
+(Deviations from the brief, which is what this step actually learned.)
+
+### Deviations From The Brief
 
 - **`SAuthMethod` has no `instructions` field.** The only prose a method carries
   is `description`; a second field would just be a copy that can disagree with
@@ -105,6 +124,10 @@ Decisions taken during execution:
   mid-conversation still surfaces through the STEP-23-04 prompt-error path, not
   the panel; `chat:session:prompt` answers `{stopReason}` and widening it was not
   worth it for a case neither shipped harness has demonstrated.
+
+## Context Handoff
+
+STEP-25-04 consumes this step's findings. The load-bearing one: `docs-only` is a shipped reality, not a fallback, which becomes a catalog requirement.
 
 ## Changed Paths
 
@@ -155,6 +178,14 @@ Decisions taken during execution:
 - **Not run:** any pass against a real *unauthenticated* opencode. This machine's provider is configured, so the `docs-only` rendering is verified from the committed fixture and the mock scenario, never from a live auth failure.
 <!-- AGENT-END:session-validation-run -->
 
+## Bugs Encountered
+
+None filed. Eight review threads on PR #34 resolved to six real defects, all fixed here; see Deviations From The Brief and the commit history.
+
+## Decisions Made or Updated
+
+The auth wall crosses IPC as data rather than as an Error, because `ipcMain.handle` serializes a rejection to its message alone and the advertised methods could never ride on a throw. `rpc-authenticate` retries on a fresh connection instead of parking the failed one, keeping the no-orphans invariant. Pi gained `no-client-delegation` so the delegation column has measured data rather than a permanent blank.
+
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
@@ -178,3 +209,7 @@ This block is the complete follow-up list; `## Follow-Ups` below restates it in 
   rather than every configured harness (carried from STEP-25-02).
 - Manual verification against a real unauthenticated harness remains owed, as
   does the GUI pass carried since Phase 23.
+
+## Completion Summary
+
+STEP-25-03 complete, merged as d9e0ffc (PR #34). Suites, e2e, lint and build green. Not verified: no run against a real unauthenticated opencode, and auth detection covers session creation only — see Validation Run.

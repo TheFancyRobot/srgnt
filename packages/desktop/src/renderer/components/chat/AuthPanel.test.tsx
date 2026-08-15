@@ -74,6 +74,31 @@ describe('AuthPanel', () => {
     expect(method('external-command').querySelector('[data-testid="auth-authenticate"]')).toBeNull();
   });
 
+  it('serializes env and quotes arguments so the copied line survives a shell', () => {
+    // The panel promises the command is built from the method's own data.
+    // Dropping `env` breaks that promise silently — the user pastes a line that
+    // runs without the variable the harness asked for — and joining argv raw
+    // lets a spaced argument re-split into two.
+    renderPanel([
+      {
+        id: 'x',
+        name: 'X',
+        kind: 'external-command',
+        command: {
+          command: '/opt/my agent/login',
+          args: ['--profile', 'work laptop', "--note=it's fine"],
+          env: { API_BASE: 'https://example.test/a b' },
+        },
+      },
+    ]);
+    const expected =
+      `API_BASE='https://example.test/a b' '/opt/my agent/login' ` +
+      `--profile 'work laptop' '--note=it'\\''s fine'`;
+    expect(screen.getByTestId('auth-command')).toHaveTextContent(expected, { normalizeWhitespace: false });
+    fireEvent.click(screen.getByTestId('auth-copy'));
+    expect(clipboard).toHaveBeenCalledWith(expected);
+  });
+
   it('renders instructions and docs for a docs-only method, and never invents a command', () => {
     renderPanel([docsOnly]);
     // opencode's login line exists only inside its own description; srgnt shows

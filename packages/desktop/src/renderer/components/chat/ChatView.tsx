@@ -142,12 +142,17 @@ export function ChatView(): React.ReactElement {
       </header>
 
       {/* Above the error surface, and instead of one: an auth wall is a thing to
-          DO something about, not a failure to dismiss. */}
+          DO something about, not a failure to dismiss.
+
+          The actions bind to the harness that raised the wall, NOT to the live
+          selector — which stays enabled behind the panel. Retrying against
+          `requestedTarget` would send harness A's methodId to harness B, failing
+          authentication or starting an agent the user never asked for. */}
       {authRequired !== null && (
         <AuthPanel
           auth={authRequired}
-          onRetry={() => void newSession(requestedTarget)}
-          onAuthenticate={(methodId) => void newSession(requestedTarget, methodId)}
+          onRetry={() => void newSession(authRequired.harnessId)}
+          onAuthenticate={(methodId) => void newSession(authRequired.harnessId, methodId)}
           onDismiss={dismissAuth}
         />
       )}

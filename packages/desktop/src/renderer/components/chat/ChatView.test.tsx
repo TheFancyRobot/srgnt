@@ -658,6 +658,29 @@ describe('ChatView — the auth wall', () => {
 
     fireEvent.click(screen.getByTestId('auth-authenticate'));
     await waitFor(() => expect(screen.getByTestId('chat-session-badge')).toBeInTheDocument());
-    expect(harness.api.chatSessionNew).toHaveBeenLastCalledWith(undefined, undefined, 'oauth');
+    // Explicitly the harness that raised the wall — the method id belongs to it.
+    expect(harness.api.chatSessionNew).toHaveBeenLastCalledWith('gated', undefined, 'oauth');
+  });
+
+  it('retries the harness that raised the wall even if the selector moved', async () => {
+    // The selector stays enabled behind the panel. Retrying against the live
+    // selection would send the gated harness's method id to a different agent —
+    // failing auth, or starting one the user never asked for.
+    harness.api.chatSessionNew.mockResolvedValueOnce({
+      ...wall,
+      authMethods: [{ id: 'oauth', name: 'Sign in', kind: 'rpc-authenticate' as const }],
+    });
+    renderChat();
+    fireEvent.click(screen.getByTestId('chat-new-session'));
+    await waitFor(() => expect(screen.getByTestId('chat-auth-panel')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('chat-target'), { target: { value: 'pi' } });
+    fireEvent.click(screen.getByTestId('auth-authenticate'));
+
+    await waitFor(() => expect(screen.getByTestId('chat-session-badge')).toBeInTheDocument());
+    const [target, , methodId] = harness.api.chatSessionNew.mock.calls.at(-1) as unknown[];
+    expect(target).toBe('gated');
+    expect(target).not.toBe('pi');
+    expect(methodId).toBe('oauth');
   });
 });

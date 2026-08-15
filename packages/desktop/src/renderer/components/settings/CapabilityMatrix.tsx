@@ -186,8 +186,10 @@ export function CapabilityMatrix(): React.ReactElement | null {
 
   React.useEffect(() => {
     // An older preload has no capability bridge: hide the section rather than
-    // crashing Settings, exactly as the harness list does.
-    const read = window.srgnt.harnessCapabilities;
+    // crashing Settings, exactly as the harness list does. `window.srgnt`
+    // itself can also be absent (harness-less test renders), so this is
+    // optional all the way down rather than only on the method.
+    const read = window.srgnt?.harnessCapabilities;
     if (read === undefined) return;
     void (async () => {
       try {
@@ -198,7 +200,7 @@ export function CapabilityMatrix(): React.ReactElement | null {
     })();
   }, []);
 
-  if (window.srgnt.harnessCapabilities === undefined) return null;
+  if (window.srgnt?.harnessCapabilities === undefined) return null;
 
   const rows = response?.entries ?? [];
   // Which columns are session-discovered comes from the payload, not from a
@@ -225,11 +227,20 @@ export function CapabilityMatrix(): React.ReactElement | null {
         </p>
       )}
 
-      {rows.length === 0 ? (
+      {/* Three distinct states, not two. `response === null` means the read is
+          still in flight or it failed — and since the registry always returns
+          at least the built-ins, "no harnesses are configured" is a claim that
+          can only be true after a successful read. Rendering it while loading
+          states something false about the user's setup. */}
+      {response === null && error === null ? (
+        <p className="text-xs text-text-tertiary" data-testid="capability-loading">
+          Reading harness capabilities…
+        </p>
+      ) : rows.length === 0 && error === null ? (
         <p className="text-xs text-text-tertiary" data-testid="capability-empty">
           No harnesses are configured yet.
         </p>
-      ) : (
+      ) : rows.length === 0 ? null : (
         /* Scrolls inside itself: the matrix is wider than the settings column and
            must never make the page scroll sideways. */
         <div className="overflow-x-auto">

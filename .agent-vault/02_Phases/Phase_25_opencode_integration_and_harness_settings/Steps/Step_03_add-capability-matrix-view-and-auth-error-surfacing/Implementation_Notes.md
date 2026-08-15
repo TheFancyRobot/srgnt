@@ -2,7 +2,7 @@
 
 - Capture durable findings learned during execution. Prefer short bullets with file paths, commands, and observed behavior.
 
-### Execution 2026-08-15
+## Execution 2026-08-15
 
 **Measured facts (STEP-25-04 inputs)**
 

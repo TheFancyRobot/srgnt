@@ -21,6 +21,10 @@ context:
   context_id: SESSION-2026-08-15-130000
   status: completed
   updated_at: '2026-08-15T13:30:00.000Z'
+  resume_target:
+    type: step
+    target: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements|STEP-25-04 Write cross-harness lessons-learned note driving generic support requirements]]'
+    section: Context Handoff
   context_summary: >-
     STEP-25-03 implemented on branch phase/25-step-03-capability-matrix. Adds the
     read-only `harness:capabilities` IPC channel (rows from the registry, cells
@@ -101,6 +105,41 @@ Decisions taken during execution:
   mid-conversation still surfaces through the STEP-23-04 prompt-error path, not
   the panel; `chat:session:prompt` answers `{stopReason}` and widening it was not
   worth it for a case neither shipped harness has demonstrated.
+
+## Changed Paths
+
+<!-- AGENT-START:session-changed-paths -->
+- `packages/contracts/src/harness.ts` — `SAuthMethod`, `SAuthMethodCommand`, the pure `normalizeAuthMethod`, and the `no-client-delegation` quirk.
+- `packages/contracts/src/ipc/contracts.ts` — `harness:capabilities` channel, `SHarnessCapabilityRow`/`SHarnessCapabilitiesResponse`, `SChatAuthRequired`, `SChatSessionNewResult`, `authMethodId` on session-new.
+- `packages/harness/src/acp/capabilities.ts` — exported `SESSION_DISCOVERED_CAPABILITIES`; `acp/connection.ts` — `authenticate()`.
+- `packages/harness/src/registry/builtins.ts` — pi declares `no-client-delegation` (STEP-22-05 probe 4).
+- `packages/harness/src/testing/mock-agent/{scenario,runner}.ts` — `authRequired` block: advertises methods verbatim, `session/new` throws `-32000` until `authenticate`.
+- `packages/desktop/src/main/services/harnesses.ts` — `capabilities()` + IPC handler.
+- `packages/desktop/src/main/chat/session-controller.ts` — `ChatAuthRequiredError`, `-32000` detection via `Effect.tapError`, `newSession(..., authMethodId?)`; `chat/index.ts` answers the wall as data.
+- `packages/desktop/src/renderer/components/settings/CapabilityMatrix.tsx` (new), `components/chat/AuthPanel.tsx` (new), both with tests; `e2e/auth.spec.ts` (new, in all three `test:e2e*` lists).
+- `ChatSessionContext.tsx`, `ChatView.tsx`, `main.tsx`, `preload/index.ts`, `env.d.ts`, `styles.css`.
+<!-- AGENT-END:session-changed-paths -->
+
+## Validation Run
+
+<!-- AGENT-START:session-validation-run -->
+- `pnpm --filter @srgnt/contracts test` — 207 passed.
+- `pnpm --filter @srgnt/harness test` — 148 passed, 3 skipped (gated ITs).
+- `pnpm --filter @srgnt/runtime test` — 458 passed.
+- `pnpm --filter @srgnt/desktop test` — 1260 passed.
+- `playwright test e2e/auth.spec.ts` — 1 passed (real Electron, spawned mock child).
+- `playwright test e2e/chat.spec.ts e2e/harnesses.spec.ts e2e/sessions.spec.ts` — 14 passed.
+- `pnpm -r lint`, `pnpm -r build` — clean; contracts and harness rebuilt first (stale-`dist` trap).
+- **Not run:** any pass against a real *unauthenticated* opencode. This machine's provider is configured, so the `docs-only` rendering is verified from the committed fixture and the mock scenario, never from a live auth failure.
+<!-- AGENT-END:session-validation-run -->
+
+## Follow-Up Work
+
+<!-- AGENT-START:session-follow-up-work -->
+- STEP-25-04 (next): the lessons-learned note. Evidence from this step — auth metadata is not reliably machine-actionable (opencode advertises no command), `configOptions` is an unmodeled generic surface, `session/close` and `session/fork` are unmodeled, and `no-client-delegation` was needed as a fourth quirk.
+- Mid-conversation auth failure should reach the same panel from the prompt-failure surface.
+- Manual verification against a real unauthenticated harness, and the GUI pass carried since Phase 23.
+<!-- AGENT-END:session-follow-up-work -->
 
 ## Follow-Ups
 

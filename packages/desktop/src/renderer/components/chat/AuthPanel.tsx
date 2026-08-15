@@ -19,10 +19,31 @@ import type { AuthMethod, ChatAuthRequired } from '@srgnt/contracts';
  *   in this component, and there must never be one.
  */
 
+/**
+ * POSIX single-quote escaping. A copied line is pasted into a shell, so an
+ * argument containing a space, `$`, or a quote must survive as one argument
+ * rather than being re-split or expanded. `'` is closed, escaped, and reopened
+ * — the standard trick, because nothing can be escaped inside single quotes.
+ *
+ * POSIX only (macOS/Linux, and Git Bash/WSL on Windows). Rendering per-shell
+ * variants would need a shell picker this panel does not have; the value here
+ * is that the line is *correct where it is copied from*, not universal.
+ */
+function shellQuote(value: string): string {
+  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
 function CommandLine({ command }: { readonly command: NonNullable<AuthMethod['command']> }): React.ReactElement {
-  // Built from the method's own `command`/`args` — never a hardcoded login line
-  // for a harness srgnt happens to know about.
-  const line = [command.command, ...command.args].join(' ');
+  // Built from the method's own `command`/`args`/`env` — never a hardcoded login
+  // line for a harness srgnt happens to know about. The env is part of the
+  // method's data: dropping it hands the user a command that silently does not
+  // do what the harness asked for.
+  const line = [
+    ...Object.entries(command.env).map(([key, value]) => `${key}=${shellQuote(value)}`),
+    shellQuote(command.command),
+    ...command.args.map(shellQuote),
+  ].join(' ');
   return (
     <div className="chat-auth-command">
       <code className="chat-auth-command-text" data-testid="auth-command">

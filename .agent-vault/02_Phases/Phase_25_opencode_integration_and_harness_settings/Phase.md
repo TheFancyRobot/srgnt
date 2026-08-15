@@ -4,10 +4,10 @@ template_version: 2
 contract_version: 1
 title: Opencode Integration and Harness Settings
 phase_id: PHASE-25
-status: in_progress
+status: completed
 owner: ''
 created: '2026-07-10'
-updated: '2026-08-13'
+updated: '2026-08-15'
 depends_on:
   - '[[02_Phases/Phase_24_projects_and_session_persistence/Phase|PHASE-24 Projects and Session Persistence]]'
 related_architecture:
@@ -64,15 +64,15 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 
 ## Acceptance Criteria
 
-- [ ] Scope is concrete and linked to the right durable notes.
-- [ ] Step notes exist for the first executable work units.
-- [ ] Validation and documentation expectations are explicit.
-- [ ] With opencode installed, a project can run Pi and opencode sessions side by side; capability differences render as visible degradation, never silent failure.
-- [ ] Capability matrix reflects live `initialize` negotiation per harness; nothing is hardcoded per harness beyond the launch spec.
-- [ ] Harness settings persist (binary path, env, per-project default) and take effect on next spawn.
-- [ ] Auth failures surface actionable guidance; `authenticate` flow works where required.
-- [ ] opencode traffic fixtures added; contract tests pass against both harnesses.
-- [ ] Lessons-learned note exists in the vault and enumerates concrete Phase 26 requirements.
+- [x] Scope is concrete and linked to the right durable notes.
+- [x] Step notes exist for the first executable work units.
+- [x] Validation and documentation expectations are explicit.
+- [ ] **NOT VERIFIED** — With opencode installed, a project can run Pi and opencode sessions side by side; capability differences render as visible degradation, never silent failure. The code path exists and is unit- and e2e-tested, but **no manual side-by-side run was performed**, and no manual GUI pass has happened since Phase 23. This is the phase's one substantive unverified claim; it belongs in the Phase-26 or release checklist, not silently ticked here.
+- [x] Capability matrix reflects live `initialize` negotiation per harness; nothing is hardcoded per harness beyond the launch spec. Asserted fixture→row against the committed pi and opencode captures (STEP-25-03).
+- [x] Harness settings persist (binary path, env, per-project default) and take effect on next spawn — *scope:* persistence and canonicalization are tested at the service/IPC boundary, and "takes effect on next spawn" is asserted at the service→connector seam (`resolveConnectDefinition`), not by spawning a binary and reading its argv.
+- [x] Auth failures surface actionable guidance; `authenticate` flow works where required — *scope:* end-to-end against the mock agent's `authRequired` scenario and both committed fixtures. **Never exercised against a real unauthenticated harness**, and detection covers session creation only (mid-conversation expiry still uses the STEP-23-04 prompt-error path).
+- [x] opencode traffic fixtures added; contract tests pass against both harnesses (`SRGNT_IT_OPENCODE=1`, `SRGNT_IT_PI=1`, both run green against the real binaries).
+- [x] Lessons-learned note exists in the vault and enumerates concrete Phase 26 requirements — [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned (STEP-25-04)]], 18 evidence-cited REQ-26-xx entries plus four explicitly unowned proposals.
 
 ## Linear Context
 
@@ -103,10 +103,10 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Steps
 
 <!-- AGENT-START:phase-steps -->
-- [ ] [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01 Add opencode harness definition with runtime capability detection]]
-- [ ] [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults|STEP-25-02 Build harness settings UI with per-project defaults]]
-- [ ] [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing|STEP-25-03 Add capability matrix view and auth error surfacing]]
-- [ ] [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements|STEP-25-04 Write cross-harness lessons-learned note driving generic support requirements]]
+- [x] [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01 Add opencode harness definition with runtime capability detection]]
+- [x] [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults|STEP-25-02 Build harness settings UI with per-project defaults]]
+- [x] [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing|STEP-25-03 Add capability matrix view and auth error surfacing]]
+- [x] [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements|STEP-25-04 Write cross-harness lessons-learned note driving generic support requirements]]
 <!-- AGENT-END:phase-steps -->
 
 ## Notes
@@ -125,4 +125,5 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
   - Settings overrides ride the shipped registry semantics: workspace `harnesses.json` entries shadow built-ins wholesale (last-write-wins) — UI writes a full edited copy, "Reset to built-in" deletes it, shadowed built-ins get an "overridden" badge (they stop tracking built-in updates, e.g. a `PI_ACP_VERSION` bump, until reset).
   - Auth v1 scope (assumption): terminal-type auth methods (pi `pi_terminal_login`, opencode's login flow) are external — AuthPanel shows a copyable command + docs link + Retry; `authenticate(methodId)` is called only for non-interactive methods; srgnt never collects credentials in its own UI. Executor must verify the SDK 1.2.1 auth-required error shape before wiring detection. Mock agent gains an `authRequired` scenario directive for E2E.
   - Decision needed (non-blocking, defaults recorded in the briefs): capability-cache file name/placement (default `harness-capabilities.json` at workspace root); override mechanics (default wholesale-shadow per current registry, delta-patch deferred to Phase 26 if lessons demand it); per-harness permission policy defaults (default DEFER to Phase 26 — per-project `permissionPolicy` from STEP-24-02 stays the only relaxation surface this phase).
-  - STEP-25-04's note is named `06_Shared_Knowledge/cross-harness-lessons-learned.md` (assumption) with fixed comparison axes for BOTH harnesses — launch/install+detection, auth surfacing, capability gaps, quirks needed, permission behavior, session load/resume, MCP passthrough, update-stream shape — distilled into evidence-cited REQ-26-xx entries mapped to PHASE-26 deliverables (editor / conformance runner / catalog / docs).
+  - STEP-25-04's note is named `06_Shared_Knowledge/cross-harness-lessons-learned.md` (assumption, held) with fixed comparison axes for BOTH harnesses — launch/install+detection, auth surfacing, capability gaps, quirks needed, permission behavior, session load/resume, MCP passthrough, update-stream shape — distilled into evidence-cited REQ-26-xx entries mapped to PHASE-26 deliverables (editor / conformance runner / catalog / docs).
+- Exit artifact, delivered 2026-08-15: [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned (STEP-25-04)]] — the Pi/opencode comparison on the eight fixed axes, the ARCH-0009 data-model failures the phase exposed, and the REQ-26-xx list [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|PHASE-26]] consumes as its requirements input. The eight axes and the assumed note name both held; what the phase did *not* anticipate is how much of the note is about srgnt's own model (a closed `NegotiatedCapabilities`, a `modes`-only session surface, closed harness-id sets) rather than about the agents.

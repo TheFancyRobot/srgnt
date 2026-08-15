@@ -21,6 +21,9 @@ context:
   context_id: SESSION-2026-08-14-014500
   status: completed
   updated_at: '2026-08-14T02:00:00.000Z'
+  current_focus:
+    summary: Advance [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults|STEP-25-02 Build harness settings UI with per-project defaults]].
+    target: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults|STEP-25-02 Build harness settings UI with per-project defaults]]'
   resume_target:
     type: step
     target: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing|STEP-25-03 Add capability matrix view and auth error surfacing]]'
@@ -45,6 +48,8 @@ context:
     into the developer's real workspace) and no fake-binary spawn test, since
     the connector completes a real ACP handshake; "takes effect on next spawn"
     is asserted at the service-to-connector seam instead.
+  last_action:
+    type: saved
 ---
 
 # Session — STEP-25-02 harness settings UI with per-project defaults
@@ -55,7 +60,17 @@ context:
 - Step: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_02_build-harness-settings-ui-with-per-project-defaults|STEP-25-02]]
 - Builds on: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_01_add-opencode-harness-definition-with-runtime-capability-detection|STEP-25-01]] (`detectHarness`, `detectCommand`, the opencode definition this UI lists)
 
-## What Happened
+## Objective
+
+Give the shipped `harnesses.json` mechanism a product surface, so a user can see detection state, override a binary path or env, and set a per-project default harness.
+
+## Planned Scope
+
+- A main service owning every write to `harnesses.json`.
+- Three `harness:*` IPC channels with boundary hardening.
+- A Settings section with per-harness cards and a per-project default selector.
+
+## Execution Log
 
 Executed in a fresh subagent with the orchestrator holding git. Implementation
 detail lives in the step's Implementation Notes and Outcome; this note records
@@ -70,7 +85,9 @@ Two changes went beyond the brief, both kept deliberately:
 - **A dangling project default blocks** session creation with an actionable
   error instead of substituting a harness the user did not choose.
 
-## Review Corrections
+## Findings
+
+### Review Corrections
 
 CodeRabbit raised seven live findings on PR #33; all were real:
 
@@ -93,6 +110,10 @@ CodeRabbit raised seven live findings on PR #33; all were real:
 - This step (and STEP-25-01) were marked done with no session note, which every
   step through PHASE-24 had. This note and STEP-25-01's retroactive one close
   that gap.
+
+## Context Handoff
+
+STEP-25-03 renders capabilities over the same service. Carried forward: opencode advertises an auth method with no machine-actionable command, so the auth panel needs a real `docs-only` path.
 
 ## Changed Paths
 
@@ -128,6 +149,14 @@ CodeRabbit raised seven live findings on PR #33; all were real:
 - **Not run:** no manual `pnpm dev` pass — it would write into the developer's real workspace. No fake-binary spawn test: `defaultChatConnect` completes a real ACP handshake, so a stub script cannot substitute for an agent; "takes effect on next spawn" is asserted at the service→connector seam instead.
 <!-- AGENT-END:session-validation-run -->
 
+## Bugs Encountered
+
+None filed. Seven review findings on PR #33 were all real and all fixed in place; see Review Corrections.
+
+## Decisions Made or Updated
+
+`SChatTarget` widened from a literal union to a string: valid targets are registry data, and only the registry can distinguish a configured harness from a dangling one. A dangling project default blocks session creation rather than substituting a harness the user did not choose. Per-harness permission-policy defaults stay deferred to Phase 26.
+
 ## Follow-Up Work
 
 <!-- AGENT-START:session-follow-up-work -->
@@ -144,3 +173,7 @@ CodeRabbit raised seven live findings on PR #33; all were real:
   from the registry belongs with STEP-25-03.
 - Per-harness permission-policy defaults stay deferred to Phase 26.
 - Manual GUI verification remains owed across phases 23-25.
+
+## Completion Summary
+
+STEP-25-02 complete, merged as 0303c44 (PR #33). Suites, lint and build green; the Linux e2e job passed, settling that the two local e2e failures were environmental. Not verified: no manual `pnpm dev` pass, and no fake-binary spawn test — see Validation Run.

@@ -152,3 +152,5 @@ the normal update stream — the mock agent's scenario coverage matches real Pi 
 - Step: [[02_Phases/Phase_22_acp_core_package_and_pi_integration_spike/Steps/Step_05_ship-flag-gated-dev-console-and-run-the-pi-adapter-spike-with-decision-gate|STEP-22-05]]
 - Architecture: [[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009 ACP Command Center Target Architecture]]
 - Boundary decision: [[04_Decisions/DEC-0017_pivot-srgnt-from-data-aggregator-to-acp-coding-agent-command-center|DEC-0017]]
+- Contrast capture: [[06_Shared_Knowledge/opencode-acp-capture|opencode ACP Capture (STEP-25-01)]]
+- Consumer: [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned (STEP-25-04)]] — probes 1, 2 and 4 here are the direct evidence for REQ-26-09, REQ-26-10 and REQ-26-11 (the conformance runner's behavioral checks).

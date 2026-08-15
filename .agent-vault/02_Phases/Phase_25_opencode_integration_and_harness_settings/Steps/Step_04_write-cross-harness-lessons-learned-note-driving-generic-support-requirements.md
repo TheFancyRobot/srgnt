@@ -5,14 +5,15 @@ contract_version: 1
 title: Write cross-harness lessons-learned note driving generic support requirements
 step_id: STEP-25-04
 phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]]'
-status: planned
-owner: ''
+status: done
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-07-17'
+updated: '2026-08-15'
 depends_on:
   - STEP-25-02
   - STEP-25-03
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-08-15-193000-write-cross-harness-lessons-learned-note-driving-generic-support-requirements-claude-opus-5|SESSION-2026-08-15-193000 claude-opus-5 session for Write cross-harness lessons-learned note driving generic support requirements]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -75,16 +76,20 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements/Validation_Plan|Validation Plan]].
+- Status: done
+- Current owner: claude-opus-5
+- Last touched: 2026-08-15
+- Next action: PHASE-25 is complete. [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|PHASE-26]] starts from [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned]]; its REQ→deliverable split is recorded in the PHASE-26 phase note's Notes section.
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- Full detail in [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements/Implementation_Notes|Implementation Notes]].
+- Delivered [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned]] at the assumed path: the eight fixed axes for both harnesses, an ARCH-0009 data-model failure section, the restated DEC-0018 PHASE-27 MCP consequence, **REQ-26-01…18** (each with an evidence pointer and a deliverable mapping) and **PROP-A…D** outside the REQ list.
+- The fixtures were opened, not trusted from prose: the 93 slash commands are the preserved count `availableCommandsTrimmedFrom: 93` on seq 0 of `packages/harness/src/testing/fixtures/opencode/simple-prompt.jsonl`, and the opencode fixture's config-option values are positional placeholders by design, so it is cited for shape.
+- **Both** harnesses return `configOptions` (opencode from `session/new`, pi from `session/load`), which reframes the sharpest finding: srgnt supports the mode surface neither harness treats as primary.
+- The `configOptions` finding splits deliberately — the report half is REQ-26-18; the product surface (`session/set_config_option`) is PROP-A, owned by no PHASE-26 deliverable and labelled as such rather than implied into the REQ list.
+- Docs-only step: no product code in the diff, so no test suite was run; validation is `vault_validate` plus a `git status` check.
 
 ## Human Notes
 
@@ -93,10 +98,12 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- [[05_Sessions/2026-08-15-193000-write-cross-harness-lessons-learned-note-driving-generic-support-requirements-claude-opus-5|SESSION-2026-08-15-193000]] — claude-opus-5, branch `phase/25-step-04-lessons-learned`: wrote the lessons note and the link edits; docs only.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Done, with the evidence scope stated where each claim is made in [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_04_write-cross-harness-lessons-learned-note-driving-generic-support-requirements/Outcome|Outcome]]. PHASE-25's exit artifact exists and PHASE-26's requirements gate is open.
+- Shipped: [[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned]] plus wikilinks in both directions (PHASE-25 → note, PHASE-26 → note, note → spike report + capture note + DEC-0018, and backlinks from both captures).
+- **Validation is documentary only.** `vault_validate` — the lessons note is flagged by nothing; the new session note inherits the same eight `MISSING_REQUIRED_HEADING` and two `INVALID_SESSION_CONTEXT` errors every existing PHASE-25 session note already carries, because house session format diverges from `07_Templates/Session_Template.md`. No test suite was run: the diff contains no product code.
+- **Narrower than "requirements are complete" implies:** the REQ list describes two harnesses, one adapter-mediated and one native, and roughly half of opencode's row is an advertisement rather than an exercised behavior — which is exactly what REQ-26-09…12 hand to the PHASE-26 conformance runner.

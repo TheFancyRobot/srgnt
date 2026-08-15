@@ -1,4 +1,5 @@
 import React from 'react';
+import { AuthPanel } from './AuthPanel.js';
 import { Composer } from './Composer.js';
 import { MessageList } from './MessageList.js';
 import { PermissionPrompt } from './PermissionPrompt.js';
@@ -42,8 +43,19 @@ function EmptyState({ hasSession }: { readonly hasSession: boolean }): React.Rea
 }
 
 export function ChatView(): React.ReactElement {
-  const { session, status, error, transcript, permissions, newSession, dispose, respondToPermission, dismissError } =
-    useChatSession();
+  const {
+    session,
+    status,
+    error,
+    transcript,
+    permissions,
+    newSession,
+    authRequired,
+    dismissAuth,
+    dispose,
+    respondToPermission,
+    dismissError,
+  } = useChatSession();
   // `null` means "the user has not chosen", which is what lets the project's
   // `defaultHarnessId` decide. Without it the selector always sent an explicit
   // target and main's default resolution was unreachable — a project set to Pi
@@ -128,6 +140,17 @@ export function ChatView(): React.ReactElement {
           )}
         </div>
       </header>
+
+      {/* Above the error surface, and instead of one: an auth wall is a thing to
+          DO something about, not a failure to dismiss. */}
+      {authRequired !== null && (
+        <AuthPanel
+          auth={authRequired}
+          onRetry={() => void newSession(requestedTarget)}
+          onAuthenticate={(methodId) => void newSession(requestedTarget, methodId)}
+          onDismiss={dismissAuth}
+        />
+      )}
 
       {error !== null && (
         <div className="chat-error" role="alert" data-testid="chat-error">

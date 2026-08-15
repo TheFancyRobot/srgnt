@@ -475,3 +475,64 @@ describe('directive coverage', () => {
     );
   });
 });
+
+// ─── Auth gate (STEP-25-03) ───
+
+describe('authRequired', () => {
+  const methods = [
+    // pi's shape: machine-actionable.
+    { id: 'terminal-login', name: 'Log in via terminal', type: 'terminal', args: ['--login'] },
+    // opencode's shape: prose only.
+    { id: 'prose-login', name: 'Log in', description: 'Run `agent auth login`' },
+  ];
+
+  it('advertises the methods verbatim at initialize, extension fields included', async () => {
+    const { connection } = await connectMockAgent(
+      scenario({ directives: [], authRequired: { methods } }),
+    );
+    // Not projected to {id, name}: the client's normalizer decides what is
+    // actionable, and a trimmed payload would decide it here instead.
+    expect(connection.capabilities.authMethods).toEqual(methods);
+  });
+
+  it('fails session/new with the ACP auth-required code until authenticate lands', async () => {
+    const { connection } = await connectMockAgent(
+      scenario({ directives: [], authRequired: { methods } }),
+    );
+    const failure = await Effect.runPromise(
+      Effect.flip(connection.newSession({ cwd: '/tmp', mcpServers: [] })),
+    );
+    // -32000 is what `RequestError.authRequired` puts on the wire in
+    // @agentclientprotocol/sdk 1.2.1 — the shape srgnt detects on.
+    expect(failure).toMatchObject({ _tag: 'ProtocolError', code: -32000 });
+
+    await Effect.runPromise(connection.authenticate({ methodId: 'terminal-login' }));
+    const session = await newSession(connection);
+    expect(session.sessionId).toBe('mock-session-1');
+  });
+
+  it('refuses an auth method it never advertised', async () => {
+    const { connection } = await connectMockAgent(
+      scenario({ directives: [], authRequired: { methods } }),
+    );
+    const failure = await Effect.runPromise(
+      Effect.flip(connection.authenticate({ methodId: 'not-a-method' })),
+    );
+    expect(failure).toMatchObject({ _tag: 'ProtocolError', code: -32602 });
+  });
+
+  it('advertises methods without gating when gateSessionNew is false', async () => {
+    const { connection } = await connectMockAgent(
+      scenario({ directives: [], authRequired: { methods, gateSessionNew: false } }),
+    );
+    expect(connection.capabilities.authMethods).toHaveLength(2);
+    await expect(newSession(connection)).resolves.toMatchObject({ sessionId: 'mock-session-1' });
+  });
+
+  it('leaves the substrate ungated when no authRequired block is present', async () => {
+    const { connection } = await connectMockAgent(scenario({ directives: [] }));
+    expect(connection.capabilities.authMethods).toEqual([]);
+    await expect(Effect.runPromise(connection.authenticate({ methodId: 'anything' }))).resolves.toEqual({});
+    await expect(newSession(connection)).resolves.toMatchObject({ sessionId: 'mock-session-1' });
+  });
+});

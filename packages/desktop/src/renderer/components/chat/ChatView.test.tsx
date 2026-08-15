@@ -142,7 +142,7 @@ describe('ChatView — session lifecycle', () => {
     fireEvent.change(screen.getByTestId('chat-target'), { target: { value: 'pi' } });
     await startSession();
     // Second arg is the active project id; `undefined` = derive it from the cwd.
-    expect(harness.api.chatSessionNew).toHaveBeenCalledWith('pi', undefined);
+    expect(harness.api.chatSessionNew).toHaveBeenCalledWith('pi', undefined, undefined);
     expect(screen.getByTestId('chat-session-badge')).toHaveTextContent('Pi');
   });
 
@@ -159,7 +159,7 @@ describe('ChatView — session lifecycle', () => {
     );
     await waitFor(() => expect((screen.getByTestId('chat-target') as HTMLSelectElement).value).toBe('pi'));
     await startSession();
-    expect(harness.api.chatSessionNew).toHaveBeenCalledWith(undefined, 'proj-1');
+    expect(harness.api.chatSessionNew).toHaveBeenCalledWith(undefined, 'proj-1', undefined);
   });
 
   it('does not collapse a non-builtin project default to the mock', async () => {
@@ -603,5 +603,61 @@ describe('ChatView permission round-trip (STEP-23-03)', () => {
     renderChat();
     await startSession();
     expect(screen.queryByTestId('chat-trust-badge')).toBeNull();
+  });
+});
+
+describe('ChatView — the auth wall', () => {
+  const wall = {
+    authRequired: true as const,
+    harnessId: 'gated',
+    harnessName: 'Gated Agent',
+    docsUrl: 'https://example.test/gated',
+    authMethods: [
+      {
+        id: 'terminal-login',
+        name: 'Log in',
+        kind: 'external-command' as const,
+        command: { command: 'gated-cli', args: ['--terminal-login'], env: {} },
+      },
+    ],
+    detail: 'ACP request session/new failed: Authentication required',
+  };
+
+  it('renders guidance instead of a raw error, and opens no session', async () => {
+    harness.api.chatSessionNew.mockResolvedValueOnce(wall);
+    renderChat();
+    fireEvent.click(screen.getByTestId('chat-new-session'));
+
+    await waitFor(() => expect(screen.getByTestId('chat-auth-panel')).toBeInTheDocument());
+    expect(screen.getByTestId('auth-command')).toHaveTextContent('gated-cli --terminal-login');
+    // Not the error toast, and no session badge: nothing was opened.
+    expect(screen.queryByTestId('chat-error')).toBeNull();
+    expect(screen.queryByTestId('chat-session-badge')).toBeNull();
+  });
+
+  it('retries into a working session once the user has authenticated elsewhere', async () => {
+    harness.api.chatSessionNew.mockResolvedValueOnce(wall);
+    renderChat();
+    fireEvent.click(screen.getByTestId('chat-new-session'));
+    await waitFor(() => expect(screen.getByTestId('chat-auth-panel')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('auth-retry'));
+    await waitFor(() => expect(screen.getByTestId('chat-session-badge')).toBeInTheDocument());
+    // The panel goes away with the session that replaced it.
+    expect(screen.queryByTestId('chat-auth-panel')).toBeNull();
+  });
+
+  it('retries with the method id for an in-protocol auth method', async () => {
+    harness.api.chatSessionNew.mockResolvedValueOnce({
+      ...wall,
+      authMethods: [{ id: 'oauth', name: 'Sign in', kind: 'rpc-authenticate' as const }],
+    });
+    renderChat();
+    fireEvent.click(screen.getByTestId('chat-new-session'));
+    await waitFor(() => expect(screen.getByTestId('chat-auth-panel')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('auth-authenticate'));
+    await waitFor(() => expect(screen.getByTestId('chat-session-badge')).toBeInTheDocument());
+    expect(harness.api.chatSessionNew).toHaveBeenLastCalledWith(undefined, undefined, 'oauth');
   });
 });

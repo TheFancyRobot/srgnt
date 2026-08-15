@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseSync, safeParse } from './shared-schemas.js';
 import {
+  normalizeAuthMethod,
   SHarnessCapabilitiesFile,
   SHarnessCapabilityOverrides,
   SHarnessDefinition,
@@ -44,7 +45,13 @@ describe('SLaunchSpec', () => {
 
 describe('SHarnessQuirk', () => {
   it('accepts the declared quirk vocabulary', () => {
-    for (const quirk of ['adapter-mediated', 'permission-routing-gaps', 'mcp-passthrough-gaps', 'no-session-load']) {
+    for (const quirk of [
+      'adapter-mediated',
+      'permission-routing-gaps',
+      'mcp-passthrough-gaps',
+      'no-session-load',
+      'no-client-delegation',
+    ]) {
       expect(safeParse(SHarnessQuirk, quirk).success).toBe(true);
     }
   });
@@ -176,5 +183,69 @@ describe('SHarnessCapabilitiesFile', () => {
     expect(
       safeParse(SHarnessCapabilitiesFile, { version: 1, entries: { pi: incomplete } }).success,
     ).toBe(false);
+  });
+});
+
+describe('normalizeAuthMethod', () => {
+  it('builds an external command from a method that names its own executable', () => {
+    expect(
+      normalizeAuthMethod(
+        { id: 'login', name: 'Log in', command: '/usr/bin/agent-login', args: ['--now'], env: { A: '1' } },
+        'ignored-fallback',
+      ),
+    ).toEqual({
+      id: 'login',
+      name: 'Log in',
+      kind: 'external-command',
+      // The method's own executable wins over the harness binary.
+      command: { command: '/usr/bin/agent-login', args: ['--now'], env: { A: '1' } },
+    });
+  });
+
+  it('falls back to the harness binary for a terminal method that names none', () => {
+    const method = { id: 'x', name: 'X', type: 'terminal', args: ['--terminal-login'] };
+    expect(normalizeAuthMethod(method, 'pi')?.command).toEqual({
+      command: 'pi',
+      args: ['--terminal-login'],
+      env: {},
+    });
+    // With nothing to run it as, the honest answer is prose, not a guessed
+    // command named after the harness id.
+    expect(normalizeAuthMethod(method)).toMatchObject({ kind: 'docs-only' });
+    expect(normalizeAuthMethod(method)).not.toHaveProperty('command');
+  });
+
+  it('treats a declared-but-unrunnable type as an in-protocol authenticate', () => {
+    expect(normalizeAuthMethod({ id: 'oauth', name: 'OAuth', type: 'oauth' }, 'agent')).toEqual({
+      id: 'oauth',
+      name: 'OAuth',
+      kind: 'rpc-authenticate',
+    });
+  });
+
+  it('degrades a method carrying only prose to docs-only', () => {
+    expect(normalizeAuthMethod({ id: 'p', name: 'P', description: 'Run `p auth login`' }, 'p')).toEqual({
+      id: 'p',
+      name: 'P',
+      description: 'Run `p auth login`',
+      kind: 'docs-only',
+    });
+  });
+
+  it('drops non-string env values rather than passing junk to a shell', () => {
+    expect(
+      normalizeAuthMethod({ id: 'x', name: 'X', command: 'x', env: { OK: 'y', BAD: 3 } })?.command?.env,
+    ).toEqual({ OK: 'y' });
+  });
+
+  it('returns undefined for anything without an id', () => {
+    // An entry that cannot be named cannot be retried or authenticated with.
+    for (const raw of [null, 'string', {}, { name: 'no id' }, { id: '' }]) {
+      expect(normalizeAuthMethod(raw, 'x')).toBeUndefined();
+    }
+  });
+
+  it('falls back to the id when the method advertises no name', () => {
+    expect(normalizeAuthMethod({ id: 'only-id' })).toMatchObject({ id: 'only-id', name: 'only-id' });
   });
 });

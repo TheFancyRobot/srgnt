@@ -23,18 +23,20 @@ export const PI_HARNESS_ID = 'pi';
 /**
  * Pi speaks ACP only through the community `pi-acp` adapter (`npx pi-acp`),
  * which wraps the `pi` CLI. Because it is adapter-mediated rather than native,
- * three quirks are declared up front so the UI degrades *visibly* instead of
- * silently mis-behaving:
+ * quirks are declared up front so the UI degrades *visibly* instead of silently
+ * mis-behaving:
  *
  * - `adapter-mediated`     — not a native ACP agent; a shim translates.
  * - `permission-routing-gaps` — `session/request_permission` may not fully
  *   round-trip through the adapter.
  * - `mcp-passthrough-gaps` — MCP servers injected via `session/new` may not
  *   reach the underlying agent, so `mcpServers` is force-disabled below.
+ * - `no-client-delegation` — the adapter runs pi's tools in its own process and
+ *   calls none of srgnt's `fs/*` or `terminal/*` services (STEP-22-05 probe 4).
  *
- * These are the *documented starting assumptions* from the ACP-pivot research;
- * STEP-22-05's live spike confirms or refines them against the captured
- * `initialize` payload.
+ * The first three are the *documented starting assumptions* from the ACP-pivot
+ * research; STEP-22-05's live spike confirms or refines them against the
+ * captured `initialize` payload, and the fourth is one of its measurements.
  */
 export const piDefinition: HarnessDefinition = {
   id: PI_HARNESS_ID,
@@ -49,7 +51,7 @@ export const piDefinition: HarnessDefinition = {
   },
   // `npx` is always present; the prerequisite the user must install is `pi`.
   detectCommand: 'pi',
-  quirks: ['adapter-mediated', 'permission-routing-gaps', 'mcp-passthrough-gaps'],
+  quirks: ['adapter-mediated', 'permission-routing-gaps', 'mcp-passthrough-gaps', 'no-client-delegation'],
   // The adapter cannot be trusted to forward injected MCP servers, so clamp the
   // protocol-baseline `mcpServers` capability off regardless of negotiation.
   capabilityOverrides: { mcpServers: false },

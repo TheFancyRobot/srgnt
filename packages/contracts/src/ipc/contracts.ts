@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { PositiveInt } from '../shared-schemas.js';
 import { SLaunchContext } from '../entities/launch.js';
-import { SHarnessDefinition } from '../harness.js';
+import { SAuthMethod, SHarnessDefinition, SHarnessQuirk } from '../harness.js';
 import { SProject, SProjectPermissionPolicy } from '../project.js';
 import { SSession, SSessionEvent } from '../session.js';
 
@@ -109,6 +109,11 @@ export const ipcChannels = {
   harnessList: 'harness:list',
   harnessSaveOverride: 'harness:save-override',
   harnessResetOverride: 'harness:reset-override',
+  // Last-negotiated capabilities (PHASE-25, STEP-25-03). A channel of its own,
+  // NOT an extension of `harness:list`: list answers "what is configured, and
+  // does it detect?" and refreshes on save/probe, while this answers "what did
+  // we measure?" and refreshes when a session connects. One shape, read-only.
+  harnessCapabilities: 'harness:capabilities',
 } as const;
 
 type IpcChannelValue = (typeof ipcChannels)[keyof typeof ipcChannels];
@@ -562,6 +567,14 @@ export const SChatSessionNewRequest = Schema.Struct({
    * time a directory is used.
    */
   projectId: Schema.optional(Schema.String),
+  /**
+   * Authenticate with this method id before `session/new` (STEP-25-03). Set only
+   * by the auth panel's `rpc-authenticate` affordance. It rides on session
+   * creation rather than on a channel of its own because an auth failure tears
+   * the connection down: there is no live agent left to authenticate against, so
+   * the retry has to be a fresh connect that runs `authenticate` first.
+   */
+  authMethodId: Schema.optional(Schema.String),
 });
 export type ChatSessionNewRequest = Schema.Schema.Type<typeof SChatSessionNewRequest>;
 
@@ -604,6 +617,34 @@ export const SChatSessionNewResponse = Schema.Struct({
   modes: Schema.optional(SChatSessionModes),
 });
 export type ChatSessionNewResponse = Schema.Schema.Type<typeof SChatSessionNewResponse>;
+
+/**
+ * The agent answered `session/new` with the ACP auth-required error (JSON-RPC
+ * `-32000`, verified against `@agentclientprotocol/sdk` 1.2.1). Returned INSTEAD
+ * of a session, as data rather than a thrown string: a raw JSON-RPC error is the
+ * first thing a new opencode user would otherwise hit, and the guidance out of
+ * it (which methods exist, what they cost the user) is exactly what an Error
+ * message cannot carry.
+ *
+ * Only `chat:session:new` answers with this. Fork and reconnect keep returning
+ * {@link SChatSessionNewResponse} — an auth wall there is a plain failure, and
+ * widening those shapes for a case neither can act on buys nothing.
+ */
+export const SChatAuthRequired = Schema.Struct({
+  authRequired: Schema.Literal(true),
+  harnessId: Schema.String,
+  harnessName: Schema.String,
+  docsUrl: Schema.optional(Schema.String),
+  /** Normalized at the seam, so the panel never sees raw SDK shapes. */
+  authMethods: Schema.Array(SAuthMethod),
+  /** The agent's own error text, shown verbatim under the guidance. */
+  detail: Schema.String,
+});
+export type ChatAuthRequired = Schema.Schema.Type<typeof SChatAuthRequired>;
+
+/** What `chat:session:new` resolves with: an open session, or the auth wall. */
+export const SChatSessionNewResult = Schema.Union(SChatSessionNewResponse, SChatAuthRequired);
+export type ChatSessionNewResult = Schema.Schema.Type<typeof SChatSessionNewResult>;
 
 export const SChatSessionPromptRequest = Schema.Struct({
   sessionId: Schema.String,
@@ -995,3 +1036,52 @@ export const SHarnessMutationResponse = Schema.Union(
   Schema.Struct({ ok: Schema.Literal(false), error: Schema.String }),
 );
 export type HarnessMutationResponse = Schema.Schema.Type<typeof SHarnessMutationResponse>;
+
+// Capability matrix IPC (PHASE-25, STEP-25-03). The one capability channel; see
+// `ipcChannels.harnessCapabilities` for why it is not part of `harness:list`.
+
+/**
+ * Whether a row describes the current definition.
+ *
+ * `stale` is decided by fingerprint, not by age: the definition changed under
+ * the same id, so the measurement describes a harness that no longer exists.
+ * Precomputed in main so every renderer agrees on staleness.
+ */
+export const SHarnessCapabilityState = Schema.Literal('measured', 'stale', 'not-yet-measured');
+export type HarnessCapabilityState = Schema.Schema.Type<typeof SHarnessCapabilityState>;
+
+/**
+ * Where a capability's value came from. `session` fields (`modes`,
+ * `slashCommands`) are not knowable at `initialize` and default to `false`, so a
+ * matrix that read them as a plain "no" would under-report every agent that has
+ * them — opencode advertises 93 slash commands and none of them exist at
+ * initialize time.
+ */
+export const SCapabilityProvenance = Schema.Literal('initialize', 'session');
+export type CapabilityProvenance = Schema.Schema.Type<typeof SCapabilityProvenance>;
+
+export const SHarnessCapabilityRow = Schema.Struct({
+  harnessId: Schema.String,
+  /** The definition's display name. Rows are labelled from data, never from the id. */
+  name: Schema.String,
+  docsUrl: Schema.optional(Schema.String),
+  /** Declared quirks — what drives the behavioral columns (and the trust badge). */
+  quirks: Schema.Array(SHarnessQuirk),
+  state: SHarnessCapabilityState,
+  /** STEP-25-01 cache fields, passed through unchanged (opaque; shape owned by @srgnt/harness). */
+  negotiated: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  effective: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  /** Per capability key; absent keys are "we do not model this field". */
+  provenance: Schema.Record({ key: Schema.String, value: SCapabilityProvenance }),
+  /** Normalized from the measured negotiation, so cached and live rows agree. */
+  authMethods: Schema.Array(SAuthMethod),
+  agentVersion: Schema.optional(Schema.String),
+  capturedAt: Schema.optional(Schema.String),
+  definitionFingerprint: Schema.optional(Schema.String),
+});
+export type HarnessCapabilityRow = Schema.Schema.Type<typeof SHarnessCapabilityRow>;
+
+export const SHarnessCapabilitiesResponse = Schema.Struct({
+  entries: Schema.Array(SHarnessCapabilityRow),
+});
+export type HarnessCapabilitiesResponse = Schema.Schema.Type<typeof SHarnessCapabilitiesResponse>;

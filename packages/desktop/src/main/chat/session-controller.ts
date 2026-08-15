@@ -3,6 +3,7 @@ import { mkdtempSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type {
+  ChatAuthRequired,
   ChatPermissionCloseEvent,
   ChatPermissionRequestEvent,
   ChatSessionModes,
@@ -20,7 +21,7 @@ import type {
   SessionEvent,
   SessionStatus,
 } from '@srgnt/contracts';
-import { deriveSessionTitle } from '@srgnt/contracts';
+import { deriveSessionTitle, normalizeAuthMethod } from '@srgnt/contracts';
 import type { AcpAgentConnection, ClientPorts, SupervisorEvent } from '@srgnt/harness';
 import { createPermissionEngine, createProjectPolicyHook } from '@srgnt/runtime';
 import { Effect } from 'effect';
@@ -723,6 +724,42 @@ export function hasAvailableCommands(update: unknown): boolean {
   );
 }
 
+/**
+ * ACP's auth-required error, verified against `@agentclientprotocol/sdk` 1.2.1:
+ * `RequestError.authRequired` is JSON-RPC `-32000` with the message
+ * "Authentication required". The client wrapper preserves the code on
+ * `ProtocolError.code`, so detection is on the code — never on the message text,
+ * which the agent is free to append to.
+ */
+const AUTH_REQUIRED_CODE = -32000;
+
+/**
+ * Whether a *typed* ACP failure is the auth wall.
+ *
+ * The typed error is captured with `Effect.tapError` before it is run, because
+ * `Effect.runPromise` rejects with a `FiberFailure` that keeps only the message:
+ * the JSON-RPC code does not survive the boundary, and matching on the text
+ * would make srgnt's auth surface depend on an agent's error prose.
+ */
+function isAuthRequiredFailure(failure: unknown): boolean {
+  if (failure === null || typeof failure !== 'object') return false;
+  const error = failure as { _tag?: unknown; code?: unknown };
+  return error._tag === 'ProtocolError' && error.code === AUTH_REQUIRED_CODE;
+}
+
+/**
+ * The auth wall as data, thrown so the IPC layer can answer with it instead of a
+ * raw JSON-RPC string. Not detected by `instanceof` downstream: `chat/index.ts`
+ * imports this module type-only (the ESM/CJS rule at the top of this file), so
+ * the `authRequired` property is the marker.
+ */
+export class ChatAuthRequiredError extends Error {
+  constructor(readonly authRequired: ChatAuthRequired) {
+    super(authRequired.detail);
+    this.name = 'ChatAuthRequiredError';
+  }
+}
+
 function toError(cause: unknown): Error {
   if (cause instanceof Error) return cause;
   if (cause !== null && typeof cause === 'object' && 'message' in cause) {
@@ -769,11 +806,23 @@ export class ChatSessionController {
     this.connect = options.connect ?? defaultChatConnect;
   }
 
-  /** initialize → session/new; starts streaming updates. Returns a chat handle. */
+  /**
+   * initialize → session/new; starts streaming updates. Returns a chat handle.
+   *
+   * Throws {@link ChatAuthRequiredError} when the agent answers `session/new`
+   * with the ACP auth wall, so the IPC layer can hand the renderer the harness's
+   * advertised auth methods instead of a raw JSON-RPC string.
+   *
+   * `authMethodId` runs `authenticate` on the fresh connection first — the
+   * retry path for an `rpc-authenticate` method. It is a session-creation
+   * argument rather than a channel of its own because the failed connection is
+   * already gone by the time the user picks a method.
+   */
   async newSession(
     target: ChatTarget,
     project: ChatSessionProject = {},
     lineage?: ChatSessionLineage,
+    authMethodId?: string,
   ): Promise<ChatSessionNewResponse> {
     // A UUID, not a counter: the handle is now also the on-disk directory name
     // and survives restarts, so it has to be unique across processes, not just
@@ -796,8 +845,22 @@ export class ChatSessionController {
     } = opened;
     let acpSessionId: string;
     let modes: ChatSessionModes | undefined;
+    // The typed ACP failure, kept because `Effect.runPromise` rejects with a
+    // FiberFailure that has dropped the JSON-RPC code by then.
+    let failure: unknown;
+    const capture = <A, E>(effect: Effect.Effect<A, E>): Promise<A> =>
+      Effect.runPromise(
+        effect.pipe(
+          Effect.tapError((error) =>
+            Effect.sync(() => {
+              failure = error;
+            }),
+          ),
+        ),
+      );
     try {
-      const result = await Effect.runPromise(connection.newSession({ cwd: opened.cwd, mcpServers: [] }));
+      if (authMethodId !== undefined) await capture(connection.authenticate({ methodId: authMethodId }));
+      const result = await capture(connection.newSession({ cwd: opened.cwd, mcpServers: [] }));
       acpSessionId = result.sessionId;
       modes = readModes(result);
       // `modes` exists only on the session/new response — observed, never negotiated.
@@ -809,6 +872,29 @@ export class ChatSessionController {
       // supervised child with no handle to dispose it by.
       services.disposeAll();
       await cleanup();
+      if (isAuthRequiredFailure(failure)) {
+        // Built from what the agent itself advertised at `initialize`, which
+        // succeeded — the auth wall is at `session/new`. Nothing here is keyed
+        // on the harness: the methods, the fallback executable and the docs link
+        // all come from the definition and the negotiation.
+        throw new ChatAuthRequiredError({
+          authRequired: true,
+          harnessId: harness.id,
+          harnessName: harness.name,
+          ...(opened.definition?.docsUrl !== undefined ? { docsUrl: opened.definition.docsUrl } : {}),
+          authMethods: connection.negotiated.authMethods
+            .map((method) =>
+              normalizeAuthMethod(
+                method,
+                opened.definition === undefined
+                  ? undefined
+                  : (opened.definition.detectCommand ?? opened.definition.launch.command),
+              ),
+            )
+            .filter((method) => method !== undefined),
+          detail: toError(cause).message,
+        });
+      }
       throw toError(cause);
     }
     this.sessions.set(handle, {
@@ -902,6 +988,8 @@ export class ChatSessionController {
      * harness, and for a headless controller with no cache wired.
      */
     reportCapabilities: (observed: { modes?: boolean; slashCommands?: boolean }) => void;
+    /** The effective registry definition, when the target is one. Absent for the mock. */
+    definition: HarnessDefinition | undefined;
     cwd: string;
   }> {
     // The cwd must be known *before* connecting: client services are confined to
@@ -1068,6 +1156,9 @@ export class ChatSessionController {
       unsubscribeStatus,
       setIdleHold: connected.setIdleHold ?? ((): void => {}),
       reportCapabilities,
+      // Carried out so the auth wall can name the harness's docs and its own
+      // binary; absent for the mock, which is not a registry harness.
+      definition,
       cwd,
     };
   }

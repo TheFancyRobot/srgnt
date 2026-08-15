@@ -5,13 +5,14 @@ contract_version: 1
 title: Add capability matrix view and auth error surfacing
 step_id: STEP-25-03
 phase: '[[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|Phase 25 opencode integration and harness settings]]'
-status: planned
-owner: ''
+status: done
+owner: claude-opus-5
 created: '2026-07-10'
-updated: '2026-08-14'
+updated: '2026-08-15'
 depends_on:
   - STEP-25-01
-related_sessions: []
+related_sessions:
+  - '[[05_Sessions/2026-08-15-130000-add-capability-matrix-view-and-auth-error-surfacing-claude-opus-5|SESSION-2026-08-15-130000 claude-opus-5 session for Add capability matrix view and auth error surfacing]]'
 related_bugs: []
 tags:
   - agent-vault
@@ -80,16 +81,19 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Agent-Managed Snapshot
 
 <!-- AGENT-START:step-agent-managed-snapshot -->
-- Status: planned
-- Current owner: 
-- Last touched: 2026-07-10
-- Next action: Read [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing/Execution_Brief|Execution Brief]] and [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing/Validation_Plan|Validation Plan]].
+- Status: done
+- Current owner: claude-opus-5
+- Last touched: 2026-08-15
+- Next action: STEP-25-04 — the cross-harness lessons note. Its inputs from this step are listed in [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing/Implementation_Notes|Implementation Notes]] (auth metadata is not reliably machine-actionable; `configOptions` is a missing generic surface; `session/close`/`session/fork` unmodelled).
 <!-- AGENT-END:step-agent-managed-snapshot -->
 
 ## Implementation Notes
 
-- Capture facts learned during execution.
-- Prefer short bullets with file paths, commands, and observed behavior.
+- Full detail in [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing/Implementation_Notes|Implementation Notes]].
+- **Verified, not assumed:** ACP auth-required is JSON-RPC `-32000` (`RequestError.authRequired`, `@agentclientprotocol/sdk` 1.2.1); `Effect.runPromise` rejects with a `FiberFailure` that drops the code, so the typed failure is captured with `Effect.tapError` and detection never matches on message text.
+- **Measured, per the corrected brief:** pi's `pi_terminal_login` → `external-command` (command rebuilt from its own `args` + the definition's binary); opencode's → `docs-only`, because it advertises no `type` and no `args`. Both asserted against the committed fixtures.
+- Capabilities live on exactly one channel (`harness:capabilities`); `harness:list` is unchanged and a test asserts it.
+- Pi gained a fourth quirk, `no-client-delegation` (STEP-22-05 probe 4), so the delegation column has data; its fingerprint change makes any pre-existing cached pi row read stale until the next connect.
 
 ## Human Notes
 
@@ -98,10 +102,11 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Session History
 
 <!-- AGENT-START:step-session-history -->
-- No sessions yet.
+- [[05_Sessions/2026-08-15-130000-add-capability-matrix-view-and-auth-error-surfacing-claude-opus-5|SESSION-2026-08-15-130000]] — claude-opus-5, branch `phase/25-step-03-capability-matrix`: shipped the matrix, the normalized auth-method payload, and the auth panel.
 <!-- AGENT-END:step-session-history -->
 
 ## Outcome Summary
 
-- Record the final result, the validation performed, and any follow-up required.
-- If the step is blocked, say exactly what is blocking it.
+- Done by automated checks (contracts 207, harness 148 +3 skipped, runtime 458, desktop 1260, e2e auth 1 + chat/harnesses/sessions 14, `pnpm -r lint` and `pnpm -r build` clean). Full result and its evidence scope in [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Steps/Step_03_add-capability-matrix-view-and-auth-error-surfacing/Outcome|Outcome]].
+- Shipped: Settings → Capabilities (six honest cell states + two quirk-driven behavioral columns, all from registry/cache/quirk data), the `harness:capabilities` channel, `SAuthMethod` + its normalizer in contracts, `AuthPanel` fed by a `chat:session:new` that answers the auth wall as data, and an `authRequired` mock-agent gate.
+- **Narrower than "done" implies, stated where it is claimed:** fixture → rendered row is asserted at two seams rather than end to end; auth detection covers session creation only (not a mid-conversation expiry); and there was **no manual run against a real unauthenticated harness**, so "the guidance is followable end-to-end" is unproven against a real agent.

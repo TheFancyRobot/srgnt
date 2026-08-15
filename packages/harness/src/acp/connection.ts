@@ -4,6 +4,8 @@ import {
   ClientSideConnection,
   ndJsonStream,
   PROTOCOL_VERSION,
+  type AuthenticateRequest,
+  type AuthenticateResponse,
   type Client,
   type ClientCapabilities,
   type Stream as AcpStream,
@@ -330,6 +332,19 @@ export class AcpAgentConnection {
           ? applyCapabilityOverrides(negotiated, this.capabilityOverrides)
           : negotiated,
     };
+  }
+
+  /**
+   * `authenticate` — for an auth method the agent advertised at `initialize`
+   * whose own metadata names no external command (STEP-25-03's
+   * `rpc-authenticate` kind). Called on a FRESH connection before `session/new`,
+   * because the auth-required failure that prompts it has already torn the
+   * previous one down.
+   */
+  authenticate(
+    params: AuthenticateRequest,
+  ): Effect.Effect<AuthenticateResponse, ProtocolError | ConnectionLost> {
+    return this.call('authenticate', () => this.inner.authenticate(params));
   }
 
   /** `session/new` — registers the returned sessionId with the update hub. */

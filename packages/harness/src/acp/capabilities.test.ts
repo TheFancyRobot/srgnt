@@ -1,5 +1,7 @@
 import type { InitializeResponse } from '@agentclientprotocol/sdk';
+import { normalizeAuthMethod } from '@srgnt/contracts';
 import { describe, expect, it } from 'vitest';
+import opencodeInitialize from '../testing/fixtures/opencode/initialize.json';
 import spikeFrames from '../testing/fixtures/pi-spike/spike-frames.json';
 import {
   applyCapabilityOverrides,
@@ -156,5 +158,59 @@ describe('mergeSessionCapabilities (session-discovered facts)', () => {
   it('touches nothing else', () => {
     const merged = mergeSessionCapabilities(base, { modes: true, slashCommands: true });
     expect({ ...merged, modes: false, slashCommands: false }).toEqual(base);
+  });
+});
+
+describe('normalizeAuthMethod over the measured fixtures', () => {
+  const piMethod = spikeFrames.probe3_initialize_response.msg.result.authMethods[0];
+  const opencodeMethod = opencodeInitialize.result.authMethods[0];
+
+  it("builds pi's login command from the method's own data, not from a harness id", () => {
+    // `detectCommand` is what pi's `type: 'terminal'` method means by an argv it
+    // never names an executable for.
+    const method = normalizeAuthMethod(piMethod, 'pi');
+    expect(method).toEqual({
+      id: 'pi_terminal_login',
+      name: 'Launch pi in the terminal',
+      description: 'Start pi in an interactive terminal to configure API keys or login',
+      kind: 'external-command',
+      command: { command: 'pi', args: ['--terminal-login'], env: {} },
+    });
+  });
+
+  it('derives that command from the fixture: changing its args changes the command', () => {
+    const mutated = normalizeAuthMethod({ ...piMethod, args: ['--login', '--verbose'] }, 'pi');
+    expect(mutated?.command?.args).toEqual(['--login', '--verbose']);
+    // …and changing the harness binary changes the executable, so nothing in the
+    // rendered command is hardcoded.
+    expect(normalizeAuthMethod(piMethod, '/opt/pi/bin/pi')?.command?.command).toBe('/opt/pi/bin/pi');
+  });
+
+  it("degrades opencode's prose-only method to docs-only", () => {
+    // MEASURED, not hypothetical (STEP-25-01): opencode's sole method carries no
+    // `type` and no `args` — its login command exists only inside `description`.
+    // Reconstructing `opencode auth login` from that prose is exactly what the
+    // no-hardcoding constraint forbids, so the honest kind is docs-only.
+    expect(opencodeMethod).not.toHaveProperty('type');
+    expect(opencodeMethod).not.toHaveProperty('args');
+    expect(normalizeAuthMethod(opencodeMethod, 'opencode')).toEqual({
+      id: 'opencode-login',
+      name: 'Login with opencode',
+      description: 'Run `opencode auth login` in the terminal',
+      kind: 'docs-only',
+    });
+    expect(normalizeAuthMethod(opencodeMethod, 'opencode')).not.toHaveProperty('command');
+  });
+
+  it('carries the same normalization for every advertised method of both fixtures', () => {
+    // The two shipped harnesses land on different kinds from the same function —
+    // the point of normalizing at all.
+    const kinds = [
+      ...spikeFrames.probe3_initialize_response.msg.result.authMethods.map(
+        (method) => normalizeAuthMethod(method, 'pi')?.kind,
+      ),
+      ...opencodeInitialize.result.authMethods.map((method) => normalizeAuthMethod(method, 'opencode')?.kind),
+    ];
+    expect(kinds).toEqual(['external-command', 'docs-only']);
   });
 });

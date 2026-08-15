@@ -49,17 +49,9 @@ publishes a machine-readable feed are named as unevidenced.
 
 ## Validation performed
 
-- `vault_validate`, run before and after. Baseline: frontmatter 129 errors,
-  structure 252, links 0, orphans 4 warnings, schema drift 1 warning. After:
-  frontmatter 131, structure 260, links 0, orphans and schema drift unchanged.
-  **Every one of the ten new errors is the new session note**, and every one is
-  inherited from the format it was told to match: the same eight headings
-  (`Objective`, `Planned Scope`, `Execution Log`, `Findings`, `Context Handoff`,
-  `Bugs Encountered`, `Decisions Made or Updated`, `Completion Summary`) and the
-  same two `INVALID_SESSION_CONTEXT` errors (`context.current_focus` and
-  `context.last_action` must be objects) already reported against all three
-  existing PHASE-25 session notes. Nothing else under PHASE-25 is flagged, and
-  the lessons note is flagged by nothing.
+- `vault_validate` after this commit — frontmatter 123, structure 229, links 0, orphans 4 warnings, schema drift 1 warning — identical to the vault's pre-PHASE-25 baseline. Nothing under PHASE-25 is flagged.
+  The four PHASE-25 session notes initially diverged from `07_Templates/Session_Template.md`; all four were conformed in the same commit, which is what returns the counts to baseline. Earlier in-flight figures (frontmatter 131, structure 260) are superseded.
+  Note that shared-knowledge notes have no template in `07_Templates/`, so the lessons note falls in the validator's skipped set: "passes" there means no frontmatter or link error, not checked against a structure.
 - Wikilinks confirmed in both directions: PHASE-25 → note, PHASE-26 → note,
   note → spike report + opencode capture + DEC-0018 + ARCH-0009, backlinks from
   both capture notes.

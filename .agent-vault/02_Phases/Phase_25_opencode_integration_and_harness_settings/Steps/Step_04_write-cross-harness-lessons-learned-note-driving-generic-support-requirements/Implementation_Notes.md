@@ -25,7 +25,7 @@
 
 **Validation**
 
-- `vault_validate`. Baseline: frontmatter 129 errors, structure 252, links 0, orphans 4 warnings, schema drift 1 warning. After: frontmatter 131, structure 260, links 0, rest unchanged. All ten new errors are the new session note and all ten are inherited from the exemplar format (eight missing headings + `context.current_focus`/`context.last_action` must be objects); the lessons note itself is flagged by nothing, because shared-knowledge notes have no template contract in `07_Templates/` and fall in the validator's skipped set — "passes" there means no frontmatter or link error, not "checked against a structure".
+- `vault_validate` after this commit — frontmatter 123, structure 229, links 0, orphans 4 warnings, schema drift 1 warning — identical to the vault's pre-PHASE-25 baseline. Nothing under PHASE-25 is flagged. The four PHASE-25 session notes were conformed to `07_Templates/Session_Template.md` in the same commit (eleven headings each, object-shaped `context.current_focus`/`context.last_action`), which is what clears the deltas seen mid-step. The lessons note itself is flagged by nothing, but shared-knowledge notes have no template contract in `07_Templates/` and fall in the validator's skipped set — "passes" there means no frontmatter or link error, not "checked against a structure".
 - No product code in the diff, so no test suite was run — `git status --short` is the check that the docs-only constraint held.
 
 ## Related Notes

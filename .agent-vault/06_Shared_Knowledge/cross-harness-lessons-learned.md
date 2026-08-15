@@ -48,7 +48,7 @@ nothing exercised it; "measured" means a probe drove it.
 | **3. Capability gaps** | `loadSession: true`, `resumeSession: false`, `sessionList: true`, `embeddedContext: false`, `images: true`. | `loadSession/resume/list: true` **plus `close` and `fork`**, which `NegotiatedCapabilities` does not model at all; `embeddedContext: true`. |
 | **4. Quirks needed** | **Four**: `adapter-mediated`, `permission-routing-gaps`, `mcp-passthrough-gaps` (three pre-declared from research, all three confirmed by probes) and `no-client-delegation`, added in STEP-25-03 from STEP-22-05 probe 4. Plus one override, `capabilityOverrides.mcpServers = false`. | **Zero quirks, zero overrides** — and the effective view equals the negotiated view, asserted in the gated IT. The target was zero and it held. |
 | **5. Permission behavior** | **Measured: self-approves.** `session/request_permission` calls received during a real tool-executing turn = 0; the tool ran anyway. | **Not measured.** The capture's trivial prompt triggered no tool call, so `permissionRequests = 0` is an absence of stimulus, not a finding. |
-| **6. Session load / resume** | **Measured:** `session/load` works and returns a rich payload (`configOptions` with model + `thought_level`, `models`, `modes` = thinking levels, `_meta.piAcp`); `session/resume` → JSON-RPC `-32601 Method not found`. | **Advertised only.** `resume` and `load` both appear in `sessionCapabilities`; neither was driven. |
+| **6. Session load / resume** | **Measured:** `session/load` works and returns a rich payload (`configOptions` with model + `thought_level`, `models`, `modes` = thinking levels, `_meta.piAcp`); `session/resume` → JSON-RPC `-32601 Method not found`. | **Advertised only, and at two different levels:** `loadSession: true` sits directly on `agentCapabilities`, while `resume` (with `list`, `close`, `fork`) is nested under `agentCapabilities.sessionCapabilities` — which is also how `negotiateCapabilities` reads them. Neither was driven. The split matters for REQ-26-14, which asks the runner to retain and report raw capability keys. |
 | **7. MCP passthrough** | **Measured: does not pass through.** A valid stdio echo server injected via `session/new.mcpServers` was never launched and the tool was never called — which is why the definition clamps `mcpServers` off. `mcpCapabilities: {http:false, sse:false}`. | **Advertised, unprobed.** `mcpCapabilities: {http:true, sse:true}` plus stdio — the only harness so far advertising non-stdio transports. No echo-server probe was run. |
 | **8. Update-stream shape** | One tool-executing turn: `agent_thought_chunk` ×37, `tool_call_update` ×24, `agent_message_chunk` ×23, `session_info_update` ×2, `tool_call` ×1, `available_commands_update` ×1. Recorded fixtures also carry an unknown variant (`pi_experimental_reasoning_summary`) the tolerant reader must survive. | One trivial no-tool turn: `available_commands_update` ×1 (**93 commands**), `agent_message_chunk` ×1, `usage_update` ×1. The commands advertisement arrives on the **first turn**, with nothing at `initialize` hinting at it. |
 
@@ -158,11 +158,15 @@ Electron does not see without a login shell; STEP-25-01 Outcome § Follow-up nam
 the binary-path override as the open item.
 *Lands on:* **[editor]**, **[catalog]**, **[docs]**.
 
-### REQ-26-02 — Env values are references, never literals
+### REQ-26-02 — Secret-shaped env values are references; ordinary literals stay literal
 
 The editor's env fields must keep the `${env:NAME}` indirection, and the
 service-side rejection of literal secrets on sensitive-looking keys must apply
-to anything the editor can write, including argv.
+to anything the editor can write, including argv. **Scope it to secrets, not to
+all env values:** the shipped rule refuses a literal only when the *key* matches
+`SENSITIVE_KEY` (or an argv flag does), so `NODE_ENV=production` and a plain
+endpoint stay literal. A Phase-26 editor that demanded indirection for every
+value would reject ordinary configuration the current service accepts.
 *Evidence:* `packages/desktop/src/main/services/harnesses.ts` (`SENSITIVE_KEY`,
 `findSensitiveLiteral` across env **and** argv); STEP-25-02 Outcome § hardening
 — literal secrets rejected while `${env:NAME}` is stored literally and resolved

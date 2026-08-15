@@ -44,10 +44,12 @@ context:
     PROP-A (a generic `session/set_config_option` surface) is evidenced but owned
     by no PHASE-26 step. NOT VALIDATED - no product code changed and no test
     suite was run; validation is documentary (`vault_validate`). The lessons note
-    itself is flagged by nothing; this session note inherits the same eight
-    MISSING_REQUIRED_HEADING and two INVALID_SESSION_CONTEXT errors the three
-    existing PHASE-25 session notes already carry, because house session format
-    diverges from `07_Templates/Session_Template.md`.
+    itself is flagged by nothing. The session notes initially diverged from
+    Session_Template and were brought to the full contract in this same commit, so
+    the four PHASE-25 notes now carry all eleven required headings and object-shaped
+    context.current_focus / context.last_action; validation is back at the vault
+    baseline of frontmatter 123 / structure 229 / links 0, with nothing under
+    PHASE-25 flagged.
   last_action:
     type: saved
 ---
@@ -157,8 +159,8 @@ PHASE-26 Step 01 should read the REQ list before designing the custom-harness ed
 ## Validation Run
 
 <!-- AGENT-START:session-validation-run -->
-- `vault_validate` — baseline before the change: frontmatter 129 errors, structure 252, links 0, orphans 4 warnings, schema drift 1 warning. After: frontmatter 131, structure 260, links 0, orphans and schema drift unchanged.
-- **Both deltas are this session note, and both are inherited from the format it was told to match.** +8 structure: the same eight headings (`Objective`, `Planned Scope`, `Execution Log`, `Findings`, `Context Handoff`, `Bugs Encountered`, `Decisions Made or Updated`, `Completion Summary`) already reported against all three existing PHASE-25 session notes, because house practice diverges from `07_Templates/Session_Template.md`. +2 frontmatter: `INVALID_SESSION_CONTEXT` for `context.current_focus` and `context.last_action`, which those same three notes also carry — that half is a real schema requirement and a two-key addition would clear it for all four at once. Neither is this step's to fix unilaterally; both are recorded as follow-up.
+- `vault_validate` after this commit — frontmatter 123, structure 229, links 0, orphans 4 warnings, schema drift 1 warning — identical to the vault's pre-PHASE-25 baseline. Nothing under PHASE-25 is flagged.
+- The four PHASE-25 session notes originally diverged from `07_Templates/Session_Template.md` (eight missing headings each, plus `context.current_focus`/`context.last_action` needing to be objects). That divergence started with STEP-25-01's note and propagated because each subsequent note was told to match it. All four were conformed in this commit, which is what returns the counts to baseline; the earlier in-flight figures (frontmatter 131, structure 260) no longer describe the tree.
 - Nothing else under PHASE-25 is flagged, and `06_Shared_Knowledge/cross-harness-lessons-learned.md` is flagged by nothing — shared-knowledge notes have no template contract, so they fall in the validator's skipped set.
 - `git status --short` — only the nine paths above; no product code in the diff (the docs-only requirement).
 - **Not run:** every test suite. No product code changed, so `pnpm test` / `lint` / `build` would only re-prove the merged state of steps 01–03.

@@ -112,6 +112,47 @@ off.
    The `not-installed` / `probe-failed` paths are covered with injected probes
    and the `hang-probe.mjs` fixture, never by uninstalling.
 
+## Addendum — protocol probe 2026-08-15 (PHASE-26 refinement)
+
+Four surfaces STEP-25-01 left unmeasured were driven directly against
+`opencode acp` 1.18.18 during PHASE-26 refinement. **No prompt was sent, so no
+model turn ran and no provider tokens were spent** — these are protocol
+round-trips only. Same version as the original capture.
+
+| Method | Params sent | Result |
+| --- | --- | --- |
+| `session/set_config_option` | `{sessionId, configId: 'mode', value: 'build'}` | **works** — returns the updated `configOptions` (both `model` and `mode` groups) |
+| `session/set_mode` | `{sessionId, modeId: 'build'}` | **works** — returns `{}` |
+| `session/fork` | `{sessionId, cwd, mcpServers: []}` | **works** — returns `{sessionId, configOptions}` |
+| `session/close` | `{sessionId}` | **works** — returns `{}` |
+
+Consequences:
+
+1. **Correction to this note's Finding 1.** It said "`session/set_mode` is the
+   wrong method for them (`session/set_config_option` is)". Measured: **both are
+   accepted by opencode.** The practical conclusion still holds — srgnt should
+   drive config options — but for the reason the ACP spec gives, not because
+   `set_mode` fails. Per
+   `agentclientprotocol.com/protocol/v1/session-config-options`, **Session Config
+   Options supersede the older Session Modes API**, agents in transition are
+   expected to advertise `configOptions` with `category: "mode"` *alongside* the
+   legacy `modes` field, and
+   `agentclientprotocol.com/protocol/v1/session-modes` carries the notice that
+   "dedicated session mode methods will be removed in a future version of the
+   protocol". opencode is exactly that transitional case: it answers both and
+   advertises only `configOptions`.
+2. **`session/set_config_option` params are `{sessionId, configId, value}`** —
+   `configId`, not `optionId`. A first attempt with `optionId` returned
+   `-32602 Invalid params`, which is worth recording: the method existing but
+   rejecting bad params is easy to misread as the method being absent.
+3. **`session/close` and `session/fork` are real, not just advertised.** This is
+   what PROP-B in the lessons note was waiting on. `fork` returns a new
+   `sessionId` plus that session's `configOptions`, which is directly relevant to
+   PHASE-24's replay-based fork.
+
+Probe script kept out of the repo deliberately (throwaway); the reproduction is
+the four frames above against `opencode acp` in a temp cwd.
+
 ## Explicitly not measured in this step
 
 Recorded so nobody reads silence as evidence:

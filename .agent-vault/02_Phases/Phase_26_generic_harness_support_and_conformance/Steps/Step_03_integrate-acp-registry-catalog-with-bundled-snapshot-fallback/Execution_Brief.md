@@ -2,10 +2,21 @@
 
 ## Why
 
-- Hand-writing a `HarnessDefinition` (STEP-26-01) requires knowing an agent's launch incantation; a catalog of known ACP agents removes that barrier — pick "Gemini CLI", get a prefilled definition draft. The ACP ecosystem site (agentclientprotocol.com) lists known agents (Gemini CLI, claude-code-acp, codex-acp, opencode, Pi's adapter, …); this step surfaces that list in-app.
+- Hand-writing a `HarnessDefinition` (STEP-26-01) requires knowing an agent's launch incantation; a catalog of known ACP agents removes that barrier — pick "Gemini CLI", get a prefilled definition draft. The ACP ecosystem site (agentclientprotocol.com) lists known agents (Gemini CLI, claude-acp, codex-acp, opencode, Pi's adapter, …); this step surfaces that list in-app.
 - The failure architecture is already decided (ARCH-0009 failure-containment: "ACP Registry or remote catalogs unreachable → bundled static snapshot serves harness discovery — fail-to-builtin, the aggregator-era catalog lesson"). The aggregator era proved remote catalogs fail in practice; the snapshot is not a nice-to-have, it is the primary path.
 - DEC-0017's local-first rule bounds the networking: no telemetry, no phone-home. The explicit, user-initiated catalog fetch is the *only* sanctioned network call this feature adds.
-- **Verify at execution (do NOT invent):** whether agentclientprotocol.com exposes a machine-readable feed (JSON endpoint) is unverified at refinement time. Check first. If no stable feed exists, the bundled snapshot IS the catalog, "refresh from network" ships behind the same `loadCatalog(fetcher)` interface as a disabled/hidden affordance, and the documented maintainer refresh procedure is the only update path. The step succeeds either way — the offline flow is the acceptance bar.
+- **VERIFIED 2026-08-15 — the feed exists, so this is a real integration, not a snapshot-only step.**
+  - Endpoint: `https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json`
+  - Schema documented at `https://github.com/agentclientprotocol/registry` → `FORMAT.md`; entries are contributed as `agent.json` files against a published schema.
+  - Top level: `version` (schema version string, e.g. `"1.0.0"`), `agents` (array), `extensions` (array — **not** harnesses; ignore in v1 and say so in the decoder).
+  - Entry fields: **required** `id`, `name`, `version` (the agent's own semver), `description`, `distribution`; **optional** `repository`, `website`, `authors`, `license`, `icon`.
+  - There is **no `docsUrl` and no `installHint` field.** Map `website ?? repository` → `SHarnessDefinition.docsUrl`, and compose the install hint into `description` (the mapping STEP-26-01 already fixes: `description` doubles as the not-installed install hint). Do not invent registry fields that do not exist.
+  - Re-verify the endpoint and re-read `FORMAT.md` at execution time; record the schema `version` you built against in Implementation Notes. The fallback design below stands unchanged and is still the acceptance bar — a live feed makes the fallback more necessary, not less.
+- **`distribution` is three kinds, and only two of them are addable without breaking a phase non-goal.** Per `FORMAT.md`:
+  - `npx` → invoked as `npx <package> [args]`. Maps cleanly onto `launch`: `{ command: 'npx', args: [package, ...args] }`. The package spec carries its own version pin (e.g. `@google/gemini-cli@0.55.1`), so these entries are **launch-pinned** in exactly the `PI_ACP_VERSION` sense — record that in the prefilled description.
+  - `uvx` → same shape via `uvx`.
+  - `binary` → an archive that must be **downloaded, extracted, and executed**, with six platform targets (`darwin`/`linux`/`windows` × `aarch64`/`x86_64`), an optional `sha256`, and its own `cmd`/`args`/`env`. **srgnt does not install harnesses (phase non-goal, DEC-0017 local-first).** A one-click add for a `binary` entry would mean srgnt downloading and unpacking an executable — squarely outside this phase.
+  - **Decision needed — this is the one that changes the feature's shape (default recorded):** render `binary` entries in the catalog as **visible but not one-click addable**, with their platform targets and a "download it yourself, then point a custom definition at it" link to the STEP-26-04 guide. Hiding them would misrepresent the ecosystem; auto-installing them would break the non-goal. If the human prefers, the narrower alternative is to filter `binary` entries out of the list entirely — but then say so in the empty-state copy rather than silently showing a shorter ecosystem than exists.
 - **REQ-26-xx gate:** entry metadata is expected to be confirmed/extended by the lessons note (its brief telegraphs: "catalog entries need install hints + docsUrl because srgnt never installs"). Field list below is the default; reconcile against REQ-26-xx before freezing the schema.
 
 ## Prerequisites
@@ -33,7 +44,7 @@
 
 1. Verify the live feed situation; record it. Read the lessons note's catalog REQs; freeze `SCatalogEntry`.
 2. Contracts schema + tests.
-3. `snapshot.json` (seed: Gemini CLI, claude-code-acp, codex-acp, opencode, pi — launch specs hand-verified, versions recorded) + refresh `README.md`.
+3. `snapshot.json` (seed: Gemini CLI, claude-acp, codex-acp, opencode, pi — launch specs hand-verified, versions recorded) + refresh `README.md`.
 4. `catalog.ts` + unit tests (snapshot path, remote-success path with injected fetcher, every failure class → snapshot fallback with typed detail — **including an injected fetcher that never resolves, asserting the loader's timeout/abort trips and returns the snapshot rather than hanging**).
 5. IPC + main service + renderer view; prefill into the STEP-26-01 editor.
 6. E2E offline path; manual online path: add Gemini CLI from the catalog, install it, run the STEP-26-02 conformance runner against it.

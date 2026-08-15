@@ -45,7 +45,7 @@ Use this note for one executable step inside a phase. This note is the source of
 ## Relevant Code Paths
 
 - `packages/contracts/src/` — `SCatalogEntry`/`SCatalog` (entries map 1:1 onto `SHarnessDefinition` drafts).
-- `packages/harness/src/registry/catalog/` (new): `snapshot.json` (committed, hand-verified fixture — seed: Gemini CLI, claude-code-acp, codex-acp, opencode, pi), `README.md` (documented refresh procedure with mandatory human diff review), `catalog.ts` (`loadCatalog` with injected fetcher; any failure → snapshot with typed detail).
+- `packages/harness/src/registry/catalog/` (new): `snapshot.json` (committed, hand-verified fixture — seed: Gemini CLI, claude-acp, codex-acp, opencode, pi), `README.md` (documented refresh procedure with mandatory human diff review), `catalog.ts` (`loadCatalog` with injected fetcher; any failure → snapshot with typed detail).
 - Desktop: `harness:catalog` IPC (fetch in main only, gated on explicit `refresh: true`); renderer "Add from catalog" view feeding the STEP-26-01 editor.
 
 ## Required Reading

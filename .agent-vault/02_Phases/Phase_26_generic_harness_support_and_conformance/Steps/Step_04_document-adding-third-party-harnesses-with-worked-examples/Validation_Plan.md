@@ -11,7 +11,7 @@
 
 - **Doc-follow protocol (the core check):** following the guide *verbatim* — ideally by someone other than its author; otherwise by the executor on a clean profile/workspace with the target agent freshly installed — produces:
   - **Gemini CLI:** a working end-to-end session in srgnt (add → detect `ok` → conformance run → prompt round-trip in chat). This is the phase criterion "proven with at least one non-built-in real agent".
-  - **claude-code-acp and codex-acp:** at minimum a completed conformance-runner report each; the report (or its JSON export) pasted into this step's Implementation Notes as evidence.
+  - **claude-acp and codex-acp:** at minimum a completed conformance-runner report each; the report (or its JSON export) pasted into this step's Implementation Notes as evidence.
 - Every shell command in the doc was actually executed during validation — spot-audit by re-running each copy-paste block; any command that was never run is a validation failure.
 - Each worked example states the exact agent version tested and the date; the definition JSON in each example decodes against `SHarnessDefinition` (paste it into the hand-edit flow and save).
 - The hand-edit `harnesses.json` example is copy-paste valid: pasting it into a fresh workspace file and restarting yields a listed harness with a rendering detection chip.

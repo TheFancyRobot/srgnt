@@ -12,6 +12,8 @@ updated: '2026-08-16'
 supersedes: []
 superseded_by: []
 related_notes:
+  - '[[01_Architecture/ACP_Command_Center_Target_Architecture|ARCH-0009 ACP Command Center Target Architecture]]'
+  - '[[02_Phases/Phase_30_session_config_options/Phase|PHASE-30 Session Config Options]]'
   - '[[06_Shared_Knowledge/cross-harness-lessons-learned|Cross-Harness Lessons Learned (STEP-25-04)]]'
   - '[[06_Shared_Knowledge/opencode-acp-capture|opencode ACP Capture (STEP-25-01)]]'
   - '[[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|PHASE-26 Generic Harness Support and Conformance]]'
@@ -36,17 +38,26 @@ only *reports* config options (REQ-26-18), with the under-advertisement caveat.
 ## Context
 
 srgnt reads session modes through `readModes`
-(`packages/desktop/src/main/chat/session-controller.ts`), which looks for a
-`modes` block, and drives them with `session/set_mode`. Measured against the two
-shipped harnesses, that path drives **neither**:
+(`packages/desktop/src/main/chat/session-controller.ts:1344`), which looks for a
+`modes` block on the **`session/load`** result, stores the ids, and drives them
+with `session/set_mode` (`setMode`, line 1437).
 
-- **opencode 1.18.18** returns `configOptions` from `session/new` — two groups,
-  `model` and `mode` — and **no `modes` block at all**. `readModes` sees nothing.
-- **pi** returns `configOptions` from `session/load` (thinking levels as modes,
-  plus a model list), per the STEP-22-05 spike.
+**Corrected 2026-08-16 after review — an earlier draft of this note claimed the
+path drives "neither harness". That was wrong.** The accurate position:
 
-So the mode selector is effectively dead for both real harnesses, while the
-protocol mechanism they both actually use is unread.
+- **pi, reopened session: works.** `session/load` returns a `modes` block, so a
+  reopened pi session has a live mode selector today. **This is working behavior
+  with real users and must be preserved, with regression coverage**, not
+  refactored away.
+- **pi, fresh session: dead.** A `session/new` session has no `modes` block to
+  read, so the selector has nothing until the session is reopened.
+- **opencode: dead everywhere.** It returns `configOptions` from `session/new` —
+  `model` and `mode` groups — and **no `modes` block at any point**. `readModes`
+  sees nothing, ever.
+
+So the gap is narrower than first stated but still real: the selector works for
+exactly one harness in exactly one lifecycle path, while the mechanism both
+harnesses actually advertise goes unread.
 
 Measured 2026-08-15 by driving `opencode acp` directly (protocol frames only, no
 prompt, no provider tokens — addendum in the opencode capture note):
@@ -119,10 +130,13 @@ registry-driven (REQ-26-08's named debt).
 - A config-options surface in chat replaces the mode selector; `readModes` and
   `session/set_mode` become the compatibility fallback.
 - STEP-26-02's report gains a real column rather than a permanent "unreachable".
-- PHASE-24's fork and PHASE-27's groups both inherit a session whose config is
-  addressable, which matters when two harnesses in a group disagree on model.
+- PHASE-24's fork inherits a session whose config is addressable.
+- PHASE-27's groups give **each member its own ACP session**, so configuration
+  becomes addressable **per member ACP session** — which is what makes two
+  members disagreeing on model a thing the user can actually see and change,
+  rather than an invisible property of whichever process answered.
 
-## Owner — decided 2026-08-15
+## Owner — assigned 2026-08-15, accepted 2026-08-16
 
 **Its own phase, executing between PHASE-26 and PHASE-27:**
 [[02_Phases/Phase_30_session_config_options/Phase|PHASE-30 Session Config Options]].

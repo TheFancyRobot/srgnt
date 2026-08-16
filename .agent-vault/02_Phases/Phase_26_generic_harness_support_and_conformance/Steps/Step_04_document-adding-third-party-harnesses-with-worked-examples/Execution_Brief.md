@@ -9,7 +9,7 @@
   - `gemini` — "Gemini CLI" — `npx @google/gemini-cli@0.55.1 --acp`
   - `codex-acp` — "Codex" — `npx @agentclientprotocol/codex-acp@1.3.0`
   - `claude-acp` — "Claude Agent" — distribution per the registry entry; re-read it at execution time.
-  **Re-verify all three (presence, id, and exact launch command) when you write the guide** — those version pins are from 2026-08-15 and the whole point of the worked examples is that the commands actually run. Record the versions you tested, the `OPENCODE_TESTED_VERSION` discipline.
+  **Re-verify all three (presence, id, and exact launch command) when you write the guide** — those version pins are from 2026-08-15 and the whole point of the worked examples is that the commands actually run. Record the exact version you tested for each agent — the same tested-version discipline the built-ins use (`PI_ACP_VERSION` for a launch-pinned adapter, `OPENCODE_TESTED_VERSION` for a user-installed binary). Name each per its own agent rather than reusing opencode's constant.
 - **REQ-26-xx gate:** the lessons note's comparison axes (launch/detection, auth surfacing, capability gaps, quirks, permission behavior, load/resume, MCP passthrough, stream shape) are the checklist for each worked example's "known quirks" section — expect REQ-26-xx entries to dictate which troubleshooting topics the guide must cover (e.g. PATH in packaged Electron, auth-required first-run, `detectCommand` vs launch command).
 
 ## Prerequisites

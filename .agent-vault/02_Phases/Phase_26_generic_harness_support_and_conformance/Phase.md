@@ -29,7 +29,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 - Define and complete the Generic Harness Support and Conformance milestone.
 - Make "bring your own ACP harness" real: custom harness editor for launch specs (command/args/env), capability overrides, and quirk flags.
 - Ship the ACP conformance smoke-runner ("test my harness") — the mock-agent scenario suite inverted to probe any configured agent binary.
-- Integrate the official ACP Registry catalog for one-click harness adds, with a bundled static snapshot fallback (the connector-catalog lesson: remote catalogs fail; fail to builtin data). Document adding Gemini CLI, claude-acp, and codex-acp.
+- Integrate the official ACP Registry catalog for one-click harness adds **of `npx` and `uvx` entries** (`binary` entries need download+extract, which the never-installs non-goal forbids — they render informationally with a route to the manual path; see STEP-26-03), with a bundled static snapshot fallback (the connector-catalog lesson: remote catalogs fail; fail to builtin data). Document adding Gemini CLI, claude-acp, and codex-acp.
 
 ## Why This Phase Exists
 
@@ -81,8 +81,10 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|PHASE-25 Opencode Integration and Harness Settings]]
 - Current phase status: planned
-- Next phase: [[02_Phases/Phase_30_session_config_options/Phase|PHASE-30 Session Config Options]] — **despite the id, PHASE-30 executes here, between 26 and 27** (ids are allocation order; 27-29 were already taken and renumbering them would break 82 files of validated wikilinks). PHASE-27 follows it.
+- Next phase: [[02_Phases/Phase_30_session_config_options/Phase|PHASE-30 Session Config Options]]
 <!-- AGENT-END:phase-linear-context -->
+
+> **Phase ids are allocation order, not execution order.** PHASE-30 executes here, between 26 and 27, then PHASE-27 follows. Its id is higher only because 27-29 were already allocated; renumbering them would break 82 files of validated wikilinks.
 
 ## Related Architecture
 

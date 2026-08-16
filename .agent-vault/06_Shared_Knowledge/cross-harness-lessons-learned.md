@@ -436,8 +436,11 @@ Not requirements on PHASE-26 as scoped; recorded so they are not lost.
   composed from `website`/`repository` and `description`. `distribution` comes in
   three kinds — `npx`, `uvx`, and `binary`; **`binary` requires download and
   extraction, which collides with srgnt's never-installs rule**, so not every
-  catalog entry is one-click addable. Details and the open decision are in
-  STEP-26-03's Execution Brief.
+  catalog entry is one-click addable. **Decided 2026-08-15: `binary` entries are
+  visible but not one-click addable**, routed to the manual path (STEP-26-03's
+  Execution Brief). What remains genuinely open is the separate, larger question
+  of whether srgnt should ever download and execute third-party binaries at all —
+  that needs its own decision note, not a catalog default.
 
 ## What this note does not establish
 

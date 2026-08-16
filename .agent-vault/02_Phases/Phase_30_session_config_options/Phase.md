@@ -40,12 +40,17 @@ tags:
 
 ## Why This Phase Exists
 
-- **srgnt's model/mode selector currently drives neither shipped harness.**
-  `readModes` (`packages/desktop/src/main/chat/session-controller.ts`) reads a
-  `modes` block. opencode 1.18.18 returns **no `modes` block at all** — it returns
-  `configOptions` with `model` and `mode` groups from `session/new`. Pi returns
-  `configOptions` from `session/load`. The feature is silently dead in both cases,
-  which is worse than absent: the UI implies a control that does nothing.
+- **srgnt's model/mode selector works in exactly one case out of four.**
+  `readModes` (`session-controller.ts:1344`) reads a `modes` block off the
+  **`session/load`** result and `setMode` (line 1437) drives `session/set_mode`.
+  - **pi, reopened session — WORKS.** `session/load` returns a `modes` block.
+    This is live behavior; **preserve it and keep regression coverage** (an
+    earlier draft of this note wrongly said the selector drives neither harness).
+  - **pi, fresh session — dead.** No `modes` block on `session/new`.
+  - **opencode, either path — dead.** It never sends a `modes` block; it sends
+    `configOptions` (`model` and `mode`) from `session/new`.
+  A control that works only after a session is reopened, and only for one
+  harness, is worse than absent: the UI implies something it usually cannot do.
 - **The current path expires on someone else's schedule.** The ACP spec states
   that Session Config Options *supersede* the Session Modes API, and that
   "dedicated session mode methods will be removed in a future version of the
@@ -55,6 +60,10 @@ tags:
   (2026-08-15) with params `{sessionId, configId, value}`, returning the updated
   `configOptions`. Evidence: addendum in
   [[06_Shared_Knowledge/opencode-acp-capture|opencode ACP Capture]].
+  **Scope of that evidence:** a scripted protocol probe against one agent, one
+  version. No prompt or model turn ran, no UI exists, and nothing was verified
+  through a full session or by hand. UI behavior, pi's `session/load` path, and
+  manual end-to-end verification are all still owed by this phase.
 - PHASE-26 deliberately scoped this **out** — its conformance runner reports
   config options and flags them unreachable (REQ-26-18), and
   [[04_Decisions/DEC-0021_adopt-acp-session-config-options-and-retire-the-modes-path|DEC-0021]]
@@ -72,7 +81,9 @@ tags:
 - Replace the chat mode selector with a config-options control driven from data:
   one control per advertised group, labelled from the group's own metadata.
 - Keep `modes` / `session/set_mode` as a fallback for agents that advertise the
-  legacy block and no `configOptions`.
+  legacy block and no `configOptions`. **Non-negotiable: a reopened pi session
+  must keep working exactly as it does today** — this is the one live path, and
+  the phase must land regression coverage for it before touching `readModes`.
 - Turn STEP-26-02's "unreachable" report column into a real measured column.
 
 ## Non-Goals
@@ -98,6 +109,7 @@ tags:
 - [ ] A user can change model **and** mode from within a session against opencode, and the change is reflected by the agent's returned `configOptions`.
 - [ ] Pi's `configOptions` (returned from `session/load`) render through the same data-driven control with no harness-specific code.
 - [ ] An agent advertising only the legacy `modes` block still works, through the fallback.
+- [ ] **A reopened pi session's mode selector still works, proven by a regression test written before `readModes` is touched.** This path works today; the phase must not trade it for the new one.
 - [ ] `session.configOptions.boolean` is advertised only where the handling exists, and a test asserts the advertisement matches the implementation.
 - [ ] STEP-26-02's conformance report shows config options as measured rather than unreachable.
 
@@ -107,8 +119,9 @@ tags:
 - Previous phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|PHASE-26 Generic Harness Support and Conformance]]
 - Current phase status: planned
 - Next phase: [[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase|PHASE-27 Groups v1 Multi-Harness Sessions and Bus]]
-- **Note:** this block reflects *execution* order. The phase id (30) is allocation order only — see the banner at the top of this note.
 <!-- AGENT-END:phase-linear-context -->
+
+> This block reflects *execution* order. The phase id (30) is allocation order only — see the banner at the top of this note.
 
 ## Related Architecture
 

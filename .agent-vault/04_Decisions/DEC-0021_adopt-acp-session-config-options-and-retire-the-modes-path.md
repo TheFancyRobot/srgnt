@@ -4,11 +4,11 @@ template_version: 2
 contract_version: 1
 title: Adopt ACP session config options and retire the session-modes path
 decision_id: DEC-0021
-status: proposed
-decided_on: ''
-owner: ''
+status: accepted
+decided_on: '2026-08-16'
+owner: matthew
 created: '2026-08-15'
-updated: '2026-08-15'
+updated: '2026-08-16'
 supersedes: []
 superseded_by: []
 related_notes:
@@ -25,9 +25,13 @@ tags:
 
 ## Status
 
-**Proposed.** Raised 2026-08-15 during PHASE-26 refinement, when PROP-A stopped
-being a guess and became a measurement. Needs a decision before any phase builds
-a mode/model selector.
+**ACCEPTED 2026-08-16** by Matthew. Raised 2026-08-15 during PHASE-26 refinement,
+when PROP-A stopped being a guess and became a measurement.
+
+Accepted position: **Option 1 — adopt config options as the primary surface,
+executed as [[02_Phases/Phase_30_session_config_options/Phase|PHASE-30]]**, which
+runs between PHASE-26 and PHASE-27. PHASE-26 itself is unchanged by this: it still
+only *reports* config options (REQ-26-18), with the under-advertisement caveat.
 
 ## Context
 
@@ -86,7 +90,7 @@ capability matrix exists to prevent.
 
 ## Options
 
-1. **Adopt config options as the primary surface** (proposed). Advertise
+1. **Adopt config options as the primary surface** — **CHOSEN**. Advertise
    `session.configOptions.boolean` *when* the handling exists, read
    `configOptions` alongside `modes`, drive `session/set_config_option`, and keep
    `session/set_mode` only as a fallback for agents that advertise `modes` and
@@ -108,7 +112,7 @@ caveat stated in the report — and this decision assigns the real work to a lat
 phase, most naturally alongside whatever makes the in-chat harness picker
 registry-driven (REQ-26-08's named debt).
 
-## Consequences if accepted
+## Consequences — now committed
 
 - `buildClientCapabilities` grows `session.configOptions.boolean`, gated on the
   handling actually existing.
@@ -137,4 +141,5 @@ Rejected alternatives:
   will disagree on model — but burying a standalone fix inside a much larger
   phase makes it the first thing cut if PHASE-27 runs long.
 
-This decision is still `proposed`: accept it before PHASE-30 executes.
+Accepted 2026-08-16, so PHASE-30 is cleared to execute once it has step notes
+(`/vault:plan PHASE-30`).

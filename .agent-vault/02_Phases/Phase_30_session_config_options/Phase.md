@@ -87,7 +87,7 @@ tags:
 ## Dependencies
 
 - Depends on [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|PHASE-26]] — its conformance runner is what verifies a harness's config-options surface, and REQ-26-08's registry-driven picker work is the natural companion to this UI.
-- [[04_Decisions/DEC-0021_adopt-acp-session-config-options-and-retire-the-modes-path|DEC-0021]] must be **accepted** before execution; it is `proposed` today.
+- [[04_Decisions/DEC-0021_adopt-acp-session-config-options-and-retire-the-modes-path|DEC-0021]] — **ACCEPTED 2026-08-16**, so this phase is cleared to execute once it has step notes.
 - Protocol references, re-read at execution time: `agentclientprotocol.com/protocol/v1/session-config-options` and `.../session-modes`.
 
 ## Acceptance Criteria
@@ -119,7 +119,7 @@ tags:
 ## Related Decisions
 
 <!-- AGENT-START:phase-related-decisions -->
-- [[04_Decisions/DEC-0021_adopt-acp-session-config-options-and-retire-the-modes-path|DEC-0021]] (PROPOSED) — the decision that created this phase. Accept it before executing.
+- [[04_Decisions/DEC-0021_adopt-acp-session-config-options-and-retire-the-modes-path|DEC-0021]] (**ACCEPTED 2026-08-16**) — the decision that created this phase, and the record of why config options replace the modes path.
 <!-- AGENT-END:phase-related-decisions -->
 
 ## Related Bugs

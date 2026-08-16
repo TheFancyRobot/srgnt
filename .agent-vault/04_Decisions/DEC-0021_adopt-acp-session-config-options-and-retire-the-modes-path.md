@@ -118,8 +118,23 @@ registry-driven (REQ-26-08's named debt).
 - PHASE-24's fork and PHASE-27's groups both inherit a session whose config is
   addressable, which matters when two harnesses in a group disagree on model.
 
-## Open question for the decider
+## Owner — decided 2026-08-15
 
-Which phase owns it — a late PHASE-26 addition, its own phase before PHASE-27, or
-folded into PHASE-27's groups work where per-session model/mode divergence
-becomes visible anyway?
+**Its own phase, executing between PHASE-26 and PHASE-27:**
+[[02_Phases/Phase_30_session_config_options/Phase|PHASE-30 Session Config Options]].
+
+The id is 30 only because 26-29 were already allocated; execution order is
+26 → **30** → 27, stated in all three phase notes. Renumbering 27-29 to make the
+ids sequential was rejected — 82 vault files reference those phase paths as
+validated wikilinks, so it is a large breakage risk for a cosmetic gain.
+
+Rejected alternatives:
+
+- **Fold into PHASE-26.** That phase is already editor + conformance runner +
+  registry + docs; this is protocol work with its own UI surface and would blur
+  two steps not written for it.
+- **Fold into PHASE-27 (groups).** Groups need it — two harnesses in one session
+  will disagree on model — but burying a standalone fix inside a much larger
+  phase makes it the first thing cut if PHASE-27 runs long.
+
+This decision is still `proposed`: accept it before PHASE-30 executes.

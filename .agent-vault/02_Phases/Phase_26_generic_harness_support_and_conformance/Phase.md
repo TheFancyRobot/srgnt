@@ -81,7 +81,7 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 <!-- AGENT-START:phase-linear-context -->
 - Previous phase: [[02_Phases/Phase_25_opencode_integration_and_harness_settings/Phase|PHASE-25 Opencode Integration and Harness Settings]]
 - Current phase status: planned
-- Next phase: [[02_Phases/Phase_27_groups_v1_multi_harness_sessions_and_bus/Phase|PHASE-27 Groups v1 Multi-Harness Sessions and Bus]]
+- Next phase: [[02_Phases/Phase_30_session_config_options/Phase|PHASE-30 Session Config Options]] — **despite the id, PHASE-30 executes here, between 26 and 27** (ids are allocation order; 27-29 were already taken and renumbering them would break 82 files of validated wikilinks). PHASE-27 follows it.
 <!-- AGENT-END:phase-linear-context -->
 
 ## Related Architecture

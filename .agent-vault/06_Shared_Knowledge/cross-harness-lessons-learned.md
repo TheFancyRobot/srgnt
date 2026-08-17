@@ -372,17 +372,52 @@ is not owned by any PHASE-26 deliverable — see PROP-A.
 
 Not requirements on PHASE-26 as scoped; recorded so they are not lost.
 
-- **PROP-A — a generic config-options surface.** Implementing
-  `session/set_config_option` (plus reading `configOptions` alongside `modes`)
-  is the fix for the divergence in REQ-26-18, and it is a **product** surface: no
-  PHASE-26 deliverable owns it. It is evidenced (both harnesses return config
-  options) but needs its own step or a decision note, most naturally alongside
-  whatever makes the in-chat picker registry-driven.
-- **PROP-B — model `session/close` and `session/fork`.** opencode advertises
-  both; srgnt forks by replaying into a fresh session (STEP-24-04) and never
-  closes explicitly. Evidenced as advertised, **not** as working — nothing has
-  called either. Worth a probe in the runner (REQ-26-14 gets it into the report)
-  before any modelling work is committed.
+- **PROP-A — a generic config-options surface. MEASURED 2026-08-15; the
+  behavioural unknown is gone, only the scope decision remains.**
+  `session/set_config_option` **works** against opencode 1.18.18 with params
+  `{sessionId, configId, value}` and returns the updated `configOptions`
+  (addendum in [[06_Shared_Knowledge/opencode-acp-capture|opencode ACP Capture]]).
+  Two corrections to what this note assumed: `session/set_mode` **also** works on
+  opencode — it is not "the wrong method" — and the reason to prefer config
+  options is the ACP spec's, namely that **Session Config Options supersede the
+  Session Modes API** and dedicated mode methods "will be removed in a future
+  version of the protocol". opencode is a transitional agent that answers both
+  while advertising only `configOptions`. This is still a **product** surface no
+  PHASE-26 deliverable owns, and it remains a scope decision — but it is no
+  longer blocked on evidence, and REQ-26-18's "flag them as unreachable" is now
+  a statement about srgnt, not about the protocol.
+- **PROP-B — model `session/close` and `session/fork`. MEASURED 2026-08-15 —
+  but the two have very different protocol standing, and that decides how safely
+  either can be built on.** Both work against opencode 1.18.18: `session/close`
+  returns `{}`, `session/fork` returns a new `sessionId` plus that session's
+  `configOptions`. The "advertised but never driven" caveat is discharged for
+  both. However:
+  - **`session/close` is stable v1**, documented in
+    `agentclientprotocol.com/protocol/v1/session-setup` and gated by
+    `sessionCapabilities.close`. Safely promotable. srgnt currently tears a
+    session down by killing the process rather than closing the session.
+  - **`session/fork` is NOT stable — it is an open RFD**
+    (`agentclientprotocol.com/rfds/session-fork`), absent from the v1
+    session-setup docs and from the maintainers' own capability list, which names
+    only resume / close / delete. opencode has implemented it ahead of
+    stabilization. The RFD itself says agents "may reply with an error if forking
+    of that specific session or with the given options is not supported". So a
+    working probe against one agent is **not** evidence the protocol surface is
+    settled: building PHASE-24's fork on it means betting on a proposal. Treat as
+    measured-but-unstable, and prefer reporting it (REQ-26-14) over depending on
+    it.
+  - **srgnt's own client capabilities are narrower than the protocol, and that
+    gates PROP-A.** `buildClientCapabilities`
+    (`packages/harness/src/acp/connection.ts:171`) advertises only `fs` and
+    `terminal`. The protocol also defines **`session.configOptions.boolean`** — a
+    *client* capability, so an agent may withhold boolean config options from a
+    client that never advertises it — and **`elicitation`** (structured user
+    input). PROP-A is therefore not purely a UI question: driving config options
+    correctly starts at the initialize handshake, and today srgnt never tells an
+    agent it can handle them.
+  - Also noted from the maintainers' capability list: **`session/delete` exists
+    in the protocol** and srgnt models it nowhere; opencode does not advertise it
+    (its `sessionCapabilities` are `close`, `fork`, `list`, `resume`).
 - **PROP-C — per-harness permission-policy defaults.** Deferred by decision in
   STEP-25-02; `SDesktopSettings` is untouched and per-project `permissionPolicy`
   remains the only relaxation surface. Pi self-approving is measured, so the need
@@ -391,9 +426,21 @@ Not requirements on PHASE-26 as scoped; recorded so they are not lost.
   creation only; a token expiring during a turn still surfaces through the
   prompt-error path. No shipped harness has demonstrated it (STEP-25-03 Outcome).
 - **Unevidenced by anything in Phase 25, listed as such:** OS-keychain-backed
-  secret storage; whether agentclientprotocol.com publishes a machine-readable
-  catalog feed (PHASE-26 already records this as UNVERIFIED — its executor must
-  check before designing around it).
+  secret storage.
+- ~~Whether agentclientprotocol.com publishes a machine-readable catalog feed.~~
+  **VERIFIED 2026-08-15: it does** —
+  `https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json`, schema
+  in `agentclientprotocol/registry` → `FORMAT.md`. Entries carry `id`, `name`,
+  `version`, `description` and a required `distribution` object; there is **no**
+  `docsUrl` or `installHint` field, so REQ-26-16's "docs + install hints" must be
+  composed from `website`/`repository` and `description`. `distribution` comes in
+  three kinds — `npx`, `uvx`, and `binary`; **`binary` requires download and
+  extraction, which collides with srgnt's never-installs rule**, so not every
+  catalog entry is one-click addable. **Decided 2026-08-15: `binary` entries are
+  visible but not one-click addable**, routed to the manual path (STEP-26-03's
+  Execution Brief). What remains genuinely open is the separate, larger question
+  of whether srgnt should ever download and execute third-party binaries at all —
+  that needs its own decision note, not a catalog default.
 
 ## What this note does not establish
 

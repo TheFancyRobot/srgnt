@@ -31,10 +31,10 @@ Use this note as the directory for decision records in \`04_Decisions/\`.
 ## Decision Log
 
 <!-- AGENT-START:decisions-index -->
-_Last rebuilt: 2026-08-15._
+_Last rebuilt: 2026-08-16._
 
-- Notes indexed: 20
-- Status summary: accepted (17), proposed (3)
+- Notes indexed: 21
+- Status summary: accepted (17), proposed (4)
 
 | Id | Title | Status | Decided | Updated | Linear |
 | --- | --- | --- | --- | --- | --- |
@@ -58,6 +58,7 @@ _Last rebuilt: 2026-08-15._
 | DEC-0020 | [Keep semantic search IPC high-level and hide internal paths](../04_Decisions/DEC-0020_keep-semantic-search-ipc-high-level-and-hide-internal-paths.md) | proposed | 2026-04-14 | 2026-07-23 | - |
 | DEC-0009 | [Freeze renderer stack and routing contract for desktop v1](../04_Decisions/DEC-0009_freeze-renderer-stack-and-routing-contract-for-desktop-v1.md) | proposed | 2026-03-22 | 2026-03-22 | - |
 | DEC-0010 | [Use shared Microsoft auth boundary with main-process secret storage](../04_Decisions/DEC-0010_use-shared-microsoft-auth-boundary-with-main-process-secret-storage.md) | proposed | 2026-03-22 | 2026-03-22 | - |
+| DEC-0021 | [Adopt ACP session config options and retire the session-modes path](../04_Decisions/DEC-0021_adopt-acp-session-config-options-and-retire-the-modes-path.md) | proposed | - | 2026-08-15 | - |
 <!-- AGENT-END:decisions-index -->
 
 ## Useful Links

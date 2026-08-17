@@ -27,14 +27,14 @@ Use this note for one executable step inside a phase. This note is the source of
 
 - Outcome: Document adding third-party harnesses with worked examples.
 - Parent phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|Phase 26 generic harness support and conformance]].
-- Exact outcome: an "Add your own harness" guide ships in `docs/` with three worked, manually verified examples — Gemini CLI, claude-code-acp, and codex-acp — covering install, HarnessDefinition setup (or registry add), conformance-runner verification, and known quirks per agent.
+- Exact outcome: an "Add your own harness" guide ships in `docs/` with three worked, manually verified examples — Gemini CLI, claude-acp, and codex-acp — covering install, HarnessDefinition setup (or registry add), conformance-runner verification, and known quirks per agent.
 - Starting files: `docs/` (new guide); registry + conformance runner from earlier steps; the three target agents installed for verification.
 - Validate: following the doc verbatim on at least one real third-party agent produces a working session; the other two verified at least through conformance-runner pass/report.
 
 ## Why This Step Exists
 
 - The docs are the phase's proof-of-generality: a third party following the guide from "I have an ACP agent" to "it has a capability-matrix row" without insider knowledge is what makes bring-your-own real. The guide is grounded in the shipped flow: install yourself → add (catalog / editor / hand-edit `harnesses.json`) → detect → conformance run → matrix row.
-- The three worked examples double as the phase's manual proof runs (Gemini CLI through a full session; claude-code-acp and codex-acp at least through conformance reports).
+- The three worked examples double as the phase's manual proof runs (Gemini CLI through a full session; claude-acp and codex-acp at least through conformance reports).
 
 ## Prerequisites
 

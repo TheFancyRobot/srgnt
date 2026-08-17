@@ -83,10 +83,12 @@ Use this note for a bounded phase of work in \`02_Phases/\`. This note is the so
 ## Linear Context
 
 <!-- AGENT-START:phase-linear-context -->
-- Previous phase: [[02_Phases/Phase_26_generic_harness_support_and_conformance/Phase|PHASE-26 Generic Harness Support and Conformance]]
+- Previous phase: [[02_Phases/Phase_30_session_config_options/Phase|PHASE-30 Session Config Options]]
 - Current phase status: planned
 - Next phase: [[02_Phases/Phase_28_reusable_group_pipelines/Phase|PHASE-28 Reusable Group Pipelines]]
 <!-- AGENT-END:phase-linear-context -->
+
+> **Phase ids are allocation order, not execution order.** PHASE-30 (Session Config Options) executes immediately before this phase, after PHASE-26; its id is higher only because 27-29 were already allocated. It matters here: groups put several member ACP sessions in one group session, and per-member model/mode divergence becomes visible the moment two members disagree.
 
 ## Related Architecture
 
